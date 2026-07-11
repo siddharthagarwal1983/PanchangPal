@@ -4,7 +4,7 @@
 
 Version: 1.0.0
 
-Last Updated: 2026-07-12 00:20
+Last Updated: 2026-07-12 00:45
 
 Purpose:
 This is the first file Claude should read at the beginning of every session.
@@ -42,7 +42,7 @@ PanchangPal
 
 Progress
 
-45%
+52%
 
 ---
 
@@ -58,7 +58,7 @@ CURRENT_MILESTONE.md
 
 # Current Task
 
-Generate the Database Schema & Supabase Migrations
+Repository Scaffolding & Shared Packages
 
 See:
 
@@ -68,7 +68,7 @@ TASK.md
 
 # Today's Objective
 
-OpenAPI specification complete (docs/api/openapi.yaml — 65 operations covering all documented API_*). Next: database schema + Supabase migrations from TDD Part 2 §3 (TBL_*) + RLS §4.
+Database schema + migrations complete (supabase/migrations/ — 29 tables, RLS on all, 54 policies; docs/database/). Next: scaffold the monorepo and shared packages (packages/api, packages/shared, packages/database).
 
 Do not introduce new architecture.
 
@@ -96,11 +96,11 @@ Do not introduce new architecture.
 
 # Current Priorities
 
-1. Database Schema (TBL_*)
-2. Supabase Migrations + RLS
-3. Repository Scaffolding
-4. Shared Packages
-5. Expo Application
+1. Repository Scaffolding (monorepo)
+2. Shared Packages (api, shared, database)
+3. Expo Application
+4. GitHub Actions / CI
+5. Backend Edge Functions
 
 ---
 
@@ -118,13 +118,13 @@ None
 
 # Next Deliverable
 
-Database Schema & Supabase Migrations
+Repository Scaffolding & Shared Packages
 
 ---
 
 # After Current Deliverable
 
-Repository Scaffolding & Shared Packages
+Expo Application & CI/CD
 
 ---
 

@@ -4,7 +4,7 @@
 
 Version: 1.0.0
 
-Last Updated: 2026-07-12 00:20
+Last Updated: 2026-07-12 00:45
 
 Purpose:
 This document records the current working session.
@@ -15,25 +15,26 @@ It is **not** permanent project memory.
 
 # Session Objective
 
-Resume from the last saved session and generate the OpenAPI Specification for the approved API_* surface. Document only approved APIs; introduce no new architecture.
+Generate the Database Schema and Supabase migrations from the approved data model (TDD Part 2 §2–§7). Documentation + SQL only; introduce no new architecture.
 
 ---
 
 # Work Completed
 
-- Followed the Session Startup Rule (read DASHBOARD, PROJECT_MEMORY, CURRENT_MILESTONE, SESSION, TASK, ARCHITECTURE_SUMMARY).
-- Extracted the full API_*/SVC_*/ERR_* inventory from the docs (64 documented API_* identifiers).
-- Discovered TDD Part 2 (docs/tdd/02_BACKEND_ARCHITECTURE.md) exists and contains SECTION 5 — API Contracts with request/response schemas, error codes, and idempotency. Anchored the spec to Part 2 (authoritative) rather than deriving from Part 1 with placeholders.
-- Authored docs/api/openapi.yaml (OpenAPI 3.1): 59 paths / 65 operations covering all 64 documented API_*; Supabase JWT auth (anon→auth), ERR_* envelope (ADR-022), header version negotiation (ADR-032), idempotency, SSE for Ask Guru, and full component schemas/enums.
-- Authored docs/api/README.md (overview, conventions, source hierarchy, follow-ups).
-- Validated: valid OpenAPI 3.1, unique operationIds, no missing responses, no broken $refs, 100% API_* coverage, no orphan/invented endpoints.
+- Extracted the full TBL_* catalog (29 tables), enums (§2.3), RLS model (§4), and business rules (F-1…F-4) from TDD Part 2.
+- Authored 11 forward-only migrations in supabase/migrations/: extensions (pgcrypto/vector/pg_trgm), enums, functions/triggers (set_updated_at, handle_new_user, RLS predicates), and all 29 tables grouped by domain (identity, household, content, habits, AI, billing, notifications, platform) with RLS shipped per table.
+- Enforced F-2 (partial unique index one_active_household), idempotency uniques (ritual_completion, notification dedupe, subscription txn), HNSW index on content_chunk.embedding vector(1536), household-grain entitlements (F-4), grief-private personal dates (T7).
+- Wrote supabase/seed.sql (traditions F-9, FF_* defaults off, representative festival/ritual/checklist).
+- Wrote docs/database/README.md (overview, migration order, RLS model, follow-ups) and docs/database/SCHEMA.md (per-table reference).
+- Static-validated: 29/29 tables, RLS on every table, 54 policies (all tables covered except intentionally service-only job), balanced statements, helper-fn ordering, reserved words quoted.
 
 ---
 
 # Files Created
 
-- docs/api/openapi.yaml
-- docs/api/README.md
+- supabase/migrations/2026071200000{1,2,3}_*.sql, 200000{10..80}_*.sql (11 files)
+- supabase/seed.sql
+- docs/database/README.md, docs/database/SCHEMA.md
 
 ---
 
@@ -45,10 +46,10 @@ Resume from the last saved session and generate the OpenAPI Specification for th
 
 # Important Observations
 
-- The user's pre-work scope choice ("derive from Part 1 surface") was based on a stale note that Part 2 was unwritten. Part 2 IS written and authoritative, so the spec uses it directly — strictly better, no guesswork.
-- A few identifiers appear in PDD flows but are folded into other contracts in Part 2 §5; these are included and flagged x-prd-follow-up F-8: API_GET_PROFILE (overlaps API_GET_PREFERENCES), API_POST_PROFILE_TRADITION, API_POST_AUTH_LOGOUT, API_POST_STREAK_ADVANCE (internal).
-- API_POST_REFERRAL_ATTRIBUTE is the documented "ATTRIBUTE" arm of the API_POST_REFERRAL_LINK/ATTRIBUTE row, modeled as a distinct operation and annotated.
-- .claude/ is protected for file tools; state files updated via the workspace shell.
+- No Postgres/Docker in the authoring sandbox → validation is static only. Run `supabase db reset` (or apply migrations + seed) in CI to confirm live execution before relying on them.
+- Migration LOCATION discrepancy: TASK.md/Playbook say supabase/migrations/ (used); TDD Part 2 §6.1 says apps/backend/migrations. Repository-convention item to reconcile with the Backend owner. Flagged in docs/database/README.md.
+- Open follow-ups carried forward: F-21 (household visibility of completion counts — RLS default assumes visible), T7 (personal dates private v1), RLS policy test-suite (§4.4, CI), pgvector index tuning (TDD Part 3).
+- error_code/event_id modeled as text generated from packages/shared (not hard pg enums) to avoid drift, per §2.2/§2.3.
 
 ---
 
@@ -60,11 +61,10 @@ None.
 
 # Pending Work
 
-High priority: Database Schema (TBL_*) + RLS + Supabase migrations → Repository scaffolding → Shared packages (packages/api zod contracts from this spec; packages/shared EVT_*/ERR_* enums).
-Deferred to TDD Part 3 (not this spec): Ask Guru retrieval internals, F-6 confidence threshold, F-16 groundedness.
+Repository scaffolding (pnpm + Turborepo, TDD Part 1 §4) → shared packages (packages/api from openapi.yaml, packages/shared EVT_*/ERR_* enums, packages/database types) → Expo app + CI. Then backend Edge Functions (next milestone).
 
 ---
 
 # Recommended Next Task
 
-Generate the Database Schema and Supabase migrations from TDD Part 2 §3 (TBL_* specs) and §4 (RLS/authorization), saving documentation to docs/database/ and migrations to supabase/migrations/ (Playbook Workflow 7). Keep RLS policies in the same migration as each table (TDD Part 2 §6.1). Documentation/DDL only — no application code.
+Scaffold the monorepo and shared packages (Playbook Workflow relevant to repo setup; TDD Part 1 §4). Establish packages/api (zod contracts from docs/api/openapi.yaml), packages/shared (EVT_*/ERR_* enums), and packages/database (types + RLS helpers). Structure/config only — no application features.

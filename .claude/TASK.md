@@ -4,7 +4,7 @@
 
 Version: 1.0.0
 
-Last Updated: 2026-07-12 00:20
+Last Updated: 2026-07-12 00:45
 
 Purpose:
 This document defines the current implementation task.
@@ -16,7 +16,7 @@ Claude should stay focused on this task and avoid expanding into unrelated work 
 
 ## Title
 
-Generate the OpenAPI Specification
+Generate the Database Schema & Supabase Migrations
 
 Status
 
@@ -24,7 +24,7 @@ Status
 
 Outcome
 
-docs/api/openapi.yaml (OpenAPI 3.1, 65 operations covering all 64 documented API_*) + docs/api/README.md. Anchored to TDD Part 2 §5; auth, ERR_* envelope, versioning, idempotency, and SSE modeled. Validated; no invented endpoints.
+11 forward-only migrations in supabase/migrations/ (29 TBL_* tables, RLS on every table, 54 policies, enums, helper functions/triggers, HNSW + F-2 indexes) + supabase/seed.sql + docs/database/ (README + SCHEMA). Faithful to TDD Part 2 §2–§7. Static-validated (no live Postgres in sandbox).
 
 ---
 
@@ -32,7 +32,7 @@ docs/api/openapi.yaml (OpenAPI 3.1, 65 operations covering all 64 documented API
 
 ## Title
 
-Generate the Database Schema & Supabase Migrations
+Repository Scaffolding & Shared Packages
 
 Status
 
@@ -50,7 +50,7 @@ Estimated Effort
 
 # Objective
 
-Produce the database documentation and Supabase migrations by realizing the approved data model in TDD Part 2 §3 (TBL_* specifications) and §4 (RLS & authorization). Document only the approved schema. Do **not** invent tables, columns, or policies.
+Scaffold the pnpm + Turborepo monorepo (TDD Part 1 §4) and the shared packages so contracts have a home. Establish structure only — no application features.
 
 ---
 
@@ -58,62 +58,45 @@ Produce the database documentation and Supabase migrations by realizing the appr
 
 Use only approved documentation:
 
-- docs/tdd/02_BACKEND_ARCHITECTURE.md (§1 data model, §3 TBL_* specs, §4 RLS, §6 lifecycle, §7 indexing) — authoritative
-- docs/tdd/01_SYSTEM_ARCHITECTURE.md (§1.5 security, §7.12 time-zone, ADR refs)
-- docs/architecture/adr/ (ADR-003 Supabase, ADR-010 panchang cache, ADR-011 vector(1536), ADR-018 RLS)
-- docs/api/openapi.yaml (contracts the schema must serve)
+- docs/tdd/01_SYSTEM_ARCHITECTURE.md §4 (repository structure), §3 (stack), §5 (standards)
+- docs/architecture/adr/ (ADR-014 monorepo, ADR-017 adapters, ADR-022 errors)
+- docs/api/openapi.yaml (source for packages/api contracts)
+- supabase/migrations/ (source for packages/database types)
 
-If documentation is ambiguous or conflicting:
-- Stop.
-- Explain the issue.
-- Request clarification.
-
-Do not make assumptions.
+If documentation is ambiguous or conflicting: Stop, explain, request clarification.
 
 ---
 
 # Deliverables
 
-Save documentation to:
+Scaffold (structure + config, per TDD Part 1 §4):
 
-docs/database/
-
-Save migrations to:
-
-supabase/migrations/
-
-Including:
-
-- Schema documentation (every TBL_*: columns, keys, indexes)
-- Enumerated types (TDD Part 2 §2.3)
-- RLS policies (one policy set per table, shipped with the table — §6.1)
-- Constraints, indexes (incl. HNSW on content_chunk.embedding, partial unique F-2)
-- Triggers/functions (set_updated_at, current_household_id, is_household_member/owner)
-- Seed data outline (traditions, festivals, rituals, checklist items, feature flags)
+- Root: pnpm-workspace.yaml, turbo.json, tsconfig.base.json, .eslintrc, .prettierrc, package.json
+- apps/mobile (Expo app skeleton), apps/backend (functions/, migrations/ pointer, seed/)
+- packages/api (API_* zod contracts from openapi.yaml)
+- packages/shared (EVT_*/ERR_* enums, domain types)
+- packages/database (generated DB types, RLS helpers)
+- packages/ui, packages/design-tokens, packages/ai (stubs)
 
 ---
 
 # Success Criteria
 
-This task is complete when:
-
-- Every TBL_* in TDD Part 2 §3 has a documented table + RLS policy.
-- Enumerated types match §2.3.
-- Business rules F-1…F-4 are enforced in schema/constraints where documented.
-- Migrations are forward-only and ship RLS with each table.
-- No undocumented tables/columns/policies introduced.
+- Monorepo structure matches TDD Part 1 §4 exactly.
+- No new top-level folders beyond the approved layout.
+- packages/api and packages/shared stubs exist so contracts/enums have a home.
+- Dependency direction respected (features → domain → data → packages).
 
 ---
 
 # Constraints
 
 Do not:
-- Change architecture.
+- Change architecture or introduce new technologies.
 - Modify MRD, PRD, PDD, or TDD.
-- Implement Edge Functions or application features.
-- Build the AI/RAG ingestion pipeline (TDD Part 3).
+- Build application features, screens, or Edge Function business logic.
 
-This task is schema + migrations documentation.
+Structure/config only.
 
 ---
 
@@ -126,4 +109,4 @@ This task is schema + migrations documentation.
 
 The next planned task is:
 
-Repository scaffolding & shared packages (packages/api, packages/shared, packages/database).
+Initialize the Expo application and configure GitHub Actions CI.

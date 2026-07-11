@@ -4,7 +4,7 @@
 
 Version: 1.0.0
 
-Last Updated: 2026-07-12 00:20
+Last Updated: 2026-07-12 00:45
 
 Purpose:
 This document defines the current milestone of the PanchangPal project.
@@ -25,7 +25,7 @@ Status
 
 Overall Progress
 
-30%
+45%
 
 Previous Milestone
 
@@ -103,7 +103,7 @@ unless explicitly instructed.
 - [x] ADR repository
 - [x] ADR README
 - [x] OpenAPI specification
-- [ ] Database documentation
+- [x] Database documentation
 - [ ] Runbook templates
 
 ---
@@ -111,10 +111,10 @@ unless explicitly instructed.
 ## Backend
 
 - [ ] Supabase project
-- [ ] Initial schema
-- [ ] Migrations
-- [ ] RLS policies
-- [ ] Seed data
+- [x] Initial schema
+- [x] Migrations
+- [x] RLS policies
+- [x] Seed data
 
 ---
 
