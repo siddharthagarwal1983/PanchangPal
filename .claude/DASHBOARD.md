@@ -4,7 +4,7 @@
 
 Version: 1.0.0
 
-Last Updated: 2026-07-11 19:40
+Last Updated: 2026-07-12 00:20
 
 Purpose:
 This is the first file Claude should read at the beginning of every session.
@@ -42,7 +42,7 @@ PanchangPal
 
 Progress
 
-40%
+45%
 
 ---
 
@@ -58,7 +58,7 @@ CURRENT_MILESTONE.md
 
 # Current Task
 
-Generate the OpenAPI Specification
+Generate the Database Schema & Supabase Migrations
 
 See:
 
@@ -68,7 +68,7 @@ TASK.md
 
 # Today's Objective
 
-ADR repository complete (32 ADRs + template + index + governance guide). Next: generate the OpenAPI specification from the approved API surface.
+OpenAPI specification complete (docs/api/openapi.yaml — 65 operations covering all documented API_*). Next: database schema + Supabase migrations from TDD Part 2 §3 (TBL_*) + RLS §4.
 
 Do not introduce new architecture.
 
@@ -96,11 +96,11 @@ Do not introduce new architecture.
 
 # Current Priorities
 
-1. OpenAPI Specification
-2. Database Schema
-3. Supabase Migrations
-4. Repository Scaffolding
-5. Shared Packages
+1. Database Schema (TBL_*)
+2. Supabase Migrations + RLS
+3. Repository Scaffolding
+4. Shared Packages
+5. Expo Application
 
 ---
 
@@ -118,13 +118,13 @@ None
 
 # Next Deliverable
 
-OpenAPI Specification
+Database Schema & Supabase Migrations
 
 ---
 
 # After Current Deliverable
 
-Database Schema & Supabase Migrations
+Repository Scaffolding & Shared Packages
 
 ---
 

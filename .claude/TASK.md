@@ -4,7 +4,7 @@
 
 Version: 1.0.0
 
-Last Updated: 2026-07-11 19:40
+Last Updated: 2026-07-12 00:20
 
 Purpose:
 This document defines the current implementation task.
@@ -16,7 +16,7 @@ Claude should stay focused on this task and avoid expanding into unrelated work 
 
 ## Title
 
-Generate Architecture Decision Records (ADRs)
+Generate the OpenAPI Specification
 
 Status
 
@@ -24,7 +24,7 @@ Status
 
 Outcome
 
-32 ADRs (ADR-001…ADR-032), ADR_TEMPLATE.md, README index, and an ADR governance guide (CONTRIBUTING.md) created under docs/architecture/adr/. Decision Log cross-referenced. No architecture changed.
+docs/api/openapi.yaml (OpenAPI 3.1, 65 operations covering all 64 documented API_*) + docs/api/README.md. Anchored to TDD Part 2 §5; auth, ERR_* envelope, versioning, idempotency, and SSE modeled. Validated; no invented endpoints.
 
 ---
 
@@ -32,7 +32,7 @@ Outcome
 
 ## Title
 
-Generate the OpenAPI Specification
+Generate the Database Schema & Supabase Migrations
 
 Status
 
@@ -50,9 +50,7 @@ Estimated Effort
 
 # Objective
 
-Produce the OpenAPI 3.1 specification for PanchangPal's approved API surface by extracting the API_* contracts implied by the approved documentation.
-
-Document only approved APIs. Do **not** invent endpoints, DTOs, or behaviour.
+Produce the database documentation and Supabase migrations by realizing the approved data model in TDD Part 2 §3 (TBL_* specifications) and §4 (RLS & authorization). Document only the approved schema. Do **not** invent tables, columns, or policies.
 
 ---
 
@@ -60,10 +58,10 @@ Document only approved APIs. Do **not** invent endpoints, DTOs, or behaviour.
 
 Use only approved documentation:
 
-- docs/tdd/ (especially Part 1 §1.2/§1.3 contracts, §7.14 versioning; Part 2 API annexes when available)
-- docs/pdd/ (API_* references in Part 2 annexes / §3.0A.3)
-- docs/architecture/adr/ (ADR-022 error envelope, ADR-032 versioning, ADR-006 Edge Functions, ADR-018 RLS/auth)
-- docs/ai/07_DECISION_LOG.md
+- docs/tdd/02_BACKEND_ARCHITECTURE.md (§1 data model, §3 TBL_* specs, §4 RLS, §6 lifecycle, §7 indexing) — authoritative
+- docs/tdd/01_SYSTEM_ARCHITECTURE.md (§1.5 security, §7.12 time-zone, ADR refs)
+- docs/architecture/adr/ (ADR-003 Supabase, ADR-010 panchang cache, ADR-011 vector(1536), ADR-018 RLS)
+- docs/api/openapi.yaml (contracts the schema must serve)
 
 If documentation is ambiguous or conflicting:
 - Stop.
@@ -76,19 +74,22 @@ Do not make assumptions.
 
 # Deliverables
 
-Create:
+Save documentation to:
 
-docs/api/
+docs/database/
+
+Save migrations to:
+
+supabase/migrations/
 
 Including:
 
-- OpenAPI 3.1 specification
-- DTO/schema definitions (aligned to packages/api intent)
-- Authentication scheme (Supabase JWT / anonymous → authenticated)
-- Request/response validation rules
-- Standard error responses (ERR_* envelope, per ADR-022)
-- Version negotiation per ADR-032
-- Examples
+- Schema documentation (every TBL_*: columns, keys, indexes)
+- Enumerated types (TDD Part 2 §2.3)
+- RLS policies (one policy set per table, shipped with the table — §6.1)
+- Constraints, indexes (incl. HNSW on content_chunk.embedding, partial unique F-2)
+- Triggers/functions (set_updated_at, current_household_id, is_household_member/owner)
+- Seed data outline (traditions, festivals, rituals, checklist items, feature flags)
 
 ---
 
@@ -96,11 +97,11 @@ Including:
 
 This task is complete when:
 
-- Every approved API_* endpoint has a documented contract.
-- Auth, validation, and error responses are specified.
-- Versioning aligns with ADR-032; errors align with ADR-022.
-- No undocumented endpoints or behaviour introduced.
-- Spec is internally consistent and references approved identifiers.
+- Every TBL_* in TDD Part 2 §3 has a documented table + RLS policy.
+- Enumerated types match §2.3.
+- Business rules F-1…F-4 are enforced in schema/constraints where documented.
+- Migrations are forward-only and ship RLS with each table.
+- No undocumented tables/columns/policies introduced.
 
 ---
 
@@ -109,11 +110,10 @@ This task is complete when:
 Do not:
 - Change architecture.
 - Modify MRD, PRD, PDD, or TDD.
-- Implement code or Edge Functions.
-- Create database schema (separate task).
-- Build application features.
+- Implement Edge Functions or application features.
+- Build the AI/RAG ingestion pipeline (TDD Part 3).
 
-This task is documentation only.
+This task is schema + migrations documentation.
 
 ---
 
@@ -126,4 +126,4 @@ This task is documentation only.
 
 The next planned task is:
 
-Generate the Database Schema and Supabase migrations.
+Repository scaffolding & shared packages (packages/api, packages/shared, packages/database).

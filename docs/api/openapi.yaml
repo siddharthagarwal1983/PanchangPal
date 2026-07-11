@@ -1,0 +1,1981 @@
+openapi: 3.1.0
+
+# =============================================================================
+# PanchangPal — API Specification (OpenAPI 3.1)
+# -----------------------------------------------------------------------------
+# Source of truth (documentation-first, ADR-027):
+#   - TDD Part 2 §5 — API Contracts (docs/tdd/02_BACKEND_ARCHITECTURE.md)  [authoritative]
+#   - TDD Part 1 §2 (runtime flows), §7.4 (error envelope), §7.14 (versioning)
+#   - PDD Parts 1–2 (SCR_*/FLOW_* refs), docs/ai/07_DECISION_LOG.md
+#   - ADR-006 (Edge Functions), ADR-018 (RLS/auth), ADR-022 (error envelope),
+#     ADR-032 (API versioning)
+#
+# This spec documents ONLY the approved API_* surface defined in TDD Part 2 §5.
+# No endpoints, DTOs, or behaviour are invented. Field-level detail not yet
+# ratified in the source docs is marked with `x-prd-follow-up` and described as
+# such (e.g. F-8 — final backend contract ownership).
+#
+# Transport note: endpoints are implemented EITHER as Supabase Edge Functions
+# (SVC_*) OR as RLS-guarded direct data access via supabase-js. The `x-impl`
+# extension on each operation records which. supabase-js operations are modeled
+# here as logical REST operations for documentation and client-contract purposes
+# (the concrete client uses supabase-js under RLS, per TDD Part 2 §5.0).
+# =============================================================================
+
+info:
+  title: PanchangPal API
+  version: 1.0.0
+  x-contract-status: >-
+    Derived from TDD Part 2 §5 (Working Draft, awaiting Architecture Review
+    Board sign-off). Final contract naming/versioning is backend-owned (F-8).
+  description: |
+    HTTP + streaming contract surface for PanchangPal — a calm, trust-first,
+    offline-first Hindu spiritual companion.
+
+    **Architecture context**
+    - Client-thin, server-authoritative (ADR-016). Computed/privileged/multi-step
+      operations run in Supabase Edge Functions (`SVC_*`, ADR-006); simple
+      RLS-guarded reads/writes go direct via `supabase-js` (ADR-018).
+    - Row-Level Security is the authorization boundary (ADR-018): callers only
+      touch rows their policies allow. Service operations validate the JWT then
+      act with the service role.
+    - Offline-first (ADR-015): mutations are optimistic and carry `client_id` +
+      `idempotency_key`; reconciled by `POST /sync`.
+
+    **Auth** — every call carries a Supabase JWT (anonymous or authenticated).
+    Anonymous-auth-first (ADR-009) means a valid JWT exists from first launch.
+
+    **Errors** — uniform envelope `{ code, message, correlation_id, recoverable }`
+    (ADR-022 / TDD Part 1 §7.4). `code` is an `ERR_*` value; the client maps it to
+    PDD §13.5 copy and emits `EVT_054`.
+
+    **Versioning** — contracts are SemVer'd in `packages/api`; the backend supports
+    the current and previous minor (N and N-1). Version travels as the
+    `X-PanchangPal-API-Version` request header, not a URL segment (ADR-032).
+  contact:
+    name: PanchangPal Backend (owner per PDD §3.0A.5)
+  license:
+    name: Proprietary
+
+externalDocs:
+  description: TDD Part 2 — Data Model, RLS & API Contracts (authoritative)
+  url: ../tdd/02_BACKEND_ARCHITECTURE.md
+
+servers:
+  - url: https://{projectRef}.functions.supabase.co
+    description: Supabase Edge Functions base (SVC_* operations). Single US region (ADR-012).
+    variables:
+      projectRef:
+        default: your-project-ref
+  - url: https://{projectRef}.supabase.co
+    description: Supabase data/auth endpoint (supabase-js direct, RLS-guarded operations).
+    variables:
+      projectRef:
+        default: your-project-ref
+
+security:
+  - bearerAuth: []
+
+tags:
+  - name: Identity & Profile
+    description: Session, auth, anon→auth merge, onboarding, geo, preferences (TDD Part 2 §5.1).
+  - name: Today, Panchang & Ritual
+    description: Today payload, panchang detail, ritual, streak, checklist (TDD Part 2 §5.2).
+  - name: Calendar & Personal Dates
+    description: Calendar, festivals, grief-aware personal dates, tithi engine (TDD Part 2 §5.3).
+  - name: Ask Guru (RAG)
+    description: Grounded-or-silent streamed AI (TDD Part 2 §5.4; full subsystem in TDD Part 3).
+  - name: Household & Referral
+    description: Household, membership, invites, ownership transfer, referral (TDD Part 2 §5.5).
+  - name: Subscription
+    description: Plans, validation, RevenueCat webhook, entitlement, restore (TDD Part 2 §5.6).
+  - name: Notifications, Sync & Account
+    description: Push tokens, scheduling, offline sync, account delete/reauth, support (TDD Part 2 §5.7).
+
+# =============================================================================
+# PATHS
+# =============================================================================
+paths:
+
+  # ---------------------------------------------------------------------------
+  # 5.1 Identity, Onboarding & Profile
+  # ---------------------------------------------------------------------------
+  /session/validate:
+    get:
+      tags: [Identity & Profile]
+      operationId: API_GET_SESSION_VALIDATE
+      summary: Validate current session
+      description: Returns session validity and identity type. Refs SCR_SPLASH_001, FLOW A2.
+      x-impl: supabase-js
+      responses:
+        '200':
+          description: Session status
+          content:
+            application/json:
+              schema:
+                type: object
+                required: [valid, is_anonymous]
+                properties:
+                  valid: { type: boolean }
+                  user: { $ref: '#/components/schemas/UserRef' }
+                  is_anonymous: { type: boolean }
+        '401':
+          $ref: '#/components/responses/Error'  # ERR_AUTH_EXPIRED
+
+  /auth/apple:
+    post:
+      tags: [Identity & Profile]
+      operationId: API_POST_AUTH_APPLE
+      summary: Sign in with Apple
+      description: Exchanges an Apple provider token for a Supabase session. Refs SCR_AUTH_001, FLOW E1.
+      x-impl: supabase-auth
+      security: []
+      requestBody:
+        required: true
+        content:
+          application/json:
+            schema: { $ref: '#/components/schemas/OAuthTokenRequest' }
+      responses:
+        '200': { $ref: '#/components/responses/Session' }
+        '401': { $ref: '#/components/responses/Error' }  # ERR_AUTH_FAILED
+
+  /auth/google:
+    post:
+      tags: [Identity & Profile]
+      operationId: API_POST_AUTH_GOOGLE
+      summary: Sign in with Google
+      description: Exchanges a Google provider token for a Supabase session. Refs SCR_AUTH_001, FLOW E1.
+      x-impl: supabase-auth
+      security: []
+      requestBody:
+        required: true
+        content:
+          application/json:
+            schema: { $ref: '#/components/schemas/OAuthTokenRequest' }
+      responses:
+        '200': { $ref: '#/components/responses/Session' }
+        '401': { $ref: '#/components/responses/Error' }  # ERR_AUTH_FAILED
+
+  /auth/email/start:
+    post:
+      tags: [Identity & Profile]
+      operationId: API_POST_AUTH_EMAIL_START
+      summary: Start email OTP / magic-link sign in
+      description: Sends a one-time code / magic link to the email. Refs SCR_AUTH_EMAIL_001.
+      x-impl: supabase-auth
+      security: []
+      requestBody:
+        required: true
+        content:
+          application/json:
+            schema:
+              type: object
+              required: [email]
+              properties:
+                email: { type: string, format: email }
+      responses:
+        '200':
+          description: OTP dispatched
+          content:
+            application/json:
+              schema:
+                type: object
+                properties:
+                  sent: { type: boolean }
+        '401': { $ref: '#/components/responses/Error' }  # ERR_AUTH_FAILED
+
+  /auth/email/verify:
+    post:
+      tags: [Identity & Profile]
+      operationId: API_POST_AUTH_EMAIL_VERIFY
+      summary: Verify email OTP / magic-link token
+      description: Exchanges the emailed token for a Supabase session. Refs SCR_AUTH_EMAIL_001.
+      x-impl: supabase-auth
+      security: []
+      requestBody:
+        required: true
+        content:
+          application/json:
+            schema:
+              type: object
+              required: [token]
+              properties:
+                token: { type: string }
+                email: { type: string, format: email }
+      responses:
+        '200': { $ref: '#/components/responses/Session' }
+        '401': { $ref: '#/components/responses/Error' }  # ERR_AUTH_FAILED
+
+  /auth/logout:
+    post:
+      tags: [Identity & Profile]
+      operationId: API_POST_AUTH_LOGOUT
+      summary: Sign out
+      description: >-
+        Ends the authenticated session. Referenced in PDD auth flows; not detailed
+        in TDD Part 2 §5 (Supabase Auth built-in). x-prd-follow-up F-8.
+      x-impl: supabase-auth
+      x-prd-follow-up: F-8
+      responses:
+        '200':
+          description: Signed out
+          content:
+            application/json:
+              schema:
+                type: object
+                properties: { success: { type: boolean } }
+
+  /account/merge:
+    post:
+      tags: [Identity & Profile]
+      operationId: API_POST_AUTH_MERGE
+      summary: Merge anonymous identity into authenticated user
+      description: |
+        Transactional anon→auth merge (ADR-009, F-1). Reassigns anon-owned rows to
+        `auth.uid()`; on divergence keeps union / longer-streak; emits EVT_045.
+        Refs FLOW E1. `[MANDATORY]` transactional (TDD Part 2 §5.1).
+      x-impl: SVC_account
+      requestBody:
+        required: true
+        content:
+          application/json:
+            schema:
+              type: object
+              required: [anon_uid, idempotency_key]
+              properties:
+                anon_uid: { type: string, format: uuid }
+                idempotency_key: { type: string, format: uuid }
+      responses:
+        '200':
+          description: Merge result
+          content:
+            application/json:
+              schema:
+                type: object
+                required: [merged, kept]
+                properties:
+                  merged: { type: boolean, const: true }
+                  kept:
+                    type: object
+                    properties:
+                      streak_len: { type: integer }
+                      household_id: { type: [string, 'null'], format: uuid }
+                  conflicts:
+                    type: array
+                    items: { type: string }
+        '409': { $ref: '#/components/responses/Error' }  # ERR_AUTH_MERGE_CONFLICT
+        '500': { $ref: '#/components/responses/Error' }  # ERR_UNKNOWN
+
+  /onboarding/config:
+    get:
+      tags: [Identity & Profile]
+      operationId: API_GET_ONBOARDING_CONFIG
+      summary: Get onboarding configuration
+      description: Slides and defaults (bundled fallback offline). Refs SCR_ONBOARDING_WELCOME_001.
+      x-impl: supabase-js
+      security: []
+      responses:
+        '200':
+          description: Onboarding config
+          content:
+            application/json:
+              schema:
+                type: object
+                properties:
+                  slides: { type: array, items: { type: object, additionalProperties: true } }
+                  defaults: { type: object, additionalProperties: true }
+
+  /geo/reverse:
+    get:
+      tags: [Identity & Profile]
+      operationId: API_GET_GEO_REVERSE
+      summary: Reverse-geocode coordinates to city + timezone
+      description: Refs FLOW A5. Timezone drives all tz-local computation (ADR-026).
+      x-impl: SVC_panchang
+      parameters:
+        - { name: lat, in: query, required: true, schema: { type: number } }
+        - { name: lng, in: query, required: true, schema: { type: number } }
+      responses:
+        '200':
+          description: Resolved place
+          content:
+            application/json:
+              schema:
+                type: object
+                properties:
+                  city: { type: string }
+                  timezone: { type: string, description: IANA tz }
+        '504': { $ref: '#/components/responses/Error' }  # ERR_NETWORK_TIMEOUT
+
+  /geo/city-search:
+    get:
+      tags: [Identity & Profile]
+      operationId: API_GET_CITY_SEARCH
+      summary: Search cities (full-text)
+      description: Refs SCR_ONBOARDING_LOCATION_001. FTS/pg_trgm (TDD Part 2 §7).
+      x-impl: supabase-js
+      parameters:
+        - { name: q, in: query, required: true, schema: { type: string } }
+      responses:
+        '200':
+          description: City matches
+          content:
+            application/json:
+              schema:
+                type: array
+                items:
+                  type: object
+                  properties:
+                    city: { type: string }
+                    region: { type: string }
+                    tz: { type: string, description: IANA tz }
+        '503': { $ref: '#/components/responses/Error' }  # ERR_OFFLINE
+
+  /traditions:
+    get:
+      tags: [Identity & Profile]
+      operationId: API_GET_TRADITIONS
+      summary: List traditions
+      description: Seeded tradition set (bundled fallback). Refs SCR_ONBOARDING_TRADITION_001, F-9.
+      x-impl: supabase-js
+      security: []
+      responses:
+        '200':
+          description: Traditions
+          content:
+            application/json:
+              schema:
+                type: array
+                items: { $ref: '#/components/schemas/Tradition' }
+
+  /profile:
+    get:
+      tags: [Identity & Profile]
+      operationId: API_GET_PROFILE
+      summary: Get user profile
+      description: >-
+        Owner-only read of `user_profile`. Referenced in PDD profile flows;
+        overlaps API_GET_PREFERENCES which reads the same row in TDD Part 2 §5.1.
+        x-prd-follow-up F-8 (final read-endpoint consolidation is backend-owned).
+      x-impl: supabase-js
+      x-prd-follow-up: F-8
+      responses:
+        '200': { $ref: '#/components/responses/Profile' }
+    post:
+      tags: [Identity & Profile]
+      operationId: API_POST_PROFILE
+      summary: Create or update user profile
+      description: Upsert `user_profile` (owner-only RLS). Refs SCR_SETTINGS_001, EVT_005/008.
+      x-impl: supabase-js
+      requestBody:
+        required: true
+        content:
+          application/json:
+            schema: { $ref: '#/components/schemas/UserProfile' }
+      responses:
+        '200': { $ref: '#/components/responses/Profile' }
+        '504': { $ref: '#/components/responses/Error' }  # ERR_NETWORK_TIMEOUT
+
+  /profile/tradition:
+    post:
+      tags: [Identity & Profile]
+      operationId: API_POST_PROFILE_TRADITION
+      summary: Set profile tradition
+      description: >-
+        Sets the user's tradition_code (a focused write over user_profile).
+        Referenced in PDD onboarding flows; folded into the profile upsert in
+        TDD Part 2 §5.1. x-prd-follow-up F-8.
+      x-impl: supabase-js
+      x-prd-follow-up: F-8
+      requestBody:
+        required: true
+        content:
+          application/json:
+            schema:
+              type: object
+              required: [tradition_code]
+              properties:
+                tradition_code: { $ref: '#/components/schemas/TraditionCode' }
+      responses:
+        '200': { $ref: '#/components/responses/Profile' }
+
+  /preferences:
+    get:
+      tags: [Identity & Profile]
+      operationId: API_GET_PREFERENCES
+      summary: Get preferences
+      description: Owner-only read of `user_profile`. Refs SCR_SETTINGS_001.
+      x-impl: supabase-js
+      responses:
+        '200': { $ref: '#/components/responses/Profile' }
+    patch:
+      tags: [Identity & Profile]
+      operationId: API_PATCH_PREFERENCES
+      summary: Update preferences
+      description: Owner-only partial update of `user_profile`. Refs SCR_SETTINGS_001, EVT_008.
+      x-impl: supabase-js
+      requestBody:
+        required: true
+        content:
+          application/json:
+            schema: { $ref: '#/components/schemas/UserProfile' }
+      responses:
+        '200': { $ref: '#/components/responses/Profile' }
+        '504': { $ref: '#/components/responses/Error' }  # ERR_NETWORK_TIMEOUT
+
+  # ---------------------------------------------------------------------------
+  # 5.2 Today, Panchang, Ritual, Streak, Checklist
+  # ---------------------------------------------------------------------------
+  /today:
+    get:
+      tags: [Today, Panchang & Ritual]
+      operationId: API_GET_TODAY
+      summary: Get today's panchang, ritual, festival, rotating content & streak
+      description: |
+        Hero endpoint (FLOW B1, EVT_012). Deterministic + cacheable (ADR-010):
+        `Cache-Control public`, keyed by (local_date, geo_bucket, tradition,
+        engine_version). Offline → client cache (ADR-015). Refs SCR_HOME_001.
+      x-impl: SVC_panchang
+      parameters:
+        - { name: lat, in: query, required: true, schema: { type: number } }
+        - { name: lng, in: query, required: true, schema: { type: number } }
+        - { name: tz, in: query, required: true, schema: { type: string, description: IANA tz } }
+        - { name: tradition, in: query, required: true, schema: { $ref: '#/components/schemas/TraditionCode' } }
+        - { name: local_date, in: query, required: true, schema: { type: string, format: date } }
+      responses:
+        '200':
+          description: Today payload
+          headers:
+            Cache-Control:
+              schema: { type: string }
+              description: public, keyed by inputs + engine_version (ADR-010).
+          content:
+            application/json:
+              schema: { $ref: '#/components/schemas/TodayResponse' }
+        '503': { $ref: '#/components/responses/Error' }  # ERR_OFFLINE
+        '502': { $ref: '#/components/responses/Error' }  # ERR_PANCHANG_UNAVAILABLE
+
+  /panchang/{date}:
+    get:
+      tags: [Today, Panchang & Ritual]
+      operationId: API_GET_PANCHANG_DETAIL
+      summary: Get full panchang for a date
+      description: Cacheable panchang detail. Refs SCR_PANCHANG_DETAIL_001, FLOW B3.
+      x-impl: SVC_panchang
+      parameters:
+        - { name: date, in: path, required: true, schema: { type: string, format: date } }
+        - { name: lat, in: query, required: true, schema: { type: number } }
+        - { name: lng, in: query, required: true, schema: { type: number } }
+        - { name: tradition, in: query, required: true, schema: { $ref: '#/components/schemas/TraditionCode' } }
+      responses:
+        '200':
+          description: Full panchang
+          content:
+            application/json:
+              schema: { $ref: '#/components/schemas/Panchang' }
+        '502': { $ref: '#/components/responses/Error' }  # ERR_PANCHANG_UNAVAILABLE
+        '500': { $ref: '#/components/responses/Error' }  # ERR_CALENDAR_ERROR
+
+  /glossary/{term}:
+    get:
+      tags: [Today, Panchang & Ritual]
+      operationId: API_GET_GLOSSARY
+      summary: Get glossary explainer for a term
+      description: Tooltip content (PDD §13.8).
+      x-impl: supabase-js
+      parameters:
+        - { name: term, in: path, required: true, schema: { type: string } }
+      responses:
+        '200':
+          description: Explainer
+          content:
+            application/json:
+              schema:
+                type: object
+                properties:
+                  term: { type: string }
+                  explainer: { type: string }
+
+  /ritual/today:
+    get:
+      tags: [Today, Panchang & Ritual]
+      operationId: API_GET_RITUAL
+      summary: Get today's guided ritual
+      description: Ritual steps + audio keys for tradition/depth. Refs SCR_RITUAL_001.
+      x-impl: supabase-js
+      parameters:
+        - { name: tradition, in: query, required: true, schema: { $ref: '#/components/schemas/TraditionCode' } }
+        - { name: depth, in: query, required: false, schema: { $ref: '#/components/schemas/ContentDepth' } }
+      responses:
+        '200':
+          description: Ritual
+          content:
+            application/json:
+              schema: { $ref: '#/components/schemas/Ritual' }
+
+  /ritual/audio:
+    get:
+      tags: [Today, Panchang & Ritual]
+      operationId: API_GET_RITUAL_AUDIO
+      summary: Get a signed URL for ritual audio
+      description: Storage signed URL for narration. Refs CMP_AUDIO_CONTROLS.
+      x-impl: supabase-storage
+      parameters:
+        - { name: audio_key, in: query, required: true, schema: { type: string } }
+      responses:
+        '200':
+          description: Signed URL
+          content:
+            application/json:
+              schema:
+                type: object
+                properties:
+                  url: { type: string, format: uri }
+                  expires_at: { type: string, format: date-time }
+        '404': { $ref: '#/components/responses/Error' }  # ERR_AUDIO_UNAVAILABLE
+
+  /ritual/complete:
+    post:
+      tags: [Today, Panchang & Ritual]
+      operationId: API_POST_RITUAL_COMPLETE
+      summary: Complete today's ritual (idempotent, client-authoritative day)
+      description: |
+        Upsert `ritual_completion` ON CONFLICT (user_id, local_date) DO NOTHING
+        (idempotent); advance streak with grace logic (PDD A4). Emits EVT_017,
+        EVT_020, and EVT_021 if grace used. Queued when offline (ADR-015).
+      x-impl: SVC_panchang
+      requestBody:
+        required: true
+        content:
+          application/json:
+            schema:
+              type: object
+              required: [ritual_id, local_date, client_id, idempotency_key]
+              properties:
+                ritual_id: { type: string, format: uuid }
+                local_date: { type: string, format: date }
+                client_id: { type: string, format: uuid }
+                idempotency_key: { type: string, format: uuid }
+                source: { type: string, description: 'home | festival | resume' }
+      responses:
+        '200':
+          description: Updated streak
+          content:
+            application/json:
+              schema:
+                type: object
+                required: [streak]
+                properties:
+                  streak: { $ref: '#/components/schemas/Streak' }
+        '409': { $ref: '#/components/responses/Error' }  # ERR_SYNC_CONFLICT
+        '503': { $ref: '#/components/responses/Error' }  # ERR_OFFLINE
+
+  /streak:
+    get:
+      tags: [Today, Panchang & Ritual]
+      operationId: API_GET_STREAK
+      summary: Get current streak
+      description: Owner read; household members may read counts (TDD Part 2 §3.7, F-21).
+      x-impl: supabase-js
+      responses:
+        '200':
+          description: Streak
+          content:
+            application/json:
+              schema: { $ref: '#/components/schemas/Streak' }
+
+  /streak/history:
+    get:
+      tags: [Today, Panchang & Ritual]
+      operationId: API_GET_STREAK_HISTORY
+      summary: Get streak history (heatmap)
+      description: Refs SCR_ACHIEVEMENTS_001.
+      x-impl: supabase-js
+      responses:
+        '200':
+          description: Completion history
+          content:
+            application/json:
+              schema:
+                type: object
+                properties:
+                  days:
+                    type: array
+                    items:
+                      type: object
+                      properties:
+                        local_date: { type: string, format: date }
+                        completed: { type: boolean }
+
+  /streak/advance:
+    post:
+      tags: [Today, Panchang & Ritual]
+      operationId: API_POST_STREAK_ADVANCE
+      summary: Advance streak (internal, grace-aware)
+      description: >-
+        Server-side streak advancement (grace logic), normally invoked internally
+        by ritual completion / sync rather than called directly; streak is derived
+        server-side and never client-set (TDD Part 2 §6.6). Emits EVT_020/021.
+        x-prd-follow-up F-8.
+      x-impl: SVC_panchang
+      x-internal: true
+      x-prd-follow-up: F-8
+      requestBody:
+        required: true
+        content:
+          application/json:
+            schema:
+              type: object
+              required: [local_date, idempotency_key]
+              properties:
+                local_date: { type: string, format: date }
+                idempotency_key: { type: string, format: uuid }
+      responses:
+        '200':
+          description: Updated streak
+          content:
+            application/json:
+              schema: { $ref: '#/components/schemas/Streak' }
+
+  /checklist:
+    get:
+      tags: [Today, Panchang & Ritual]
+      operationId: API_GET_CHECKLIST
+      summary: Get today's checklist items
+      description: Curated 3–5 daily items. Refs SCR_HOME_001.
+      x-impl: supabase-js
+      responses:
+        '200':
+          description: Checklist items
+          content:
+            application/json:
+              schema:
+                type: array
+                items: { $ref: '#/components/schemas/ChecklistItem' }
+
+  /checklist/complete:
+    post:
+      tags: [Today, Panchang & Ritual]
+      operationId: API_POST_CHECKLIST_COMPLETE
+      summary: Complete a checklist item (idempotent)
+      description: Owner-write, household-read. Emits EVT_019. Queued when offline.
+      x-impl: supabase-js
+      requestBody:
+        required: true
+        content:
+          application/json:
+            schema:
+              type: object
+              required: [item_id, local_date, client_id]
+              properties:
+                item_id: { type: string, format: uuid }
+                local_date: { type: string, format: date }
+                client_id: { type: string, format: uuid }
+      responses:
+        '200':
+          description: Completion recorded
+          content:
+            application/json:
+              schema:
+                type: object
+                properties: { ok: { type: boolean } }
+        '409': { $ref: '#/components/responses/Error' }  # ERR_SYNC_CONFLICT
+
+  /content/rotating:
+    get:
+      tags: [Today, Panchang & Ritual]
+      operationId: API_GET_CONTENT_ROTATING
+      summary: Get rotating home content (quote / fact)
+      description: Cacheable per local_date. Refs CMP_ROTATING_ELEMENT.
+      x-impl: supabase-js
+      parameters:
+        - { name: local_date, in: query, required: true, schema: { type: string, format: date } }
+      responses:
+        '200':
+          description: Rotating element
+          content:
+            application/json:
+              schema: { $ref: '#/components/schemas/RotatingContent' }
+
+  # ---------------------------------------------------------------------------
+  # 5.3 Calendar, Festivals, Personal Dates
+  # ---------------------------------------------------------------------------
+  /calendar/{month}:
+    get:
+      tags: [Calendar & Personal Dates]
+      operationId: API_GET_CALENDAR
+      summary: Get a month of calendar markers
+      description: Cacheable month grid. Refs SCR_CALENDAR_001, FLOW C3.
+      x-impl: SVC_panchang
+      parameters:
+        - { name: month, in: path, required: true, schema: { type: string, pattern: '^\d{4}-\d{2}$' }, description: 'YYYY-MM' }
+        - { name: tradition, in: query, required: true, schema: { $ref: '#/components/schemas/TraditionCode' } }
+        - { name: lat, in: query, required: true, schema: { type: number } }
+        - { name: lng, in: query, required: true, schema: { type: number } }
+      responses:
+        '200':
+          description: Month markers
+          content:
+            application/json:
+              schema:
+                type: object
+                properties:
+                  days:
+                    type: array
+                    items:
+                      type: object
+                      properties:
+                        date: { type: string, format: date }
+                        markers: { type: array, items: { type: string } }
+        '503': { $ref: '#/components/responses/Error' }  # ERR_OFFLINE
+        '500': { $ref: '#/components/responses/Error' }  # ERR_CALENDAR_ERROR
+
+  /calendar/day:
+    get:
+      tags: [Calendar & Personal Dates]
+      operationId: API_GET_CALENDAR_DAY
+      summary: Get a single calendar day (panchang + events)
+      description: Refs SCR_CALENDAR_DAY_001.
+      x-impl: SVC_panchang
+      parameters:
+        - { name: date, in: query, required: true, schema: { type: string, format: date } }
+        - { name: tradition, in: query, required: true, schema: { $ref: '#/components/schemas/TraditionCode' } }
+      responses:
+        '200':
+          description: Day detail
+          content:
+            application/json:
+              schema:
+                type: object
+                properties:
+                  panchang: { $ref: '#/components/schemas/Panchang' }
+                  events: { type: array, items: { type: object, additionalProperties: true } }
+        '500': { $ref: '#/components/responses/Error' }  # ERR_CALENDAR_ERROR
+
+  /festival/{id}:
+    get:
+      tags: [Calendar & Personal Dates]
+      operationId: API_GET_FESTIVAL
+      summary: Get festival detail
+      description: Tradition/depth-aware festival content. Refs SCR_FESTIVAL_DETAIL_001, FLOW C1.
+      x-impl: supabase-js
+      parameters:
+        - { name: id, in: path, required: true, schema: { type: string, format: uuid } }
+        - { name: tradition, in: query, required: false, schema: { $ref: '#/components/schemas/TraditionCode' } }
+        - { name: depth, in: query, required: false, schema: { $ref: '#/components/schemas/ContentDepth' } }
+      responses:
+        '200':
+          description: Festival
+          content:
+            application/json:
+              schema: { $ref: '#/components/schemas/Festival' }
+        '409': { $ref: '#/components/responses/Error' }  # ERR_FESTIVAL_CONFLICT
+
+  /festival/{id}/ritual:
+    get:
+      tags: [Calendar & Personal Dates]
+      operationId: API_GET_RITUAL_BY_FESTIVAL
+      summary: Get the ritual for a festival ("Observe now")
+      x-impl: supabase-js
+      parameters:
+        - { name: id, in: path, required: true, schema: { type: string, format: uuid } }
+      responses:
+        '200':
+          description: Ritual (or null if none)
+          content:
+            application/json:
+              schema:
+                oneOf:
+                  - { $ref: '#/components/schemas/Ritual' }
+                  - { type: 'null' }
+
+  /reminders:
+    post:
+      tags: [Calendar & Personal Dates]
+      operationId: API_POST_REMINDER
+      summary: Schedule a festival reminder
+      description: '"Remind me" for a festival. Refs FLOW C1.'
+      x-impl: SVC_notify
+      requestBody:
+        required: true
+        content:
+          application/json:
+            schema:
+              type: object
+              required: [festival_id, lead]
+              properties:
+                festival_id: { type: string, format: uuid }
+                lead: { $ref: '#/components/schemas/ReminderLead' }
+      responses:
+        '200':
+          description: Scheduled
+          content:
+            application/json:
+              schema:
+                type: object
+                properties: { scheduled: { type: boolean } }
+
+  /personal-dates:
+    get:
+      tags: [Calendar & Personal Dates]
+      operationId: API_GET_PERSONAL_DATES
+      summary: List personal dates (with next occurrence)
+      description: Owner-only private (grief-sensitive). Refs SCR_PERSONAL_DATES_001, FLOW C2.
+      x-impl: supabase-js
+      responses:
+        '200':
+          description: Personal dates
+          content:
+            application/json:
+              schema:
+                type: array
+                items: { $ref: '#/components/schemas/PersonalDate' }
+    post:
+      tags: [Calendar & Personal Dates]
+      operationId: API_POST_PERSONAL_DATE
+      summary: Create a personal date (tithi engine, grief-aware)
+      description: |
+        Server computes `next_occurrence` via the tithi engine; on skip/repeat
+        year returns both candidates (no silent guess → ERR_TITHI_AMBIGUOUS).
+        Schedules a calm reminder (never streak/promo). Emits EVT_025.
+      x-impl: SVC_panchang
+      requestBody:
+        required: true
+        content:
+          application/json:
+            schema: { $ref: '#/components/schemas/PersonalDateCreate' }
+      responses:
+        '200':
+          description: Created
+          content:
+            application/json:
+              schema: { $ref: '#/components/schemas/PersonalDateWriteResult' }
+        '422': { $ref: '#/components/responses/Error' }  # ERR_TITHI_AMBIGUOUS
+
+  /personal-dates/{id}:
+    patch:
+      tags: [Calendar & Personal Dates]
+      operationId: API_PATCH_PERSONAL_DATE
+      summary: Update a personal date
+      x-impl: SVC_panchang
+      parameters:
+        - { name: id, in: path, required: true, schema: { type: string, format: uuid } }
+      requestBody:
+        required: true
+        content:
+          application/json:
+            schema: { $ref: '#/components/schemas/PersonalDateCreate' }
+      responses:
+        '200':
+          description: Updated
+          content:
+            application/json:
+              schema: { $ref: '#/components/schemas/PersonalDateWriteResult' }
+        '422': { $ref: '#/components/responses/Error' }  # ERR_TITHI_AMBIGUOUS
+    delete:
+      tags: [Calendar & Personal Dates]
+      operationId: API_DELETE_PERSONAL_DATE
+      summary: Delete a personal date
+      description: Soft-delete (tombstone) for offline reconciliation (TDD Part 2 §6.6).
+      x-impl: supabase-js
+      parameters:
+        - { name: id, in: path, required: true, schema: { type: string, format: uuid } }
+      responses:
+        '200':
+          description: Deleted
+          content:
+            application/json:
+              schema:
+                type: object
+                properties: { deleted: { type: boolean } }
+
+  /tithi/next:
+    get:
+      tags: [Calendar & Personal Dates]
+      operationId: API_GET_TITHI_NEXT
+      summary: Compute next tithi occurrence
+      description: Refs FLOW C2, AC-PDATE-EDIT-01/02. Returns dual candidates on ambiguity.
+      x-impl: SVC_panchang
+      parameters:
+        - { name: basis, in: query, required: true, schema: { $ref: '#/components/schemas/DateBasis' } }
+        - { name: tz, in: query, required: true, schema: { type: string, description: IANA tz } }
+        - { name: gregorian, in: query, required: false, schema: { type: string, format: date } }
+        - { name: tithi, in: query, required: false, schema: { type: string, description: 'encoded {paksha,month,tithi}' } }
+      responses:
+        '200':
+          description: Next occurrence
+          content:
+            application/json:
+              schema:
+                type: object
+                properties:
+                  next_occurrence: { type: string, format: date }
+                  candidates: { type: array, items: { type: string, format: date } }
+        '422': { $ref: '#/components/responses/Error' }  # ERR_TITHI_AMBIGUOUS
+
+  # ---------------------------------------------------------------------------
+  # 5.4 Ask Guru (RAG)
+  # ---------------------------------------------------------------------------
+  /ask:
+    post:
+      tags: [Ask Guru (RAG)]
+      operationId: API_POST_ASK_GURU
+      summary: Ask Guru (streamed, grounded-or-silent)
+      description: |
+        SSE stream (ADR-019). Pipeline (TDD Part 1 §2.10): scope classify → embed →
+        pgvector search → confidence threshold (F-6) → stream or decline. Never
+        fabricates on error. Emits EVT_029 → EVT_030 → EVT_031 → EVT_033/034.
+        Prompts/embeddings/reasoning are never exposed (ADR-031).
+      x-impl: SVC_ask_guru
+      requestBody:
+        required: true
+        content:
+          application/json:
+            schema:
+              type: object
+              required: [question, idempotency_key]
+              properties:
+                question: { type: string, maxLength: 500 }
+                conversation_id: { type: string, format: uuid }
+                idempotency_key: { type: string, format: uuid }
+      responses:
+        '200':
+          description: |
+            Server-Sent Events stream of tokens, then sources, then a terminal
+            `done` event carrying message_id + outcome. See AskGuruStreamEvent.
+          content:
+            text/event-stream:
+              schema: { $ref: '#/components/schemas/AskGuruStreamEvent' }
+        '422': { $ref: '#/components/responses/Error' }  # ERR_RAG_LOW_CONFIDENCE / ERR_RAG_EMPTY
+        '502': { $ref: '#/components/responses/Error' }  # ERR_AI_ERROR
+        '504': { $ref: '#/components/responses/Error' }  # ERR_AI_TIMEOUT
+
+  /ask/suggestions:
+    get:
+      tags: [Ask Guru (RAG)]
+      operationId: API_GET_GURU_SUGGESTIONS
+      summary: Get suggested questions
+      description: Evergreen fallback suggestions. Refs SCR_GURU_HOME_001, EVT_028.
+      x-impl: SVC_ask_guru
+      parameters:
+        - { name: context, in: query, required: false, schema: { type: string } }
+      responses:
+        '200':
+          description: Suggestions
+          content:
+            application/json:
+              schema:
+                type: array
+                items: { type: string }
+
+  /guru/history:
+    get:
+      tags: [Ask Guru (RAG)]
+      operationId: API_GET_GURU_HISTORY
+      summary: List Ask Guru conversations
+      description: Owner-only. Refs SCR_GURU_HISTORY_001.
+      x-impl: supabase-js
+      responses:
+        '200':
+          description: Conversations
+          content:
+            application/json:
+              schema:
+                type: array
+                items: { $ref: '#/components/schemas/Conversation' }
+
+  /guru/conversation/{id}:
+    get:
+      tags: [Ask Guru (RAG)]
+      operationId: API_GET_GURU_CONVERSATION
+      summary: Get a conversation's messages
+      description: Owner-only. No cross-session memory (ADR-031).
+      x-impl: supabase-js
+      parameters:
+        - { name: id, in: path, required: true, schema: { type: string, format: uuid } }
+      responses:
+        '200':
+          description: Messages
+          content:
+            application/json:
+              schema:
+                type: array
+                items: { $ref: '#/components/schemas/Message' }
+
+  /guru/feedback:
+    post:
+      tags: [Ask Guru (RAG)]
+      operationId: API_POST_GURU_FEEDBACK
+      summary: Submit feedback on an answer
+      description: Emits EVT_032.
+      x-impl: supabase-js
+      requestBody:
+        required: true
+        content:
+          application/json:
+            schema:
+              type: object
+              required: [message_id, rating]
+              properties:
+                message_id: { type: string, format: uuid }
+                rating: { type: string, enum: [up, down] }
+                reason: { type: string }
+      responses:
+        '200':
+          description: Recorded
+          content:
+            application/json:
+              schema:
+                type: object
+                properties: { ok: { type: boolean } }
+
+  # ---------------------------------------------------------------------------
+  # 5.5 Household, Invite, Referral
+  # ---------------------------------------------------------------------------
+  /household:
+    get:
+      tags: [Household & Referral]
+      operationId: API_GET_HOUSEHOLD
+      summary: Get household + members
+      description: Household-member read (RLS). Refs SCR_HOUSEHOLD_001.
+      x-impl: supabase-js
+      responses:
+        '200':
+          description: Household
+          content:
+            application/json:
+              schema: { $ref: '#/components/schemas/Household' }
+    post:
+      tags: [Household & Referral]
+      operationId: API_POST_HOUSEHOLD
+      summary: Create household
+      description: Refs SCR_ONBOARDING_HOUSEHOLD_001, EVT_006.
+      x-impl: supabase-js
+      requestBody:
+        required: true
+        content:
+          application/json:
+            schema:
+              type: object
+              required: [name]
+              properties:
+                name: { type: string, minLength: 1, maxLength: 40 }
+      responses:
+        '200':
+          description: Created household
+          content:
+            application/json:
+              schema: { $ref: '#/components/schemas/Household' }
+
+  /household/member:
+    post:
+      tags: [Household & Referral]
+      operationId: API_POST_HOUSEHOLD_MEMBER
+      summary: Add a household member
+      description: Emits EVT_007/055.
+      x-impl: SVC_household
+      requestBody:
+        required: true
+        content:
+          application/json:
+            schema: { $ref: '#/components/schemas/HouseholdMemberInput' }
+      responses:
+        '200': { $ref: '#/components/responses/HouseholdMember' }
+
+  /household/member/{id}:
+    patch:
+      tags: [Household & Referral]
+      operationId: API_PATCH_HOUSEHOLD_MEMBER
+      summary: Update a household member
+      x-impl: SVC_household
+      parameters:
+        - { name: id, in: path, required: true, schema: { type: string, format: uuid } }
+      requestBody:
+        required: true
+        content:
+          application/json:
+            schema: { $ref: '#/components/schemas/HouseholdMemberInput' }
+      responses:
+        '200': { $ref: '#/components/responses/HouseholdMember' }
+    delete:
+      tags: [Household & Referral]
+      operationId: API_DELETE_HOUSEHOLD_MEMBER
+      summary: Remove a household member
+      x-impl: SVC_household
+      parameters:
+        - { name: id, in: path, required: true, schema: { type: string, format: uuid } }
+      responses:
+        '200':
+          description: Removed
+          content:
+            application/json:
+              schema:
+                type: object
+                properties: { deleted: { type: boolean } }
+
+  /invite:
+    post:
+      tags: [Household & Referral]
+      operationId: API_POST_HOUSEHOLD_INVITE
+      summary: Create a household invite
+      description: Returns an opaque token + shareable URL. Emits EVT_036.
+      x-impl: SVC_household
+      requestBody:
+        required: true
+        content:
+          application/json:
+            schema:
+              type: object
+              required: [household_id]
+              properties:
+                household_id: { type: string, format: uuid }
+      responses:
+        '200':
+          description: Invite
+          content:
+            application/json:
+              schema:
+                type: object
+                properties:
+                  token: { type: string }
+                  url: { type: string, format: uri }
+                  expires_at: { type: string, format: date-time }
+
+  /invite/{token}:
+    get:
+      tags: [Household & Referral]
+      operationId: API_GET_INVITE
+      summary: Look up an invite by token
+      description: Shown on the accept card. `ERR_INVITE_EXPIRED` when past expiry.
+      x-impl: SVC_household
+      security: []
+      parameters:
+        - { name: token, in: path, required: true, schema: { type: string } }
+      responses:
+        '200':
+          description: Invite preview
+          content:
+            application/json:
+              schema:
+                type: object
+                properties:
+                  household_name: { type: string }
+                  inviter: { type: string }
+        '410': { $ref: '#/components/responses/Error' }  # ERR_INVITE_EXPIRED
+
+  /invite/accept:
+    post:
+      tags: [Household & Referral]
+      operationId: API_POST_INVITE_ACCEPT
+      summary: Accept a household invite (enforces one-active-household, F-2)
+      description: |
+        Validate token (not expired) → require auth → if already active in another
+        household, deactivate that membership (explicit switch, AC-HHINV-04) →
+        insert household_member → EVT_037.
+      x-impl: SVC_household
+      requestBody:
+        required: true
+        content:
+          application/json:
+            schema:
+              type: object
+              required: [token, idempotency_key]
+              properties:
+                token: { type: string }
+                role: { $ref: '#/components/schemas/MemberRole' }
+                depth: { $ref: '#/components/schemas/ContentDepth' }
+                idempotency_key: { type: string, format: uuid }
+      responses:
+        '200':
+          description: Joined
+          content:
+            application/json:
+              schema:
+                type: object
+                required: [household_id]
+                properties:
+                  household_id: { type: string, format: uuid }
+                  switched_from: { type: string, format: uuid }
+        '410': { $ref: '#/components/responses/Error' }  # ERR_INVITE_EXPIRED
+        '401': { $ref: '#/components/responses/Error' }  # ERR_AUTH_FAILED
+
+  /household/transfer:
+    post:
+      tags: [Household & Referral]
+      operationId: API_POST_HOUSEHOLD_TRANSFER
+      summary: Transfer household ownership
+      description: Required before owner deletion (F-3). Refs SCR_DELETE_ACCOUNT_001.
+      x-impl: SVC_account
+      requestBody:
+        required: true
+        content:
+          application/json:
+            schema:
+              type: object
+              required: [household_id, new_owner_id]
+              properties:
+                household_id: { type: string, format: uuid }
+                new_owner_id: { type: string, format: uuid }
+      responses:
+        '200':
+          description: Transferred
+          content:
+            application/json:
+              schema:
+                type: object
+                properties: { ok: { type: boolean } }
+
+  /referral/link:
+    post:
+      tags: [Household & Referral]
+      operationId: API_POST_REFERRAL_LINK
+      summary: Create a referral code/link
+      description: Emits EVT_038. Refs FLOW D3.
+      x-impl: SVC_household
+      requestBody:
+        required: false
+        content:
+          application/json:
+            schema: { type: object }
+      responses:
+        '200':
+          description: Referral code
+          content:
+            application/json:
+              schema:
+                type: object
+                properties:
+                  code: { type: string }
+
+  /referral/attribute:
+    post:
+      tags: [Household & Referral]
+      operationId: API_POST_REFERRAL_ATTRIBUTE
+      summary: Attribute a referral code
+      description: >-
+        Records referral attribution. The "ATTRIBUTE" arm of the documented
+        `API_POST_REFERRAL_LINK / ATTRIBUTE` row (TDD Part 2 §5.5,
+        `{code} → {attributed}`), modeled here as a distinct operation. Emits
+        EVT_039. Refs FLOW D3.
+      x-impl: SVC_household
+      requestBody:
+        required: true
+        content:
+          application/json:
+            schema:
+              type: object
+              required: [code]
+              properties:
+                code: { type: string }
+      responses:
+        '200':
+          description: Attributed
+          content:
+            application/json:
+              schema:
+                type: object
+                properties: { attributed: { type: boolean } }
+
+  # ---------------------------------------------------------------------------
+  # 5.6 Subscription & Entitlement
+  # ---------------------------------------------------------------------------
+  /subscription/plans:
+    get:
+      tags: [Subscription]
+      operationId: API_GET_SUB_PLANS
+      summary: Get subscription plans (offerings)
+      description: RevenueCat offerings (individual/family). Refs SCR_SUBSCRIPTION_001, EVT_049.
+      x-impl: revenuecat-sdk
+      responses:
+        '200':
+          description: Plans
+          content:
+            application/json:
+              schema:
+                type: array
+                items: { type: object, additionalProperties: true }
+
+  /subscription/validate:
+    post:
+      tags: [Subscription]
+      operationId: API_POST_SUB_VALIDATE
+      summary: Validate a purchase
+      description: Native IAP → RevenueCat → webhook reconciliation (ADR-005). Emits EVT_051.
+      x-impl: revenuecat-sdk
+      requestBody:
+        required: true
+        content:
+          application/json:
+            schema: { type: object, additionalProperties: true }
+      responses:
+        '200':
+          description: Validation result
+          content:
+            application/json:
+              schema: { type: object, additionalProperties: true }
+        '402': { $ref: '#/components/responses/Error' }  # ERR_PAYMENT_FAILED
+        '422': { $ref: '#/components/responses/Error' }  # ERR_SUBSCRIPTION_INVALID
+
+  /rc/webhook:
+    post:
+      tags: [Subscription]
+      operationId: API_POST_RC_WEBHOOK
+      summary: RevenueCat entitlement webhook (signed, idempotent)
+      description: |
+        `[MANDATORY]` verify `X-RevenueCat-Signature` (REVENUECAT_WEBHOOK_SECRET).
+        Upserts subscription (by rc_original_txn_id) + entitlement at HOUSEHOLD
+        grain (F-4); idempotent by RC event id. Clients never write entitlements
+        (service-only, TDD Part 2 §4.1).
+      x-impl: SVC_revenuecat_webhook
+      security: []
+      parameters:
+        - name: X-RevenueCat-Signature
+          in: header
+          required: true
+          schema: { type: string }
+          description: HMAC signature verified against REVENUECAT_WEBHOOK_SECRET.
+      requestBody:
+        required: true
+        content:
+          application/json:
+            schema:
+              type: object
+              description: RevenueCat event payload.
+              additionalProperties: true
+      responses:
+        '200':
+          description: Processed
+          content:
+            application/json:
+              schema:
+                type: object
+                properties: { ok: { type: boolean } }
+
+  /subscription/entitlement:
+    get:
+      tags: [Subscription]
+      operationId: API_GET_SUB_ENTITLEMENT
+      summary: Get active entitlements
+      description: Household-member read; used for gating.
+      x-impl: supabase-js
+      responses:
+        '200':
+          description: Entitlements
+          content:
+            application/json:
+              schema:
+                type: object
+                properties:
+                  entitlements:
+                    type: array
+                    items: { $ref: '#/components/schemas/Entitlement' }
+
+  /subscription/restore:
+    post:
+      tags: [Subscription]
+      operationId: API_POST_SUB_RESTORE
+      summary: Restore purchases
+      description: Emits EVT_052.
+      x-impl: revenuecat-sdk
+      responses:
+        '200':
+          description: Restored entitlements
+          content:
+            application/json:
+              schema:
+                type: object
+                properties:
+                  entitlements:
+                    type: array
+                    items: { $ref: '#/components/schemas/Entitlement' }
+        '422': { $ref: '#/components/responses/Error' }  # ERR_SUBSCRIPTION_INVALID
+
+  # ---------------------------------------------------------------------------
+  # 5.7 Notifications, Sync, Account, Support
+  # ---------------------------------------------------------------------------
+  /notify/token:
+    post:
+      tags: [Notifications, Sync & Account]
+      operationId: API_POST_NOTIF_TOKEN
+      summary: Register a push token
+      description: Upsert `push_token` (owner-only). Refs §8 notifications.
+      x-impl: supabase-js
+      requestBody:
+        required: true
+        content:
+          application/json:
+            schema:
+              type: object
+              required: [expo_token, platform]
+              properties:
+                expo_token: { type: string }
+                platform: { type: string, enum: [ios, android] }
+      responses:
+        '200':
+          description: Registered
+          content:
+            application/json:
+              schema:
+                type: object
+                properties: { ok: { type: boolean } }
+
+  /notify/schedule:
+    post:
+      tags: [Notifications, Sync & Account]
+      operationId: API_POST_NOTIF_SCHEDULE
+      summary: Schedule notifications from preferences
+      description: |
+        Computes the due notification set applying quiet hours, caps, and
+        completion suppression (ADR-020). Idempotent via dedupe_key. Refs FLOW A4, §8.
+      x-impl: SVC_notify_scheduler
+      requestBody:
+        required: true
+        content:
+          application/json:
+            schema:
+              type: object
+              description: Notification preferences (channels, ritual_time, quiet hours).
+              additionalProperties: true
+      responses:
+        '200':
+          description: Scheduled set
+          content:
+            application/json:
+              schema:
+                type: object
+                properties:
+                  scheduled: { type: integer }
+
+  /sync:
+    post:
+      tags: [Notifications, Sync & Account]
+      operationId: API_POST_SYNC
+      summary: Reconcile offline mutations
+      description: |
+        Applies queued mutations in order with per-kind conflict rules
+        (TDD Part 1 §2.11 / Part 2 §6.6): daily completion client-authoritative for
+        its local_date; union household/history; longer streak wins. Idempotent via
+        `client_id` + unique constraints. Refs FLOW E5.
+      x-impl: SVC_sync
+      requestBody:
+        required: true
+        content:
+          application/json:
+            schema: { $ref: '#/components/schemas/SyncRequest' }
+      responses:
+        '200':
+          description: Reconciled state
+          content:
+            application/json:
+              schema: { $ref: '#/components/schemas/SyncResponse' }
+        '409': { $ref: '#/components/responses/Error' }  # ERR_SYNC_CONFLICT
+
+  /account/delete:
+    post:
+      tags: [Notifications, Sync & Account]
+      operationId: API_POST_ACCOUNT_DELETE
+      summary: Request account deletion (grace window)
+      description: |
+        Creates an `account_deletion` row with a grace window (F-3). Owner with
+        members must transfer ownership first (AC-DEL-01). Refs SCR_DELETE_ACCOUNT_001.
+      x-impl: SVC_account
+      requestBody:
+        required: true
+        content:
+          application/json:
+            schema:
+              type: object
+              required: [reauth_token]
+              properties:
+                reauth_token: { type: string }
+      responses:
+        '200':
+          description: Deletion scheduled
+          content:
+            application/json:
+              schema:
+                type: object
+                properties:
+                  execute_after: { type: string, format: date-time }
+        '401': { $ref: '#/components/responses/Error' }  # ERR_AUTH_EXPIRED
+
+  /reauth:
+    post:
+      tags: [Notifications, Sync & Account]
+      operationId: API_POST_REAUTH
+      summary: Re-authenticate for a sensitive action
+      description: Returns a short-lived reauth token. Refs CMP_REAUTH_PROMPT.
+      x-impl: supabase-auth
+      responses:
+        '200':
+          description: Reauth token
+          content:
+            application/json:
+              schema:
+                type: object
+                properties:
+                  reauth_token: { type: string }
+        '401': { $ref: '#/components/responses/Error' }  # ERR_AUTH_EXPIRED
+
+  /support/ticket:
+    post:
+      tags: [Notifications, Sync & Account]
+      operationId: API_POST_SUPPORT_TICKET
+      summary: Submit a support/feedback ticket
+      description: Refs FLOW E2, Help.
+      x-impl: supabase-js
+      requestBody:
+        required: true
+        content:
+          application/json:
+            schema:
+              type: object
+              required: [subject, body]
+              properties:
+                email: { type: string, format: email }
+                subject: { type: string }
+                body: { type: string }
+      responses:
+        '200':
+          description: Submitted
+          content:
+            application/json:
+              schema:
+                type: object
+                properties: { ok: { type: boolean } }
+
+# =============================================================================
+# COMPONENTS
+# =============================================================================
+components:
+
+  securitySchemes:
+    bearerAuth:
+      type: http
+      scheme: bearer
+      bearerFormat: JWT
+      description: >-
+        Supabase JWT (anonymous or authenticated). Anonymous-auth-first (ADR-009)
+        means a valid JWT exists from first launch; RLS (ADR-018) scopes access.
+
+  parameters:
+    ApiVersion:
+      name: X-PanchangPal-API-Version
+      in: header
+      required: false
+      schema: { type: string, example: '1.0' }
+      description: >-
+        Requested contract version (SemVer). Backend supports current and previous
+        minor (N and N-1). Omitting it selects the current version (ADR-032).
+    IdempotencyKey:
+      name: Idempotency-Key
+      in: header
+      required: false
+      schema: { type: string, format: uuid }
+      description: >-
+        Optional transport-level idempotency key. Mutations also accept
+        `idempotency_key` in the body (TDD Part 2 §5.0).
+
+  headers:
+    CorrelationId:
+      description: Request correlation id echoed for tracing (ADR-023).
+      schema: { type: string }
+
+  responses:
+
+    Error:
+      description: |
+        Uniform error envelope (ADR-022 / TDD Part 1 §7.4). The specific `code`
+        depends on the operation; see each operation's documented `ERR_*` codes.
+      headers:
+        X-Correlation-Id: { $ref: '#/components/headers/CorrelationId' }
+      content:
+        application/json:
+          schema: { $ref: '#/components/schemas/ErrorEnvelope' }
+          examples:
+            offline:
+              value: { code: ERR_OFFLINE, message: 'You are offline.', correlation_id: 'c-123', recoverable: true }
+            aiTimeout:
+              value: { code: ERR_AI_TIMEOUT, message: 'Ask Guru took too long.', correlation_id: 'c-456', recoverable: true }
+
+    Session:
+      description: Authenticated session
+      content:
+        application/json:
+          schema: { $ref: '#/components/schemas/Session' }
+
+    Profile:
+      description: User profile
+      content:
+        application/json:
+          schema: { $ref: '#/components/schemas/UserProfile' }
+
+    HouseholdMember:
+      description: Household member
+      content:
+        application/json:
+          schema: { $ref: '#/components/schemas/HouseholdMember' }
+
+  schemas:
+
+    # ---- Enums (TDD Part 2 §2.3) ----
+    TraditionCode:
+      type: string
+      enum: [generic, north_indian, south_indian_tamil, bengali]
+      description: Seeded, extensible (F-9).
+    ContentDepth:
+      type: string
+      enum: [quick, deep]
+    MemberRole:
+      type: string
+      enum: [anchor, parent, elder, youth, other]
+    DateBasis:
+      type: string
+      enum: [tithi, gregorian]
+    ReminderLead:
+      type: string
+      enum: [same_day, one_day, custom]
+    MessageRole:
+      type: string
+      enum: [user, assistant]
+    MessageOutcome:
+      type: string
+      enum: [grounded, declined, refused, error]
+    EntitlementKind:
+      type: string
+      enum: [individual, family]
+    SubStatus:
+      type: string
+      enum: [active, in_grace, expired, cancelled, paused]
+    AppearanceMode:
+      type: string
+      enum: [system, light, dark]
+
+    ErrorCode:
+      type: string
+      description: ERR_* taxonomy (mirrors PDD §3.0.2 / packages/shared).
+      enum:
+        - ERR_AI_ERROR
+        - ERR_AI_TIMEOUT
+        - ERR_AUDIO_UNAVAILABLE
+        - ERR_AUTH_EXPIRED
+        - ERR_AUTH_FAILED
+        - ERR_AUTH_MERGE_CONFLICT
+        - ERR_CALENDAR_ERROR
+        - ERR_FESTIVAL_CONFLICT
+        - ERR_GPS_DISABLED
+        - ERR_INVITE_EXPIRED
+        - ERR_LOCATION_DENIED
+        - ERR_NETWORK_TIMEOUT
+        - ERR_NOTIF_DENIED
+        - ERR_OFFLINE
+        - ERR_PANCHANG_UNAVAILABLE
+        - ERR_PAYMENT_FAILED
+        - ERR_POOR_NETWORK
+        - ERR_RAG_EMPTY
+        - ERR_RAG_LOW_CONFIDENCE
+        - ERR_SUBSCRIPTION_INVALID
+        - ERR_SYNC_CONFLICT
+        - ERR_TITHI_AMBIGUOUS
+        - ERR_UNKNOWN
+
+    ErrorEnvelope:
+      type: object
+      required: [code, message, correlation_id, recoverable]
+      properties:
+        code: { $ref: '#/components/schemas/ErrorCode' }
+        message: { type: string, description: Human-safe message (never leaks internals). }
+        correlation_id: { type: string }
+        recoverable: { type: boolean }
+
+    # ---- Identity ----
+    UserRef:
+      type: object
+      properties:
+        id: { type: string, format: uuid }
+        is_anonymous: { type: boolean }
+    Session:
+      type: object
+      properties:
+        access_token: { type: string }
+        refresh_token: { type: string }
+        user: { $ref: '#/components/schemas/UserRef' }
+        expires_at: { type: string, format: date-time }
+    OAuthTokenRequest:
+      type: object
+      required: [provider_token]
+      properties:
+        provider_token: { type: string }
+        nonce: { type: string }
+
+    Tradition:
+      type: object
+      properties:
+        code: { $ref: '#/components/schemas/TraditionCode' }
+        name: { type: string }
+        description: { type: string }
+        is_active: { type: boolean }
+
+    UserProfile:
+      type: object
+      description: Owner-only (TDD Part 2 §3.2). All fields optional on PATCH.
+      properties:
+        tradition_code: { $ref: '#/components/schemas/TraditionCode' }
+        ritual_time: { type: string, description: 'local wall time HH:MM' }
+        content_depth: { $ref: '#/components/schemas/ContentDepth' }
+        city: { type: string }
+        lat: { type: number }
+        lng: { type: number }
+        timezone: { type: string, description: IANA tz }
+        appearance: { $ref: '#/components/schemas/AppearanceMode' }
+        locale: { type: string, default: en-US }
+        notif_prefs: { type: object, additionalProperties: true }
+
+    # ---- Today / Panchang / Ritual ----
+    Muhurta:
+      type: object
+      properties:
+        name: { type: string }
+        state: { type: string }
+        label: { type: string }
+    Panchang:
+      type: object
+      properties:
+        tithi: { type: string }
+        nakshatra: { type: string }
+        yoga: { type: string }
+        karana: { type: string }
+        sunrise: { type: string }
+        sunset: { type: string }
+        muhurta: { type: array, items: { $ref: '#/components/schemas/Muhurta' } }
+        rahu_kaal: { type: string }
+    RitualStep:
+      type: object
+      properties:
+        text: { type: string }
+        audio_key: { type: string }
+        duration: { type: integer }
+    Ritual:
+      type: object
+      properties:
+        id: { type: string, format: uuid }
+        title: { type: string }
+        intro: { type: string }
+        steps: { type: array, items: { $ref: '#/components/schemas/RitualStep' } }
+        audio_key: { type: string }
+        depth: { $ref: '#/components/schemas/ContentDepth' }
+    Streak:
+      type: object
+      properties:
+        current_len: { type: integer }
+        best_len: { type: integer }
+        grace_remaining: { type: integer }
+        grace_used: { type: boolean }
+    RotatingContent:
+      type: object
+      properties:
+        type: { type: string, enum: [quote, fact, on_this_day] }
+        text: { type: string }
+    ChecklistItem:
+      type: object
+      properties:
+        id: { type: string, format: uuid }
+        label: { type: string }
+        order: { type: integer }
+        type: { type: string }
+    TodayResponse:
+      type: object
+      required: [panchang, ritual, rotating, streak, meta]
+      properties:
+        panchang: { $ref: '#/components/schemas/Panchang' }
+        ritual: { $ref: '#/components/schemas/Ritual' }
+        festival:
+          oneOf:
+            - $ref: '#/components/schemas/Festival'
+            - type: 'null'
+        rotating: { $ref: '#/components/schemas/RotatingContent' }
+        streak: { $ref: '#/components/schemas/Streak' }
+        meta:
+          type: object
+          properties:
+            engine_version: { type: string }
+            computed_at: { type: string, format: date-time }
+            cache: { type: string, enum: [hit, miss] }
+
+    # ---- Calendar / Festivals / Personal Dates ----
+    Festival:
+      type: object
+      properties:
+        id: { type: string, format: uuid }
+        name: { type: string }
+        significance: { type: string }
+        how_to: { type: string }
+        depth_quick: { type: string }
+        depth_deep: { type: string }
+        ritual_id: { type: string, format: uuid }
+    TithiSpec:
+      type: object
+      properties:
+        paksha: { type: string }
+        month: { type: string }
+        tithi: { type: string }
+    PersonalDate:
+      type: object
+      properties:
+        id: { type: string, format: uuid }
+        name: { type: string }
+        basis: { $ref: '#/components/schemas/DateBasis' }
+        gregorian_date: { type: string, format: date }
+        tithi: { $ref: '#/components/schemas/TithiSpec' }
+        reminder_lead: { $ref: '#/components/schemas/ReminderLead' }
+        reminder_time: { type: string }
+        next_occurrence: { type: string, format: date }
+        is_active: { type: boolean }
+    PersonalDateCreate:
+      type: object
+      required: [name, basis, reminder_lead, client_id, idempotency_key]
+      properties:
+        name: { type: string }
+        basis: { $ref: '#/components/schemas/DateBasis' }
+        gregorian_date: { type: string, format: date }
+        tithi: { $ref: '#/components/schemas/TithiSpec' }
+        reminder_lead: { $ref: '#/components/schemas/ReminderLead' }
+        reminder_time: { type: string }
+        client_id: { type: string, format: uuid }
+        idempotency_key: { type: string, format: uuid }
+    PersonalDateWriteResult:
+      type: object
+      required: [id, next_occurrence]
+      properties:
+        id: { type: string, format: uuid }
+        next_occurrence: { type: string, format: date }
+        candidates:
+          type: array
+          items: { type: string, format: date }
+          description: Present when the tithi is ambiguous (ERR_TITHI_AMBIGUOUS).
+
+    # ---- Ask Guru ----
+    AskGuruStreamEvent:
+      description: |
+        One SSE event. The stream emits zero+ `token` events, then a `sources`
+        event, then a terminal `done` event (TDD Part 2 §5.4).
+      oneOf:
+        - type: object
+          properties:
+            type: { type: string, const: token }
+            text: { type: string }
+        - type: object
+          properties:
+            type: { type: string, const: sources }
+            sources:
+              type: array
+              items:
+                type: object
+                properties:
+                  title: { type: string }
+                  chunk_id: { type: string, format: uuid }
+                  score: { type: number }
+        - type: object
+          properties:
+            type: { type: string, const: done }
+            message_id: { type: string, format: uuid }
+            outcome: { $ref: '#/components/schemas/MessageOutcome' }
+            error_code: { $ref: '#/components/schemas/ErrorCode' }
+    Conversation:
+      type: object
+      properties:
+        id: { type: string, format: uuid }
+        title: { type: string }
+        updated_at: { type: string, format: date-time }
+    Message:
+      type: object
+      properties:
+        id: { type: string, format: uuid }
+        role: { $ref: '#/components/schemas/MessageRole' }
+        content: { type: string }
+        outcome: { $ref: '#/components/schemas/MessageOutcome' }
+        sources:
+          type: array
+          items:
+            type: object
+            properties:
+              title: { type: string }
+              chunk_id: { type: string, format: uuid }
+              score: { type: number }
+
+    # ---- Household ----
+    HouseholdMember:
+      type: object
+      properties:
+        id: { type: string, format: uuid }
+        household_id: { type: string, format: uuid }
+        user_id: { type: [string, 'null'], format: uuid }
+        display_name: { type: string }
+        role: { $ref: '#/components/schemas/MemberRole' }
+        depth: { $ref: '#/components/schemas/ContentDepth' }
+        is_active: { type: boolean }
+    HouseholdMemberInput:
+      type: object
+      required: [household_id, display_name]
+      properties:
+        household_id: { type: string, format: uuid }
+        display_name: { type: string }
+        role: { $ref: '#/components/schemas/MemberRole' }
+        depth: { $ref: '#/components/schemas/ContentDepth' }
+    Household:
+      type: object
+      properties:
+        id: { type: string, format: uuid }
+        name: { type: string }
+        owner_id: { type: string, format: uuid }
+        tradition_code: { $ref: '#/components/schemas/TraditionCode' }
+        members:
+          type: array
+          items: { $ref: '#/components/schemas/HouseholdMember' }
+
+    # ---- Subscription ----
+    Entitlement:
+      type: object
+      properties:
+        kind: { $ref: '#/components/schemas/EntitlementKind' }
+        is_active: { type: boolean }
+        granted_at: { type: string, format: date-time }
+        expires_at: { type: string, format: date-time }
+        source: { type: string, default: revenuecat }
+
+    # ---- Sync ----
+    SyncMutation:
+      type: object
+      required: [kind, payload, client_id, local_ts]
+      properties:
+        kind:
+          type: string
+          enum: [ritual_complete, checklist, personal_date]
+          description: Extensible set (TDD Part 2 §5.7).
+        payload: { type: object, additionalProperties: true }
+        client_id: { type: string, format: uuid }
+        local_ts: { type: string, format: date-time }
+    SyncRequest:
+      type: object
+      required: [mutations, idempotency_key]
+      properties:
+        mutations:
+          type: array
+          items: { $ref: '#/components/schemas/SyncMutation' }
+        client_ts: { type: string, format: date-time }
+        idempotency_key: { type: string, format: uuid }
+    SyncResponse:
+      type: object
+      properties:
+        applied:
+          type: array
+          items: { type: string, format: uuid }
+        conflicts:
+          type: array
+          items:
+            type: object
+            properties:
+              client_id: { type: string, format: uuid }
+              resolution: { type: string }
+              error_code: { $ref: '#/components/schemas/ErrorCode' }
+        server_state: { type: object, additionalProperties: true }

@@ -4,7 +4,7 @@
 
 Version: 1.0.0
 
-Last Updated: 2026-07-11 19:40
+Last Updated: 2026-07-12 00:20
 
 Purpose:
 This document defines the current milestone of the PanchangPal project.
@@ -25,7 +25,7 @@ Status
 
 Overall Progress
 
-20%
+30%
 
 Previous Milestone
 
@@ -102,7 +102,7 @@ unless explicitly instructed.
 
 - [x] ADR repository
 - [x] ADR README
-- [ ] OpenAPI specification
+- [x] OpenAPI specification
 - [ ] Database documentation
 - [ ] Runbook templates
 

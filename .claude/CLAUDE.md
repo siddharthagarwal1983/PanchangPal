@@ -30,6 +30,29 @@ Every engineering decision must reinforce these principles.
 
 ---
 
+# Session Startup Rule
+
+At the beginning of every new session, automatically follow the context-loading workflow.
+
+Read only:
+
+1. DASHBOARD.md
+2. PROJECT_MEMORY.md
+3. CURRENT_MILESTONE.md
+4. SESSION.md
+5. TASK.md
+6. ARCHITECTURE_SUMMARY.md
+
+Treat these files as the primary context.
+
+Do not perform a repository-wide scan.
+
+Only retrieve additional documentation if the current task requires it.
+
+Prefer lazy loading of documentation over eager loading.
+
+---
+
 # Startup Workflow
 
 Before starting ANY task, follow this exact sequence.

@@ -4,7 +4,7 @@
 
 Version: 1.0.0
 
-Last Updated: 2026-07-11 19:40
+Last Updated: 2026-07-12 00:20
 
 Purpose:
 This document records the current working session.
@@ -15,44 +15,40 @@ It is **not** permanent project memory.
 
 # Session Objective
 
-Generate the Architecture Decision Record (ADR) repository from approved documentation, then add the remaining ADR governance artifacts. Document only already-approved decisions; introduce no new architecture.
+Resume from the last saved session and generate the OpenAPI Specification for the approved API_* surface. Document only approved APIs; introduce no new architecture.
 
 ---
 
 # Work Completed
 
-- Extracted approved architectural decisions from TDD Part 1 §6 (ADR-001…013) and the Decision Log / TDD prose.
-- Authored 31 initial standalone ADRs (ADR-001…031) in Michael Nygard format, preserving the canonical §6 numbering.
-- Added ADR-032 — API Versioning Strategy (grounded in TDD §7.14/§5), covering SemVer, N/N-1 compatibility, additive evolution, expand-then-contract, deprecation/sunset, and rollout/rollback.
-- Created ADR_TEMPLATE.md (official future-ADR template + authoring guidelines).
-- Built README.md index (32 ADRs, statuses, one-line summaries) and kept it in sync.
-- Added an ADR cross-reference map to docs/ai/07_DECISION_LOG.md (references only; no decisions changed).
-- Validated numbering (001–032 contiguous, no dupes), link resolution, and section completeness.
+- Followed the Session Startup Rule (read DASHBOARD, PROJECT_MEMORY, CURRENT_MILESTONE, SESSION, TASK, ARCHITECTURE_SUMMARY).
+- Extracted the full API_*/SVC_*/ERR_* inventory from the docs (64 documented API_* identifiers).
+- Discovered TDD Part 2 (docs/tdd/02_BACKEND_ARCHITECTURE.md) exists and contains SECTION 5 — API Contracts with request/response schemas, error codes, and idempotency. Anchored the spec to Part 2 (authoritative) rather than deriving from Part 1 with placeholders.
+- Authored docs/api/openapi.yaml (OpenAPI 3.1): 59 paths / 65 operations covering all 64 documented API_*; Supabase JWT auth (anon→auth), ERR_* envelope (ADR-022), header version negotiation (ADR-032), idempotency, SSE for Ask Guru, and full component schemas/enums.
+- Authored docs/api/README.md (overview, conventions, source hierarchy, follow-ups).
+- Validated: valid OpenAPI 3.1, unique operationIds, no missing responses, no broken $refs, 100% API_* coverage, no orphan/invented endpoints.
 
 ---
 
 # Files Created
 
-docs/architecture/adr/
-- ADR-001…ADR-032 (32 records)
-- ADR_TEMPLATE.md
-- README.md
-- CONTRIBUTING.md (ADR governance guide)
+- docs/api/openapi.yaml
+- docs/api/README.md
 
 ---
 
 # Files Modified
 
-- docs/ai/07_DECISION_LOG.md (added standalone-ADR cross-reference map only)
-- .claude/DASHBOARD.md, PROJECT_STATUS.md, CURRENT_MILESTONE.md, DECISIONS.md, SESSION.md, TASK.md (session close-out)
+- .claude/DASHBOARD.md, PROJECT_STATUS.md, CURRENT_MILESTONE.md, SESSION.md, TASK.md (progress sync)
 
 ---
 
 # Important Observations
 
-- Numbering deviates from TASK.md's illustrative example filenames on purpose: TDD §6 already fixes ADR-001…013, and those numbers are cross-referenced across the TDD and Decision Log. Renumbering would break references and reuse numbers. Extended set continues from ADR-014.
-- Model/Prompt/Configuration "Registry" items in the backlog are NOT yet documented as distinct decisions — flagged as ambiguous/missing, not invented.
-- .claude/ is protected for file tools; session files were updated via the workspace shell.
+- The user's pre-work scope choice ("derive from Part 1 surface") was based on a stale note that Part 2 was unwritten. Part 2 IS written and authoritative, so the spec uses it directly — strictly better, no guesswork.
+- A few identifiers appear in PDD flows but are folded into other contracts in Part 2 §5; these are included and flagged x-prd-follow-up F-8: API_GET_PROFILE (overlaps API_GET_PREFERENCES), API_POST_PROFILE_TRADITION, API_POST_AUTH_LOGOUT, API_POST_STREAK_ADVANCE (internal).
+- API_POST_REFERRAL_ATTRIBUTE is the documented "ATTRIBUTE" arm of the API_POST_REFERRAL_LINK/ATTRIBUTE row, modeled as a distinct operation and annotated.
+- .claude/ is protected for file tools; state files updated via the workspace shell.
 
 ---
 
@@ -64,11 +60,11 @@ None.
 
 # Pending Work
 
-High priority: OpenAPI Specification → Database Schema → Supabase Migrations → Repository scaffolding → Shared packages.
-Deferred tunables (not decisions): API min-supported-version threshold, sunset cutoff, N-1 window — set in TDD Part 2/5.
+High priority: Database Schema (TBL_*) + RLS + Supabase migrations → Repository scaffolding → Shared packages (packages/api zod contracts from this spec; packages/shared EVT_*/ERR_* enums).
+Deferred to TDD Part 3 (not this spec): Ask Guru retrieval internals, F-6 confidence threshold, F-16 groundedness.
 
 ---
 
 # Recommended Next Task
 
-Generate the OpenAPI Specification (docs/api/) from the approved API_* surface — DTOs, auth, validation, error responses, examples. Use only approved APIs; align with ADR-032 (versioning) and ADR-022 (error envelope).
+Generate the Database Schema and Supabase migrations from TDD Part 2 §3 (TBL_* specs) and §4 (RLS/authorization), saving documentation to docs/database/ and migrations to supabase/migrations/ (Playbook Workflow 7). Keep RLS policies in the same migration as each table (TDD Part 2 §6.1). Documentation/DDL only — no application code.
