@@ -4,7 +4,7 @@
 
 Version: 1.0.0
 
-Last Updated: 2026-07-12 01:30
+Last Updated: 2026-07-12 02:10
 
 Purpose:
 This is the first file Claude should read at the beginning of every session.
@@ -42,7 +42,7 @@ PanchangPal
 
 Progress
 
-58%
+64%
 
 ---
 
@@ -58,7 +58,7 @@ CURRENT_MILESTONE.md
 
 # Current Task
 
-Initialize the Expo application & configure GitHub Actions CI
+Backend Foundation — implement SVC_* Edge Functions
 
 See:
 
@@ -68,7 +68,7 @@ TASK.md
 
 # Today's Objective
 
-Monorepo scaffolded (pnpm + Turborepo; 6 packages + 2 apps; config, contracts, enums). Next: initialize the Expo app with the toolchain and stand up the GitHub Actions CI pipeline.
+Expo app shell (4-tab router, providers, Zustand stores, theme, i18n) + GitHub Actions CI/CD (ci/cd/ota workflows, CODEOWNERS, scripts) complete. Next: implement the SVC_* Edge Functions against the API_* contracts.
 
 Do not introduce new architecture.
 
@@ -96,11 +96,11 @@ Do not introduce new architecture.
 
 # Current Priorities
 
-1. Expo Application (toolchain init)
-2. GitHub Actions / CI (ADR-024)
-3. Backend Edge Functions (SVC_*)
-4. Design System / Component Library
-5. AI/RAG subsystem (TDD Part 3)
+1. Backend Edge Functions (SVC_*)
+2. Design System / Component Library
+3. Mobile feature slices (MOD_*)
+4. AI/RAG subsystem (TDD Part 3)
+5. Apply migrations to a live Supabase project
 
 ---
 
@@ -118,13 +118,13 @@ None
 
 # Next Deliverable
 
-Expo Application & GitHub Actions CI
+Backend Edge Functions (SVC_*)
 
 ---
 
 # After Current Deliverable
 
-Backend Edge Functions (SVC_*)
+Design System & Mobile feature slices
 
 ---
 

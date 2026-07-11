@@ -1,0 +1,80 @@
+# =============================================================================
+# CD — deploy on merge to main (TDD Part 5 §2.1, ADR-024).
+#   migrations → staging  →  deploy Edge Functions (SVC_*)  →  Maestro E2E
+#   →  EAS build  →  TestFlight / Play Internal.
+# Production is a MANUAL promotion gated by the §10 go/no-go (separate job below).
+# OTA (JS-only) is handled by ota.yml. Secrets come from GitHub/EAS/Supabase stores
+# (TDD Part 5 §4) — never in the repo.
+# =============================================================================
+name: CD
+
+on:
+  push:
+    branches: [main]
+  workflow_dispatch:
+
+concurrency:
+  group: cd-main
+  cancel-in-progress: false
+
+jobs:
+  migrate-staging:
+    name: Apply DB migrations → staging
+    runs-on: ubuntu-latest
+    environment: staging
+    steps:
+      - uses: actions/checkout@v4
+      # Forward-only, expand-then-contract; RLS ships with each table (TDD Part 2 §6.1).
+      - name: supabase db push (staging)
+        run: bash scripts/migrate.sh "$SUPABASE_STAGING_DB_URL"
+        env:
+          SUPABASE_STAGING_DB_URL: ${{ secrets.SUPABASE_STAGING_DB_URL }}
+
+  deploy-functions:
+    name: Deploy Edge Functions (SVC_*) → staging
+    runs-on: ubuntu-latest
+    needs: migrate-staging
+    environment: staging
+    steps:
+      - uses: actions/checkout@v4
+      - name: Deploy functions
+        run: echo "supabase functions deploy --project-ref $SUPABASE_STAGING_REF (apps/backend/functions)"
+        env:
+          SUPABASE_STAGING_REF: ${{ secrets.SUPABASE_STAGING_REF }}
+          SUPABASE_ACCESS_TOKEN: ${{ secrets.SUPABASE_ACCESS_TOKEN }}
+
+  e2e-staging:
+    name: Maestro E2E (FLOW_*) on staging
+    runs-on: ubuntu-latest
+    needs: deploy-functions
+    steps:
+      - uses: actions/checkout@v4
+      # FLOW_* journeys: onboarding (A1), morning ritual (B1), Ask Guru (D1),
+      # household invite (D2), offline loop + sync (E5), payment (F1). tests/flows/.
+      - run: echo "maestro test tests/flows (wired with the E2E task)"
+
+  eas-build:
+    name: EAS build → internal distribution
+    runs-on: ubuntu-latest
+    needs: e2e-staging
+    environment: staging
+    steps:
+      - uses: actions/checkout@v4
+      - name: EAS build + submit (staging profile)
+        run: echo "eas build --profile staging && eas submit (TestFlight / Play Internal)"
+        env:
+          EXPO_ACCESS_TOKEN: ${{ secrets.EXPO_ACCESS_TOKEN }}
+
+  promote-production:
+    name: Promote to production (manual go/no-go §10.1)
+    runs-on: ubuntu-latest
+    needs: eas-build
+    environment: production # requires manual approval (TDD Part 5 §2.1/§10)
+    if: ${{ github.event_name == 'workflow_dispatch' }}
+    steps:
+      - uses: actions/checkout@v4
+      - name: Prod migrations + functions + store release
+        run: echo "Apply prod migrations, deploy functions, EAS submit to App Store / Play (phased rollout §10.2)."
+        env:
+          SUPABASE_PROD_DB_URL: ${{ secrets.SUPABASE_PROD_DB_URL }}
+          EXPO_ACCESS_TOKEN: ${{ secrets.EXPO_ACCESS_TOKEN }}

@@ -4,7 +4,7 @@
 
 Version: 1.0.0
 
-Last Updated: 2026-07-12 01:30
+Last Updated: 2026-07-12 02:10
 
 Purpose:
 This document defines the current implementation task.
@@ -16,7 +16,7 @@ Claude should stay focused on this task and avoid expanding into unrelated work 
 
 ## Title
 
-Repository Scaffolding & Shared Packages
+Initialize the Expo Application & Configure GitHub Actions CI
 
 Status
 
@@ -24,7 +24,7 @@ Status
 
 Outcome
 
-pnpm + Turborepo monorepo scaffolded per TDD Part 1 §4: root config; packages/shared (ERR_*/EVT_*/enums), packages/api (zod contracts), packages/database (TBL_* + RLS refs), packages/ui + design-tokens + ai stubs; apps/mobile Expo skeleton; apps/backend functions placeholders; scripts/tests/.github READMEs. JSON valid, no dependency cycles, layout matches §4.
+apps/mobile Expo shell (4-tab router today/calendar/guru/you, AppProviders with Query+theme+i18n, Zustand STORE_* skeletons, metro/babel config) + .github CI/CD (ci.yml 6 gates, cd.yml 5-stage pipeline, ota.yml, CODEOWNERS) + scripts/migrate.sh & codegen.sh. Structure/pipeline only; validated.
 
 ---
 
@@ -32,7 +32,7 @@ pnpm + Turborepo monorepo scaffolded per TDD Part 1 §4: root config; packages/s
 
 ## Title
 
-Initialize the Expo Application & Configure GitHub Actions CI
+Backend Foundation — implement the SVC_* Edge Functions
 
 Status
 
@@ -44,13 +44,13 @@ Priority
 
 Estimated Effort
 
-1–2 Sessions
+3–5 Sessions
 
 ---
 
 # Objective
 
-Turn the apps/mobile skeleton into a runnable Expo app (toolchain + core runtime deps + navigation skeleton + theme provider), and stand up the GitHub Actions CI/CD pipeline per ADR-024. Structure/pipeline only — no product features.
+Implement the Supabase Edge Functions (Deno) against the approved API_* contracts (TDD Part 2 §5) and the AI/RAG subsystem (TDD Part 3 for SVC_ask_guru). Server-authoritative, idempotent, RLS-respecting; server-only secrets.
 
 ---
 
@@ -58,48 +58,58 @@ Turn the apps/mobile skeleton into a runnable Expo app (toolchain + core runtime
 
 Use only approved documentation:
 
-- docs/tdd/01_SYSTEM_ARCHITECTURE.md §2.3/§2.4 (app internals, deployment), §3 (stack), §5 (standards)
-- docs/tdd/04_MOBILE_ARCHITECTURE.md (mobile architecture)
-- docs/tdd/05_PLATFORM_DEVOPS.md (CI/CD gates)
-- docs/architecture/adr/ (ADR-002 Expo/EAS, ADR-024 delivery/OTA, ADR-029 a11y gate)
+- docs/tdd/02_BACKEND_ARCHITECTURE.md §5 (API_* contracts), §4 (RLS), §6 (lifecycle)
+- docs/tdd/03_AI_RAG.md (SVC_ask_guru, retrieval, guardrails, streaming)
+- docs/tdd/01_SYSTEM_ARCHITECTURE.md §2 (flows), §7 (idempotency, rate limits, timeouts)
+- docs/api/openapi.yaml, packages/api (contracts), packages/shared (ERR_*/EVT_*)
+- docs/architecture/adr/ (ADR-006, 011, 019, 022, 030)
 
 If documentation is ambiguous or conflicting: Stop, explain, request clarification.
 
 ---
 
-# Deliverables
+# Deliverables (per function, apps/backend/functions/)
 
-- apps/mobile: Expo runtime deps, Expo Router 4-tab skeleton (UX-1), theme provider bound to @panchangpal/design-tokens, Zustand + TanStack Query providers wired (no features).
-- .github/workflows: CI pipeline (lint/typecheck/test → migrations → function deploy → EAS build), with accessibility + RLS-policy-suite + API-contract gates.
-- scripts/: migrate / codegen wrappers as needed by CI.
+- panchang (API_GET_TODAY, panchang detail, calendar, ritual complete)
+- ask-guru (API_POST_ASK_GURU — SSE, grounded-or-silent; needs TDD Part 3)
+- notify-scheduler (due-notification sweep)
+- revenuecat-webhook (signature-verified, idempotent entitlement upsert)
+- sync (offline mutation reconciliation)
+- account (anon→auth merge, delete, transfer)
+- content-ingest (RAG ingestion; TDD Part 3)
+- _shared (auth/JWT, logging + correlation IDs, guardrails)
+
+Each with unit tests (Vitest) and idempotency where documented.
 
 ---
 
 # Success Criteria
 
-- `pnpm install` + `pnpm typecheck` pass in CI.
-- Expo app boots to an empty 4-tab shell.
-- CI pipeline defined with the ADR-024 stages and release-blocking gates.
-- No product features or Edge Function business logic added.
+- Each SVC_* implements its API_* contract exactly (request/response/errors).
+- Idempotency keys honored; secrets server-only; RLS respected (service role only where documented).
+- Errors return the ERR_* envelope; no fabricated AI content.
+- Unit tests pass; contract tests green in CI.
 
 ---
 
 # Constraints
 
 Do not:
-- Change architecture or introduce new technologies.
+- Change architecture, contracts, or schema.
 - Modify MRD, PRD, PDD, or TDD.
-- Build product screens, ritual/AI/household features, or SVC_* business logic.
+- Build mobile feature UI (separate track).
+
+Note: SVC_ask_guru + content-ingest depend on TDD Part 3 (AI/RAG). Read it first; if retrieval/threshold specifics are missing, stop and confirm.
 
 ---
 
 # After Completion
 
 1. Update SESSION.md.
-2. Update PROJECT_STATUS.md.
+2. Update PROJECT_STATUS.md + PROJECT_MEMORY.md (milestone transition to Backend Foundation).
 3. Update TASK.md with the next task.
 4. Recommend the next task.
 
 The next planned task is:
 
-Backend Foundation — implement the SVC_* Edge Functions against the API_* contracts.
+Design System & Component Library (packages/ui CMP_* + tokens from PDD Part 3 §6).

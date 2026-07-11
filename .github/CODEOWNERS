@@ -1,0 +1,33 @@
+# CODEOWNERS — enforces the PDD §3.0A.5 ownership model on every PR (TDD Part 5 §2.2).
+# Replace @owner placeholders with real GitHub handles/teams when the org is set up.
+# Required review by the owning area is a merge gate.
+
+# Default
+*                         @owner
+
+# Docs (source-of-truth hierarchy)
+/docs/mrd/                @owner-product
+/docs/prd/                @owner-product
+/docs/pdd/                @owner-design
+/docs/tdd/                @owner-architecture
+/docs/architecture/adr/   @owner-architecture
+/docs/api/                @owner-backend
+/docs/database/           @owner-backend
+
+# Backend (Supabase, migrations, functions, RLS)
+/apps/backend/            @owner-backend
+/supabase/                @owner-backend
+
+# Mobile app
+/apps/mobile/             @owner-mobile
+
+# Shared packages
+/packages/api/            @owner-backend
+/packages/database/       @owner-backend
+/packages/shared/         @owner-architecture
+/packages/ui/             @owner-design
+/packages/design-tokens/  @owner-design
+/packages/ai/             @owner-ai
+
+# CI/CD + security
+/.github/                 @owner-platform

@@ -1,0 +1,30 @@
+# =============================================================================
+# OTA — Expo Updates (TDD Part 5 §2.4, ADR-024). JS-only, store-policy-compliant
+# changes ship to Expo Updates channels for fast fixes. NO native-module / config-
+# plugin changes via OTA (TRISK-10). Every OTA is tied to a runtime version; rollouts
+# are staged and monitored (Sentry crash-free), auto-rollback on a crash spike.
+# Manual dispatch so OTA is a deliberate action, not every merge.
+# =============================================================================
+name: OTA
+
+on:
+  workflow_dispatch:
+    inputs:
+      channel:
+        description: 'Expo Updates channel'
+        required: true
+        default: 'staging'
+        type: choice
+        options: [staging, prod]
+
+jobs:
+  publish-ota:
+    name: Publish Expo Update
+    runs-on: ubuntu-latest
+    environment: ${{ inputs.channel }}
+    steps:
+      - uses: actions/checkout@v4
+      - name: eas update
+        run: echo "eas update --channel ${{ inputs.channel }} --message '${{ github.event.head_commit.message }}'"
+        env:
+          EXPO_ACCESS_TOKEN: ${{ secrets.EXPO_ACCESS_TOKEN }}

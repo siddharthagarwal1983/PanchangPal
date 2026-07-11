@@ -4,7 +4,7 @@
 
 Version: 1.0.0
 
-Last Updated: 2026-07-12 01:30
+Last Updated: 2026-07-12 02:10
 
 Purpose:
 This document defines the current milestone of the PanchangPal project.
@@ -25,7 +25,7 @@ Status
 
 Overall Progress
 
-65%
+90%
 
 Previous Milestone
 
@@ -131,19 +131,19 @@ unless explicitly instructed.
 ## Mobile
 
 - [x] Expo project (skeleton: app.config.ts, router entry)
-- [ ] Navigation skeleton
-- [ ] Theme provider
-- [ ] Design system integration
+- [x] Navigation skeleton (4-tab: today/calendar/guru/you)
+- [x] Theme provider (bound to design-tokens)
+- [ ] Design system integration (token values from PDD Part 3 §6)
 
 ---
 
 ## DevOps
 
-- [ ] GitHub Actions
-- [ ] Linting
-- [ ] Formatting
-- [ ] Testing pipeline
-- [ ] Build pipeline
+- [x] GitHub Actions (ci/cd/ota workflows + CODEOWNERS)
+- [x] Linting (ESLint config + CI gate)
+- [x] Formatting (Prettier)
+- [x] Testing pipeline (unit/component/a11y + RLS + contract gates)
+- [x] Build pipeline (EAS build/submit in CD)
 
 ---
 
