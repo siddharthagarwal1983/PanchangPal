@@ -773,6 +773,59 @@ Never.
 
 ---
 
+## DEC-022
+
+**Category**
+
+Privacy / Data (product) + Repository (engineering)
+
+**Title**
+
+F-21 Household Completion-Count Visibility (Visible) & Migration Location (apps/backend)
+
+**Status**
+
+Approved
+
+**Owner**
+
+Product & Architecture
+
+**Date**
+
+2026-07-12
+
+### Context
+
+Two follow-ups raised during TDD Part 2 / database implementation needed a ruling before repository scaffolding: (a) `F-21` — whether household members may read each other's ritual-completion / streak data; and (b) a repository-convention conflict over where Supabase migrations live.
+
+### Decision
+
+1. **F-21 — Visible counts.** Household members may read each other's completion / streak **counts** (no per-item shaming detail), powering the North Star (Weekly Household Ritual Completions) and positive social proof (PDD §8.5). The RLS default in TDD Part 2 §3.7 stands and is asserted by the RLS policy test-suite.
+2. **Migration location — `apps/backend/`.** Migrations live in `apps/backend/migrations/` and seed in `apps/backend/seed/seed.sql`, per the authoritative repo layout (TDD Part 1 §4 + Part 2 §6.1), which outranks the Playbook/TASK convention in the source-of-truth hierarchy. `supabase/config.toml` (a CLI requirement) points its seed path there; CI applies migrations from `apps/backend/migrations/`.
+
+### Alternatives Considered
+
+* F-21: completions fully private (owner-only), North Star computed service-side only — rejected; removes the in-app positive social proof PDD §8.5 relies on.
+* Migrations in `supabase/migrations/` (CLI default) — rejected; conflicts with the authoritative TDD repo layout.
+
+### Consequences
+
+Household read of completion counts remains enabled (privacy bounded to counts, never per-item detail). Migrations sit outside the Supabase CLI default path, so CI (not the bare local CLI) is the canonical apply path; `supabase/config.toml` bridges the seed path.
+
+### Affected Documents
+
+* docs/database/README.md (location + F-21 resolved), docs/database/SCHEMA.md
+* apps/backend/migrations/, apps/backend/seed/, supabase/config.toml
+* apps/backend/tests/rls/rls_policies.test.sql (asserts F-21)
+* Resolves TDD Part 2 §8.2 follow-up `F-21`.
+
+### Review Trigger
+
+A privacy-policy change to household data visibility, or adoption of the standard Supabase CLI migration path.
+
+---
+
 # Decision Review Schedule
 
 Review decisions according to category:

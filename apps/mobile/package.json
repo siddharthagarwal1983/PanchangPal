@@ -1,0 +1,21 @@
+{
+  "name": "@panchangpal/mobile",
+  "version": "0.1.0",
+  "private": true,
+  "description": "PanchangPal Expo app (React Native, Expo Router). Feature-sliced per TDD Part 1 §2.3/§4. Skeleton only — features are built in later tasks.",
+  "main": "expo-router/entry",
+  "scripts": {
+    "start": "expo start",
+    "android": "expo start --android",
+    "ios": "expo start --ios",
+    "typecheck": "tsc --noEmit",
+    "lint": "eslint app src",
+    "test": "echo 'jest + RN Testing Library configured in the testing task' && exit 0"
+  },
+  "dependencies": {
+    "@panchangpal/api": "workspace:*",
+    "@panchangpal/shared": "workspace:*",
+    "@panchangpal/ui": "workspace:*",
+    "@panchangpal/design-tokens": "workspace:*"
+  }
+}

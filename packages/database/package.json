@@ -1,0 +1,21 @@
+{
+  "name": "@panchangpal/database",
+  "version": "0.1.0",
+  "private": true,
+  "description": "Generated DB types (from apps/backend/migrations) + RLS helper references. Types are regenerated via `supabase gen types` in CI.",
+  "type": "module",
+  "main": "src/index.ts",
+  "types": "src/index.ts",
+  "exports": {
+    ".": "./src/index.ts"
+  },
+  "scripts": {
+    "typecheck": "tsc --noEmit",
+    "lint": "eslint src",
+    "build": "tsc",
+    "gen": "echo 'CI: supabase gen types typescript --local > src/generated.ts'"
+  },
+  "dependencies": {
+    "@panchangpal/shared": "workspace:*"
+  }
+}

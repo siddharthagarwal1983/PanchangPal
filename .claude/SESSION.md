@@ -4,52 +4,58 @@
 
 Version: 1.0.0
 
-Last Updated: 2026-07-12 00:45
+Last Updated: 2026-07-12 01:30
 
 Purpose:
 This document records the current working session.
-It allows Claude to resume work without rereading the entire repository.
 It is **not** permanent project memory.
 
 ---
 
 # Session Objective
 
-Generate the Database Schema and Supabase migrations from the approved data model (TDD Part 2 §2–§7). Documentation + SQL only; introduce no new architecture.
+Scaffold the pnpm + Turborepo monorepo and shared packages per TDD Part 1 §4, so contracts/enums have a home. Structure + config only; no application features.
 
 ---
 
 # Work Completed
 
-- Extracted the full TBL_* catalog (29 tables), enums (§2.3), RLS model (§4), and business rules (F-1…F-4) from TDD Part 2.
-- Authored 11 forward-only migrations in supabase/migrations/: extensions (pgcrypto/vector/pg_trgm), enums, functions/triggers (set_updated_at, handle_new_user, RLS predicates), and all 29 tables grouped by domain (identity, household, content, habits, AI, billing, notifications, platform) with RLS shipped per table.
-- Enforced F-2 (partial unique index one_active_household), idempotency uniques (ritual_completion, notification dedupe, subscription txn), HNSW index on content_chunk.embedding vector(1536), household-grain entitlements (F-4), grief-private personal dates (T7).
-- Wrote supabase/seed.sql (traditions F-9, FF_* defaults off, representative festival/ritual/checklist).
-- Wrote docs/database/README.md (overview, migration order, RLS model, follow-ups) and docs/database/SCHEMA.md (per-table reference).
-- Static-validated: 29/29 tables, RLS on every table, 54 policies (all tables covered except intentionally service-only job), balanced statements, helper-fn ordering, reserved words quoted.
+- Root config: package.json (workspaces, scripts), pnpm-workspace.yaml, turbo.json, tsconfig.base.json (strict, path aliases), .eslintrc.cjs (dependency-direction + no-OpenAI-in-app rules), .prettierrc, .npmrc, .nvmrc.
+- packages/shared: canonical ERR_* (23) + ErrorEnvelope, EVT_* (001–055) + analytics envelope, §2.3 domain enums, FF_* flags, core domain types.
+- packages/api: zod ErrorEnvelope + API version header + reference contract (API_GET_TODAY) with the pattern for the remaining 63 (generated from openapi.yaml).
+- packages/database: TBL_* registry + RLS helper references; note that types are generated via `supabase gen types` in CI.
+- packages/ui, packages/design-tokens, packages/ai: package.json + tsconfig + index stubs (token namespaces; LLM/Embedding adapter seams; server-only AI note).
+- apps/mobile: Expo skeleton (app.config.ts with panchangpal:// scheme + EXPO_PUBLIC_* extra, expo-router entry, feature-sliced src/ dirs, README).
+- apps/backend: README + 8 function placeholders (SVC_* responsibilities), alongside existing migrations/seed/tests.
+- scripts/, tests/flows/, .github/workflows/: placeholder READMEs.
 
 ---
 
 # Files Created
 
-- supabase/migrations/2026071200000{1,2,3}_*.sql, 200000{10..80}_*.sql (11 files)
-- supabase/seed.sql
-- docs/database/README.md, docs/database/SCHEMA.md
+- 8 root config files; 6 packages (package.json + tsconfig + src); apps/mobile + apps/backend skeletons; scripts/tests/.github READMEs. 8 workspace package.json total.
 
 ---
 
 # Files Modified
 
-- .claude/DASHBOARD.md, PROJECT_STATUS.md, CURRENT_MILESTONE.md, SESSION.md, TASK.md (progress sync)
+- .claude/DASHBOARD.md, PROJECT_STATUS.md, CURRENT_MILESTONE.md, SESSION.md, TASK.md.
+
+---
+
+# Validation
+
+- All package.json + tsconfig + turbo.json parse as valid JSON.
+- 8 workspace packages resolve; dependency direction correct (shared/design-tokens are leaves; app → api/shared/ui/tokens; api/ai/database → shared); no cycles.
+- Top-level layout matches TDD §4 exactly (apps, packages, docs, scripts, tests, supabase, .github); no stray or empty dirs.
 
 ---
 
 # Important Observations
 
-- No Postgres/Docker in the authoring sandbox → validation is static only. Run `supabase db reset` (or apply migrations + seed) in CI to confirm live execution before relying on them.
-- Migration LOCATION discrepancy: TASK.md/Playbook say supabase/migrations/ (used); TDD Part 2 §6.1 says apps/backend/migrations. Repository-convention item to reconcile with the Backend owner. Flagged in docs/database/README.md.
-- Open follow-ups carried forward: F-21 (household visibility of completion counts — RLS default assumes visible), T7 (personal dates private v1), RLS policy test-suite (§4.4, CI), pgvector index tuning (TDD Part 3).
-- error_code/event_id modeled as text generated from packages/shared (not hard pg enums) to avoid drift, per §2.2/§2.3.
+- No install/typecheck run: node_modules absent and the sandbox is offline, so `pnpm install` / `tsc` couldn't execute. Run `pnpm install && pnpm typecheck` in CI to confirm. All configs are structurally valid.
+- Runtime deps (expo, react-native, zustand, @tanstack/react-query, supabase-js, zod versions) are declared but not installed here — the Expo toolchain init (next task) pulls them.
+- .npmrc written via shell (dotfile blocked for file tool).
 
 ---
 
@@ -59,12 +65,6 @@ None.
 
 ---
 
-# Pending Work
-
-Repository scaffolding (pnpm + Turborepo, TDD Part 1 §4) → shared packages (packages/api from openapi.yaml, packages/shared EVT_*/ERR_* enums, packages/database types) → Expo app + CI. Then backend Edge Functions (next milestone).
-
----
-
 # Recommended Next Task
 
-Scaffold the monorepo and shared packages (Playbook Workflow relevant to repo setup; TDD Part 1 §4). Establish packages/api (zod contracts from docs/api/openapi.yaml), packages/shared (EVT_*/ERR_* enums), and packages/database (types + RLS helpers). Structure/config only — no application features.
+Initialize the Expo application with the toolchain (expo install, RN deps, navigation skeleton, theme provider) and stand up the GitHub Actions CI pipeline (ADR-024): lint/typecheck/test → migrations → function deploy → EAS build, with a11y + RLS-suite gates.

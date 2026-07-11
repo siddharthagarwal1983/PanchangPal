@@ -4,7 +4,7 @@
 
 Version: 1.0.0
 
-Last Updated: 2026-07-12 00:45
+Last Updated: 2026-07-12 01:30
 
 Purpose:
 This document defines the current implementation task.
@@ -16,7 +16,7 @@ Claude should stay focused on this task and avoid expanding into unrelated work 
 
 ## Title
 
-Generate the Database Schema & Supabase Migrations
+Repository Scaffolding & Shared Packages
 
 Status
 
@@ -24,7 +24,7 @@ Status
 
 Outcome
 
-11 forward-only migrations in supabase/migrations/ (29 TBL_* tables, RLS on every table, 54 policies, enums, helper functions/triggers, HNSW + F-2 indexes) + supabase/seed.sql + docs/database/ (README + SCHEMA). Faithful to TDD Part 2 §2–§7. Static-validated (no live Postgres in sandbox).
+pnpm + Turborepo monorepo scaffolded per TDD Part 1 §4: root config; packages/shared (ERR_*/EVT_*/enums), packages/api (zod contracts), packages/database (TBL_* + RLS refs), packages/ui + design-tokens + ai stubs; apps/mobile Expo skeleton; apps/backend functions placeholders; scripts/tests/.github READMEs. JSON valid, no dependency cycles, layout matches §4.
 
 ---
 
@@ -32,7 +32,7 @@ Outcome
 
 ## Title
 
-Repository Scaffolding & Shared Packages
+Initialize the Expo Application & Configure GitHub Actions CI
 
 Status
 
@@ -50,7 +50,7 @@ Estimated Effort
 
 # Objective
 
-Scaffold the pnpm + Turborepo monorepo (TDD Part 1 §4) and the shared packages so contracts have a home. Establish structure only — no application features.
+Turn the apps/mobile skeleton into a runnable Expo app (toolchain + core runtime deps + navigation skeleton + theme provider), and stand up the GitHub Actions CI/CD pipeline per ADR-024. Structure/pipeline only — no product features.
 
 ---
 
@@ -58,10 +58,10 @@ Scaffold the pnpm + Turborepo monorepo (TDD Part 1 §4) and the shared packages 
 
 Use only approved documentation:
 
-- docs/tdd/01_SYSTEM_ARCHITECTURE.md §4 (repository structure), §3 (stack), §5 (standards)
-- docs/architecture/adr/ (ADR-014 monorepo, ADR-017 adapters, ADR-022 errors)
-- docs/api/openapi.yaml (source for packages/api contracts)
-- supabase/migrations/ (source for packages/database types)
+- docs/tdd/01_SYSTEM_ARCHITECTURE.md §2.3/§2.4 (app internals, deployment), §3 (stack), §5 (standards)
+- docs/tdd/04_MOBILE_ARCHITECTURE.md (mobile architecture)
+- docs/tdd/05_PLATFORM_DEVOPS.md (CI/CD gates)
+- docs/architecture/adr/ (ADR-002 Expo/EAS, ADR-024 delivery/OTA, ADR-029 a11y gate)
 
 If documentation is ambiguous or conflicting: Stop, explain, request clarification.
 
@@ -69,23 +69,18 @@ If documentation is ambiguous or conflicting: Stop, explain, request clarificati
 
 # Deliverables
 
-Scaffold (structure + config, per TDD Part 1 §4):
-
-- Root: pnpm-workspace.yaml, turbo.json, tsconfig.base.json, .eslintrc, .prettierrc, package.json
-- apps/mobile (Expo app skeleton), apps/backend (functions/, migrations/ pointer, seed/)
-- packages/api (API_* zod contracts from openapi.yaml)
-- packages/shared (EVT_*/ERR_* enums, domain types)
-- packages/database (generated DB types, RLS helpers)
-- packages/ui, packages/design-tokens, packages/ai (stubs)
+- apps/mobile: Expo runtime deps, Expo Router 4-tab skeleton (UX-1), theme provider bound to @panchangpal/design-tokens, Zustand + TanStack Query providers wired (no features).
+- .github/workflows: CI pipeline (lint/typecheck/test → migrations → function deploy → EAS build), with accessibility + RLS-policy-suite + API-contract gates.
+- scripts/: migrate / codegen wrappers as needed by CI.
 
 ---
 
 # Success Criteria
 
-- Monorepo structure matches TDD Part 1 §4 exactly.
-- No new top-level folders beyond the approved layout.
-- packages/api and packages/shared stubs exist so contracts/enums have a home.
-- Dependency direction respected (features → domain → data → packages).
+- `pnpm install` + `pnpm typecheck` pass in CI.
+- Expo app boots to an empty 4-tab shell.
+- CI pipeline defined with the ADR-024 stages and release-blocking gates.
+- No product features or Edge Function business logic added.
 
 ---
 
@@ -94,9 +89,7 @@ Scaffold (structure + config, per TDD Part 1 §4):
 Do not:
 - Change architecture or introduce new technologies.
 - Modify MRD, PRD, PDD, or TDD.
-- Build application features, screens, or Edge Function business logic.
-
-Structure/config only.
+- Build product screens, ritual/AI/household features, or SVC_* business logic.
 
 ---
 
@@ -109,4 +102,4 @@ Structure/config only.
 
 The next planned task is:
 
-Initialize the Expo application and configure GitHub Actions CI.
+Backend Foundation — implement the SVC_* Edge Functions against the API_* contracts.

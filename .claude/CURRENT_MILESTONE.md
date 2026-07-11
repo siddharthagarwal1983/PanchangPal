@@ -4,7 +4,7 @@
 
 Version: 1.0.0
 
-Last Updated: 2026-07-12 00:45
+Last Updated: 2026-07-12 01:30
 
 Purpose:
 This document defines the current milestone of the PanchangPal project.
@@ -25,7 +25,7 @@ Status
 
 Overall Progress
 
-45%
+65%
 
 Previous Milestone
 
@@ -91,10 +91,10 @@ unless explicitly instructed.
 
 ## Repository
 
-- [ ] Monorepo initialized
-- [ ] Folder structure finalized
-- [ ] Package manager configured
-- [ ] Workspace configuration completed
+- [x] Monorepo initialized
+- [x] Folder structure finalized
+- [x] Package manager configured (pnpm + Turborepo)
+- [x] Workspace configuration completed
 
 ---
 
@@ -120,17 +120,17 @@ unless explicitly instructed.
 
 ## Shared Packages
 
-- [ ] Shared types
-- [ ] API package
-- [ ] UI package
-- [ ] Design tokens
-- [ ] AI package
+- [x] Shared types (packages/shared: EVT_*/ERR_*/enums)
+- [x] API package (packages/api: zod contracts)
+- [x] UI package (packages/ui stub)
+- [x] Design tokens (packages/design-tokens stub)
+- [x] AI package (packages/ai stub)
 
 ---
 
 ## Mobile
 
-- [ ] Expo project
+- [x] Expo project (skeleton: app.config.ts, router entry)
 - [ ] Navigation skeleton
 - [ ] Theme provider
 - [ ] Design system integration

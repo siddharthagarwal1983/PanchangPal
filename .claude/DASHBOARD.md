@@ -4,7 +4,7 @@
 
 Version: 1.0.0
 
-Last Updated: 2026-07-12 00:45
+Last Updated: 2026-07-12 01:30
 
 Purpose:
 This is the first file Claude should read at the beginning of every session.
@@ -42,7 +42,7 @@ PanchangPal
 
 Progress
 
-52%
+58%
 
 ---
 
@@ -58,7 +58,7 @@ CURRENT_MILESTONE.md
 
 # Current Task
 
-Repository Scaffolding & Shared Packages
+Initialize the Expo application & configure GitHub Actions CI
 
 See:
 
@@ -68,7 +68,7 @@ TASK.md
 
 # Today's Objective
 
-Database schema + migrations complete (supabase/migrations/ — 29 tables, RLS on all, 54 policies; docs/database/). Next: scaffold the monorepo and shared packages (packages/api, packages/shared, packages/database).
+Monorepo scaffolded (pnpm + Turborepo; 6 packages + 2 apps; config, contracts, enums). Next: initialize the Expo app with the toolchain and stand up the GitHub Actions CI pipeline.
 
 Do not introduce new architecture.
 
@@ -96,11 +96,11 @@ Do not introduce new architecture.
 
 # Current Priorities
 
-1. Repository Scaffolding (monorepo)
-2. Shared Packages (api, shared, database)
-3. Expo Application
-4. GitHub Actions / CI
-5. Backend Edge Functions
+1. Expo Application (toolchain init)
+2. GitHub Actions / CI (ADR-024)
+3. Backend Edge Functions (SVC_*)
+4. Design System / Component Library
+5. AI/RAG subsystem (TDD Part 3)
 
 ---
 
@@ -118,13 +118,13 @@ None
 
 # Next Deliverable
 
-Repository Scaffolding & Shared Packages
+Expo Application & GitHub Actions CI
 
 ---
 
 # After Current Deliverable
 
-Expo Application & CI/CD
+Backend Edge Functions (SVC_*)
 
 ---
 

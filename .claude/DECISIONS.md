@@ -309,6 +309,12 @@ Do not introduce new top-level folders.
 
 Respect module boundaries.
 
+Migrations & seed live under `apps/backend/` (TDD §4/§6.1), not `supabase/migrations/`.
+Supabase CLI config stays at `supabase/config.toml`. (DEC-022)
+
+Household members may read each other's ritual/streak COUNTS (F-21 = visible, DEC-022);
+personal dates remain owner-only private (T7). Never expose per-item shaming data.
+
 ---
 
 # Coding Principles

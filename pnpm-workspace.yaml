@@ -1,0 +1,4 @@
+# PanchangPal — pnpm workspaces (TDD Part 1 §4, ADR-014)
+packages:
+  - "apps/*"
+  - "packages/*"

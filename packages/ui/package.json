@@ -1,0 +1,18 @@
+{
+  "name": "@panchangpal/ui",
+  "version": "0.1.0",
+  "private": true,
+  "description": "CMP_* React Native component library (PDD Part 3 §5), bound to @panchangpal/design-tokens. UI never imports the data layer (TDD Part 1 §5 dependency rules).",
+  "type": "module",
+  "main": "src/index.ts",
+  "types": "src/index.ts",
+  "exports": { ".": "./src/index.ts" },
+  "scripts": {
+    "typecheck": "tsc --noEmit",
+    "lint": "eslint src",
+    "build": "tsc"
+  },
+  "dependencies": {
+    "@panchangpal/design-tokens": "workspace:*"
+  }
+}

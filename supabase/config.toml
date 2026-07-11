@@ -1,0 +1,33 @@
+# =============================================================================
+# supabase/config.toml
+# Supabase CLI configuration. The CLI requires this file to live at
+# ./supabase/config.toml, but the PROJECT SOURCES (migrations, seed, functions)
+# live under apps/backend/ per the authoritative repo layout in
+# TDD Part 1 §4 and TDD Part 2 §6.1 (source-of-truth hierarchy: TDD > Playbook/Tasks).
+#
+# Resolution of the flagged migration-location discrepancy (decision 2026-07-12):
+#   - Migrations:  apps/backend/migrations/   (applied by CI, TDD Part 1 §2.4)
+#   - Seed:        apps/backend/seed/seed.sql (wired below via db.seed.sql_paths)
+#   - Functions:   apps/backend/functions/    (SVC_*, added in a later task)
+#
+# Local `supabase db reset` uses the seed path below. Migrations are applied in
+# CI (GitHub Actions) from apps/backend/migrations in lexical order; a local dev
+# convenience script may symlink apps/backend/migrations → supabase/migrations.
+# =============================================================================
+
+project_id = "panchangpal"
+
+[db]
+# Single US region for launch (ADR-012). Local shadow DB for migration diffing.
+major_version = 15
+
+[db.seed]
+enabled = true
+# Seed path is relative to this supabase/ directory.
+sql_paths = ["../apps/backend/seed/seed.sql"]
+
+[db.migrations]
+# Migration files live under apps/backend/migrations (TDD §4/§6.1). CI applies them;
+# see scripts/ and .github/ (CI/CD task). Kept out of the CLI default supabase/migrations
+# intentionally to honor the TDD repository layout.
+schema_paths = []

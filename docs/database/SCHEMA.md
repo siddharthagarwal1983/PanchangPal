@@ -1,7 +1,7 @@
 # PanchangPal — Schema Reference
 
 **Authoritative source:** TDD Part 2 §2–§3 (`docs/tdd/02_BACKEND_ARCHITECTURE.md`).
-This document mirrors the migrations in `supabase/migrations/`. Every table lists its
+This document mirrors the migrations in `apps/backend/migrations/`. Every table lists its
 purpose, key columns, indexes, and RLS summary. Conventions per TDD Part 2 §2.1: UUID v4
 PKs (except identity-mirroring tables keyed by `auth.uid`), `created_at`/`updated_at`
 (the latter maintained by `set_updated_at()`), soft-delete via `deleted_at` where
@@ -112,6 +112,10 @@ retrieval; index `(content_item_id)`. **RLS:** public select; service-role write
 (`SVC_content_ingest`). Chunking/embedding/eval spec is TDD Part 3.
 
 ## Habit data (owner-write; household-read counts)
+
+> **F-21 ratified (2026-07-12, DEC-022):** household members may read each other's
+> completion/streak **counts** (no per-item detail). The household-read policies below
+> are the approved behaviour, asserted by `apps/backend/tests/rls/rls_policies.test.sql`.
 
 ### `ritual_completion` — TBL_RITUAL_COMPLETION
 `user_id`, `ritual_id`, `local_date` (user-tz, client-authoritative PDD A4),

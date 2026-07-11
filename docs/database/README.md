@@ -11,8 +11,8 @@
 The PanchangPal database is **PostgreSQL on Supabase** (ADR-003), with **Row-Level
 Security as the primary authorization boundary** (ADR-018) and **pgvector** for RAG
 retrieval (ADR-004/011). This directory documents the schema; the executable
-migrations live in [`supabase/migrations/`](../../supabase/migrations/) and seed data
-in [`supabase/seed.sql`](../../supabase/seed.sql).
+migrations live in [`apps/backend/migrations/`](../../apps/backend/migrations/) and
+seed data in [`apps/backend/seed/seed.sql`](../../apps/backend/seed/seed.sql).
 
 Everything here realizes the approved data model in **TDD Part 2 §1–§7**. No tables,
 columns, or policies are invented.
@@ -20,10 +20,13 @@ columns, or policies are invented.
 - Full per-table reference: [`SCHEMA.md`](SCHEMA.md)
 - Contracts served by this schema: [`../api/openapi.yaml`](../api/openapi.yaml)
 
-> **Migration location note.** TASK.md and the Playbook (Workflow 7) place migrations
-> in `supabase/migrations/` (used here). TDD Part 2 §6.1 refers to
-> `apps/backend/migrations`. This is a repository-convention discrepancy to reconcile
-> with the Backend owner; the SQL is location-independent.
+> **Migration location — RESOLVED (2026-07-12, DEC-022).** Migrations and seed live
+> under `apps/backend/` per the authoritative repo layout (TDD Part 1 §4 + Part 2 §6.1),
+> which outranks the Playbook/TASK convention in the source-of-truth hierarchy. The
+> Supabase CLI config remains at `supabase/config.toml` (a CLI requirement) and points
+> its seed path at `apps/backend/seed/seed.sql`; CI applies the migrations from
+> `apps/backend/migrations/` (TDD Part 1 §2.4). The empty `supabase/migrations/`
+> directory carries a pointer README.
 
 ---
 
@@ -62,10 +65,10 @@ tables.
 | 10 | `20260712000070_notifications.sql` | `push_token`, `notification` + RLS |
 | 11 | `20260712000080_platform.sql` | `feature_flag`, `analytics_event`, `job`, `account_deletion`, `support_ticket` + RLS |
 
-Seed (`supabase/seed.sql`) loads the tradition set (F-9), feature-flag defaults (all
-post-v1 `FF_*` off), and representative festival/ritual/checklist rows. The RAG corpus
-(`content_item`/`content_chunk`) is loaded by `SVC_content_ingest` (TDD Part 3), not
-raw-seeded.
+Seed (`apps/backend/seed/seed.sql`) loads the tradition set (F-9), feature-flag
+defaults (all post-v1 `FF_*` off), and representative festival/ritual/checklist rows.
+The RAG corpus (`content_item`/`content_chunk`) is loaded by `SVC_content_ingest`
+(TDD Part 3), not raw-seeded.
 
 ---
 
@@ -105,21 +108,37 @@ writes are denied while the service role proceeds.
 
 ---
 
-## Open follow-ups (not decided here)
+## Follow-ups
 
-- **F-21** — whether household members may read each other's completion **counts** for
-  social proof (the §3.7 RLS default assumes yes). Ratify with Product.
-- **T7** — personal dates are per-user private in v1 (no household sharing).
-- **RLS policy test-suite** (§4.4) — the release-gate security tests are a CI task, to
-  be implemented alongside the backend.
-- **pgvector index tuning** (HNSW `m`/`ef_construction`) — set with the corpus in TDD Part 3.
+**Resolved (2026-07-12):**
+
+- **F-21 — RESOLVED (visible counts), DEC-022.** Household members may read each other's
+  completion/streak **counts** (no per-item shaming detail) to power the North Star and
+  positive social proof (PDD §8.5). The §3.7 RLS default stands; asserted by the RLS
+  test-suite (test 8, both positive and negative controls).
+- **RLS policy test-suite (§4.4) — RESOLVED.** Implemented as pgTAP at
+  [`apps/backend/tests/rls/rls_policies.test.sql`](../../apps/backend/tests/rls/rls_policies.test.sql),
+  covering cross-user/cross-household denial, service-only write denial, anonymous
+  public-read, own-row writes, and F-21. Wired as a CI security gate (NFR-18).
+- **Migration location — RESOLVED (DEC-022).** See the note above.
+
+**Still deferred (intentionally, not blockers for this stage):**
+
+- **pgvector index tuning** (HNSW `m` / `ef_construction`) — requires the actual corpus;
+  set in **TDD Part 3** (documented deferral, TDD Part 2 §8.4). The index exists; only
+  its parameters are tuned later.
+- **T7** — personal dates remain per-user private in v1 (no household sharing).
 
 ---
 
 ## Validation performed
 
 Static validation (no Postgres available in the authoring sandbox — live
-`supabase db reset` should be run in CI): all **29 `TBL_*` present and uniquely
-created**, **RLS enabled on every table**, **54 policies** with every table covered
-(except intentionally service-only `job`), balanced statements, RLS helper predicates
-defined before first use, and reserved identifiers quoted.
+`supabase db reset` + `pg_prove` should be run in CI): all **29 `TBL_*` present and
+uniquely created**, **RLS enabled on every table**, **54 policies** with every table
+covered (except intentionally service-only `job`), balanced statements, RLS helper
+predicates defined before first use, and reserved identifiers quoted.
+
+The **RLS policy test-suite** (`apps/backend/tests/rls/rls_policies.test.sql`, pgTAP,
+11 assertions) encodes the §4.4 security gate and runs in CI against a freshly migrated
+database.
