@@ -2,9 +2,9 @@
 
 # PanchangPal — Project Status Dashboard
 
-Version: 1.0.0
+Version: 1.1.2
 
-Last Updated: 2026-07-12 06:00
+Last Updated: 2026-07-12 (DevOps platform audit + hardening)
 
 Purpose:
 This document provides a high-level snapshot of the overall project.
@@ -29,11 +29,11 @@ For day-to-day work see:
 
 Current Phase
 
-🟡 Repository & Platform Foundation
+🚧 Mobile MVP — Phase 1 (Feature Slices)
 
 Overall Progress
 
-██████████░░░░░░░░░░
+████████████████░░░░
 
 **84% Complete**
 
@@ -62,14 +62,14 @@ TBD
 | Product Design (PDD) | ✅ Complete | 100% |
 | Technical Design (TDD) | ✅ Complete | 100% |
 | AI Knowledge Base | ✅ Complete | 100% |
-| Repository Foundation | 🟡 In Progress | 95% |
+| Repository Foundation | ✅ Complete | 100% |
 | ADR Repository | ✅ Complete | 100% |
 | API Specification | ✅ Complete | 100% |
 | Database Design | ✅ Complete | 100% |
-| Backend Development | ⏳ Pending | 0% |
-| Mobile Development | ⏳ Pending | 0% |
-| AI Platform | ⏳ Pending | 0% |
-| Testing | ⏳ Pending | 0% |
+| Backend Foundation (SVC_*) | ✅ Complete | 100% (panchang compute blocked by ADR-033) |
+| Mobile Development (feature slices) | 🚧 In Progress | ~68% (M1–M5 done; M6 increment 1 done) |
+| AI Platform | 🟡 In Progress | Adapters + RAG pipeline done; corpus + eval pending |
+| Testing | 🟡 In Progress | Unit/component/domain in place; E2E pending |
 | Beta | ⏳ Pending | 0% |
 | Production Launch | ⏳ Pending | 0% |
 
@@ -77,20 +77,21 @@ TBD
 
 # Current Milestone
 
-Repository & Platform Foundation
+Mobile MVP — Phase 1 (Feature Slices)
 
 Objective
 
-Build the engineering foundation before implementing application features.
+Build the mobile application as a sequence of vertical, production-quality feature slices
+(M1–M8) on top of the completed foundation and backend.
 
 Current Focus
 
-- Repository setup
-- ADRs
-- OpenAPI
-- Database schema
-- Supabase
-- CI/CD
+- M6 Profile / Household — 🚧 in progress (increment 1 done: Preferences/Settings/Profile;
+  next: Household members/invites/realtime, then account deletion)
+- M7 Notifications (pending)
+- M8 Subscription (pending)
+
+Completed slices: M1 App Shell · M2 Today · M3 Guided Ritual · M4 Calendar Shell · M5 Ask Guru Client.
 
 See:
 
@@ -110,7 +111,7 @@ See:
 | ADR Repository | ✅ Complete |
 | OpenAPI Specification | ✅ Complete |
 | Database Documentation | ✅ Complete |
-| Runbooks | ⏳ Pending |
+| Runbooks | 🟢 DevOps docs added (SETUP.md + docs/devops/*); operational runbooks partial |
 
 ---
 
@@ -125,7 +126,7 @@ See:
 | Security Architecture | ✅ Complete |
 | Release Architecture | ✅ Complete |
 
-Implementation has not yet begun.
+Implementation is underway (Mobile MVP Phase 1; M1–M5 complete).
 
 ---
 
@@ -135,8 +136,8 @@ Implementation has not yet begun.
 |--------|---------|
 | Repository Structure | ✅ Complete |
 | Shared Packages | ✅ Scaffolded |
-| Expo App | ✅ Scaffolded |
-| Supabase Project | ⏳ Pending |
+| Expo App | ✅ App shell + M1–M5 slices |
+| Supabase Project | ⏳ Pending (migrations defined; not yet applied to a live project) |
 | GitHub Actions | ✅ Complete |
 | CI/CD | ✅ Defined |
 
@@ -146,11 +147,11 @@ Implementation has not yet begun.
 
 | Area | Status |
 |--------|---------|
-| Authentication | ⏳ Pending |
-| Database | ⏳ Pending |
-| Edge Functions | 🟢 Wired (panchang engine blocked) |
-| APIs | ⏳ Pending |
-| RLS Policies | ⏳ Pending |
+| Authentication | ✅ AuthRepository + anon-first/OAuth/OTP (backend + shell) |
+| Database | ✅ Schema + RLS + repositories (migrations not yet applied live) |
+| Edge Functions | 🟢 7 SVC_* wired (panchang compute blocked by ADR-033) |
+| APIs | ✅ OpenAPI (65 operations) + SVC_* handlers |
+| RLS Policies | ✅ Defined across 29 tables |
 | AI Provider | ✅ OpenAI adapters + RAG pipeline + rate limit/cost |
 | Analytics Adapter | ⏳ Pending |
 | Payment Adapter | ✅ Webhook + BillingRepository (F-4) |
@@ -163,13 +164,18 @@ Implementation has not yet begun.
 |--------|---------|
 | Expo Setup | ✅ App shell |
 | Navigation | ✅ Shell (splash/auth/4-tab/guards/deep links) |
-| Design System | 🟡 Tokens + shell components |
-| Components | ⏳ Pending |
+| Design System | ✅ Tokens + shell/feature components (extends per slice) |
+| Components | 🟢 CMP_* for M1–M5 + settings atoms (Segmented/Toggle/SettingsRow); Notifications/Subscription pending |
 | Authentication Flow | ✅ Anon-first + OAuth/OTP (shell) |
+| Today (MOD_today) | ✅ SCR_HOME_001 (panchang unavailable per ADR-033) |
 | Ritual Experience | ✅ Guided player (session engine, offline restore, text-first audio seam) |
 | Calendar Experience | 🟡 Month shell (grid/navigation; spiritual markers blocked by ADR-033) |
-| Ask Guru | 🟢 Client (launch-gated) |
-| Household | ⏳ Pending |
+| Ask Guru | 🟢 Client complete (live answers gated, GURU_LIVE=false) |
+| Settings / Preferences | ✅ SCR_SETTINGS_001 (server-authoritative prefs; optimistic + offline) |
+| Profile | ✅ SCR_PROFILE_001 (account state, deferred-auth prompt, entries) |
+| Household | 🟡 Shell (SCR_HOUSEHOLD_001; members/invites/realtime next) |
+| Notifications | ⏳ Pending (M7) |
+| Subscription | ⏳ Pending (M8) |
 
 ---
 
@@ -177,11 +183,12 @@ Implementation has not yet begun.
 
 | Area | Status |
 |--------|---------|
-| RAG Pipeline | ⏳ Pending |
-| Prompt Registry | ⏳ Pending |
-| Model Registry | ⏳ Pending |
-| Embeddings | ⏳ Pending |
-| Evaluation Suite | ⏳ Pending |
+| RAG Pipeline | ✅ Implemented (retrieval + pgvector RPC) |
+| Prompt Registry | 🟡 In Progress |
+| Model Registry | 🟡 In Progress |
+| Embeddings | ✅ pgvector migration + retrieval RPC |
+| Content Corpus (reviewed) | ⏳ Pending — gates live Ask Guru |
+| Evaluation Suite | ⏳ Pending — gates live Ask Guru |
 
 ---
 
@@ -189,12 +196,12 @@ Implementation has not yet begun.
 
 | Area | Status |
 |--------|---------|
-| GitHub Actions | ⏳ Pending |
-| Linting | ⏳ Pending |
-| Testing Pipeline | ⏳ Pending |
-| Build Pipeline | ⏳ Pending |
-| OTA Strategy | ⏳ Pending |
-| Release Automation | ⏳ Pending |
+| GitHub Actions | ✅ Complete + hardened (least-privilege, retries, preflight gates, summaries; YAML-validated) |
+| Linting | ✅ ESLint + Prettier configured |
+| Testing Pipeline | 🟢 Vitest + pgTAP suites; CI db-tests now installs psql + pg_prove (first live run pending) |
+| Build Pipeline | ✅ Turborepo defined |
+| OTA Strategy | ✅ Defined |
+| Release Automation | 🟡 Defined + preflight validator (scripts/preflight.sh); deploy steps scaffolded until EAS/projects provisioned |
 
 ---
 
@@ -202,12 +209,12 @@ Implementation has not yet begun.
 
 | Area | Status |
 |--------|---------|
-| Unit Tests | ⏳ Pending |
-| Integration Tests | ⏳ Pending |
-| Component Tests | ⏳ Pending |
-| Accessibility Tests | ⏳ Pending |
+| Unit Tests | 🟢 In place (10+ Vitest suites) |
+| Integration Tests | 🟢 pgTAP integration suite |
+| Component Tests | 🟢 In place for delivered slices |
+| Accessibility Tests | 🟢 a11y assertions in slice tests |
 | AI Evaluation | ⏳ Pending |
-| E2E Tests | ⏳ Pending |
+| E2E Tests | ⏳ Pending (Maestro FLOW_*) |
 
 ---
 
@@ -215,27 +222,27 @@ Implementation has not yet begun.
 
 Priority 1
 
-Repository scaffolding
+Mobile Milestone 6 — Profile / Household (MOD_you)
 
 Priority 2
 
-Architecture Decision Records
+Mobile Milestone 7 — Notifications
 
 Priority 3
 
-OpenAPI specification
+Mobile Milestone 8 — Subscription
 
 Priority 4
 
-Database schema
+⛔ Ratify ADR-033 (Canonical Panchang Engine) — unblocks Today panchang, Calendar markers, notifications
 
 Priority 5
 
-Supabase migrations
+AI corpus ingestion + eval readiness — unblocks live Ask Guru (GURU_LIVE)
 
 Priority 6
 
-Expo application
+Apply migrations to a live Supabase project + integration run
 
 ---
 
@@ -247,14 +254,17 @@ Expo application
 - Owner: Architecture + Product (+ pandit reviewer).
 - Expected Resolution: ratify ADR-033 Part B (ephemeris/ayanamsa/traditions/methodology/validation dataset/tolerances) → implement a concrete engine → pass golden dataset. See docs/architecture/canonical-panchang-engine/.
 
+🔒 **Ask Guru live answers gated** (GURU_LIVE = false)
+- The Ask Guru client is complete but streams live answers only once a reviewed content corpus and evaluation readiness are in place (TDD Part 3 §9/§10B). Until then it honestly declines. Flipping the flag goes live.
+
 ---
 
 # Next Major Deliverables
 
-- Backend Edge Functions (SVC_*)
-- Design System & Component Library
-- Mobile feature slices (MOD_*)
-- Initial Supabase Project (apply migrations)
+- Mobile feature slices M6–M8 (Profile/Household, Notifications, Subscription)
+- Reviewed AI content corpus + evaluation harness (unblocks live Ask Guru)
+- Initial Supabase Project (apply migrations) + integration run
+- E2E automation (Maestro FLOW_*) + first live CI run
 
 ---
 
@@ -283,6 +293,21 @@ Expo application
   CalendarProvider/repository/query seam, accessible month navigation/grid/day cells and
   tradition switcher. Festival, vrat, and panchang markers remain explicitly unavailable until
   ADR-033 is ratified.
+- Mobile Milestone 5 (Ask Guru Client / SCR_GURU_HOME/CHAT/HISTORY_001): trust-first home,
+  streamed conversation, source/decline/error/offline states, and cached history via a
+  readiness-gated SSE transport. The client calls only the server API/SSE adapter — never an LLM
+  directly and never fabricates. Live answers stay gated (GURU_LIVE=false) until corpus/eval
+  readiness; component/domain/UI + a11y tests included.
+- Mobile Milestone 6 — Increment 1 (Profile/Household / MOD_you): server-authoritative
+  preferences (profileRepository owner-RLS + usePreferences/useUpdatePreferences: optimistic,
+  STORE_prefs mirror, offline queue); SCR_SETTINGS_001 (appearance/tradition/depth/sign-out) and
+  SCR_PROFILE_001 (account state, deferred-auth prompt, Settings/Household entries); new settings
+  CMP_* (Segmented/Toggle/SettingsRow); Household shell (no dead end); mapping + repository tests.
+  Household members/invites/realtime and account deletion remain (later M6 increments).
+- DevOps Platform Audit & Hardening (interlude, 2026-07-12): canonical env inventory (14 vars),
+  secrets matrix, 6 .env.*.example templates, scripts/preflight.sh + bootstrap.sh, behavior-
+  preserving workflow hardening (ci/cd/ota), docs/SETUP.md + docs/devops/*, DEVOPS_AUDIT_REPORT.md;
+  fixed .gitignore ignoring env templates. No product/architecture/deploy-behavior changes.
 
 Do not duplicate SESSION.md.
 
@@ -294,16 +319,15 @@ Only major milestones belong here.
 
 Current Goal
 
-Move from documentation to implementation.
+Complete the Mobile MVP Phase 1 feature slices (M6–M8) and reach Beta Readiness.
 
-The project is considered ready for feature development when:
+The project is considered ready for Beta Readiness & Platform Hardening when:
 
-- Repository foundation is complete.
-- CI/CD is operational.
-- Database schema is finalized.
-- OpenAPI specification is complete.
-- Supabase project is configured.
-- Shared packages are established.
+- All eight mobile slices (M1–M8) are implemented and reviewed.
+- Every screen composes approved CMP_* with tokens-only styling and localized strings.
+- Unit/component/domain tests pass in CI (first live CI run completed).
+- A live Supabase project is provisioned and migrations applied.
+- ADR-033 is ratified and Ask Guru corpus/eval readiness is met for a panchang-inclusive launch.
 
 ---
 
@@ -333,35 +357,39 @@ Those belong in SESSION.md.
 
 ↓
 
-🟡 Repository Foundation
+✅ Repository Foundation
 
 ↓
 
-Backend Foundation
+✅ Backend Foundation
 
 ↓
 
-Design System
+✅ Design System
 
 ↓
 
-Authentication
+✅ Authentication
 
 ↓
 
-Today's Panchang
+✅ Today's Panchang (shell; compute blocked by ADR-033)
 
 ↓
 
-Ritual Experience
+✅ Ritual Experience
 
 ↓
 
-Ask Guru AI
+✅ Calendar Shell
 
 ↓
 
-Household
+✅ Ask Guru AI (client; live answers gated)
+
+↓
+
+🚧 Household
 
 ↓
 
@@ -387,8 +415,13 @@ Production
 
 # Executive Summary
 
-The PanchangPal project has completed the product definition and architecture phases.
+The PanchangPal project has completed the product definition and architecture phases, the
+repository and platform foundation, and the backend SVC_* services.
 
-The current focus is building a production-ready engineering foundation before feature implementation begins.
+The current focus is the Mobile MVP Phase 1 feature-slice milestone: App Shell, Today, Guided
+Ritual, Calendar Shell, and Ask Guru Client (M1–M5) are complete; Profile/Household,
+Notifications, and Subscription (M6–M8) remain. The only architectural blocker is the Canonical
+Panchang Engine decision (ADR-033); Ask Guru live answers are intentionally gated until
+corpus/eval readiness.
 
 The project remains on track and architecture is considered stable.

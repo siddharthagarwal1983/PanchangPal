@@ -3,89 +3,101 @@
 # PanchangPal — Current Session
 
 Version: 1.0.0
-Last Updated: 2026-07-12 12:57
+Last Updated: 2026-07-12 (evening — DevOps platform audit + hardening)
 
-Date/Time: 2026-07-12, afternoon session.
+Date/Time: 2026-07-12, evening session.
 
 ---
 
 # Session Objective
 
-Transform the internal Project Command Center (scripts/command-center/) into a world-class,
-Linear/Vercel/Datadog-quality Engineering Command Center — improving presentation, hierarchy,
-navigation, and interactivity only. No backend changes, no invented data, no architecture or
-visual-identity changes; the tool stays repo-generated.
+Complete audit + hardening of the deployment platform BEFORE further feature work. Goal: make
+PanchangPal reproducible, self-documenting, and deployment-ready for any developer / CI-CD system.
+Constraints honored: no product features, no architecture changes, no deploy-behavior changes, no
+invented env vars, no real secrets.
 
 ---
 
-# Work Completed (this session — Command Center upgrade)
+# Work Completed (11-phase DevOps pass)
 
-- Rebuilt the dashboard as a hash-routed SPA with a grouped left-nav (Overview / Delivery /
-  Architecture / Quality / Risk / Activity) and a persistent go/no-go verdict in the top bar.
-- Added an Engineering Cockpit landing page (ship-today verdict, production readiness, blockers,
-  critical risks, module health, recent changes/decisions, upcoming milestones).
-- Added views: Module Health, AI Context Graph, Decision Timeline, Risk Register, first-class
-  Blockers page, interactive Dependency Graph (pan/zoom + upstream/downstream highlight + drawer),
-  ADR Explorer (status filter + detail drawer), Technical Debt kanban, Engineering Journal.
-- Extended the generator with derived, repo-grounded data only (no fabrication): moduleHealth,
-  aiContext, risks, decisions, per-severity/area tech-debt, ADR decision/consequences/related IDs,
-  and a structured session journal with per-commit file stats.
-- Preserved the existing colour palette, typography, data model, and repo-generated architecture.
+- Phase 1–3 (audit): inventoried 3 workflows (ci/cd/ota), scripts, 8 package.json, turbo, Supabase/
+  Expo/Deno config, Edge Functions, and every env reference. Produced a canonical 14-variable
+  inventory (docs/devops/ENVIRONMENT_VARIABLES.md) + workflow audit (docs/devops/GITHUB_ACTIONS_AUDIT.md).
+- Phase 4 (templates): 6 `.env.*.example` (master/local/development/staging/production/ci),
+  placeholders only. Fixed `.gitignore` — `.env.*`/`*.env` was ignoring the templates; added negations.
+- Phase 5 (secrets): docs/devops/SECRETS_MATRIX.md — 18 secrets/vars classified by store + sensitivity.
+- Phase 6–7 (tooling): scripts/preflight.sh (fail-fast deploy validator, per-target) + scripts/
+  bootstrap.sh (dev-machine PASS/WARN/FAIL + %). Both syntax-checked and run.
+- Phase 8 (hardening, behavior-preserving): least-privilege permissions; version pins from workflow
+  env (fixed 8× duplication); pnpm install retries; db-tests now installs psql + pg_prove;
+  security-scan gets Node/pnpm+cache; preflight gate on every CD/OTA deploy job; supabase/setup-cli;
+  step summaries; OTA env aligned to staging/production; refreshed workflows/README. All 3 workflows
+  re-validated as YAML.
+- Phase 9: docs/SETUP.md — full new-engineer guide (prereqs → run → test → migrate → deploy → FAQ).
+- Phase 10–11: docs/devops/DEPLOYMENT_READINESS.md + DEVOPS_AUDIT_REPORT.md (scores, risks, actions).
+- Phase 4.5: docs/devops/CONFIGURATION_REGISTRY.md — canonical registry of all 40 config items
+  (env/secrets/feature-flags/build/Supabase/notifications) + dependency/environment/ownership/
+  validation/lifecycle matrices + a Configuration Health Report (score 88/100). Grounded by re-scan.
 
 ---
 
-# Files Created
-
-None (all Command Center files already existed from the prior session).
-
----
+# Files Created (18)
+- DEVOPS_AUDIT_REPORT.md; docs/SETUP.md
+- docs/devops/{GITHUB_ACTIONS_AUDIT,ENVIRONMENT_VARIABLES,SECRETS_MATRIX,DEPLOYMENT_READINESS,CONFIGURATION_REGISTRY}.md
+- .env.example + .env.{local,development,staging,production,ci}.example
+- scripts/preflight.sh; scripts/bootstrap.sh
 
 # Files Modified
-
-- scripts/command-center/generate.mjs (derived parsers + richer ADR/session data)
-- scripts/command-center/app.js (rewritten as multi-view SPA)
-- scripts/command-center/styles.css (layout/interaction on unchanged palette)
-- scripts/command-center/index.html (new shell: nav groups, go/no-go, drawer)
-- scripts/command-center/README.md (new views + honesty notes)
-- scripts/command-center/command-center.json (regenerated build artifact)
+- .github/workflows/{ci,cd,ota}.yml (hardened); .github/workflows/README.md (refreshed)
+- .gitignore (negations so *.example templates are committable)
+- .claude/{IMPLEMENTATION_ROADMAP,PROJECT_STATUS,TASK,SESSION}.md (this completion update)
 
 ---
 
-# Important Observations
-
-- Product state is unchanged: still 84%, Mobile MVP Phase 1, M1–M5 done. This was tooling only.
-- Verification: node --check on all JS; a jsdom harness rendered all 19 routes with zero runtime
-  errors; serve.mjs returns 200 for html/json/js/css and 404 for path traversal.
-- Honest limits surfaced in-UI: no live CI status / coverage % (offline); risk probability/impact
-  are inferred from blockers/proposed-ADRs/open-gates; owners read "unassigned".
-- Consistency note: PROJECT_STATUS.md still frames "Current Phase" as Repository & Platform
-  Foundation with Mobile/Backend Development at 0% — stale vs DASHBOARD (Mobile MVP Phase 1). Left
-  as-is per end-session rules (report, don't rewrite); recommend reconciling next session.
+# Verification
+- All 18 deliverables present + non-empty. bootstrap.sh + preflight.sh: `bash -n` clean and executed
+  (bootstrap shows readiness %; preflight fails fast on missing secrets, passes when set).
+- 3 workflows parse as valid YAML with the full job graph intact (caught + fixed an unquoted-colon
+  YAML bug in the summary steps).
+- Templates confirmed committable (not gitignored) and placeholder-only (no real secret patterns).
 
 ---
 
-# Blockers
-
-- ⛔ Canonical Panchang Engine (ADR-033, Proposed) — unchanged.
-- 🔒 Ask Guru live answers gated (GURU_LIVE=false) — unchanged.
-- Cannot commit/push from the session — user commits manually.
+# Key Findings (see GITHUB_ACTIONS_AUDIT.md / DEVOPS_AUDIT_REPORT.md)
+- `.gitignore` would have ignored all `.env.example` templates (fixed).
+- CI db-tests lacked psql/pg_prove; security-scan lacked Node/pnpm setup (fixed).
+- Version pins duplicated/hardcoded across CI jobs (fixed via env).
+- OTA used Environment `prod` vs CD `production` (aligned).
+- Secrets discovered (14 real vars): EXPO_PUBLIC_{SUPABASE_URL,SUPABASE_ANON_KEY,REVENUECAT_KEY,
+  SENTRY_DSN}; SUPABASE_{URL,ANON_KEY,SERVICE_ROLE_KEY}; OPENAI_API_KEY; REVENUECAT_WEBHOOK_SECRET;
+  SUPABASE_{ACCESS_TOKEN,STAGING_DB_URL,STAGING_REF,PROD_DB_URL}; EXPO_ACCESS_TOKEN.
+- Absent (NOT invented): Apple/Google/Stripe/EAS-beyond-token — store creds are EAS-managed.
 
 ---
 
-# Pending Work
+# Missing Configuration (gated, owner: Platform — not a code task)
+- Live Supabase dev/staging/prod projects + Edge secrets; GitHub secrets/Environments; prod reviewers.
+- eas.json + EAS/store credentials; several CD/OTA deploy steps remain intentional scaffolds.
+- AI eval harness (ci ai-eval-subset gate) — owner: AI.
 
-- Review/approve the Command Center upgrade.
-- Optional: CI job to regenerate command-center.json on push (+ publish to Pages).
+---
+
+# Deployment Readiness
+- Developer-experience / documentation readiness: ~92% (reproducible from clean clone).
+- Actual production-deploy readiness: ~45% (gated on provisioning above). Pipeline + validation ready.
+
+---
+
+# Blockers (unchanged)
+- ⛔ Canonical Panchang Engine (ADR-033). 🔒 Ask Guru GURU_LIVE gate. Cannot commit/push from session.
 
 ---
 
 # Recommended Next Task
-
-Resume the product track: Mobile MVP Milestone 6 — Profile / Household (MOD_you), pending review
-sign-off on M5 and the Command Center.
+Owner-driven provisioning (Track C): create Supabase projects + configure GitHub secrets/Environments,
+then run `scripts/preflight.sh staging`. Product track resumes at M6 Increment 2 (Household).
 
 ---
 
 # STOP
-
-Stopped for review. Do not start Milestone 6 until approved.
+Stopped for review. No further changes until approved.

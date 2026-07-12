@@ -4,6 +4,11 @@
 # plugin changes via OTA (TRISK-10). Every OTA is tied to a runtime version; rollouts
 # are staged and monitored (Sentry crash-free), auto-rollback on a crash spike.
 # Manual dispatch so OTA is a deliberate action, not every merge.
+#
+# Hardening (2026-07-12): least-privilege permissions, preflight fail-fast, and the
+# Environment name aligned to CD (staging/production, finding OTA-1). The update
+# message no longer relies on head_commit (empty on dispatch) — it uses the SHA.
+# The publish STEP stays a scaffold (echo) until EAS is provisioned.
 # =============================================================================
 name: OTA
 
@@ -15,7 +20,10 @@ on:
         required: true
         default: 'staging'
         type: choice
-        options: [staging, prod]
+        options: [staging, production]
+
+permissions:
+  contents: read
 
 jobs:
   publish-ota:
@@ -24,7 +32,11 @@ jobs:
     environment: ${{ inputs.channel }}
     steps:
       - uses: actions/checkout@v4
+      - name: Preflight (fail fast on missing config)
+        run: bash scripts/preflight.sh "${{ inputs.channel }}"
+        env:
+          EXPO_ACCESS_TOKEN: ${{ secrets.EXPO_ACCESS_TOKEN }}
       - name: eas update
-        run: echo "eas update --channel ${{ inputs.channel }} --message '${{ github.event.head_commit.message }}'"
+        run: echo "eas update --channel ${{ inputs.channel }} --message 'OTA ${{ github.sha }}'"
         env:
           EXPO_ACCESS_TOKEN: ${{ secrets.EXPO_ACCESS_TOKEN }}
