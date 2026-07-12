@@ -4,68 +4,54 @@
 
 Version: 1.0.0
 
-Last Updated: 2026-07-12 02:10
+Last Updated: 2026-07-12 02:55
 
 Purpose:
-This document records the current working session.
-It is **not** permanent project memory.
+This document records the current working session. It is **not** permanent project memory.
 
 ---
 
 # Session Objective
 
-Initialize the Expo application (shell + wiring) and stand up the GitHub Actions CI/CD pipeline per TDD Part 4 (§3/§4) and Part 5 (§2). Structure/pipeline only; no product features.
+Backend Foundation — begin implementing the SVC_* Edge Functions against the API_* contracts (TDD Part 2 §5) and the AI/RAG subsystem (TDD Part 3). Read Part 3 first; flag any missing specs.
 
 ---
 
-# Work Completed
+# Work Completed (first increment)
 
-Expo app (apps/mobile):
-- Runtime deps declared (expo, expo-router, react-native, zustand, @tanstack/react-query, react-native-mmkv, supabase-js, i18next, reanimated, safe-area). babel.config.js (reanimated), metro.config.js (monorepo watchFolders).
-- 4-tab router per TDD §3.1: app/_layout (AppProviders + stack), (onboarding) stack, (tabs)/_layout (today | calendar | guru | you) with empty SCR_* screens.
-- Providers: AppProviders (SafeArea + QueryClientProvider + ThemeProvider + i18n); queryClient config (§4.3); ThemeProvider bound to @panchangpal/design-tokens (§9.3); i18n (i18next + expo-localization, §9.2).
-- Zustand STORE_* skeletons (§4.2): session, offlineQueue, prefs, ui — store shapes + seams, no business logic.
-
-CI/CD (.github):
-- ci.yml — 6 PR-gate jobs covering all TDD Part 5 §2.2 gates: lint+typecheck, unit/component/a11y, api/zod contract, RLS policy suite (postgres service + migrate + pg_prove), AI eval subset, secret + dependency scan.
-- cd.yml — migrate→staging → deploy SVC_* → Maestro E2E → EAS build → internal dist → manual prod promotion (§10 go/no-go).
-- ota.yml — Expo Updates (JS-only, staged) per §2.4. CODEOWNERS (PDD §3.0A.5). scripts/migrate.sh + codegen.sh.
+- Read TDD Part 3 (AI/RAG): retrieval config, F-6/F-16 thresholds, chunking, prompt/config registries, SSE contract — all specified; no blocking AI-spec gaps.
+- `_shared` core (Deno + Vitest-safe): env, supabase clients (service + user), ERR_* envelope + AppError, http/cors/sse, structured logging + correlation id, auth/withHandler boundary, HMAC crypto.
+- Fully-specified DB functions with PURE logic + Vitest tests:
+  - `sync` — per-kind conflict rules (§6.6): client-authoritative daily completion, checklist union, personal-date LWW+tombstone, longer-streak-wins.
+  - `revenuecat-webhook` — HMAC verify + event→(subscription, entitlement) mapping at household grain (F-4).
+  - `account` — anon→auth merge (F-1), deletion gate (F-3), grace window, transfer.
+- Conformant skeletons + flagged seams: `panchang` (cache-key tested; engine BLOCKED), `notify-scheduler` (sweep/quiet-hours/Expo seams), `ask-guru` (SSE pipeline + confidence gate wired), `content-ingest` (chunk→embed→upsert seams).
+- `packages/ai` fleshed out: LLMProvider/EmbeddingProvider adapters, AI config registry (§8A defaults), retrieval confidence gate (§4.4, tested), scope/refusal taxonomy.
+- Vitest wired: root vitest.config.ts (alias + include), root `test` script, CI updated (vitest + mobile jest steps).
 
 ---
 
-# Files Created
+# Files Created / Modified
 
-~24: mobile config + router (8 tsx) + providers/stores/theme/i18n (9 ts/tsx); .github ci/cd/ota + CODEOWNERS; scripts/migrate.sh + codegen.sh.
+Created ~28: apps/backend/{deno.json, functions/_shared/*, functions/{sync,revenuecat-webhook,account,panchang,notify-scheduler,ask-guru,content-ingest}/*}, packages/ai/src/{providers,config,retrieval,scope,retrieval.test}.ts, vitest.config.ts.
+Modified: package.json (vitest), .github/workflows/ci.yml, packages/ai/src/index.ts, apps/backend/functions/README.md; .claude state files.
 
-# Files Modified
+---
 
-- apps/mobile/package.json (deps), apps/mobile/app/_layout.tsx.
-- .claude/DASHBOARD.md, PROJECT_STATUS.md, CURRENT_MILESTONE.md, SESSION.md, TASK.md.
+# ⚠️ BLOCKER / GAP (needs owner input)
+
+**Panchang astronomical engine is undocumented.** ADR-010 mandates a deterministic engine validated vs Drik/mPanchang, but the actual algorithm (ephemeris; tithi/nakshatra/yoga/karana; sunrise/sunset; muhurta; Rahu Kaal) is NOT specified in any MRD/PRD/PDD/TDD. Not invented (a wrong tithi breaks trust, MRD Risk §1). `panchang/engine.ts` is an explicit blocked seam; `panchang` + `notify-scheduler` (sunrise/tithi timing) are gated on it. Needs the approved algorithm/ephemeris source + reviewer-validation harness.
 
 ---
 
 # Validation
 
-- All 3 workflow YAMLs parse; CI = 6 jobs (8 documented gates covered), CD = 5-stage pipeline with manual prod gate, OTA = 1 job.
-- Router tree matches TDD §3.1 (onboarding + 4 tabs). mobile package.json valid (23 deps). Deep-link scheme present.
-- Dependency direction unchanged; no new top-level folders.
-
----
-
-# Important Observations
-
-- Offline sandbox: no `pnpm install` / `tsc` / `expo` / act — validation is structural. First CI run (`pnpm install && pnpm typecheck` + the postgres RLS job) is the live confirmation. TS uses type-only imports (verbatimModuleSyntax).
-- Workflow steps that need the toolchain/DB/secrets are wired with echo placeholders where the real command needs provisioning (marked in comments) so the gate structure exists and fails closed.
-- CODEOWNERS uses @owner placeholders — replace with real handles when the GitHub org is set up.
-
----
-
-# Blockers
-
-None.
+- 7 handlers use Deno.serve; pure logic/test graph has ZERO Deno.* usage (Vitest-safe). 5 test files (sync, rc, account, panchang cacheKey, ai retrieval).
+- JSON/deno.json valid; CI api-contract → vitest, unit job runs vitest + mobile jest.
+- No live run: sandbox offline (no node_modules/vitest). Tests + TS run in CI.
 
 ---
 
 # Recommended Next Task
 
-Backend Foundation — implement the SVC_* Edge Functions (Deno) against the API_* contracts (TDD Part 2 §5) and TDD Part 3 for SVC_ask_guru: panchang, ask-guru (SSE), notify-scheduler, revenuecat-webhook, sync, account, content-ingest. Server-only secrets; idempotent; RLS-respecting.
+Continue Backend Foundation: (1) resolve the panchang-engine gap with the owner; (2) add the concrete OpenAI adapters (GPT-5 mini + text-embedding-3-small) in packages/ai with OPENAI_API_KEY; (3) wire the DB upserts (sync/webhook/account) + integration tests vs a Supabase test project; (4) add ask-guru rate limits + cost circuit-breaker (§8.4).

@@ -50,8 +50,11 @@ jobs:
           node-version: '20.11.0'
           cache: pnpm
       - run: pnpm install --frozen-lockfile
-      # Component tests assert accessibility (roles/labels/targets/contrast) — release-blocking (ADR-029).
+      # Vitest logic suites (Edge Function conflict rules, RC mapping, merge/deletion,
+      # panchang cache key, retrieval confidence gate). Component/a11y tests (jest-expo)
+      # run per-app and are release-blocking (ADR-029).
       - run: pnpm test
+      - run: pnpm --filter @panchangpal/mobile test
 
   api-contract:
     name: API / zod contract tests
@@ -67,7 +70,7 @@ jobs:
           cache: pnpm
       - run: pnpm install --frozen-lockfile
       # Validates packages/api zod contracts against docs/api/openapi.yaml (ADR-032).
-      - run: pnpm --filter @panchangpal/api test
+      - run: pnpm exec vitest run packages/api --passWithNoTests
 
   rls-policy:
     name: RLS policy test-suite (§4.4 security gate)

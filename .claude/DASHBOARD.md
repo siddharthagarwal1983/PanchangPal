@@ -4,7 +4,7 @@
 
 Version: 1.0.0
 
-Last Updated: 2026-07-12 02:10
+Last Updated: 2026-07-12 02:55
 
 Purpose:
 This is the first file Claude should read at the beginning of every session.
@@ -42,7 +42,7 @@ PanchangPal
 
 Progress
 
-64%
+70%
 
 ---
 
@@ -58,7 +58,7 @@ CURRENT_MILESTONE.md
 
 # Current Task
 
-Backend Foundation — implement SVC_* Edge Functions
+Backend Foundation (continued) — panchang engine, AI adapters, DB wiring
 
 See:
 
@@ -68,7 +68,7 @@ TASK.md
 
 # Today's Objective
 
-Expo app shell (4-tab router, providers, Zustand stores, theme, i18n) + GitHub Actions CI/CD (ci/cd/ota workflows, CODEOWNERS, scripts) complete. Next: implement the SVC_* Edge Functions against the API_* contracts.
+SVC_* first increment done: _shared core; sync/revenuecat-webhook/account logic + Vitest tests; panchang/notify/ask-guru/content-ingest conformant skeletons; packages/ai adapters+config+gate. Next: unblock panchang engine, add OpenAI adapters + DB integration wiring.
 
 Do not introduce new architecture.
 
@@ -96,11 +96,11 @@ Do not introduce new architecture.
 
 # Current Priorities
 
-1. Backend Edge Functions (SVC_*)
+1. Backend SVC_* completion (panchang engine gap, AI adapters, DB wiring)
 2. Design System / Component Library
 3. Mobile feature slices (MOD_*)
-4. AI/RAG subsystem (TDD Part 3)
-5. Apply migrations to a live Supabase project
+4. Apply migrations to a live Supabase project
+5. AI corpus ingestion + eval harness
 
 ---
 
@@ -118,7 +118,7 @@ None
 
 # Next Deliverable
 
-Backend Edge Functions (SVC_*)
+Backend SVC_* completion (engine + adapters + DB wiring)
 
 ---
 
