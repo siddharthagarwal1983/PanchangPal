@@ -167,6 +167,7 @@ Implementation has not yet begun.
 | Components | ⏳ Pending |
 | Authentication Flow | ✅ Anon-first + OAuth/OTP (shell) |
 | Ritual Experience | ✅ Guided player (session engine, offline restore, text-first audio seam) |
+| Calendar Experience | 🟡 Month shell (grid/navigation; spiritual markers blocked by ADR-033) |
 | Ask Guru | ⏳ Pending |
 | Household | ⏳ Pending |
 
@@ -278,6 +279,10 @@ Expo application
   RitualEngine; MMKV ritual-session repository; RitualRepository/query hook; NullAudioAdapter
   text-first seam; dedicated accessible completion state; 5 ritual CMP_* and domain/repository/UI
   tests. Playback is intentionally deferred to a separately approved AudioAdapter.
+- Mobile Milestone 4 (Calendar Shell / SCR_CALENDAR_001): reusable Gregorian month layout,
+  CalendarProvider/repository/query seam, accessible month navigation/grid/day cells and
+  tradition switcher. Festival, vrat, and panchang markers remain explicitly unavailable until
+  ADR-033 is ratified.
 
 Do not duplicate SESSION.md.
 

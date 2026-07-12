@@ -11,7 +11,7 @@ Purpose: records the current working session. Not permanent project memory.
 
 # Session Objective
 
-Implement Mobile MVP Milestone 3 — Guided Ritual Player (SCR_RITUAL_001) within MOD_today.
+Implement Mobile MVP Milestone 5 — Ask Guru Client (SCR_GURU_*) within MOD_guru.
 Architecture-first; panchang stays behind the frozen abstraction; do not touch ADR-033.
 
 ---
@@ -55,6 +55,21 @@ Architecture-first; panchang stays behind the frozen abstraction; do not touch A
 
 ---
 
+# Work Completed (Milestone 4 — Calendar Shell / SCR_CALENDAR_001)
+
+- Calendar month domain models the Gregorian grid and safe month navigation only; it has no
+  spiritual-calendar or event-computation logic.
+- ProductionCalendarProvider reports `ERR_PANCHANG_UNAVAILABLE` while ADR-033 remains blocked;
+  CalendarRepository and `useCalendarMonth` establish the future API/cache seam without
+  fabricating festival, vrat, or panchang markers.
+- SCR_CALENDAR_001 now composes CMP_MONTH_NAV, CMP_MONTH_GRID, CMP_DAY_CELL, and
+  CMP_TRADITION_SWITCHER. It supports selected dates, Today/previous/next controls, Dynamic Type,
+  screen-reader labels, and a calm unavailable message.
+- Tests cover month layout/navigation, provider/repository normalization, and calendar component
+  interactions and accessibility semantics.
+
+---
+
 # Architecture Compliance
 
 No architecture changes. Panchang stays behind PanchangProvider; ADR-033 untouched; NO
@@ -73,7 +88,7 @@ loading/empty/offline/error states. Reused M1 Screen/AppHeader; extended the com
 
 # Remaining Work / Blockers
 
-Milestone 3 complete. Blocker unchanged: ⛔ Canonical Panchang Engine (ADR-033) — Today's
+Milestone 4 complete. Blocker unchanged: ⛔ Canonical Panchang Engine (ADR-033) — Today's
 panchang card + festival stay "unavailable"/hidden until ratified. Ritual audio playback is
 intentionally not implemented: the NullAudioAdapter preserves the full text-guided flow until a
 production audio adapter is separately approved. Verification could not complete in this sandbox
@@ -81,7 +96,9 @@ because package-manager dependency downloads fail after the network is unavailab
 
 ---
 
-# STOP
+# Current Work
 
-Milestone 3 complete. Do NOT begin Calendar or another feature. Awaiting review + approval.
-Recommended next: Calendar shell (MOD_calendar).
+Milestone 5 was authorized on 2026-07-12. Scope: Ask Guru client (home, conversation, and
+history) with server-owned SSE, sources, honest declines, and accessible streaming states. Live
+answers remain gated by reviewed corpus/evaluation readiness; the client must never fabricate an
+answer or call an LLM directly.

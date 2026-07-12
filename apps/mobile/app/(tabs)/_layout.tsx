@@ -33,6 +33,8 @@ export default function TabsLayout() {
       <Tabs.Screen name="today/ritual" options={{ href: null, tabBarStyle: { display: 'none' } }} />
       <Tabs.Screen name="calendar/index" />
       <Tabs.Screen name="guru/index" />
+      <Tabs.Screen name="guru/chat" options={{ href: null }} />
+      <Tabs.Screen name="guru/history" options={{ href: null }} />
       <Tabs.Screen name="you/index" />
     </Tabs>
   );

@@ -32,3 +32,14 @@ export { RitualStep, type RitualStepProps } from './components/RitualStep';
 export { ProgressRing, type ProgressRingProps } from './components/ProgressRing';
 export { AudioControls, type AudioControlsProps } from './components/AudioControls';
 export { CompletionMoment, type CompletionMomentProps } from './components/CompletionMoment';
+// Calendar shell (SCR_CALENDAR_001)
+export { MonthNav, type MonthNavProps } from './components/MonthNav';
+export { MonthGrid, type MonthGridProps, type MonthGridDay } from './components/MonthGrid';
+export { DayCell, type DayCellProps } from './components/DayCell';
+export { TraditionSwitcher, type TraditionSwitcherProps, type TraditionOption } from './components/TraditionSwitcher';
+// Ask Guru (SCR_GURU_*)
+export { GuruHeader } from './components/GuruHeader';
+export { ChatInput, type ChatInputProps } from './components/ChatInput';
+export { AIChatBubble, type AIChatBubbleProps } from './components/AIChatBubble';
+export { TypingIndicator } from './components/TypingIndicator';
+export { SourceChip } from './components/SourceChip';

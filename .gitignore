@@ -19,6 +19,7 @@ node_modules/
 out/
 .docusaurus/
 .turbo/
+.pnpm-store/
 
 # Environment / Secrets
 .env

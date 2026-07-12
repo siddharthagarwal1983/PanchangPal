@@ -73,6 +73,31 @@ export const enUS = {
     label: '{{count}} day streak',
     graceCopy: 'A grace day kept your streak — no worries.',
   },
+  calendar: {
+    today: 'Today',
+    previousMonth: 'Previous month: {{month}}',
+    nextMonth: 'Next month: {{month}}',
+    tradition: 'Tradition',
+    unavailable: 'Festival and vrat markers are temporarily unavailable.',
+    unavailableDetail: 'The month layout is available, but spiritual calendar data will appear once it is ready.',
+    generic: 'General',
+    northIndian: 'North Indian',
+    southIndianTamil: 'Tamil',
+    bengali: 'Bengali',
+  },
+  guru: {
+    trustLine: "Guru answers from verified sources — and says so when it's not sure.",
+    inputPlaceholder: 'Ask Guru a question',
+    send: 'Send',
+    offline: 'Ask Guru needs a connection.',
+    thinking: 'Guru is thinking.',
+    unavailable: "I don't have verified information on this one. I'd rather not guess on something this important.",
+    history: 'View history',
+    historyEmpty: 'Your questions to Guru will appear here.',
+    starterDaily: 'How do I start a simple daily practice?',
+    starterTithi: "What does today's tithi mean?",
+    starterKids: 'Explain a festival to my kids.',
+  },
 } as const;
 
 export type Translations = typeof enUS;
