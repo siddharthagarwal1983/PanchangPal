@@ -4,7 +4,7 @@
 
 Version: 1.0.0
 
-Last Updated: 2026-07-12 05:10
+Last Updated: 2026-07-12 06:00
 
 Purpose:
 This document provides a high-level snapshot of the overall project.
@@ -35,7 +35,7 @@ Overall Progress
 
 ██████████░░░░░░░░░░
 
-**82% Complete**
+**84% Complete**
 
 Project Health
 
@@ -168,7 +168,7 @@ Implementation has not yet begun.
 | Authentication Flow | ✅ Anon-first + OAuth/OTP (shell) |
 | Ritual Experience | ✅ Guided player (session engine, offline restore, text-first audio seam) |
 | Calendar Experience | 🟡 Month shell (grid/navigation; spiritual markers blocked by ADR-033) |
-| Ask Guru | ⏳ Pending |
+| Ask Guru | 🟢 Client (launch-gated) |
 | Household | ⏳ Pending |
 
 ---

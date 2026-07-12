@@ -43,3 +43,4 @@ export { ChatInput, type ChatInputProps } from './components/ChatInput';
 export { AIChatBubble, type AIChatBubbleProps } from './components/AIChatBubble';
 export { TypingIndicator } from './components/TypingIndicator';
 export { SourceChip } from './components/SourceChip';
+export { ConversationRow, type ConversationRowProps } from './components/ConversationRow';

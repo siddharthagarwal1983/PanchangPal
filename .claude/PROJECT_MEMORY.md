@@ -2,15 +2,15 @@
 
 # PanchangPal — Project Memory
 
-Version: 1.0.0
+Version: 1.1.0
 
-Last Updated: 2026-07-11
+Last Updated: 2026-07-12
 
 Current Phase:
-Repository Setup
+Mobile MVP — Phase 1 (Feature Slices)
 
 Status:
-Planning Complete → Implementation Starting
+Foundation + Backend complete; mobile feature slices in progress (M1–M5 done)
 
 Purpose:
 This file is the permanent memory of the PanchangPal project.
@@ -106,7 +106,7 @@ Completed
 
 ✓ AI Knowledge Base
 
-Current implementation has not yet started.
+Implementation is underway: Repository & Platform Foundation and Backend Foundation (SVC_* Edge Functions) are complete; the mobile app is being built as feature slices (App Shell, Today, Guided Ritual, Calendar Shell, Ask Guru done). Live progress lives in DASHBOARD.md / CURRENT_MILESTONE.md / SESSION.md — not here.
 
 ---
 
@@ -319,64 +319,48 @@ All third-party integrations are accessed through adapters.
 
 # Current Development Phase
 
-The project is transitioning from documentation to implementation.
+Foundation and backend are built; the current phase is the **Mobile MVP (Phase 1)** feature-slice
+milestone.
 
-Immediate priorities are:
+Completed:
+1. Repository scaffolding · ADR repository · OpenAPI spec · Database schema + migrations
+2. Backend Foundation — all SVC_* Edge Functions, provider adapters, DB repositories
+3. Mobile slices: M1 App Shell · M2 Today · M3 Guided Ritual · M4 Calendar Shell · M5 Ask Guru
 
-1. Repository scaffolding
-2. ADR repository
-3. OpenAPI specification
-4. Database schema
-5. Supabase migrations
-6. Figma Design System
-7. Backend implementation
-8. Mobile implementation
+Remaining mobile slices: M6 Profile/Household · M7 Notifications · M8 Subscription.
+Then: Beta Readiness & Platform Hardening (TDD Part 5).
 
 ---
 
 # Major Pending Deliverables
 
-Architecture
+Done: ADR repository, OpenAPI spec, database schema + migrations, GitHub Actions CI/CD, shared
+packages, Expo project, backend SVC_* services, and mobile slices M1–M5.
 
-- ADR Repository
+Remaining:
 
-Backend
-
-- OpenAPI Specification
-- Database Schema
-- Migrations
-
-Design
-
-- Figma Design System
-
-Infrastructure
-
-- GitHub Actions
-- CI/CD
-- Expo project
-- Shared packages
-
-Development
-
-- Backend services
-- Mobile application
-- AI platform
-
-Testing
-
-- Unit tests
-- Integration tests
-- E2E tests
-- AI evaluation suite
-
-Deployment
-
-- TestFlight
-- Google Play Internal Testing
-- Production Release
+- Mobile — Profile/Household (M6), Notifications (M7), Subscription (M8)
+- AI platform — reviewed content corpus + evaluation harness (unblocks live Ask Guru)
+- Testing — E2E (Maestro FLOW_*), first live CI run
+- Deployment — live Supabase project, TestFlight / Play Internal, production release
 
 ---
+
+# Standing Blockers & Frozen Abstraction Seams
+
+Stable, cross-cutting facts (permanent until an approved decision changes them):
+
+- **PanchangEngine** (server) + **PanchangProvider** (client) — panchang is ALWAYS accessed
+  through these seams. The astronomical algorithm is undocumented and BLOCKED by ADR-033
+  (Canonical Panchang Computation Engine, Proposed). Until ratified, panchang compute,
+  Calendar/festival markers, and sunrise/tithi notifications surface a calm "unavailable" state;
+  no astronomical calculations are implemented and no values are fabricated.
+- **Ask Guru readiness gate** — the client streams only via the server SSE adapter (never an LLM
+  directly, never fabricates). Live answers are gated OFF (GURU_LIVE = false) until reviewed
+  corpus + evaluation readiness (TDD Part 3 §9/§10B); the client is complete behind the gate.
+- **AudioAdapter** — ritual narration is behind a port with a NullAudioAdapter fallback; the
+  text-guided flow is fully functional until a production audio adapter is approved.
+- **MockPanchangProvider** is DEV/TEST ONLY and must never be imported by production code.
 
 # Repository Rules
 

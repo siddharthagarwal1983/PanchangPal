@@ -1,15 +1,23 @@
 import type { GuruOutcome, GuruSource, GuruStreamEvent } from './types';
 
-/** Parses one complete SSE frame. Unknown/malformed data is discarded instead of guessed. */
+/**
+ * Parses one complete SSE frame from SVC_ask_guru. Accepts BOTH forms:
+ *  - named-event:  `event: token\ndata: {"text":"…"}`
+ *  - data-only:    `data: {"type":"token","text":"…"}`  (the form SVC_ask_guru emits, TDD Part 2 §5.4)
+ * The event type is the `event:` line if present, else the JSON `type` field. Unknown/malformed
+ * data is discarded (null) — never guessed; the server owns the outcome.
+ */
 export function parseGuruSseFrame(frame: string): GuruStreamEvent | null {
-  const event = frame.match(/^event:\s*(\w+)$/m)?.[1];
+  const eventLine = frame.match(/^event:\s*(\w+)$/m)?.[1];
   const data = frame.match(/^data:\s*(.+)$/m)?.[1];
-  if (!event || !data) return null;
+  if (!data) return null;
   try {
     const value = JSON.parse(data) as unknown;
-    if (event === 'token' && isObject(value) && typeof value.text === 'string') return { type: 'token', text: value.text };
-    if (event === 'sources' && isObject(value) && Array.isArray(value.sources)) return { type: 'sources', sources: value.sources.flatMap(toSource) };
-    if (event === 'done' && isObject(value) && isOutcome(value.outcome)) return { type: 'done', outcome: value.outcome, messageId: typeof value.message_id === 'string' ? value.message_id : undefined, errorCode: typeof value.error_code === 'string' ? value.error_code : undefined };
+    if (!isObject(value)) return null;
+    const event = eventLine ?? (typeof value.type === 'string' ? value.type : undefined);
+    if (event === 'token' && typeof value.text === 'string') return { type: 'token', text: value.text };
+    if (event === 'sources' && Array.isArray(value.sources)) return { type: 'sources', sources: value.sources.flatMap(toSource) };
+    if (event === 'done' && isOutcome(value.outcome)) return { type: 'done', outcome: value.outcome, messageId: typeof value.message_id === 'string' ? value.message_id : undefined, errorCode: typeof value.error_code === 'string' ? value.error_code : undefined };
   } catch { return null; }
   return null;
 }
