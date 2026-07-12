@@ -3,7 +3,7 @@
 # PanchangPal — Current Session
 
 Version: 1.0.0
-Last Updated: 2026-07-12 04:30
+Last Updated: 2026-07-12 05:10
 
 Purpose: records the current working session. Not permanent project memory.
 
@@ -11,60 +11,61 @@ Purpose: records the current working session. Not permanent project memory.
 
 # Session Objective
 
-Implement EXACTLY ONE milestone: Mobile MVP Milestone 1 — Application Shell. Architecture-first;
-no feature screens; do not touch ADR-033 / the PanchangEngine interface; stop after M1.
+Implement Mobile MVP Milestone 2 — Today (MOD_today) — and visualize screens as built.
+Architecture-first; panchang stays behind the frozen abstraction; do not touch ADR-033.
 
 ---
 
-# Work Completed (Milestone 1 — Application Shell)
+# Work Completed (Milestone 2 — Today / SCR_HOME_001)
 
-Resolved two spec-vs-architecture conflicts with the user before building (both → canonical):
-tabs = Today/Calendar/Guru/You (not Home/Festivals/Settings); auth = anonymous-first + Apple/
-Google/email-OTP (not password login/register/forgot — those don't exist in the contracts).
-
-- Design tokens: packages/design-tokens populated with PDD §6 values (light+dark color, type,
-  spacing, radius, motion) + getTheme(). ThemeProvider/useTheme moved into @panchangpal/ui.
-- Shared UI (11 CMP_*): Text, Screen (loading/empty/error/offline states), AppHeader,
-  BottomTabBar, Spinner, Skeleton, EmptyState, ErrorState, OfflineBanner, AuthButton,
-  BrandLogo/SplashBackdrop — token-only, typed, a11y (roles/labels/state, ≥44/48).
-- Auth data layer: supabaseClient (public keys only), AuthRepository (anon, Apple/Google/
-  email-OTP, restore, logout, merge via API_*), STORE_session wired to the repository, useOnline.
-- Navigation: root layout + AppProviders + app ErrorBoundary + expo-router per-route boundary;
-  splash bootstrap (app/index.tsx); (onboarding) sign-in + verify-otp; (tabs) custom
-  CMP_BOTTOM_TAB_BAR; guards (resolveRootRoute/requiresAuth/isEntitled); deep-link table; 4 tab
-  shells using Screen + AppHeader.
-- i18n: en-US keys for every shell string; typed t().
-- Tests (3 suites): shell components (a11y), navigation guards, session store (auth flow +
-  restore + merge + logout). jest-expo configs for mobile + ui; CI runs both.
+- Today components (9 CMP_* in @panchangpal/ui): Card, PrimaryButton, LocationChip,
+  PanchangCard (default/loading/offline/error/UNAVAILABLE states), RitualCard (3 states),
+  StreakCounter (grace-aware, secondary, no loss-framing), Checklist (+item, role=checkbox,
+  optimistic), RotatingElement, FestivalCard (conditional). Tokens-only, a11y, no hardcoded hex.
+- Panchang provider abstraction (client mirror of the frozen PanchangEngine seam):
+  PanchangProvider interface; ProductionPanchangProvider (API_GET_TODAY → 'unavailable' while
+  engine blocked, ADR-033, never fabricated); dev-only MockPanchangProvider.dev.ts imported
+  ONLY by tests (verified) — production code never depends on it.
+- Data: TodayRepository (API_GET_TODAY, ritual complete, checklist); hooks useToday
+  (cached-first), useChecklist + useToggleChecklistItem (optimistic + offline-queue + revert),
+  useCompleteRitual (optimistic + server-derived streak).
+- Domain: StreakService, RitualProgressService (pure view logic).
+- SCR_HOME_001 composed from CMP_* + hooks + domain — no business logic in the screen.
+  Panchang card shows the calm "temporarily unavailable" state; ritual/streak/checklist/
+  reflection are functional. i18n keys added.
+- Visualized the Today screen in the side panel (production unavailable + dev-mock preview).
+- Tests: today-domain (streak/ritual/mock), today-components (panchang states, checklist role/
+  toggle, ritual states).
 
 ---
 
 # Architecture Compliance
 
-No architecture changes. Frozen IA + auth model honored. PanchangEngine interface untouched;
-ADR-033 not modified. No astronomical calculations; no MockPanchangProvider needed (shell needs
-no panchang data). No business logic in screens (repositories/stores/guards). Tokens-only; no
-hardcoded hex/type; localized strings; loading/empty/offline/error states on every screen.
+No architecture changes. Panchang stays behind PanchangProvider; ADR-033 untouched; NO
+astronomical calculations; MockPanchangProvider is dev/test-only (production uses the real
+provider → unavailable). No business logic in the screen. Tokens-only; localized strings;
+loading/empty/offline/error states. Reused M1 Screen/AppHeader; extended the component library.
 
 ---
 
 # Validation
 
-11 CMP_* components, 11 app routes, 17 mobile src modules, 3 test suites. No hardcoded hex in
-ui/app source (grep clean). JSON valid. No live run (offline sandbox) — tsc/jest run in CI.
+20 CMP_* components; 9 M2 domain/data files; 2 M2 test suites. Mock imported only by tests
+(grep-verified). No hardcoded hex. JSON valid. No live run (offline sandbox) — tsc/jest in CI.
 
 ---
 
 # Remaining Work / Blockers
 
-Milestone 1 complete. Blocker unchanged: ⛔ Canonical Panchang Engine (ADR-033, Proposed) —
-does NOT block the shell. Native provider-token acquisition (Apple/Google) is stubbed pending the
-auth-native task. Deferred: full onboarding slides, MMKV onboarding-completion persistence.
+Milestone 2 complete. Blocker unchanged: ⛔ Canonical Panchang Engine (ADR-033) — Today's
+panchang card + festival stay "unavailable"/hidden until ratified; the rest of Today works.
+Deferred to later Today polish: pull-to-refresh, ritual completion moment animation, real
+festival/rotating content (needs corpus + engine).
 
 ---
 
 # STOP
 
-Milestone 1 is complete. Do NOT begin Milestone 2. Awaiting review + approval.
-Recommended next milestone: Milestone 2 — Today (MOD_today) shell + non-panchang parts
-(streak/checklist), with the panchang view showing "temporarily unavailable" until ADR-033.
+Milestone 2 complete. Do NOT begin Milestone 3. Awaiting review + approval.
+Recommended next: Milestone 3 — Ritual experience (SCR_RITUAL_001: steps, audio, completion
+moment) OR Calendar shell — your call.

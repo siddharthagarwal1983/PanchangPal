@@ -4,7 +4,7 @@
 
 Version: 1.0.0
 
-Last Updated: 2026-07-12 04:30
+Last Updated: 2026-07-12 05:10
 
 Purpose:
 This document provides a high-level snapshot of the overall project.
@@ -35,7 +35,7 @@ Overall Progress
 
 ██████████░░░░░░░░░░
 
-**79% Complete**
+**82% Complete**
 
 Project Health
 
@@ -166,7 +166,7 @@ Implementation has not yet begun.
 | Design System | 🟡 Tokens + shell components |
 | Components | ⏳ Pending |
 | Authentication Flow | ✅ Anon-first + OAuth/OTP (shell) |
-| Ritual Experience | ⏳ Pending |
+| Ritual Experience | 🟡 Today shell (ritual card) |
 | Ask Guru | ⏳ Pending |
 | Household | ⏳ Pending |
 
@@ -273,6 +273,7 @@ Expo application
 - Expo app shell (4-tab router, providers, Zustand stores, theme, i18n) + GitHub Actions CI/CD (ci/cd/ota, CODEOWNERS, scripts)
 - Backend Foundation: 7 SVC_* Edge Functions wired; OpenAI adapters + RAG pipeline; DB repositories + 2 pgvector/AI migrations; Ask Guru rate limit + cost circuit-breaker; 10 Vitest suites + pgTAP integration suite; ADR-033 + panchang-engine work item
 - Mobile Milestone 1 (Application Shell): PDD §6 design tokens; 11 CMP_* shell components (a11y-first); anon-first + OAuth/OTP auth (AuthRepository + STORE_session); splash/onboarding/4-tab navigation + guards + deep links + error boundary; i18n; 3 test suites
+- Mobile Milestone 2 (Today / MOD_today): 9 Today CMP_* (panchang/ritual/streak/checklist/rotating/festival cards + primary button/location chip/card); client PanchangProvider abstraction + ProductionPanchangProvider + dev-only MockPanchangProvider; useToday/useChecklist/useCompleteRitual hooks (optimistic + offline queue); StreakService/RitualProgressService; SCR_HOME_001 composed (panchang shows unavailable per ADR-033); 2 test suites
 
 Do not duplicate SESSION.md.
 

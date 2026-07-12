@@ -37,6 +37,29 @@ export const enUS = {
     offline: 'Connect to the internet to use this.',
     session: 'Your session expired. Please sign in again.',
   },
+  today: {
+    panchangLabel: "Today's panchang",
+    panchangUnavailable: 'Panchang is temporarily unavailable.',
+    panchangOpen: "Today's panchang, open details",
+    reflection: "Today's reflection",
+    checklistTitle: 'Today',
+    checklistAllDone: 'All done for today.',
+    savedOffline: 'Saved from your last connection',
+  },
+  ritual: {
+    title: "Today's ritual",
+    begin: 'Begin',
+    continue: 'Continue',
+    done: 'Done for today',
+    stateNotStarted: "Today's ritual, not started",
+    stateInProgress: "Today's ritual, continue",
+    stateCompleted: "Today's ritual, completed",
+    duration: 'About {{minutes}} min',
+  },
+  streak: {
+    label: '{{count}} day streak',
+    graceCopy: 'A grace day kept your streak — no worries.',
+  },
 } as const;
 
 export type Translations = typeof enUS;
