@@ -4,7 +4,7 @@
 
 Version: 1.0.0
 
-Last Updated: 2026-07-12 03:40
+Last Updated: 2026-07-12 04:30
 
 Purpose:
 This document provides a high-level snapshot of the overall project.
@@ -35,7 +35,7 @@ Overall Progress
 
 ██████████░░░░░░░░░░
 
-**76% Complete**
+**79% Complete**
 
 Project Health
 
@@ -161,11 +161,11 @@ Implementation has not yet begun.
 
 | Area | Status |
 |--------|---------|
-| Expo Setup | ✅ Scaffolded |
-| Navigation | 🟡 Shell (4-tab) |
-| Design System | ⏳ Pending |
+| Expo Setup | ✅ App shell |
+| Navigation | ✅ Shell (splash/auth/4-tab/guards/deep links) |
+| Design System | 🟡 Tokens + shell components |
 | Components | ⏳ Pending |
-| Authentication Flow | ⏳ Pending |
+| Authentication Flow | ✅ Anon-first + OAuth/OTP (shell) |
 | Ritual Experience | ⏳ Pending |
 | Ask Guru | ⏳ Pending |
 | Household | ⏳ Pending |
@@ -272,6 +272,7 @@ Expo application
 - Monorepo scaffold (pnpm + Turborepo; packages/api,shared,database,ui,design-tokens,ai; apps/mobile,backend)
 - Expo app shell (4-tab router, providers, Zustand stores, theme, i18n) + GitHub Actions CI/CD (ci/cd/ota, CODEOWNERS, scripts)
 - Backend Foundation: 7 SVC_* Edge Functions wired; OpenAI adapters + RAG pipeline; DB repositories + 2 pgvector/AI migrations; Ask Guru rate limit + cost circuit-breaker; 10 Vitest suites + pgTAP integration suite; ADR-033 + panchang-engine work item
+- Mobile Milestone 1 (Application Shell): PDD §6 design tokens; 11 CMP_* shell components (a11y-first); anon-first + OAuth/OTP auth (AuthRepository + STORE_session); splash/onboarding/4-tab navigation + guards + deep links + error boundary; i18n; 3 test suites
 
 Do not duplicate SESSION.md.
 

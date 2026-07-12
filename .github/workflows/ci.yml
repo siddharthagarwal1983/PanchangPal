@@ -54,6 +54,7 @@ jobs:
       # panchang cache key, retrieval confidence gate). Component/a11y tests (jest-expo)
       # run per-app and are release-blocking (ADR-029).
       - run: pnpm test
+      - run: pnpm --filter @panchangpal/ui test
       - run: pnpm --filter @panchangpal/mobile test
 
   api-contract:

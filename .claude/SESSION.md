@@ -3,7 +3,7 @@
 # PanchangPal — Current Session
 
 Version: 1.0.0
-Last Updated: 2026-07-12 03:40
+Last Updated: 2026-07-12 04:30
 
 Purpose: records the current working session. Not permanent project memory.
 
@@ -11,43 +11,60 @@ Purpose: records the current working session. Not permanent project memory.
 
 # Session Objective
 
-Complete all Backend Foundation work that is INDEPENDENT of the Panchang astronomical
-calculations, keep the engine as an abstract provider (only blocked component), and create the
-"Canonical Panchang Engine Decision" architecture work item (ADR + MRD/PRD/PDD/TDD).
+Implement EXACTLY ONE milestone: Mobile MVP Milestone 1 — Application Shell. Architecture-first;
+no feature screens; do not touch ADR-033 / the PanchangEngine interface; stop after M1.
 
 ---
 
-# Work Completed
+# Work Completed (Milestone 1 — Application Shell)
 
-Independent backend work (all 9 requested items):
-1. OpenAI providers behind the AI abstraction: OpenAiLLMProvider (SSE stream) + OpenAiEmbeddingProvider (1536), prompts registry, scope classifier + groundedness (fail-safe). Tested with mock fetch.
-2. DB repositories + Supabase wiring: SyncRepository, BillingRepository (F-4), AccountRepository (F-1/F-3), NotificationRepository, ContentRepository (pgvector RPC), aiStores (Pg rate-limit/cost). All SVC_* handlers wired to repos.
-3. DB integration tests (pgTAP): idempotent upserts, household entitlement, merge reassignment, AI helpers — apps/backend/tests/integration/.
-4. Ask Guru rate limiting: pure sliding-window + in-memory/Postgres stores (anon tighter). Tested.
-5. Cost monitoring + circuit breaker: cost estimator + rolling-window ledger + breaker (opens before ceiling). Tested. Migration for ai_config/ai_rate_limit/ai_cost_ledger + atomic RPCs.
-6. Remaining Edge Function wiring: ask-guru full pipeline (rate→cost→scope→embed→retrieve→gate→stream→sources→groundedness); content-ingest (chunk→embed→upsert); notify-scheduler (engine-independent sweep).
-7. CI/CD: Vitest wired (root config), db-tests job runs RLS + integration pgTAP on pgvector image; mobile jest step.
-8. notify-scheduler depends ONLY on the PanchangEngine interface (no calculation assumed).
-9. Engine-dependent tests marked it.skip with TODO(ADR-033); no fake data.
+Resolved two spec-vs-architecture conflicts with the user before building (both → canonical):
+tabs = Today/Calendar/Guru/You (not Home/Festivals/Settings); auth = anonymous-first + Apple/
+Google/email-OTP (not password login/register/forgot — those don't exist in the contracts).
 
-Panchang engine: refactored to abstract PanchangEngine interface + unimplementedPanchangEngine (fails closed). The ONLY blocked component.
+- Design tokens: packages/design-tokens populated with PDD §6 values (light+dark color, type,
+  spacing, radius, motion) + getTheme(). ThemeProvider/useTheme moved into @panchangpal/ui.
+- Shared UI (11 CMP_*): Text, Screen (loading/empty/error/offline states), AppHeader,
+  BottomTabBar, Spinner, Skeleton, EmptyState, ErrorState, OfflineBanner, AuthButton,
+  BrandLogo/SplashBackdrop — token-only, typed, a11y (roles/labels/state, ≥44/48).
+- Auth data layer: supabaseClient (public keys only), AuthRepository (anon, Apple/Google/
+  email-OTP, restore, logout, merge via API_*), STORE_session wired to the repository, useOnline.
+- Navigation: root layout + AppProviders + app ErrorBoundary + expo-router per-route boundary;
+  splash bootstrap (app/index.tsx); (onboarding) sign-in + verify-otp; (tabs) custom
+  CMP_BOTTOM_TAB_BAR; guards (resolveRootRoute/requiresAuth/isEntitled); deep-link table; 4 tab
+  shells using Screen + AppHeader.
+- i18n: en-US keys for every shell string; typed t().
+- Tests (3 suites): shell components (a11y), navigation guards, session store (auth flow +
+  restore + merge + logout). jest-expo configs for mobile + ui; CI runs both.
 
-Architecture work item "Canonical Panchang Engine Decision": ADR-033 (Proposed) + docs/architecture/canonical-panchang-engine/{README,MRD,PRD,PDD,TDD}.md covering ephemeris, ayanamsa, traditions, methodology, validation dataset, tolerances, provider architecture. ADR index updated (33 ADRs).
+---
+
+# Architecture Compliance
+
+No architecture changes. Frozen IA + auth model honored. PanchangEngine interface untouched;
+ADR-033 not modified. No astronomical calculations; no MockPanchangProvider needed (shell needs
+no panchang data). No business logic in screens (repositories/stores/guards). Tokens-only; no
+hardcoded hex/type; localized strings; loading/empty/offline/error states on every screen.
 
 ---
 
 # Validation
 
-34 backend .ts files; 10 Vitest suites (+2 skipped engine tests); RLS + integration pgTAP; 13 migrations; packages/ai 10 modules. JSON/YAML valid; pure test graph Deno-free. No live run (offline sandbox) — runs in CI.
+11 CMP_* components, 11 app routes, 17 mobile src modules, 3 test suites. No hardcoded hex in
+ui/app source (grep clean). JSON valid. No live run (offline sandbox) — tsc/jest run in CI.
 
 ---
 
-# BLOCKER (only one)
+# Remaining Work / Blockers
 
-⛔ Canonical Panchang Engine (ADR-033, Proposed). Astronomical algorithm undocumented; do NOT implement until ratified. Blocks SVC_panchang compute + sunrise/tithi notifications only.
+Milestone 1 complete. Blocker unchanged: ⛔ Canonical Panchang Engine (ADR-033, Proposed) —
+does NOT block the shell. Native provider-token acquisition (Apple/Google) is stubbed pending the
+auth-native task. Deferred: full onboarding slides, MMKV onboarding-completion persistence.
 
 ---
 
-# Recommended Next Task
+# STOP
 
-Design System & Component Library (packages/ui CMP_* + tokens from PDD Part 3 §6), then mobile feature slices (MOD_*). In parallel (owner-driven): ratify ADR-033 Part B to unblock the engine.
+Milestone 1 is complete. Do NOT begin Milestone 2. Awaiting review + approval.
+Recommended next milestone: Milestone 2 — Today (MOD_today) shell + non-panchang parts
+(streak/checklist), with the panchang view showing "temporarily unavailable" until ADR-033.
