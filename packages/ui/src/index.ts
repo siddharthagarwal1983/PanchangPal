@@ -44,3 +44,7 @@ export { AIChatBubble, type AIChatBubbleProps } from './components/AIChatBubble'
 export { TypingIndicator } from './components/TypingIndicator';
 export { SourceChip } from './components/SourceChip';
 export { ConversationRow, type ConversationRowProps } from './components/ConversationRow';
+// Profile / Household / Settings (MOD_you) — Milestone 6
+export { SegmentedControl, type SegmentedControlProps, type SegmentedOption } from './components/SegmentedControl';
+export { Toggle, type ToggleProps } from './components/Toggle';
+export { SettingsRow, type SettingsRowProps } from './components/SettingsRow';

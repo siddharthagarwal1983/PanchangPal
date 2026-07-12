@@ -36,6 +36,8 @@ export default function TabsLayout() {
       <Tabs.Screen name="guru/chat" options={{ href: null }} />
       <Tabs.Screen name="guru/history" options={{ href: null }} />
       <Tabs.Screen name="you/index" />
+      <Tabs.Screen name="you/settings" options={{ href: null }} />
+      <Tabs.Screen name="you/household" options={{ href: null }} />
     </Tabs>
   );
 }

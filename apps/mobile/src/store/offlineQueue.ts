@@ -8,7 +8,7 @@ import { create } from 'zustand';
 
 export interface QueuedMutation {
   id: string;
-  kind: 'ritual_complete' | 'checklist' | 'personal_date';
+  kind: 'ritual_complete' | 'checklist' | 'personal_date' | 'preferences';
   payload: unknown;
   client_id: string;
   local_ts: string; // ISO-8601
