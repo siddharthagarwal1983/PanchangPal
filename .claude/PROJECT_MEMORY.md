@@ -4,7 +4,7 @@
 
 Version: 1.1.0
 
-Last Updated: 2026-07-12
+Last Updated: 2026-07-12 (memory rev: command-center tooling noted)
 
 Current Phase:
 Mobile MVP — Phase 1 (Feature Slices)
@@ -139,6 +139,16 @@ AI operational memory resides under:
 ```
 .claude/
 ```
+
+Internal tooling resides under:
+
+```
+scripts/
+```
+
+`scripts/command-center/` is a repo-generated engineering dashboard (parses the .claude/ docs plus
+source into command-center.json; served by serve.mjs). It is an observability/build tool, not part
+of the product runtime.
 
 ---
 
