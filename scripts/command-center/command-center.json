@@ -1,0 +1,3503 @@
+{
+  "generatedAt": "2026-07-12T07:22:10.393Z",
+  "repo": {
+    "name": "PanchangPal",
+    "branch": "main",
+    "github": "https://github.com/siddharthagarwal1983/PanchangPal",
+    "head": "c8def11"
+  },
+  "executive": {
+    "progress": 84,
+    "health": "On Track",
+    "phase": "Mobile MVP — Phase 1 (Feature Slices)",
+    "milestone": "Mobile MVP — Phase 1",
+    "task": "Milestone 5 — Ask Guru Client ✅ COMPLETE (awaiting review).",
+    "lastUpdated": "2026-07-12 06:15",
+    "source": {
+      "label": ".claude/PROJECT_STATUS.md",
+      "href": "https://github.com/siddharthagarwal1983/PanchangPal/blob/main/.claude/PROJECT_STATUS.md"
+    }
+  },
+  "phases": {
+    "rows": [
+      {
+        "phase": "Idea Validation",
+        "status": "Complete",
+        "icon": "✅",
+        "progress": 100
+      },
+      {
+        "phase": "Market Research",
+        "status": "Complete",
+        "icon": "✅",
+        "progress": 100
+      },
+      {
+        "phase": "MRD",
+        "status": "Complete",
+        "icon": "✅",
+        "progress": 100
+      },
+      {
+        "phase": "PRD",
+        "status": "Complete",
+        "icon": "✅",
+        "progress": 100
+      },
+      {
+        "phase": "Product Design (PDD)",
+        "status": "Complete",
+        "icon": "✅",
+        "progress": 100
+      },
+      {
+        "phase": "Technical Design (TDD)",
+        "status": "Complete",
+        "icon": "✅",
+        "progress": 100
+      },
+      {
+        "phase": "AI Knowledge Base",
+        "status": "Complete",
+        "icon": "✅",
+        "progress": 100
+      },
+      {
+        "phase": "Repository Foundation",
+        "status": "In Progress",
+        "icon": "🟡",
+        "progress": 95
+      },
+      {
+        "phase": "ADR Repository",
+        "status": "Complete",
+        "icon": "✅",
+        "progress": 100
+      },
+      {
+        "phase": "API Specification",
+        "status": "Complete",
+        "icon": "✅",
+        "progress": 100
+      },
+      {
+        "phase": "Database Design",
+        "status": "Complete",
+        "icon": "✅",
+        "progress": 100
+      },
+      {
+        "phase": "Backend Development",
+        "status": "Pending",
+        "icon": "⏳",
+        "progress": 0
+      },
+      {
+        "phase": "Mobile Development",
+        "status": "Pending",
+        "icon": "⏳",
+        "progress": 0
+      },
+      {
+        "phase": "AI Platform",
+        "status": "Pending",
+        "icon": "⏳",
+        "progress": 0
+      },
+      {
+        "phase": "Testing",
+        "status": "Pending",
+        "icon": "⏳",
+        "progress": 0
+      },
+      {
+        "phase": "Beta",
+        "status": "Pending",
+        "icon": "⏳",
+        "progress": 0
+      },
+      {
+        "phase": "Production Launch",
+        "status": "Pending",
+        "icon": "⏳",
+        "progress": 0
+      }
+    ],
+    "source": {
+      "label": ".claude/PROJECT_STATUS.md · Phase Progress",
+      "href": "https://github.com/siddharthagarwal1983/PanchangPal/blob/main/.claude/PROJECT_STATUS.md"
+    }
+  },
+  "milestones": {
+    "milestoneName": "Mobile MVP — Phase 1 (Feature Slices)",
+    "rows": [
+      {
+        "id": "M1",
+        "name": "Application Shell",
+        "screens": "splash, onboarding/auth, 4-tab nav",
+        "status": "Complete",
+        "done": true
+      },
+      {
+        "id": "M2",
+        "name": "Today",
+        "screens": "SCR_HOME_001",
+        "status": "Complete",
+        "done": true
+      },
+      {
+        "id": "M3",
+        "name": "Guided Ritual Player",
+        "screens": "SCR_RITUAL_001",
+        "status": "Complete",
+        "done": true
+      },
+      {
+        "id": "M4",
+        "name": "Calendar Shell",
+        "screens": "SCR_CALENDAR_001",
+        "status": "Complete",
+        "done": true
+      },
+      {
+        "id": "M5",
+        "name": "Ask Guru Client",
+        "screens": "SCR_GURU_HOME/CHAT/HISTORY_001",
+        "status": "Complete",
+        "done": true
+      },
+      {
+        "id": "M6",
+        "name": "Profile / Household",
+        "screens": "SCR_PROFILE_001, SCR_HOUSEHOLD_*, SCR_SETTINGS_001",
+        "status": "Next",
+        "done": false
+      },
+      {
+        "id": "M7",
+        "name": "Notifications",
+        "screens": "opt-in, prefs, deep-link routing",
+        "status": "Pending",
+        "done": false
+      },
+      {
+        "id": "M8",
+        "name": "Subscription",
+        "screens": "SCR_SUBSCRIPTION_001 (RevenueCat)",
+        "status": "Pending",
+        "done": false
+      }
+    ],
+    "source": {
+      "label": ".claude/CURRENT_MILESTONE.md",
+      "href": "https://github.com/siddharthagarwal1983/PanchangPal/blob/main/.claude/CURRENT_MILESTONE.md"
+    }
+  },
+  "roadmap": {
+    "tracks": [
+      {
+        "title": "Track A — Product build (unblocked, proceed now)",
+        "items": [
+          "Design System & Component Library — tokens (PDD Part 3 §6) + CMP_* (a11y-first). <- next",
+          "Mobile feature slices (MOD_*) — today, calendar, ask-guru, you, onboarding/auth; offline",
+          "AI corpus ingestion + eval harness — run SVC_content_ingest on the reviewed corpus; calibrate",
+          "Backend DB wiring hardening — flesh repository upserts vs a live Supabase test project; green"
+        ]
+      },
+      {
+        "title": "Track B — Canonical Panchang Engine (owner-driven, unblocks the rest)",
+        "items": [
+          "Ratify ADR-033 Part B (Architecture + Product + pandit reviewer): ephemeris, ayanamsa,",
+          "Implement the concrete engine behind PanchangEngine (e.g. Swiss Ephemeris-grade) — only after",
+          "Golden-dataset validation gate (vs Drik/mPanchang, per tradition) in CI; reviewer sign-off.",
+          "Register the engine + set engine_version; un-skip the engine tests; enable SVC_panchang compute"
+        ]
+      },
+      {
+        "title": "Track C — Platform hardening (parallel, TDD Part 5)",
+        "items": []
+      }
+    ],
+    "source": {
+      "label": ".claude/IMPLEMENTATION_ROADMAP.md",
+      "href": "https://github.com/siddharthagarwal1983/PanchangPal/blob/main/.claude/IMPLEMENTATION_ROADMAP.md"
+    }
+  },
+  "adrs": {
+    "count": 33,
+    "byStatus": {
+      "Accepted": 32,
+      "Proposed": 1
+    },
+    "rows": [
+      {
+        "id": "ADR-001",
+        "title": "React Native for the Mobile Client",
+        "status": "Accepted",
+        "date": "2026-07-11",
+        "summary": "One TypeScript codebase for iOS + Android, matching the solo-founder constraint.",
+        "href": "https://github.com/siddharthagarwal1983/PanchangPal/blob/main/docs/architecture/adr/ADR-001-React-Native.md",
+        "decision": "Build the mobile client with React Native (TypeScript), sharing one codebase across iOS and Android. Native capabilities (audio narration, notifications, inapp purchase) are reached through Expo and vetted community modules rather than handwritten native code where a maintained module exists.",
+        "consequences": "Positive. One shared codebase and one skill set (TypeScript) across the whole client; fast iteration; a large ecosystem of libraries for audio, notifications, and IAP; easier future hiring. Tradeoffs. Some platformspecific polish must still be written perOS; certain native capabilities depend on the health of community modules; the JavaScript bridge imposes performance discipline (see ADR007, ADR010 for the…",
+        "context": "PanchangPal must ship a single consumer product on both iOS and Android, built and maintained by a solo founder on a tight timeline (MRD Risk §12 — solofounder singlepointoffailure; PRD platform requirement). Building two fully native applications (Swift +…",
+        "related": []
+      },
+      {
+        "id": "ADR-002",
+        "title": "Expo (Managed Workflow) + EAS",
+        "status": "Accepted",
+        "date": "2026-07-11",
+        "summary": "Managed Expo + EAS Build/Submit + OTA removes native build/CI toil and enables fast JS fixes.",
+        "href": "https://github.com/siddharthagarwal1983/PanchangPal/blob/main/docs/architecture/adr/ADR-002-Expo-Managed-Workflow.md",
+        "decision": "Use the Expo managed workflow with EAS Build/Submit for native binaries and Expo Updates (OTA) for JavaScriptonly changes. The app stays within Expo's supported native surface; anything custom is added via Expo config plugins rather than a bare eject.",
+        "consequences": "Positive. No native toolchain to operate; faster delivery; OTA enables rapid, policycompliant JS fixes (ADR024); EAS handles build and store submission. Tradeoffs. The app must remain within Expo's supported native capabilities; custom native needs are met with config plugins, and a genuinely unsupported dependency could force a devclient or bare eject. Operational. OTA updates are limited to JScompatible changes…",
+        "context": "React Native (ADR001) still leaves a large operational burden: native toolchains, signing, CI for two platforms, and store submission. For a solo founder that undifferentiated work is pure risk and time cost (TDD Part 1 §1.1 \"managedfirst, buildleast\"). The…",
+        "related": []
+      },
+      {
+        "id": "ADR-003",
+        "title": "Supabase as the Backend Platform",
+        "status": "Accepted",
+        "date": "2026-07-11",
+        "summary": "One managed platform: Auth, Postgres+RLS+pgvector, Storage, Edge Functions, Realtime.",
+        "href": "https://github.com/siddharthagarwal1983/PanchangPal/blob/main/docs/architecture/adr/ADR-003-Supabase.md",
+        "decision": "Adopt Supabase as the single managed backend platform: Auth, PostgreSQL (with RowLevel Security and pgvector), Storage (CDNfronted), Edge Functions (Deno), and Realtime. Supabase anonymous auth enables deferred signin (ADR009); pgvector colocates RAG embeddings with content (ADR004), avoiding a separate vector vendor.",
+        "consequences": "Positive. One platform covers ~80% of backend needs; PostgreSQL + RLS provide a strong authori",
+        "context": "PanchangPal needs auth, a relational data store, file storage, serverside compute, and realtime household sync — with strong peruser authori",
+        "related": []
+      },
+      {
+        "id": "ADR-004",
+        "title": "RAG with pgvector + OpenAI (Grounded-or-Silent)",
+        "status": "Accepted",
+        "date": "2026-07-11",
+        "summary": "Answer only from a reviewed corpus via pgvector retrieval; decline when confidence is low.",
+        "href": "https://github.com/siddharthagarwal1983/PanchangPal/blob/main/docs/architecture/adr/ADR-004-RAG-pgvector-OpenAI.md",
+        "decision": "Implement RetrievalAugmented Generation over pgvector (embeddings stored in the same PostgreSQL as the content), with OpenAI embeddings and generation reached behind an LLM adapter (ADR011). The Ask Guru Edge Function classifies scope, embeds the query, runs a similarity search over the reviewed CONTENTCHUNK corpus, and only generates when retrieval confidence clears a tunable threshold; otherwise it declines. All…",
+        "consequences": "Positive. One datastore for content and vectors gives transactional content↔embedding consistency and lower cost/ops; grounding is enforceable and testable (refusal test set, groundedness metrics). Tradeoffs. pgvector index parameters (HNSW/IVFFlat) must be tuned as the corpus grows; retrieval quality depends on corpus curation. Operational. Confidence threshold and optional groundedness postcheck are calibrated…",
+        "context": "Ask Guru answers questions about Hindu ritual and observance, where a fabricated specific costs disproportionate trust (MRD Risk §3; PRD P0 4). The product principle is groundedorsilent: the assistant must answer only from a reviewed content library and…",
+        "related": []
+      },
+      {
+        "id": "ADR-005",
+        "title": "RevenueCat for Billing & Entitlements",
+        "status": "Accepted",
+        "date": "2026-07-11",
+        "summary": "RevenueCat orchestrates native IAP as the cross-platform entitlement source of truth.",
+        "href": "https://github.com/siddharthagarwal1983/PanchangPal/blob/main/docs/architecture/adr/ADR-005-RevenueCat.md",
+        "decision": "Use RevenueCat to orchestrate native IAP (StoreKit / Play Billing). RevenueCat is the crossplatform entitlement source of truth, performs receipt validation, and notifies the backend of entitlement changes via webhook (SVCrevenuecatwebhook), which reconciles them into PostgreSQL. Business logic depends on a Payment Provider Adapter (see ADR017), so RevenueCat is the concrete implementation behind a swappable seam.",
+        "consequences": "Positive. Fast, robust crossplatform entitlements including familyplan propagation via webhook; storecompliant. Tradeoffs. A billingvendor dependency, mitigated by the payment adapter (ADR017). Operational. The webhook handler is idempotent (dedupe by event id) so redeliveries never doubleapply entitlements (TDD §7.7).",
+        "context": "PanchangPal moneti",
+        "related": [
+          "SVC_revenuecat_webhook",
+          "API_POST_SUB_VALIDATE"
+        ]
+      },
+      {
+        "id": "ADR-006",
+        "title": "Edge Functions (Deno) for Privileged & Compute Logic",
+        "status": "Accepted",
+        "date": "2026-07-11",
+        "summary": "Stateless, secret-holding server units for panchang, RAG, webhooks, sync, account ops.",
+        "href": "https://github.com/siddharthagarwal1983/PanchangPal/blob/main/docs/architecture/adr/ADR-006-Edge-Functions.md",
+        "decision": "Run privileged and compute logic in Supabase Edge Functions (Deno) — stateless, idempotent units that are the only place holding secrets and performing thirdparty egress. Named services include SVCpanchang, SVCaskguru, SVCnotifyscheduler, SVCrevenuecatwebhook, SVCsync, SVCaccount, and SVCcontentingest. All state lives in PostgreSQL; Edge Functions carry none.",
+        "consequences": "Positive. A clean, secretholding server boundary; stateless functions scale hori",
+        "context": "Several operations must not run on the client: they hold secrets (OpenAI, servicerole, webhook keys), reach third parties, or compute authoritative state (panchang, RAG answers, entitlements, sync, account merge/deletion). The architecture is clientthin and…",
+        "related": [
+          "SVC_panchang",
+          "SVC_ask_guru",
+          "SVC_notify_scheduler",
+          "SVC_revenuecat_webhook",
+          "SVC_sync",
+          "SVC_account",
+          "SVC_content_ingest"
+        ]
+      },
+      {
+        "id": "ADR-007",
+        "title": "TanStack Query for Server State",
+        "status": "Accepted",
+        "date": "2026-07-11",
+        "summary": "Cached-first, offline-persistent server-cache layer powering the sub-500ms Today render.",
+        "href": "https://github.com/siddharthagarwal1983/PanchangPal/blob/main/docs/architecture/adr/ADR-007-TanStack-Query.md",
+        "decision": "Use TanStack Query with persistence as the serverstate / servercache layer. It powers stalewhilerevalidate reads, retry with backoff, and offline persistence, and is the mechanism behind the cachedfirst performance budgets. It is paired with",
+        "consequences": "Positive. Less boilerplate; robust caching, retries, and offline persistence; directly reali",
+        "context": "Two of the product's core requirements are cachedfirst rendering (returning users see Today in under 500 ms before any network) and offlinefirst operation of the daily loop (TDD Part 1 §1.6, §1.7). Both depend on a disciplined servercache layer with staleness…",
+        "related": []
+      },
+      {
+        "id": "ADR-008",
+        "title": "Zustand for Client / UI State",
+        "status": "Accepted",
+        "date": "2026-07-11",
+        "summary": "Minimal store for session, offline queue, and prefs, kept separate from server state.",
+        "href": "https://github.com/siddharthagarwal1983/PanchangPal/blob/main/docs/architecture/adr/ADR-008-Zustand.md",
+        "decision": "Use",
+        "consequences": "Positive. Simple, testable stores with a tiny API and no boilerplate; easy to seed test doubles. Tradeoffs. Discipline is required to keep server state out of",
+        "context": "Beyond cached server data (ADR007), the app needs a small, ergonomic store for ephemeral and clientowned state: the session, the durable offline mutation queue, user preferences, and UI state. For a solo founder, minimal boilerplate and a clear boundary from…",
+        "related": []
+      },
+      {
+        "id": "ADR-009",
+        "title": "Anonymous-Auth-First Identity",
+        "status": "Accepted",
+        "date": "2026-07-11",
+        "summary": "Every first-launch user gets an anon session so RLS works before sign-in; merge on auth.",
+        "href": "https://github.com/siddharthagarwal1983/PanchangPal/blob/main/docs/architecture/adr/ADR-009-Anonymous-Auth-First.md",
+        "decision": "Give every firstlaunch user a Supabase anonymous session so a real auth.uid exists immediately and RLS applies from the start. When the user later signs in with Apple, Google, or emailOTP, SVCaccount performs an identity merge: anonowned rows are reassigned to the authenticated user, with divergence resolved by union / longerstreak and communicated to the user (ERRAUTHMERGECONFLICT).",
+        "consequences": "Positive. RLS works universally from first launch; onboarding needs no signin wall; no unowned data window. Tradeoffs. Requires a robust, welltested merge path (SVCaccount, F1), including conflict resolution. Operational. Anonymous accounts are an abuse vector; device attestation / rate limits are the documented mitigation.",
+        "context": "The product defers signin: a firsttime user completes onboarding and uses the daily loop without hitting an account wall (UX2). But RowLevel Security (ADR018) is the authori",
+        "related": [
+          "SVC_account"
+        ]
+      },
+      {
+        "id": "ADR-010",
+        "title": "Deterministic, Cacheable Panchang Engine",
+        "status": "Accepted",
+        "date": "2026-07-11",
+        "summary": "Pure, versioned panchang function cached at CDN + client for accuracy, scale, and cost.",
+        "href": "https://github.com/siddharthagarwal1983/PanchangPal/blob/main/docs/architecture/adr/ADR-010-Deterministic-Panchang.md",
+        "decision": "Implement the panchang/tithi engine as a pure function of (instant, latitude/longitude, time",
+        "consequences": "Positive. Very high cache hit rates make read latency largely CDNbound (supporting the singleregion choice, ADR012) and keep marginal cost near",
+        "context": "Panchang/tithi correctness is the product's trust pillar — a wrong tithi costs disproportionate trust (MRD Risk §1). Panchang is also the highestvolume read path, so recomputing it per request would be wasteful and expensive. The values are a pure function of…",
+        "related": [
+          "SVC_panchang"
+        ]
+      },
+      {
+        "id": "ADR-011",
+        "title": "LLM Provider Adapter (GPT-5 mini + text-embedding-3-small)",
+        "status": "Accepted",
+        "date": "2026-07-11",
+        "summary": "All model access behind an adapter; GPT-5 mini + 1536-dim embeddings as launch impl.",
+        "href": "https://github.com/siddharthagarwal1983/PanchangPal/blob/main/docs/architecture/adr/ADR-011-LLM-Provider-Adapter.md",
+        "decision": "Access all LLM and embedding capability through LLMProvider and EmbeddingProvider adapters in packages/ai. The initial concrete implementation is OpenAI GPT5 mini for generation (streaming) and OpenAI textembedding3small (1536 dimensions) for embeddings, fixing contentchunk.embedding at vector(1536) for launch. All access is serverside (ADR006). Vendor or model changes are configuration changes plus, for embeddings,…",
+        "consequences": "Positive. Model/vendor are swappable via config without touching callers; launch cost/latency fit the groundedanswer workload and the AIcost ceiling. Tradeoffs. A model or embedding change requires reembedding the corpus (bounded by corpus si",
+        "context": "The PRD left the AI vendor open and flagged cost as a top risk (MRD Risk §2). Ask Guru answers from a small, reviewercurated corpus with grounded output (ADR004), so a frontier model is not required for accuracy — but the choice must remain swappable, and the…",
+        "related": []
+      },
+      {
+        "id": "ADR-012",
+        "title": "Single US Supabase Region for Launch",
+        "status": "Accepted",
+        "date": "2026-07-11",
+        "summary": "One US region; AU/NZ served by CDN + optimistic writes. Resolves F-18.",
+        "href": "https://github.com/siddharthagarwal1983/PanchangPal/blob/main/docs/architecture/adr/ADR-012-Single-US-Region.md",
+        "decision": "Deploy a single Supabase project in one US region (e.g., useast) for launch, serving AU/N",
+        "consequences": "Positive. Simplest possible operations; CDN caching covers most read latency for AU/N",
+        "context": "The launch markets are the US, Australia, and New",
+        "related": []
+      },
+      {
+        "id": "ADR-013",
+        "title": "Analytics Adapter with Postgres Sink",
+        "status": "Accepted",
+        "date": "2026-07-11",
+        "summary": "Events behind an adapter into a Postgres sink; migratable to PostHog/Amplitude. Resolves F-19.",
+        "href": "https://github.com/siddharthagarwal1983/PanchangPal/blob/main/docs/architecture/adr/ADR-013-Analytics-Adapter.md",
+        "decision": "Emit all analytics through an AnalyticsService adapter; the launch sink is a PostgreSQL analyticsevent table plus scheduled rollups. Events use the PDD §11.1 envelope (pseudonymous IDs, householdid, no PII), are batched from the client, and feed dashboards. The North Star is computed by grouping the completion event by householdid per ISO week. Migrating to a managed platform later swaps the adapter implementation…",
+        "consequences": "Positive.",
+        "context": "The product needs analytics from launch — activation, the habit/North Star metric (Weekly Household Ritual Completions), AI, retention, and moneti",
+        "related": []
+      },
+      {
+        "id": "ADR-014",
+        "title": "Monorepo (pnpm + Turborepo)",
+        "status": "Accepted",
+        "date": "2026-07-11",
+        "summary": "One repo for app, backend, and shared contracts to keep client and server in lockstep.",
+        "href": "https://github.com/siddharthagarwal1983/PanchangPal/blob/main/docs/architecture/adr/ADR-014-Monorepo.md",
+        "decision": "Maintain a single monorepo managed with pnpm workspaces + Turborepo containing apps/mobile, apps/backend, and shared packages/ (ui, designtokens, api, database, ai, shared), plus docs/, scripts/, and tests/. Shared contracts live in packages/api and packages/shared as the single source consumed by both client and Edge Functions. No new toplevel folders are added without approval.",
+        "consequences": "Positive. App, functions, DB, and contracts move together; one type source endtoend; Turborepo gives fast, cached CI. Tradeoffs. A monorepo needs dependencydirection discipline (enforced by lint: features → domain → data → packages); tooling must scope builds per package. Operational. CODEOWNERS enforces ownership across areas within the one repo (TDD §4/§5).",
+        "context": "PanchangPal spans a mobile app, Supabase Edge Functions, database migrations, and shared contracts (types, API schemas, design tokens, event/error enums). These must stay in lockstep — a change to an API contract or an EVT/ERR enum must reach both client and…",
+        "related": []
+      },
+      {
+        "id": "ADR-015",
+        "title": "Offline-First Architecture",
+        "status": "Accepted",
+        "date": "2026-07-11",
+        "summary": "Core loop is offline-complete; optimistic writes + durable queue reconciled on reconnect.",
+        "href": "https://github.com/siddharthagarwal1983/PanchangPal/blob/main/docs/architecture/adr/ADR-015-Offline-First.md",
+        "decision": "Make the core loop offlinecomplete. Cached today's panchang, ritual text, checklist, and streak are fully usable with no network. Offline actions (ritual complete, checklist, personaldate add) are applied optimistically and enqueued in a durable MMKVbacked queue that survives app kill; on reconnect SVCsync reconciles them under documented conflict rules — daily completion is clientauthoritative for the day,…",
+        "consequences": "Positive. The habit loop never loses a completion to a bad network (NFR09/NFR10); instant, calm completion UX. Tradeoffs. Requires explicit conflict rules, idempotency keys, and a durable queue; reconciliation logic must be tested against conflict cases. Operational. ERRSYNCCONFLICT surfaces only usermeaningful conflicts; sync success is an SLO (NFR10).",
+        "context": "The daily habit — the product's entire value — must form on a diaspora commuter's flaky connection. If the core loop (today's panchang, ritual text, checklist, streak) fails without network, the habit does not form (TDD Part 1 §1.2, §1.7; PDD Flow E5).…",
+        "related": [
+          "SVC_sync"
+        ]
+      },
+      {
+        "id": "ADR-016",
+        "title": "Thin Client / Server-Authoritative State",
+        "status": "Accepted",
+        "date": "2026-07-11",
+        "summary": "Server owns truth; the client renders/caches, with daily completion the one offline exception.",
+        "href": "https://github.com/siddharthagarwal1983/PanchangPal/blob/main/docs/architecture/adr/ADR-016-Thin-Client-Server-Authoritative.md",
+        "decision": "Keep the client thin and the server authoritative for truth. The mobile app renders and caches; the server (Edge Functions + PostgreSQL) is authoritative for panchang computation, RAG answers, entitlements, streak length, and crossdevice state. The single deliberate exception is daily completion, which is clientauthoritative for the day and reconciled serverside (ADR015) so the loop works offline. Direct CRUD…",
+        "consequences": "Positive. One source of truth for correctnesscritical state; consistent multidevice/household behavior; secrets stay serverside (ADR030). Tradeoffs. More roundtrips for computed state, mitigated by cachedfirst reads (ADR007) and deterministic caching (ADR010). Operational. The offline exception (clientauthoritative daily completion) is explicit and bounded, not a general pattern.",
+        "context": "PanchangPal must produce consistent, trustworthy truth across devices and household members — panchang values, streak length, entitlements, and RAG answers cannot diverge per device. Placing business logic on the client would scatter truth, complicate…",
+        "related": []
+      },
+      {
+        "id": "ADR-017",
+        "title": "Provider Adapter Pattern (Hexagonal Boundaries)",
+        "status": "Accepted",
+        "date": "2026-07-11",
+        "summary": "Every external vendor (AI, analytics, payments, notifications) sits behind a swappable adapter.",
+        "href": "https://github.com/siddharthagarwal1983/PanchangPal/blob/main/docs/architecture/adr/ADR-017-Provider-Adapter-Pattern.md",
+        "decision": "Isolate every external dependency behind an adapter interface, with domain logic depending on the interface, not the vendor. Concrete adapters exist for AI (LLMProvider/EmbeddingProvider, ADR011), analytics (AnalyticsService, ADR013), payments (Payment Provider Adapter with RevenueCat as the launch implementation, ADR005), and notifications (Expo Push behind the scheduler, ADR020). Swapping a vendor means writing a…",
+        "consequences": "Positive. Vendors are swappable with contained blast radius; adapters are natural seams for test doubles; lockin risk is bounded and exportable data (PostgreSQL) reinforces portability. Tradeoffs. A small amount of indirection and interface maintenance; teams must resist reaching around the adapter for a vendoronly feature. Operational. ADR review triggers and a quarterly dependency review watch for lockin creep…",
+        "context": "PanchangPal depends on several external vendors — the LLM provider, analytics, payments, and notifications. Vendor lockin is a top technical risk (TDD §9 TRISK01), and any one vendor may need to be swapped as cost, scale, or capability changes. Domain logic…",
+        "related": []
+      },
+      {
+        "id": "ADR-018",
+        "title": "Row-Level Security as the Authorization Boundary",
+        "status": "Accepted",
+        "date": "2026-07-11",
+        "summary": "RLS on every user-owned table is the primary, release-blocking authorization boundary.",
+        "href": "https://github.com/siddharthagarwal1983/PanchangPal/blob/main/docs/architecture/adr/ADR-018-Row-Level-Security.md",
+        "decision": "Make RowLevel Security the primary authori",
+        "consequences": "Positive. A strong, uniform authori",
+        "context": "PanchangPal stores personal and household data that a user or household must be able to read and write only for their own rows. With a thin client talking directly to PostgreSQL for CRUD (ADR016), authori",
+        "related": []
+      },
+      {
+        "id": "ADR-019",
+        "title": "Streaming AI Responses",
+        "status": "Accepted",
+        "date": "2026-07-11",
+        "summary": "Token-streamed Ask Guru answers for first-token < 2s and calm error recovery.",
+        "href": "https://github.com/siddharthagarwal1983/PanchangPal/blob/main/docs/architecture/adr/ADR-019-Streaming-AI-Responses.md",
+        "decision": "Stream AI responses tokenbytoken from SVCaskguru to the client. The Edge Function classifies scope and retrieves grounding first; when grounded, it streams generation so the first token renders under 2 seconds, followed by visible sources. An optional groundedness postcheck can downgrade a weak answer. On transient AI errors, one automatic retry is allowed, then a calm userdriven retry — never an autoloop (cost…",
+        "consequences": "Positive. Meets NFR05; the assistant feels responsive; errors degrade to a calm retry rather than a dead end. Tradeoffs. Streaming adds client and Edge Function complexity (partial rendering, cancellation, error midstream). Operational. Firsttoken latency and cost/query are firstclass AI metrics (PDD §9.9); embeddings and evergreen answers are cached to cut latency/cost (ADR004 improvement).",
+        "context": "Ask Guru must feel responsive despite LLM generation latency. The NFR is a first streamed token in under 2 seconds, with a full short answer well under the hard cap (TDD §8 NFR05). A blocking request that returns only when generation finishes would violate…",
+        "related": [
+          "SVC_ask_guru"
+        ]
+      },
+      {
+        "id": "ADR-020",
+        "title": "Notification Architecture (Expo Push + pg_cron)",
+        "status": "Accepted",
+        "date": "2026-07-11",
+        "summary": "Server-scheduled, tz-local, quiet-hours-aware pushes over one cross-platform API.",
+        "href": "https://github.com/siddharthagarwal1983/PanchangPal/blob/main/docs/architecture/adr/ADR-020-Notification-Architecture.md",
+        "decision": "Deliver notifications via Expo Notifications / Expo Push (APNs/FCM), scheduled by a serverside SVCnotifyscheduler Edge Function driven by a pgcron scheduled trigger. The scheduler computes due notifications from userlocal time, sunrise, festivals, and personaldate tithi recurrences, then applies quiet hours, frequency caps, and completion suppression before sending with deeplink payloads (panchangpal://…). The…",
+        "consequences": "Positive. One crossplatform push path; serverside timing logic is consistent and testable; deep links land users on a valid backstack. Tradeoffs. Delivery depends on APNs/FCM and Expo receipts; timing accuracy requires careful t",
+        "context": "PanchangPal's daily loop depends on welltimed, respectful notifications: morning ritual reminders at the user's local sunriserelative time, festival and personaldate reminders, delivered within tight timing tolerances and respecting quiet hours, frequency…",
+        "related": [
+          "SVC_notify_scheduler"
+        ]
+      },
+      {
+        "id": "ADR-021",
+        "title": "Feature-Flag Architecture (Postgres-backed)",
+        "status": "Accepted",
+        "date": "2026-07-11",
+        "summary": "A `feature_flags` table + Realtime invalidation gates post-v1 scope without branching.",
+        "href": "https://github.com/siddharthagarwal1983/PanchangPal/blob/main/docs/architecture/adr/ADR-021-Feature-Flag-Architecture.md",
+        "decision": "Use a PostgreSQL featureflags table (FF) read at launch and cached on the client, with Realtime invalidation for nearimmediate updates. Flags gate postv1 features — FFGREETINGCARD, FFJAINMODE, FFFAMILYPLAN, FFLIFECYCLEEMAIL — so scope can be enabled/disabled without code branches.",
+        "consequences": "Positive. Simple, auditable flags with no extra vendor; Realtime invalidation avoids stale gating; scope is decoupled from release branches. Tradeoffs. Flag values themselves are product followups (F9/F11/F15/F17); flags must be cleaned up once features graduate. Operational. Flags are read at launch and cached; the same table is a natural home for lightweight remote config.",
+        "context": "Postv1 scope (greeting card, Jain mode, family plan, lifecycle email) must be shippable and cuttable without branching, so the team can \"cut scope, don't slip\" under timeline pressure (MRD Risk §14). This requires runtime flags that are simple, auditable, and…",
+        "related": []
+      },
+      {
+        "id": "ADR-022",
+        "title": "Standard Error Envelope & ERR_* Taxonomy",
+        "status": "Accepted",
+        "date": "2026-07-11",
+        "summary": "Typed `{code,message,correlation_id,recoverable}` envelope; no leaked internals; mapped to copy.",
+        "href": "https://github.com/siddharthagarwal1983/PanchangPal/blob/main/docs/architecture/adr/ADR-022-Error-Envelope.md",
+        "decision": "Every thrown or returned error maps to an approved ERR code. Edge Functions return a typed error envelope { code, message, correlationid, recoverable } and never leak raw stack traces or model text. The client maps ERR to user copy (PDD §13.5) and emits an error analytics event (EVT054); a global error boundary handles ERRUNKNOWN. Errors are isolated to the smallest surface (e.g., a panchangcard error does not fail…",
+        "consequences": "Positive. Consistent, safe, observable errors; a stable contract between client and server; locali",
+        "context": "Errors must be calm, actionable, recoverable where possible, and never leak internals — a trust and security requirement (TDD Part 1 §1.4 \"fail calm, never fake\"; §1.5). Client and server must agree on error identity so a failure can be mapped to user copy,…",
+        "related": []
+      },
+      {
+        "id": "ADR-023",
+        "title": "Observability (Sentry + Correlation IDs)",
+        "status": "Accepted",
+        "date": "2026-07-11",
+        "summary": "Sentry + structured logs + one correlation ID for end-to-end tracing; AI audited, no PII.",
+        "href": "https://github.com/siddharthagarwal1983/PanchangPal/blob/main/docs/architecture/adr/ADR-023-Observability.md",
+        "decision": "Adopt Sentry for errors and Performance on both client and server, complemented by Supabase metrics and an uptime check. Use structured JSON logs in Edge Functions and one correlation ID (requestid/correlationid) shared across logs, metrics, and traces so a SCR interaction can be followed to a DB query and back. Every ERR is observable (client EVT054 + server logs with errorcode). AI is audited as firstclass metrics…",
+        "consequences": "Positive. Endtoend traceability; SLOs become dashboards + alerts; AI quality and cost are measurable and audited. Tradeoffs. CorrelationID propagation and structuredlogging discipline must be maintained across every function and client call. Operational. Dashboards per PDD §11; NFR ownership assigned per TDD §9; no PII in any telemetry (ADR031).",
+        "context": "The NFR targets (startup, latency, crashfree rate, AI firsttoken, sync success) are SLOs, not vibes — they need dashboards and alerts (TDD Part 1 §1.10, §8). An incident must be traceable across the stack: from a screen interaction to a database query and…",
+        "related": []
+      },
+      {
+        "id": "ADR-024",
+        "title": "Delivery & Release Strategy (GitHub Actions + EAS + OTA)",
+        "status": "Accepted",
+        "date": "2026-07-11",
+        "summary": "Trunk-based CI/CD: lint/test → migrations → functions → EAS build → stores, with OTA fixes.",
+        "href": "https://github.com/siddharthagarwal1983/PanchangPal/blob/main/docs/architecture/adr/ADR-024-Delivery-Release-OTA.md",
+        "decision": "Use GitHub Actions as the CI/CD pipeline: lint/typecheck/test → apply DB migrations to Supabase → deploy Edge Functions → EAS Build/Submit for native binaries → store distribution, plus Expo Updates (OTA) for JSonly changes within store policy. Development is trunkbased: shortlived branches off main, PRs gated by required checks (lint/type/test/a11y) and CODEOWNERS review; main is always releasable; releases are…",
+        "consequences": "Positive. Fast, repeatable releases; app, functions, and DB deploy together; OTA enables rapid policycompliant fixes; feature flags (ADR021) decouple deploy from release. Tradeoffs. OTA is limited to JScompatible changes and must respect store policy; versioncompatibility windows require disciplined, backwardcompatible migrations. Operational. CI fails on lint/type/test/a11y; CODEOWNERS enforces PDD §3.0A.5…",
+        "context": "A solo founder needs a fast, safe path from commit to production for both a native app and a serverless backend, plus the ability to ship JavaScriptonly fixes quickly for a trustcritical product. Database migrations and Edge Function deploys must move in…",
+        "related": []
+      },
+      {
+        "id": "ADR-025",
+        "title": "Background Jobs (pg_cron + Jobs Table)",
+        "status": "Accepted",
+        "date": "2026-07-11",
+        "summary": "Scheduling and idempotent workers inside Supabase; no external queue at v1.",
+        "href": "https://github.com/siddharthagarwal1983/PanchangPal/blob/main/docs/architecture/adr/ADR-025-Background-Jobs.md",
+        "decision": "Run background work with pgcron scheduled triggers plus a jobs table worker pattern in Edge Functions. pgcron fires on schedule; Edge Function workers claim and process jobs idempotently. This covers notification scheduling, winback segmentation, content ingestion/embedding, analytics rollups, and entitlement reconciliation — all inside Supabase, with no external queue.",
+        "consequences": "Positive. No extra infrastructure; scheduling and workers live where the data is; idempotent workers make retries safe. Tradeoffs. pgcron and Edge Functions have platform limits; very high job throughput or longrunning jobs would need a dedicated worker/queue later. Operational. Job workers reuse the idempotencykey discipline (TDD §7.7); the scheduler is idempotent (ADR020).",
+        "context": "Several recurring, asynchronous workloads exist: notification scheduling (perminute windows), winback segmentation (daily), content ingestion/embedding (on publish), analytics rollups (hourly/daily), and entitlement reconciliation. These need reliable…",
+        "related": []
+      },
+      {
+        "id": "ADR-026",
+        "title": "Time-Zone Correctness (UTC Store, IANA Compute)",
+        "status": "Accepted",
+        "date": "2026-07-11",
+        "summary": "Store UTC, compute/display in the user's IANA tz via one utility; never default to India time.",
+        "href": "https://github.com/siddharthagarwal1983/PanchangPal/blob/main/docs/architecture/adr/ADR-026-Time-Zone-Correctness.md",
+        "decision": "Store instants in UTC; compute and display in the user's IANA time",
+        "consequences": "Positive. Correct local tithis, sunrise, and reminder timing everywhere; a single, testable code path for all date logic. Tradeoffs. Location→t",
+        "context": "Time",
+        "related": []
+      },
+      {
+        "id": "ADR-027",
+        "title": "Documentation-First Development",
+        "status": "Accepted",
+        "date": "2026-07-11",
+        "summary": "Docs precede code under a source-of-truth hierarchy; never invent requirements.",
+        "href": "https://github.com/siddharthagarwal1983/PanchangPal/blob/main/docs/architecture/adr/ADR-027-Documentation-First.md",
+        "decision": "Adopt documentationfirst development: product, UX, and architecture documentation (MRD → PRD → PDD → TDD → ADRs → Design System → Issues → Tasks) are completed before implementation, and this precedence is the sourceoftruth hierarchy. Requirements, business rules, navigation, schema, API contracts, analytics events, error codes, and identifiers are never invented in code; where documentation is ambiguous or…",
+        "consequences": "Positive. Preserved institutional memory; endtoend traceability; AI agents and future hires can extend the system without rederiving context; conflicts are surfaced, not guessed. Tradeoffs. Upfront documentation effort and the discipline to keep docs synchroni",
+        "context": "PanchangPal is built by a solo founder with AI coding agents, where the single largest structural risk is loss of context (MRD Risk §12; TRISK11). The product also depends on strict traceability — screens, flows, APIs, tables, and events share identifiers so…",
+        "related": []
+      },
+      {
+        "id": "ADR-028",
+        "title": "Managed-Services-First",
+        "status": "Accepted",
+        "date": "2026-07-11",
+        "summary": "Buy managed platforms, build only differentiating logic; bound lock-in with adapters.",
+        "href": "https://github.com/siddharthagarwal1983/PanchangPal/blob/main/docs/architecture/adr/ADR-028-Managed-Services-First.md",
+        "decision": "Adopt a managedfirst, buildleast posture: buy managed platforms (Supabase, RevenueCat, Sentry, Expo/EAS, OpenAI) and write only differentiating logic — the panchang/tithi engine, the RAG content pipeline, and the household habit loop. Managed tiers are si",
+        "consequences": "Positive. Minimal operations; faster delivery; effort concentrated on the differentiating logic; costs scale with milestones. Tradeoffs. Dependence on thirdparty platforms and their pricing/limits, mitigated by adapters (ADR017), exportable PostgreSQL data, and documented scale triggers. Operational. Vendor lockin is an explicitly tracked risk (TRISK01) with ADR review triggers and quarterly dependency reviews.",
+        "context": "PanchangPal is built and operated by one engineer on a tight timeline, where every piece of infrastructure operated inhouse is a risk and a time cost that does not differentiate the product (MRD Risk §12; TDD Part 1 §1.1). The moat is trust and household…",
+        "related": []
+      },
+      {
+        "id": "ADR-029",
+        "title": "Accessibility-First (WCAG 2.1 AA, Release-Blocking)",
+        "status": "Accepted",
+        "date": "2026-07-11",
+        "summary": "WCAG 2.1 AA is a release-blocking, test-enforced gate on every component and screen.",
+        "href": "https://github.com/siddharthagarwal1983/PanchangPal/blob/main/docs/architecture/adr/ADR-029-Accessibility-First.md",
+        "decision": "Treat accessibility as a releaseblocking gate at WCAG 2.1 AA. Every component and screen provides semantic roles/labels/values, focus order equal to visual order, minimum touch targets (≥44/48), Dynamic Type reflow, ReducedMotion fallbacks, colorindependence, screenreader support (VoiceOver/TalkBack), and correct audiofocus management (ritual narration vs. screen reader). Accessibility is enforced in percomponent…",
+        "consequences": "Positive. An inclusive product for all household members; accessibility regressions are caught in CI, not in the field. Tradeoffs. Every component carries accessibility implementation and test cost; the release gate can block shipping until issues are fixed. Operational. WCAG 2.1 AA pass is an NFR (NFR17); a11y checks run in CI (ADR024) and the QA plan (PDD §15.4).",
+        "context": "PanchangPal serves a broad, multigenerational audience, including older household members, and holds trust and inclusion as core values. Accessibility that is bolted on late is typically incomplete. The PDD sets a WCAG 2.1 AA gate, and engineering must uphold…",
+        "related": []
+      },
+      {
+        "id": "ADR-030",
+        "title": "Security Model (Least Privilege, No Secrets on Device)",
+        "status": "Accepted",
+        "date": "2026-07-11",
+        "summary": "Least privilege everywhere; server-only secrets; validated inputs; server-side receipt checks.",
+        "href": "https://github.com/siddharthagarwal1983/PanchangPal/blob/main/docs/architecture/adr/ADR-030-Security-Model.md",
+        "decision": "Enforce least privilege by default and no secrets on the device. Every service receives the minimum permissions required. Serveronly secrets (OPENAIAPIKEY, SUPABASESERVICEROLEKEY, REVENUECATWEBHOOKSECRET, EXPOACCESSTOKEN) live only in Edge Function/CI/EAS secret stores; the app holds only public keys (EXPOPUBLIC). Privileged operations run only in Edge Functions with the service role, never on the client. All inputs…",
+        "consequences": "Positive. Secrets cannot leak from the device; compromised components have minimal reach; serverside receipt validation resists IAP fraud. Tradeoffs. All privileged paths must be routed through Edge Functions; secret management spans Supabase, CI, and EAS and must be maintained carefully. Operational.",
+        "context": "PanchangPal handles personal data and money (subscriptions) and depends on thirdparty secrets (OpenAI, servicerole, webhook keys). Trust and security are core principles (TDD Part 1 §1.5). A leaked key or an overprivileged component is a critical risk…",
+        "related": []
+      },
+      {
+        "id": "ADR-031",
+        "title": "Privacy & Data-Minimization Model",
+        "status": "Accepted",
+        "date": "2026-07-11",
+        "summary": "Minimize collection; no PII in analytics/logs/prompts; no cross-session AI memory; export/delete.",
+        "href": "https://github.com/siddharthagarwal1983/PanchangPal/blob/main/docs/architecture/adr/ADR-031-Privacy-Data-Minimization.md",
+        "decision": "Adopt data minimi",
+        "consequences": "Positive. Smaller privacy attack surface; CCPAaligned export/delete; griefaware handling of personal dates; trust reinforced. Tradeoffs. No PII in analytics/prompts constrains some personali",
+        "context": "PanchangPal is privacyfirst, serving users in markets with regimes such as CCPA. The product touches sensitive contexts — personal dates that may commemorate the deceased, household relationships, spiritual practice — where overcollection or leakage of…",
+        "related": [
+          "SVC_account"
+        ]
+      },
+      {
+        "id": "ADR-032",
+        "title": "API Versioning Strategy",
+        "status": "Accepted",
+        "date": "2026-07-11",
+        "summary": "Compatibility-first SemVer contracts; support N & N-1; additive evolution + expand-then-contract.",
+        "href": "https://github.com/siddharthagarwal1983/PanchangPal/blob/main/docs/architecture/adr/ADR-032-API-Versioning-Strategy.md",
+        "decision": "Adopt a compatibilityfirst, minimalsurface API versioning strategy anchored on the existing packages/api contract source and TDD §7.14: Versioning philosophy. Prefer evolution over versioning: extend contracts backwardcompatibly (additive change) rather than minting new versions. A new explicit version is created only for a genuinely breaking change that cannot be expressed additively. The backend supports the…",
+        "consequences": "Positive. Older installs and queued offline work keep functioning (N/N1 guarantee), protecting the trustcritical daily loop; additive evolution keeps the maintenance surface small for a solo founder; flags + expandthencontract make rollout and rollback lowrisk; adoption telemetry makes deprecation evidencebased rather than guesswork. Tradeoffs. Additiveonly discipline means the schema accumulates optional fields and…",
+        "context": "PanchangPal ships a mobile client that users update on their own schedule — or not at all — against a backend that must keep evolving. Because storedistributed app versions linger in the field and the daily loop is offlinefirst (ADR015), the backend cannot…",
+        "related": [
+          "SVC_sync"
+        ]
+      },
+      {
+        "id": "ADR-033",
+        "title": "Canonical Panchang Computation Engine",
+        "status": "Proposed",
+        "date": "2026-07-12",
+        "summary": "Panchang behind an abstract `PanchangEngine` provider; astronomical choices (ephemeris/ayanamsa/methodology/validation/tolerances) to ratify. Only blocked backend component.",
+        "href": "https://github.com/siddharthagarwal1983/PanchangPal/blob/main/docs/architecture/adr/ADR-033-Canonical-Panchang-Computation-Engine.md",
+        "decision": "Part A — Provider architecture (decidable now, proposed as Accepted): Panchang computation sits behind a PanchangEngine provider interface. Business logic (SVCpanchang, SVCnotifyscheduler, personaldate recurrence) depends only on the interface, never on a concrete algorithm. A concrete engine is a swappable, engineversion stamped implementation; swapping or upgrading it is a config/deploy change that invalidates the…",
+        "consequences": "Positive. All independent backend work proceeds; the accuracy decision is made deliberately with reviewers; the deterministic, cacheable architecture (ADR010) is preserved; the engine is swappable and versionstamped. Tradeoffs. SVCpanchang (Today/calendar/detail) and sunrise/tithitimed notifications remain unavailable until Part B is ratified and an engine is implemented + validated. Engine dependent tests are…",
+        "context": "ADR010 mandates a deterministic panchang engine — a pure function of (instant, lat/lng, t",
+        "related": [
+          "SVC_panchang",
+          "SVC_notify_scheduler"
+        ]
+      }
+    ],
+    "source": {
+      "label": "docs/architecture/adr/",
+      "href": "https://github.com/siddharthagarwal1983/PanchangPal/blob/main/docs/architecture/adr/README.md"
+    }
+  },
+  "traceability": {
+    "layers": [
+      {
+        "layer": "API_* endpoints",
+        "count": 65,
+        "where": "docs/api/openapi.yaml"
+      },
+      {
+        "layer": "SVC_* functions",
+        "count": 8,
+        "where": "apps/backend/functions/"
+      },
+      {
+        "layer": "TBL_* tables",
+        "count": 32,
+        "where": "apps/backend/migrations/"
+      }
+    ],
+    "sample": [
+      {
+        "api": "API_POST_AUTH_APPLE",
+        "impl": "supabase-js",
+        "tag": "Identity & Profile"
+      },
+      {
+        "api": "API_POST_AUTH_GOOGLE",
+        "impl": "supabase-auth",
+        "tag": "Identity & Profile"
+      },
+      {
+        "api": "API_POST_AUTH_EMAIL_START",
+        "impl": "supabase-auth",
+        "tag": "Identity & Profile"
+      },
+      {
+        "api": "API_POST_AUTH_EMAIL_VERIFY",
+        "impl": "supabase-auth",
+        "tag": "Identity & Profile"
+      },
+      {
+        "api": "API_POST_AUTH_LOGOUT",
+        "impl": "supabase-auth",
+        "tag": "Identity & Profile"
+      },
+      {
+        "api": "API_POST_AUTH_MERGE",
+        "impl": "supabase-auth",
+        "tag": "Identity & Profile"
+      },
+      {
+        "api": "API_GET_ONBOARDING_CONFIG",
+        "impl": "SVC_account",
+        "tag": "Identity & Profile"
+      },
+      {
+        "api": "API_GET_GEO_REVERSE",
+        "impl": "supabase-js",
+        "tag": "Identity & Profile"
+      },
+      {
+        "api": "API_GET_CITY_SEARCH",
+        "impl": "SVC_panchang",
+        "tag": "Identity & Profile"
+      },
+      {
+        "api": "API_GET_TRADITIONS",
+        "impl": "supabase-js",
+        "tag": "Identity & Profile"
+      },
+      {
+        "api": "API_GET_PROFILE",
+        "impl": "supabase-js",
+        "tag": "Identity & Profile"
+      },
+      {
+        "api": "API_POST_PROFILE",
+        "impl": "supabase-js",
+        "tag": "Identity & Profile"
+      },
+      {
+        "api": "API_POST_PROFILE_TRADITION",
+        "impl": "supabase-js",
+        "tag": "Identity & Profile"
+      },
+      {
+        "api": "API_GET_PREFERENCES",
+        "impl": "supabase-js",
+        "tag": "Identity & Profile"
+      }
+    ],
+    "source": {
+      "label": "docs/api/openapi.yaml",
+      "href": "https://github.com/siddharthagarwal1983/PanchangPal/blob/main/docs/api/openapi.yaml"
+    }
+  },
+  "dependencyGraph": {
+    "nodes": [
+      {
+        "id": "mobile",
+        "full": "@panchangpal/mobile",
+        "path": "apps/mobile",
+        "href": "https://github.com/siddharthagarwal1983/PanchangPal/blob/main/apps/mobile",
+        "role": "React Native / Expo app. Thin client, server-authoritative.",
+        "layer": "app"
+      },
+      {
+        "id": "ai",
+        "full": "@panchangpal/ai",
+        "path": "packages/ai",
+        "href": "https://github.com/siddharthagarwal1983/PanchangPal/blob/main/packages/ai",
+        "role": "RAG + LLM provider adapters (ADR-011). Grounded-or-silent.",
+        "layer": "service"
+      },
+      {
+        "id": "api",
+        "full": "@panchangpal/api",
+        "path": "packages/api",
+        "href": "https://github.com/siddharthagarwal1983/PanchangPal/blob/main/packages/api",
+        "role": "API contracts / DTOs (zod) shared by client + Edge Functions.",
+        "layer": "contract"
+      },
+      {
+        "id": "database",
+        "full": "@panchangpal/database",
+        "path": "packages/database",
+        "href": "https://github.com/siddharthagarwal1983/PanchangPal/blob/main/packages/database",
+        "role": "Supabase schema, migrations, RLS, pgTAP contracts.",
+        "layer": "data"
+      },
+      {
+        "id": "design-tokens",
+        "full": "@panchangpal/design-tokens",
+        "path": "packages/design-tokens",
+        "href": "https://github.com/siddharthagarwal1983/PanchangPal/blob/main/packages/design-tokens",
+        "role": "Design tokens (color/space/type) from PDD §6. No runtime deps.",
+        "layer": "foundation"
+      },
+      {
+        "id": "shared",
+        "full": "@panchangpal/shared",
+        "path": "packages/shared",
+        "href": "https://github.com/siddharthagarwal1983/PanchangPal/blob/main/packages/shared",
+        "role": "Domain types + canonical event/error identifiers. No runtime deps.",
+        "layer": "foundation"
+      },
+      {
+        "id": "ui",
+        "full": "@panchangpal/ui",
+        "path": "packages/ui",
+        "href": "https://github.com/siddharthagarwal1983/PanchangPal/blob/main/packages/ui",
+        "role": "Cross-platform component library + theme (tokens-driven).",
+        "layer": "presentation"
+      }
+    ],
+    "edges": [
+      {
+        "from": "mobile",
+        "to": "api"
+      },
+      {
+        "from": "mobile",
+        "to": "shared"
+      },
+      {
+        "from": "mobile",
+        "to": "ui"
+      },
+      {
+        "from": "mobile",
+        "to": "design-tokens"
+      },
+      {
+        "from": "ai",
+        "to": "shared"
+      },
+      {
+        "from": "api",
+        "to": "shared"
+      },
+      {
+        "from": "database",
+        "to": "shared"
+      },
+      {
+        "from": "ui",
+        "to": "design-tokens"
+      }
+    ],
+    "source": {
+      "label": "workspace package.json graph",
+      "href": "https://github.com/siddharthagarwal1983/PanchangPal/blob/main/pnpm-workspace.yaml"
+    }
+  },
+  "repoHealth": {
+    "metrics": [
+      {
+        "label": "TS/TSX files",
+        "value": 168
+      },
+      {
+        "label": "Lines of code",
+        "value": 6873
+      },
+      {
+        "label": "Doc files",
+        "value": 68
+      },
+      {
+        "label": "Workspace packages",
+        "value": 7
+      },
+      {
+        "label": "SQL migrations",
+        "value": 13
+      }
+    ],
+    "source": {
+      "label": "repository scan",
+      "href": "https://github.com/siddharthagarwal1983/PanchangPal/blob/main"
+    }
+  },
+  "moduleHealth": {
+    "modules": [
+      {
+        "key": "Backend",
+        "dir": "apps/backend",
+        "href": "https://github.com/siddharthagarwal1983/PanchangPal/blob/main/apps/backend",
+        "metrics": [
+          {
+            "k": "Files",
+            "v": 34
+          },
+          {
+            "k": "Migrations",
+            "v": 13
+          },
+          {
+            "k": "pgTAP",
+            "v": 21
+          },
+          {
+            "k": "Debt",
+            "v": 14
+          }
+        ],
+        "h": {
+          "label": "Healthy",
+          "pill": "ok"
+        }
+      },
+      {
+        "key": "Mobile",
+        "dir": "apps/mobile",
+        "href": "https://github.com/siddharthagarwal1983/PanchangPal/blob/main/apps/mobile",
+        "metrics": [
+          {
+            "k": "Files",
+            "v": 70
+          },
+          {
+            "k": "LOC",
+            "v": 2607
+          },
+          {
+            "k": "Test cases",
+            "v": 41
+          },
+          {
+            "k": "Debt",
+            "v": 8
+          }
+        ],
+        "h": {
+          "label": "Healthy",
+          "pill": "ok"
+        }
+      },
+      {
+        "key": "AI",
+        "dir": "packages/ai",
+        "href": "https://github.com/siddharthagarwal1983/PanchangPal/blob/main/packages/ai",
+        "metrics": [
+          {
+            "k": "Files",
+            "v": 13
+          },
+          {
+            "k": "Test cases",
+            "v": 13
+          },
+          {
+            "k": "Debt",
+            "v": 0
+          }
+        ],
+        "h": {
+          "label": "Live gated",
+          "pill": "gated"
+        }
+      },
+      {
+        "key": "Design System",
+        "dir": "packages/ui",
+        "href": "https://github.com/siddharthagarwal1983/PanchangPal/blob/main/packages/ui",
+        "metrics": [
+          {
+            "k": "Files",
+            "v": 41
+          },
+          {
+            "k": "Test cases",
+            "v": 23
+          },
+          {
+            "k": "Debt",
+            "v": 2
+          }
+        ],
+        "h": {
+          "label": "Healthy",
+          "pill": "ok"
+        }
+      },
+      {
+        "key": "Documentation",
+        "dir": "docs",
+        "href": "https://github.com/siddharthagarwal1983/PanchangPal/blob/main/docs",
+        "metrics": [
+          {
+            "k": "Doc files",
+            "v": 68
+          },
+          {
+            "k": "ADRs",
+            "v": 33
+          }
+        ],
+        "h": {
+          "label": "Healthy",
+          "pill": "ok"
+        }
+      },
+      {
+        "key": "Testing",
+        "dir": "apps",
+        "href": "https://github.com/siddharthagarwal1983/PanchangPal/blob/main/.github/workflows/ci.yml",
+        "metrics": [
+          {
+            "k": "Test files",
+            "v": 22
+          },
+          {
+            "k": "Cases",
+            "v": 102
+          },
+          {
+            "k": "pgTAP",
+            "v": 21
+          }
+        ],
+        "h": {
+          "label": "Healthy",
+          "pill": "ok"
+        }
+      },
+      {
+        "key": "Infrastructure",
+        "dir": ".github",
+        "href": "https://github.com/siddharthagarwal1983/PanchangPal/blob/main/.github/workflows",
+        "metrics": [
+          {
+            "k": "Workflows",
+            "v": 3
+          },
+          {
+            "k": "Migrations",
+            "v": 13
+          }
+        ],
+        "h": {
+          "label": "In progress",
+          "pill": "warn"
+        }
+      }
+    ],
+    "source": {
+      "label": "repository scan (files · tests · debt)",
+      "href": "https://github.com/siddharthagarwal1983/PanchangPal/blob/main"
+    }
+  },
+  "aiContext": {
+    "nodes": [
+      {
+        "name": "Architecture",
+        "maturity": 71,
+        "layers": {
+          "MRD": false,
+          "PRD": true,
+          "PDD": true,
+          "TDD": true,
+          "ADR": true,
+          "Impl": false,
+          "Tests": true
+        },
+        "links": {
+          "MRD": "https://github.com/siddharthagarwal1983/PanchangPal/blob/main/docs/mrd",
+          "PRD": "https://github.com/siddharthagarwal1983/PanchangPal/blob/main/docs/prd",
+          "PDD": "https://github.com/siddharthagarwal1983/PanchangPal/blob/main/docs/pdd",
+          "TDD": "https://github.com/siddharthagarwal1983/PanchangPal/blob/main/docs/tdd",
+          "ADR": "https://github.com/siddharthagarwal1983/PanchangPal/blob/main/docs/architecture/adr/README.md"
+        },
+        "status": "In progress",
+        "pill": "warn"
+      },
+      {
+        "name": "Backend",
+        "maturity": 71,
+        "layers": {
+          "MRD": false,
+          "PRD": false,
+          "PDD": true,
+          "TDD": true,
+          "ADR": true,
+          "Impl": true,
+          "Tests": true
+        },
+        "links": {
+          "MRD": "https://github.com/siddharthagarwal1983/PanchangPal/blob/main/docs/mrd",
+          "PRD": "https://github.com/siddharthagarwal1983/PanchangPal/blob/main/docs/prd",
+          "PDD": "https://github.com/siddharthagarwal1983/PanchangPal/blob/main/docs/pdd",
+          "TDD": "https://github.com/siddharthagarwal1983/PanchangPal/blob/main/docs/tdd",
+          "ADR": "https://github.com/siddharthagarwal1983/PanchangPal/blob/main/docs/architecture/adr/README.md"
+        },
+        "status": "Healthy",
+        "pill": "ok"
+      },
+      {
+        "name": "Mobile",
+        "maturity": 100,
+        "layers": {
+          "MRD": true,
+          "PRD": true,
+          "PDD": true,
+          "TDD": true,
+          "ADR": true,
+          "Impl": true,
+          "Tests": true
+        },
+        "links": {
+          "MRD": "https://github.com/siddharthagarwal1983/PanchangPal/blob/main/docs/mrd",
+          "PRD": "https://github.com/siddharthagarwal1983/PanchangPal/blob/main/docs/prd",
+          "PDD": "https://github.com/siddharthagarwal1983/PanchangPal/blob/main/docs/pdd",
+          "TDD": "https://github.com/siddharthagarwal1983/PanchangPal/blob/main/docs/tdd",
+          "ADR": "https://github.com/siddharthagarwal1983/PanchangPal/blob/main/docs/architecture/adr/README.md"
+        },
+        "status": "Healthy",
+        "pill": "ok"
+      },
+      {
+        "name": "Design System",
+        "maturity": 57,
+        "layers": {
+          "MRD": false,
+          "PRD": false,
+          "PDD": true,
+          "TDD": true,
+          "ADR": true,
+          "Impl": true,
+          "Tests": false
+        },
+        "links": {
+          "MRD": "https://github.com/siddharthagarwal1983/PanchangPal/blob/main/docs/mrd",
+          "PRD": "https://github.com/siddharthagarwal1983/PanchangPal/blob/main/docs/prd",
+          "PDD": "https://github.com/siddharthagarwal1983/PanchangPal/blob/main/docs/pdd",
+          "TDD": "https://github.com/siddharthagarwal1983/PanchangPal/blob/main/docs/tdd",
+          "ADR": "https://github.com/siddharthagarwal1983/PanchangPal/blob/main/docs/architecture/adr/README.md"
+        },
+        "status": "In progress",
+        "pill": "warn"
+      },
+      {
+        "name": "Ask Guru",
+        "maturity": 100,
+        "layers": {
+          "MRD": true,
+          "PRD": true,
+          "PDD": true,
+          "TDD": true,
+          "ADR": true,
+          "Impl": true,
+          "Tests": true
+        },
+        "links": {
+          "MRD": "https://github.com/siddharthagarwal1983/PanchangPal/blob/main/docs/mrd",
+          "PRD": "https://github.com/siddharthagarwal1983/PanchangPal/blob/main/docs/prd",
+          "PDD": "https://github.com/siddharthagarwal1983/PanchangPal/blob/main/docs/pdd",
+          "TDD": "https://github.com/siddharthagarwal1983/PanchangPal/blob/main/docs/tdd",
+          "ADR": "https://github.com/siddharthagarwal1983/PanchangPal/blob/main/docs/architecture/adr/README.md"
+        },
+        "status": "Live gated",
+        "pill": "gated"
+      },
+      {
+        "name": "Notifications",
+        "maturity": 86,
+        "layers": {
+          "MRD": true,
+          "PRD": true,
+          "PDD": true,
+          "TDD": true,
+          "ADR": true,
+          "Impl": false,
+          "Tests": true
+        },
+        "links": {
+          "MRD": "https://github.com/siddharthagarwal1983/PanchangPal/blob/main/docs/mrd",
+          "PRD": "https://github.com/siddharthagarwal1983/PanchangPal/blob/main/docs/prd",
+          "PDD": "https://github.com/siddharthagarwal1983/PanchangPal/blob/main/docs/pdd",
+          "TDD": "https://github.com/siddharthagarwal1983/PanchangPal/blob/main/docs/tdd",
+          "ADR": "https://github.com/siddharthagarwal1983/PanchangPal/blob/main/docs/architecture/adr/README.md"
+        },
+        "status": "In progress",
+        "pill": "warn"
+      },
+      {
+        "name": "Panchang Engine",
+        "maturity": 100,
+        "layers": {
+          "MRD": true,
+          "PRD": true,
+          "PDD": true,
+          "TDD": true,
+          "ADR": true,
+          "Impl": true,
+          "Tests": true
+        },
+        "links": {
+          "MRD": "https://github.com/siddharthagarwal1983/PanchangPal/blob/main/docs/mrd",
+          "PRD": "https://github.com/siddharthagarwal1983/PanchangPal/blob/main/docs/prd",
+          "PDD": "https://github.com/siddharthagarwal1983/PanchangPal/blob/main/docs/pdd",
+          "TDD": "https://github.com/siddharthagarwal1983/PanchangPal/blob/main/docs/tdd",
+          "ADR": "https://github.com/siddharthagarwal1983/PanchangPal/blob/main/docs/architecture/adr/README.md"
+        },
+        "status": "Blocked",
+        "pill": "crit"
+      }
+    ],
+    "source": {
+      "label": "doc corpus + impl presence",
+      "href": "https://github.com/siddharthagarwal1983/PanchangPal/blob/main"
+    }
+  },
+  "techDebt": {
+    "count": 144,
+    "byTag": {
+      "BLOCKED": 36,
+      "TODO": 5,
+      "PRD-FOLLOWUP": 48,
+      "ASSUMPTION": 55
+    },
+    "bySeverity": {
+      "Critical": 36,
+      "Medium": 5,
+      "Low": 103
+    },
+    "byArea": {
+      "backend": 14,
+      "mobile": 8,
+      "design-system": 2,
+      "docs": 120
+    },
+    "items": [
+      {
+        "tag": "BLOCKED",
+        "file": "apps/backend/functions/README.md",
+        "line": 19,
+        "text": "| `panchang` | Skeleton + cache-key tested | ⚠️ **compute BLOCKED** — see `panchang/engine.ts` (undocumented astronomical algorithm; ADR-010) |",
+        "href": "https://github.com/siddharthagarwal1983/PanchangPal/blob/main/apps/backend/functions/README.md#L19",
+        "severity": "Critical",
+        "area": "backend"
+      },
+      {
+        "tag": "BLOCKED",
+        "file": "apps/backend/functions/README.md",
+        "line": 30,
+        "text": "(blocked documentation gap, flagged to product/architecture).",
+        "href": "https://github.com/siddharthagarwal1983/PanchangPal/blob/main/apps/backend/functions/README.md#L30",
+        "severity": "Critical",
+        "area": "backend"
+      },
+      {
+        "tag": "BLOCKED",
+        "file": "apps/backend/functions/notify-scheduler/index.ts",
+        "line": 8,
+        "text": "* While the engine is blocked (ADR-033), sunrise-relative + personal-date-tithi",
+        "href": "https://github.com/siddharthagarwal1983/PanchangPal/blob/main/apps/backend/functions/notify-scheduler/index.ts#L8",
+        "severity": "Critical",
+        "area": "backend"
+      },
+      {
+        "tag": "BLOCKED",
+        "file": "apps/backend/functions/notify-scheduler/index.ts",
+        "line": 23,
+        "text": "// Injected abstract engine — NOT an implementation. Blocked until ADR-033.",
+        "href": "https://github.com/siddharthagarwal1983/PanchangPal/blob/main/apps/backend/functions/notify-scheduler/index.ts#L23",
+        "severity": "Critical",
+        "area": "backend"
+      },
+      {
+        "tag": "BLOCKED",
+        "file": "apps/backend/functions/notify-scheduler/index.ts",
+        "line": 35,
+        "text": "// 2) resolve sunrise/tithi timing ONLY via the engine interface; skip-with-log if blocked.",
+        "href": "https://github.com/siddharthagarwal1983/PanchangPal/blob/main/apps/backend/functions/notify-scheduler/index.ts#L35",
+        "severity": "Critical",
+        "area": "backend"
+      },
+      {
+        "tag": "BLOCKED",
+        "file": "apps/backend/functions/panchang/engine.test.ts",
+        "line": 11,
+        "text": "it('placeholder engine fails closed (never fabricates)', () => {",
+        "href": "https://github.com/siddharthagarwal1983/PanchangPal/blob/main/apps/backend/functions/panchang/engine.test.ts#L11",
+        "severity": "Critical",
+        "area": "backend"
+      },
+      {
+        "tag": "TODO",
+        "file": "apps/backend/functions/panchang/engine.test.ts",
+        "line": 17,
+        "text": "// TODO(ADR-033): un-skip once the canonical engine + validation dataset are approved.",
+        "href": "https://github.com/siddharthagarwal1983/PanchangPal/blob/main/apps/backend/functions/panchang/engine.test.ts#L17",
+        "severity": "Medium",
+        "area": "backend"
+      },
+      {
+        "tag": "TODO",
+        "file": "apps/backend/functions/panchang/engine.test.ts",
+        "line": 23,
+        "text": "// TODO(ADR-033): un-skip once regional variant rules are approved.",
+        "href": "https://github.com/siddharthagarwal1983/PanchangPal/blob/main/apps/backend/functions/panchang/engine.test.ts#L23",
+        "severity": "Medium",
+        "area": "backend"
+      },
+      {
+        "tag": "BLOCKED",
+        "file": "apps/backend/functions/panchang/engine.ts",
+        "line": 4,
+        "text": "* ⚠️ THE ONLY BLOCKED COMPONENT IN THE BACKEND. The deterministic astronomical",
+        "href": "https://github.com/siddharthagarwal1983/PanchangPal/blob/main/apps/backend/functions/panchang/engine.ts#L4",
+        "severity": "Critical",
+        "area": "backend"
+      },
+      {
+        "tag": "BLOCKED",
+        "file": "apps/backend/functions/panchang/engine.ts",
+        "line": 56,
+        "text": "'Panchang engine not available: blocked on the \"Canonical Panchang Computation Engine\" decision (ADR-033, Proposed). Do not implement astronomical calculations ",
+        "href": "https://github.com/siddharthagarwal1983/PanchangPal/blob/main/apps/backend/functions/panchang/engine.ts#L56",
+        "severity": "Critical",
+        "area": "backend"
+      },
+      {
+        "tag": "BLOCKED",
+        "file": "apps/backend/functions/panchang/engine.ts",
+        "line": 64,
+        "text": "* whole backend compiles and runs, but every compute call fails closed (never fabricates).",
+        "href": "https://github.com/siddharthagarwal1983/PanchangPal/blob/main/apps/backend/functions/panchang/engine.ts#L64",
+        "severity": "Critical",
+        "area": "backend"
+      },
+      {
+        "tag": "BLOCKED",
+        "file": "apps/backend/functions/panchang/index.ts",
+        "line": 8,
+        "text": "* engine fails closed (ERR_PANCHANG_UNAVAILABLE, never fabricated data). Caching,",
+        "href": "https://github.com/siddharthagarwal1983/PanchangPal/blob/main/apps/backend/functions/panchang/index.ts#L8",
+        "severity": "Critical",
+        "area": "backend"
+      },
+      {
+        "tag": "BLOCKED",
+        "file": "apps/backend/functions/panchang/index.ts",
+        "line": 27,
+        "text": "// The single registered engine (blocked). Swap for the approved concrete engine post-ADR-033.",
+        "href": "https://github.com/siddharthagarwal1983/PanchangPal/blob/main/apps/backend/functions/panchang/index.ts#L27",
+        "severity": "Critical",
+        "area": "backend"
+      },
+      {
+        "tag": "BLOCKED",
+        "file": "apps/backend/functions/panchang/index.ts",
+        "line": 63,
+        "text": "// Cache miss → compute. BLOCKED until ADR-033 (engine fails closed, never fabricates).",
+        "href": "https://github.com/siddharthagarwal1983/PanchangPal/blob/main/apps/backend/functions/panchang/index.ts#L63",
+        "severity": "Critical",
+        "area": "backend"
+      },
+      {
+        "tag": "BLOCKED",
+        "file": "apps/mobile/app/(tabs)/today/index.tsx",
+        "line": 8,
+        "text": "* canonical engine is blocked (ADR-033) — never fabricated values. The rest of Home (ritual,",
+        "href": "https://github.com/siddharthagarwal1983/PanchangPal/blob/main/apps/mobile/app/(tabs)/today/index.tsx#L8",
+        "severity": "Critical",
+        "area": "mobile"
+      },
+      {
+        "tag": "BLOCKED",
+        "file": "apps/mobile/app/(tabs)/today/index.tsx",
+        "line": 32,
+        "text": "// Panchang stays behind the provider abstraction; blocked → unavailable (ADR-033).",
+        "href": "https://github.com/siddharthagarwal1983/PanchangPal/blob/main/apps/mobile/app/(tabs)/today/index.tsx#L32",
+        "severity": "Critical",
+        "area": "mobile"
+      },
+      {
+        "tag": "BLOCKED",
+        "file": "apps/mobile/app/(tabs)/today/index.tsx",
+        "line": 73,
+        "text": "panchang/festival engine is blocked (ADR-033), festival is null, so it stays hidden. */}",
+        "href": "https://github.com/siddharthagarwal1983/PanchangPal/blob/main/apps/mobile/app/(tabs)/today/index.tsx#L73",
+        "severity": "Critical",
+        "area": "mobile"
+      },
+      {
+        "tag": "BLOCKED",
+        "file": "apps/mobile/src/data/hooks/useToday.ts",
+        "line": 5,
+        "text": "* the engine is blocked (ADR-033) the result is { status: 'unavailable' } and the card shows",
+        "href": "https://github.com/siddharthagarwal1983/PanchangPal/blob/main/apps/mobile/src/data/hooks/useToday.ts#L5",
+        "severity": "Critical",
+        "area": "mobile"
+      },
+      {
+        "tag": "BLOCKED",
+        "file": "apps/mobile/src/data/todayRepository.ts",
+        "line": 7,
+        "text": "* Panchang: API_GET_TODAY returns ERR_PANCHANG_UNAVAILABLE while the engine is blocked",
+        "href": "https://github.com/siddharthagarwal1983/PanchangPal/blob/main/apps/mobile/src/data/todayRepository.ts#L7",
+        "severity": "Critical",
+        "area": "mobile"
+      },
+      {
+        "tag": "BLOCKED",
+        "file": "apps/mobile/src/domain/__tests__/calendar-month.test.ts",
+        "line": 16,
+        "text": "it('keeps production calendar markers unavailable while ADR-033 is blocked', async () => {",
+        "href": "https://github.com/siddharthagarwal1983/PanchangPal/blob/main/apps/mobile/src/domain/__tests__/calendar-month.test.ts#L16",
+        "severity": "Critical",
+        "area": "mobile"
+      },
+      {
+        "tag": "BLOCKED",
+        "file": "apps/mobile/src/domain/panchang/PanchangProvider.ts",
+        "line": 5,
+        "text": "* engine is blocked (ADR-033) the server returns ERR_PANCHANG_UNAVAILABLE, which surfaces as",
+        "href": "https://github.com/siddharthagarwal1983/PanchangPal/blob/main/apps/mobile/src/domain/panchang/PanchangProvider.ts#L5",
+        "severity": "Critical",
+        "area": "mobile"
+      },
+      {
+        "tag": "BLOCKED",
+        "file": "apps/mobile/src/domain/panchang/ProductionPanchangProvider.ts",
+        "line": 3,
+        "text": "* TodayRepository. While the canonical panchang engine is blocked (ADR-033) the server",
+        "href": "https://github.com/siddharthagarwal1983/PanchangPal/blob/main/apps/mobile/src/domain/panchang/ProductionPanchangProvider.ts#L3",
+        "severity": "Critical",
+        "area": "mobile"
+      },
+      {
+        "tag": "BLOCKED",
+        "file": "packages/ui/src/components/PanchangCard.tsx",
+        "line": 4,
+        "text": "* + retry) / unavailable (engine blocked, ADR-033 — a calm \"temporarily unavailable\", NEVER",
+        "href": "https://github.com/siddharthagarwal1983/PanchangPal/blob/main/packages/ui/src/components/PanchangCard.tsx#L4",
+        "severity": "Critical",
+        "area": "design-system"
+      },
+      {
+        "tag": "BLOCKED",
+        "file": "packages/ui/src/components/PanchangCard.tsx",
+        "line": 27,
+        "text": "/** Engine blocked (ADR-033) or fetch failed → show the calm unavailable state, not data. */",
+        "href": "https://github.com/siddharthagarwal1983/PanchangPal/blob/main/packages/ui/src/components/PanchangCard.tsx#L27",
+        "severity": "Critical",
+        "area": "design-system"
+      },
+      {
+        "tag": "BLOCKED",
+        "file": "docs/architecture/adr/ADR-033-Canonical-Panchang-Computation-Engine.md",
+        "line": 32,
+        "text": "registered implementation fails closed. This ADR is the gate that unblocks a real engine.",
+        "href": "https://github.com/siddharthagarwal1983/PanchangPal/blob/main/docs/architecture/adr/ADR-033-Canonical-Panchang-Computation-Engine.md#L32",
+        "severity": "Critical",
+        "area": "docs"
+      },
+      {
+        "tag": "BLOCKED",
+        "file": "docs/architecture/adr/ADR-033-Canonical-Panchang-Computation-Engine.md",
+        "line": 72,
+        "text": "churn when the engine lands. *Disadvantages:* panchang/notification timing stays blocked",
+        "href": "https://github.com/siddharthagarwal1983/PanchangPal/blob/main/docs/architecture/adr/ADR-033-Canonical-Panchang-Computation-Engine.md#L72",
+        "severity": "Critical",
+        "area": "docs"
+      },
+      {
+        "tag": "TODO",
+        "file": "docs/architecture/adr/ADR-033-Canonical-Panchang-Computation-Engine.md",
+        "line": 138,
+        "text": "`it.skip` with `TODO(ADR-033)` until the validated dataset exists.",
+        "href": "https://github.com/siddharthagarwal1983/PanchangPal/blob/main/docs/architecture/adr/ADR-033-Canonical-Panchang-Computation-Engine.md#L138",
+        "severity": "Medium",
+        "area": "docs"
+      },
+      {
+        "tag": "PRD-FOLLOWUP",
+        "file": "docs/architecture/adr/ADR_TEMPLATE.md",
+        "line": 92,
+        "text": "Optional. Non-binding implementation guidance, sequencing hints, `[TECHNICAL IMPROVEMENT]`/`[ASSUMPTION Tn]`/`[PRD FOLLOW-UP Fn]` callouts, or pointers to where",
+        "href": "https://github.com/siddharthagarwal1983/PanchangPal/blob/main/docs/architecture/adr/ADR_TEMPLATE.md#L92",
+        "severity": "Low",
+        "area": "docs"
+      },
+      {
+        "tag": "ASSUMPTION",
+        "file": "docs/architecture/adr/ADR_TEMPLATE.md",
+        "line": 92,
+        "text": "Optional. Non-binding implementation guidance, sequencing hints, `[TECHNICAL IMPROVEMENT]`/`[ASSUMPTION Tn]`/`[PRD FOLLOW-UP Fn]` callouts, or pointers to where",
+        "href": "https://github.com/siddharthagarwal1983/PanchangPal/blob/main/docs/architecture/adr/ADR_TEMPLATE.md#L92",
+        "severity": "Low",
+        "area": "docs"
+      },
+      {
+        "tag": "PRD-FOLLOWUP",
+        "file": "docs/architecture/adr/ADR_TEMPLATE.md",
+        "line": 102,
+        "text": "Create an ADR for a **material architectural decision** — one that is expensive to reverse, shapes multiple parts of the system, or must be understood by a futu",
+        "href": "https://github.com/siddharthagarwal1983/PanchangPal/blob/main/docs/architecture/adr/ADR_TEMPLATE.md#L102",
+        "severity": "Low",
+        "area": "docs"
+      },
+      {
+        "tag": "ASSUMPTION",
+        "file": "docs/architecture/adr/ADR_TEMPLATE.md",
+        "line": 130,
+        "text": "Write as a permanent engineering record: calm, precise, present-tense, and self-contained — each ADR must be understandable without reading its source document.",
+        "href": "https://github.com/siddharthagarwal1983/PanchangPal/blob/main/docs/architecture/adr/ADR_TEMPLATE.md#L130",
+        "severity": "Low",
+        "area": "docs"
+      },
+      {
+        "tag": "BLOCKED",
+        "file": "docs/architecture/adr/README.md",
+        "line": 47,
+        "text": "| [ADR-033](ADR-033-Canonical-Panchang-Computation-Engine.md) | Canonical Panchang Computation Engine | Proposed | 2026-07-12 | Panchang behind an abstract `Pan",
+        "href": "https://github.com/siddharthagarwal1983/PanchangPal/blob/main/docs/architecture/adr/README.md#L47",
+        "severity": "Critical",
+        "area": "docs"
+      },
+      {
+        "tag": "BLOCKED",
+        "file": "docs/architecture/canonical-panchang-engine/MRD.md",
+        "line": 75,
+        "text": "blocked (fail closed, never fabricate).",
+        "href": "https://github.com/siddharthagarwal1983/PanchangPal/blob/main/docs/architecture/canonical-panchang-engine/MRD.md#L75",
+        "severity": "Critical",
+        "area": "docs"
+      },
+      {
+        "tag": "BLOCKED",
+        "file": "docs/architecture/canonical-panchang-engine/PDD.md",
+        "line": 37,
+        "text": "- **Engine unavailable (current state, ADR-033 blocked).** Panchang surfaces show a calm",
+        "href": "https://github.com/siddharthagarwal1983/PanchangPal/blob/main/docs/architecture/canonical-panchang-engine/PDD.md#L37",
+        "severity": "Critical",
+        "area": "docs"
+      },
+      {
+        "tag": "BLOCKED",
+        "file": "docs/architecture/canonical-panchang-engine/README.md",
+        "line": 3,
+        "text": "**Status:** OPEN / BLOCKING — the only blocked backend component.",
+        "href": "https://github.com/siddharthagarwal1983/PanchangPal/blob/main/docs/architecture/canonical-panchang-engine/README.md#L3",
+        "severity": "Critical",
+        "area": "docs"
+      },
+      {
+        "tag": "BLOCKED",
+        "file": "docs/architecture/canonical-panchang-engine/README.md",
+        "line": 10,
+        "text": "interface whose only implementation fails closed (`ERR_PANCHANG_UNAVAILABLE`).",
+        "href": "https://github.com/siddharthagarwal1983/PanchangPal/blob/main/docs/architecture/canonical-panchang-engine/README.md#L10",
+        "severity": "Critical",
+        "area": "docs"
+      },
+      {
+        "tag": "BLOCKED",
+        "file": "docs/architecture/canonical-panchang-engine/README.md",
+        "line": 34,
+        "text": "(fails closed). `SVC_panchang` and `SVC_notify_scheduler` depend only on the interface. When the",
+        "href": "https://github.com/siddharthagarwal1983/PanchangPal/blob/main/docs/architecture/canonical-panchang-engine/README.md#L34",
+        "severity": "Critical",
+        "area": "docs"
+      },
+      {
+        "tag": "BLOCKED",
+        "file": "docs/architecture/canonical-panchang-engine/TDD.md",
+        "line": 25,
+        "text": "- unimplementedPanchangEngine   (current; fails closed — ADR-033 blocked)",
+        "href": "https://github.com/siddharthagarwal1983/PanchangPal/blob/main/docs/architecture/canonical-panchang-engine/TDD.md#L25",
+        "severity": "Critical",
+        "area": "docs"
+      },
+      {
+        "tag": "TODO",
+        "file": "docs/architecture/canonical-panchang-engine/TDD.md",
+        "line": 118,
+        "text": "Engine-behavior tests remain `it.skip` with `TODO(ADR-033)`; the placeholder engine fails closed.",
+        "href": "https://github.com/siddharthagarwal1983/PanchangPal/blob/main/docs/architecture/canonical-panchang-engine/TDD.md#L118",
+        "severity": "Medium",
+        "area": "docs"
+      },
+      {
+        "tag": "BLOCKED",
+        "file": "docs/architecture/canonical-panchang-engine/TDD.md",
+        "line": 118,
+        "text": "Engine-behavior tests remain `it.skip` with `TODO(ADR-033)`; the placeholder engine fails closed.",
+        "href": "https://github.com/siddharthagarwal1983/PanchangPal/blob/main/docs/architecture/canonical-panchang-engine/TDD.md#L118",
+        "severity": "Critical",
+        "area": "docs"
+      },
+      {
+        "tag": "ASSUMPTION",
+        "file": "docs/pdd/01_FOUNDATIONS.md",
+        "line": 22,
+        "text": "- **`[ASSUMPTION]`** — a decision made where the PRD/MRD is silent or ambiguous. Treat as a decision, not a suggestion. If a stakeholder disagrees, change it he",
+        "href": "https://github.com/siddharthagarwal1983/PanchangPal/blob/main/docs/pdd/01_FOUNDATIONS.md#L22",
+        "severity": "Low",
+        "area": "docs"
+      },
+      {
+        "tag": "PRD-FOLLOWUP",
+        "file": "docs/pdd/01_FOUNDATIONS.md",
+        "line": 24,
+        "text": "- Scope/business-rule/functional-requirement changes are **not** made here. Where this doc surfaces a functional gap or a rule that seems wrong, it is flagged a",
+        "href": "https://github.com/siddharthagarwal1983/PanchangPal/blob/main/docs/pdd/01_FOUNDATIONS.md#L24",
+        "severity": "Low",
+        "area": "docs"
+      },
+      {
+        "tag": "ASSUMPTION",
+        "file": "docs/pdd/01_FOUNDATIONS.md",
+        "line": 171,
+        "text": "- **Grief-aware.** Shraddha/death-anniversary tracking touches loss. Those surfaces use a distinctly gentler, quieter treatment (muted palette, no streak/gamifi",
+        "href": "https://github.com/siddharthagarwal1983/PanchangPal/blob/main/docs/pdd/01_FOUNDATIONS.md#L171",
+        "severity": "Low",
+        "area": "docs"
+      },
+      {
+        "tag": "ASSUMPTION",
+        "file": "docs/pdd/01_FOUNDATIONS.md",
+        "line": 225,
+        "text": "**[ASSUMPTION]** Tab labels are \"Today / Calendar / Ask Guru / You.\" Icon set uses a lit-diya motif for Ask Guru to signal warmth/guidance. Tab bar hides during",
+        "href": "https://github.com/siddharthagarwal1983/PanchangPal/blob/main/docs/pdd/01_FOUNDATIONS.md#L225",
+        "severity": "Low",
+        "area": "docs"
+      },
+      {
+        "tag": "ASSUMPTION",
+        "file": "docs/pdd/01_FOUNDATIONS.md",
+        "line": 333,
+        "text": "- **[ASSUMPTION]** Anonymous profiles are silently upgraded to a full account on first sign-in, preserving streak/history/preferences. Backend must support anon",
+        "href": "https://github.com/siddharthagarwal1983/PanchangPal/blob/main/docs/pdd/01_FOUNDATIONS.md#L333",
+        "severity": "Low",
+        "area": "docs"
+      },
+      {
+        "tag": "ASSUMPTION",
+        "file": "docs/pdd/01_FOUNDATIONS.md",
+        "line": 454,
+        "text": "This document **references** future design tokens by name; **values are defined in Part 3 §6 (Design System)** — not here. Where a flow, state, or microinteract",
+        "href": "https://github.com/siddharthagarwal1983/PanchangPal/blob/main/docs/pdd/01_FOUNDATIONS.md#L454",
+        "severity": "Low",
+        "area": "docs"
+      },
+      {
+        "tag": "PRD-FOLLOWUP",
+        "file": "docs/pdd/01_FOUNDATIONS.md",
+        "line": 476,
+        "text": "**[ASSUMPTION]** Budgets are p75 targets on a mid-tier device (e.g., iPhone SE 2nd-gen / a mid-range Android from ~2 years prior) on a typical diaspora-market n",
+        "href": "https://github.com/siddharthagarwal1983/PanchangPal/blob/main/docs/pdd/01_FOUNDATIONS.md#L476",
+        "severity": "Low",
+        "area": "docs"
+      },
+      {
+        "tag": "ASSUMPTION",
+        "file": "docs/pdd/01_FOUNDATIONS.md",
+        "line": 476,
+        "text": "**[ASSUMPTION]** Budgets are p75 targets on a mid-tier device (e.g., iPhone SE 2nd-gen / a mid-range Android from ~2 years prior) on a typical diaspora-market n",
+        "href": "https://github.com/siddharthagarwal1983/PanchangPal/blob/main/docs/pdd/01_FOUNDATIONS.md#L476",
+        "severity": "Low",
+        "area": "docs"
+      },
+      {
+        "tag": "TODO",
+        "file": "docs/pdd/01_FOUNDATIONS.md",
+        "line": 590,
+        "text": "- **Every upstream cell in the traceability matrix (§3.0A.2) must be populated** — an empty MRD/PRD/User-Story reference is a lint failure, not an allowed TODO.",
+        "href": "https://github.com/siddharthagarwal1983/PanchangPal/blob/main/docs/pdd/01_FOUNDATIONS.md#L590",
+        "severity": "Medium",
+        "area": "docs"
+      },
+      {
+        "tag": "PRD-FOLLOWUP",
+        "file": "docs/pdd/01_FOUNDATIONS.md",
+        "line": 642,
+        "text": "| **PRD Impact** | None / Clarification / Requires PRD update (→ `[PRD FOLLOW-UP]`) |",
+        "href": "https://github.com/siddharthagarwal1983/PanchangPal/blob/main/docs/pdd/01_FOUNDATIONS.md#L642",
+        "severity": "Low",
+        "area": "docs"
+      },
+      {
+        "tag": "PRD-FOLLOWUP",
+        "file": "docs/pdd/01_FOUNDATIONS.md",
+        "line": 649,
+        "text": "**Rules:** no change is implemented before **Approved**; a **Breaking** change forces a **MAJOR** bump and explicit reviewer sign-off; changes touching scope/bu",
+        "href": "https://github.com/siddharthagarwal1983/PanchangPal/blob/main/docs/pdd/01_FOUNDATIONS.md#L649",
+        "severity": "Low",
+        "area": "docs"
+      },
+      {
+        "tag": "ASSUMPTION",
+        "file": "docs/pdd/01_FOUNDATIONS.md",
+        "line": 697,
+        "text": "- Abandon mid-onboarding → progress persisted locally; next launch resumes at the last incomplete step (not restart). **[ASSUMPTION]**",
+        "href": "https://github.com/siddharthagarwal1983/PanchangPal/blob/main/docs/pdd/01_FOUNDATIONS.md#L697",
+        "severity": "Low",
+        "area": "docs"
+      },
+      {
+        "tag": "ASSUMPTION",
+        "file": "docs/pdd/01_FOUNDATIONS.md",
+        "line": 756,
+        "text": "**Failure path:** Save error → local draft retained, inline retry, snackbar. Duplicate member name → allow (families reuse names) but warn softly. **[ASSUMPTION",
+        "href": "https://github.com/siddharthagarwal1983/PanchangPal/blob/main/docs/pdd/01_FOUNDATIONS.md#L756",
+        "severity": "Low",
+        "area": "docs"
+      },
+      {
+        "tag": "ASSUMPTION",
+        "file": "docs/pdd/01_FOUNDATIONS.md",
+        "line": 849,
+        "text": "- User completes but offline → completion recorded locally, streak advances locally, synced on reconnect (optimistic; conflict-safe). **[ASSUMPTION]** Completio",
+        "href": "https://github.com/siddharthagarwal1983/PanchangPal/blob/main/docs/pdd/01_FOUNDATIONS.md#L849",
+        "severity": "Low",
+        "area": "docs"
+      },
+      {
+        "tag": "ASSUMPTION",
+        "file": "docs/pdd/01_FOUNDATIONS.md",
+        "line": 874,
+        "text": "**[ASSUMPTION]** Checklist items are a small curated set (3–5) derived from the day's tradition/festival context, not user-authored in v1 (user-authored tasks d",
+        "href": "https://github.com/siddharthagarwal1983/PanchangPal/blob/main/docs/pdd/01_FOUNDATIONS.md#L874",
+        "severity": "Low",
+        "area": "docs"
+      },
+      {
+        "tag": "ASSUMPTION",
+        "file": "docs/pdd/01_FOUNDATIONS.md",
+        "line": 943,
+        "text": "▸ Tone confirmed as calm/respectful (no streak, no promo)  [ASSUMPTION]",
+        "href": "https://github.com/siddharthagarwal1983/PanchangPal/blob/main/docs/pdd/01_FOUNDATIONS.md#L943",
+        "severity": "Low",
+        "area": "docs"
+      },
+      {
+        "tag": "ASSUMPTION",
+        "file": "docs/pdd/01_FOUNDATIONS.md",
+        "line": 1035,
+        "text": "**Failure paths:** Expired token → graceful re-request. Already a member of another household → **[ASSUMPTION]** a user belongs to one active household in v1; j",
+        "href": "https://github.com/siddharthagarwal1983/PanchangPal/blob/main/docs/pdd/01_FOUNDATIONS.md#L1035",
+        "severity": "Low",
+        "area": "docs"
+      },
+      {
+        "tag": "ASSUMPTION",
+        "file": "docs/pdd/01_FOUNDATIONS.md",
+        "line": 1110,
+        "text": "**Failure path:** Continued lapse → cadence reduces automatically; win-back never becomes nagging (Trust P2). **[ASSUMPTION]** Win-back thresholds (7/14/30 days",
+        "href": "https://github.com/siddharthagarwal1983/PanchangPal/blob/main/docs/pdd/01_FOUNDATIONS.md#L1110",
+        "severity": "Low",
+        "area": "docs"
+      },
+      {
+        "tag": "ASSUMPTION",
+        "file": "docs/pdd/01_FOUNDATIONS.md",
+        "line": 1138,
+        "text": "**Failure paths:** OAuth cancel → return to prior screen, still anonymous. OTP/link fails/expires → resend with clear countdown; rate-limited to prevent abuse. ",
+        "href": "https://github.com/siddharthagarwal1983/PanchangPal/blob/main/docs/pdd/01_FOUNDATIONS.md#L1138",
+        "severity": "Low",
+        "area": "docs"
+      },
+      {
+        "tag": "ASSUMPTION",
+        "file": "docs/pdd/01_FOUNDATIONS.md",
+        "line": 1186,
+        "text": "**[ASSUMPTION]** After logout the app returns to an anonymous Today (not a login wall), preserving the \"no auth wall\" principle; household features show a \"sign",
+        "href": "https://github.com/siddharthagarwal1983/PanchangPal/blob/main/docs/pdd/01_FOUNDATIONS.md#L1186",
+        "severity": "Low",
+        "area": "docs"
+      },
+      {
+        "tag": "ASSUMPTION",
+        "file": "docs/pdd/01_FOUNDATIONS.md",
+        "line": 1214,
+        "text": "**Failure paths:** Owner-with-members must resolve ownership first (no orphaned households). Deletion request offline → queued, executed on reconnect; user info",
+        "href": "https://github.com/siddharthagarwal1983/PanchangPal/blob/main/docs/pdd/01_FOUNDATIONS.md#L1214",
+        "severity": "Low",
+        "area": "docs"
+      },
+      {
+        "tag": "BLOCKED",
+        "file": "docs/pdd/01_FOUNDATIONS.md",
+        "line": 1224,
+        "text": "**Exit points:** ✔ user completes core loop offline; syncs later · ✖ network-only features gracefully blocked.",
+        "href": "https://github.com/siddharthagarwal1983/PanchangPal/blob/main/docs/pdd/01_FOUNDATIONS.md#L1224",
+        "severity": "Critical",
+        "area": "docs"
+      },
+      {
+        "tag": "BLOCKED",
+        "file": "docs/pdd/01_FOUNDATIONS.md",
+        "line": 1240,
+        "text": "**Failure path:** A network-only action attempted offline → queued or clearly blocked with a retry, never a silent failure or crash. Sync conflict → resolved pe",
+        "href": "https://github.com/siddharthagarwal1983/PanchangPal/blob/main/docs/pdd/01_FOUNDATIONS.md#L1240",
+        "severity": "Critical",
+        "area": "docs"
+      },
+      {
+        "tag": "ASSUMPTION",
+        "file": "docs/pdd/01_FOUNDATIONS.md",
+        "line": 1268,
+        "text": "**Failure paths:** Payment failure → actionable error, retry, alternative method; entitlement never granted without confirmed purchase; store/network error → \"w",
+        "href": "https://github.com/siddharthagarwal1983/PanchangPal/blob/main/docs/pdd/01_FOUNDATIONS.md#L1268",
+        "severity": "Low",
+        "area": "docs"
+      },
+      {
+        "tag": "PRD-FOLLOWUP",
+        "file": "docs/pdd/01_FOUNDATIONS.md",
+        "line": 1274,
+        "text": "One annex per flow, in the standardized block defined in §3.0.5. All KPI targets are **[ASSUMPTION]**s proposed by design for engineering/PM ratification (see t",
+        "href": "https://github.com/siddharthagarwal1983/PanchangPal/blob/main/docs/pdd/01_FOUNDATIONS.md#L1274",
+        "severity": "Low",
+        "area": "docs"
+      },
+      {
+        "tag": "ASSUMPTION",
+        "file": "docs/pdd/01_FOUNDATIONS.md",
+        "line": 1274,
+        "text": "One annex per flow, in the standardized block defined in §3.0.5. All KPI targets are **[ASSUMPTION]**s proposed by design for engineering/PM ratification (see t",
+        "href": "https://github.com/siddharthagarwal1983/PanchangPal/blob/main/docs/pdd/01_FOUNDATIONS.md#L1274",
+        "severity": "Low",
+        "area": "docs"
+      },
+      {
+        "tag": "PRD-FOLLOWUP",
+        "file": "docs/pdd/01_FOUNDATIONS.md",
+        "line": 1426,
+        "text": "**AI Dependencies** · **Required LLM:** yes (vendor TBD — open PRD question). **Vector Search:** yes, over reviewed content library. **Embeddings:** yes (conten",
+        "href": "https://github.com/siddharthagarwal1983/PanchangPal/blob/main/docs/pdd/01_FOUNDATIONS.md#L1426",
+        "severity": "Low",
+        "area": "docs"
+      },
+      {
+        "tag": "PRD-FOLLOWUP",
+        "file": "docs/pdd/01_FOUNDATIONS.md",
+        "line": 1669,
+        "text": "Open Questions:     Unresolved items / [PRD FOLLOW-UP] refs (or \"None\")",
+        "href": "https://github.com/siddharthagarwal1983/PanchangPal/blob/main/docs/pdd/01_FOUNDATIONS.md#L1669",
+        "severity": "Low",
+        "area": "docs"
+      },
+      {
+        "tag": "PRD-FOLLOWUP",
+        "file": "docs/pdd/01_FOUNDATIONS.md",
+        "line": 1678,
+        "text": "Every `UX Improvement` in Part 1, with original requirement, proposed change, rationale, expected user impact, implementation effort, and whether the PRD should",
+        "href": "https://github.com/siddharthagarwal1983/PanchangPal/blob/main/docs/pdd/01_FOUNDATIONS.md#L1678",
+        "severity": "Low",
+        "area": "docs"
+      },
+      {
+        "tag": "PRD-FOLLOWUP",
+        "file": "docs/pdd/01_FOUNDATIONS.md",
+        "line": 1690,
+        "text": "### `[PRD FOLLOW-UP]` — items that touch scope / business rules / functional requirements (not changed here)",
+        "href": "https://github.com/siddharthagarwal1983/PanchangPal/blob/main/docs/pdd/01_FOUNDATIONS.md#L1690",
+        "severity": "Low",
+        "area": "docs"
+      },
+      {
+        "tag": "PRD-FOLLOWUP",
+        "file": "docs/pdd/01_FOUNDATIONS.md",
+        "line": 1743,
+        "text": "Four, appended to the `[PRD FOLLOW-UP]` table: **F-5** (ratify annex KPI targets), **F-6** (set Ask Guru RAG confidence threshold), **F-7** (ratify performance-",
+        "href": "https://github.com/siddharthagarwal1983/PanchangPal/blob/main/docs/pdd/01_FOUNDATIONS.md#L1743",
+        "severity": "Low",
+        "area": "docs"
+      },
+      {
+        "tag": "PRD-FOLLOWUP",
+        "file": "docs/pdd/02_USER_FLOWS.md",
+        "line": 17,
+        "text": "- **APIs** cite `API_*` names (§3.0A.3); endpoint shapes are proposed to make screens testable — final contracts are backend-owned (`[PRD FOLLOW-UP] F-8`).",
+        "href": "https://github.com/siddharthagarwal1983/PanchangPal/blob/main/docs/pdd/02_USER_FLOWS.md#L17",
+        "severity": "Low",
+        "area": "docs"
+      },
+      {
+        "tag": "PRD-FOLLOWUP",
+        "file": "docs/pdd/02_USER_FLOWS.md",
+        "line": 20,
+        "text": "- KPI targets referenced here inherit the §3.15 annex targets (design-proposed, pending `[PRD FOLLOW-UP] F-5`).",
+        "href": "https://github.com/siddharthagarwal1983/PanchangPal/blob/main/docs/pdd/02_USER_FLOWS.md#L20",
+        "severity": "Low",
+        "area": "docs"
+      },
+      {
+        "tag": "PRD-FOLLOWUP",
+        "file": "docs/pdd/02_USER_FLOWS.md",
+        "line": 166,
+        "text": "**Open Questions:** OQ — final enumerated tradition set for v1 depends on the \"top 2–3 by onboarding data\" decision (PRD P0 #2); until data exists, bundled set ",
+        "href": "https://github.com/siddharthagarwal1983/PanchangPal/blob/main/docs/pdd/02_USER_FLOWS.md#L166",
+        "severity": "Low",
+        "area": "docs"
+      },
+      {
+        "tag": "ASSUMPTION",
+        "file": "docs/pdd/02_USER_FLOWS.md",
+        "line": 166,
+        "text": "**Open Questions:** OQ — final enumerated tradition set for v1 depends on the \"top 2–3 by onboarding data\" decision (PRD P0 #2); until data exists, bundled set ",
+        "href": "https://github.com/siddharthagarwal1983/PanchangPal/blob/main/docs/pdd/02_USER_FLOWS.md#L166",
+        "severity": "Low",
+        "area": "docs"
+      },
+      {
+        "tag": "PRD-FOLLOWUP",
+        "file": "docs/pdd/02_USER_FLOWS.md",
+        "line": 191,
+        "text": "**Open Questions:** None (roles/depth enums fixed by A3; one-household-per-user is `[PRD FOLLOW-UP] F-2`).",
+        "href": "https://github.com/siddharthagarwal1983/PanchangPal/blob/main/docs/pdd/02_USER_FLOWS.md#L191",
+        "severity": "Low",
+        "area": "docs"
+      },
+      {
+        "tag": "ASSUMPTION",
+        "file": "docs/pdd/02_USER_FLOWS.md",
+        "line": 205,
+        "text": "**Inputs:** ritual time (local time) or preset. **Outputs:** `ritual_time` on profile (used by notification scheduler). **Validation:** valid time; default = lo",
+        "href": "https://github.com/siddharthagarwal1983/PanchangPal/blob/main/docs/pdd/02_USER_FLOWS.md#L205",
+        "severity": "Low",
+        "area": "docs"
+      },
+      {
+        "tag": "BLOCKED",
+        "file": "docs/pdd/02_USER_FLOWS.md",
+        "line": 236,
+        "text": "- AC-ONB-PAN-02 — Given no connectivity, when the screen loads, then an estimated panchang reveals with a refine-later note; onboarding is not blocked.",
+        "href": "https://github.com/siddharthagarwal1983/PanchangPal/blob/main/docs/pdd/02_USER_FLOWS.md#L236",
+        "severity": "Critical",
+        "area": "docs"
+      },
+      {
+        "tag": "PRD-FOLLOWUP",
+        "file": "docs/pdd/02_USER_FLOWS.md",
+        "line": 294,
+        "text": "**Open Questions:** None (merge logic is `[PRD FOLLOW-UP] F-1`).",
+        "href": "https://github.com/siddharthagarwal1983/PanchangPal/blob/main/docs/pdd/02_USER_FLOWS.md#L294",
+        "severity": "Low",
+        "area": "docs"
+      },
+      {
+        "tag": "ASSUMPTION",
+        "file": "docs/pdd/02_USER_FLOWS.md",
+        "line": 520,
+        "text": "**Analytics Events:** EVT_025 (on add, fired from edit), list view (reuse EVT_022 context or dedicated — **[ASSUMPTION P2-A3]** list view reuses screen-view log",
+        "href": "https://github.com/siddharthagarwal1983/PanchangPal/blob/main/docs/pdd/02_USER_FLOWS.md#L520",
+        "severity": "Low",
+        "area": "docs"
+      },
+      {
+        "tag": "ASSUMPTION",
+        "file": "docs/pdd/02_USER_FLOWS.md",
+        "line": 570,
+        "text": "**Inputs:** free-text question; suggested-question selection. **Outputs:** routes to a conversation seeded with the question. **Validation:** non-empty trimmed ",
+        "href": "https://github.com/siddharthagarwal1983/PanchangPal/blob/main/docs/pdd/02_USER_FLOWS.md#L570",
+        "severity": "Low",
+        "area": "docs"
+      },
+      {
+        "tag": "PRD-FOLLOWUP",
+        "file": "docs/pdd/02_USER_FLOWS.md",
+        "line": 606,
+        "text": "**Open Questions:** OQ — LLM vendor and per-query cost (PRD open question); confidence-threshold value (`[PRD FOLLOW-UP] F-6`).",
+        "href": "https://github.com/siddharthagarwal1983/PanchangPal/blob/main/docs/pdd/02_USER_FLOWS.md#L606",
+        "severity": "Low",
+        "area": "docs"
+      },
+      {
+        "tag": "ASSUMPTION",
+        "file": "docs/pdd/02_USER_FLOWS.md",
+        "line": 653,
+        "text": "**Analytics Events:** EVT_012-family screen-view (**[ASSUMPTION P2-A5]** profile view reuses standard screen-view logging), EVT_049 (if Subscription row → viewe",
+        "href": "https://github.com/siddharthagarwal1983/PanchangPal/blob/main/docs/pdd/02_USER_FLOWS.md#L653",
+        "severity": "Low",
+        "area": "docs"
+      },
+      {
+        "tag": "ASSUMPTION",
+        "file": "docs/pdd/02_USER_FLOWS.md",
+        "line": 676,
+        "text": "**Analytics Events:** EVT_007 (Member Added — via invite acceptance elsewhere), member-edit (**[ASSUMPTION P2-A6]** logged as a generic settings-change event; a",
+        "href": "https://github.com/siddharthagarwal1983/PanchangPal/blob/main/docs/pdd/02_USER_FLOWS.md#L676",
+        "severity": "Low",
+        "area": "docs"
+      },
+      {
+        "tag": "PRD-FOLLOWUP",
+        "file": "docs/pdd/02_USER_FLOWS.md",
+        "line": 681,
+        "text": "**Open Questions:** OQ — one-household-per-user rule and ownership transfer are `[PRD FOLLOW-UP] F-2/F-3`.",
+        "href": "https://github.com/siddharthagarwal1983/PanchangPal/blob/main/docs/pdd/02_USER_FLOWS.md#L681",
+        "severity": "Low",
+        "area": "docs"
+      },
+      {
+        "tag": "PRD-FOLLOWUP",
+        "file": "docs/pdd/02_USER_FLOWS.md",
+        "line": 706,
+        "text": "**Open Questions:** OQ — `[PRD FOLLOW-UP] F-2` household cardinality.",
+        "href": "https://github.com/siddharthagarwal1983/PanchangPal/blob/main/docs/pdd/02_USER_FLOWS.md#L706",
+        "severity": "Low",
+        "area": "docs"
+      },
+      {
+        "tag": "PRD-FOLLOWUP",
+        "file": "docs/pdd/02_USER_FLOWS.md",
+        "line": 791,
+        "text": "**Open Questions:** OQ — data-export format/scope (privacy) is a `[PRD FOLLOW-UP]` (policy).",
+        "href": "https://github.com/siddharthagarwal1983/PanchangPal/blob/main/docs/pdd/02_USER_FLOWS.md#L791",
+        "severity": "Low",
+        "area": "docs"
+      },
+      {
+        "tag": "PRD-FOLLOWUP",
+        "file": "docs/pdd/02_USER_FLOWS.md",
+        "line": 815,
+        "text": "**Open Questions:** OQ — grace-window length and export coupling are `[PRD FOLLOW-UP] F-3` (policy).",
+        "href": "https://github.com/siddharthagarwal1983/PanchangPal/blob/main/docs/pdd/02_USER_FLOWS.md#L815",
+        "severity": "Low",
+        "area": "docs"
+      },
+      {
+        "tag": "PRD-FOLLOWUP",
+        "file": "docs/pdd/02_USER_FLOWS.md",
+        "line": 880,
+        "text": "### `[PRD FOLLOW-UP]` — new items surfaced in Part 2",
+        "href": "https://github.com/siddharthagarwal1983/PanchangPal/blob/main/docs/pdd/02_USER_FLOWS.md#L880",
+        "severity": "Low",
+        "area": "docs"
+      },
+      {
+        "tag": "ASSUMPTION",
+        "file": "docs/pdd/03_COMPONENT_LIBRARY.md",
+        "line": 41,
+        "text": "**[ASSUMPTION P3-A0]** Base grid unit = **4pt**; all spacing tokens are multiples (Section 6). Platform note: components are React Native (Expo); iOS/Android pa",
+        "href": "https://github.com/siddharthagarwal1983/PanchangPal/blob/main/docs/pdd/03_COMPONENT_LIBRARY.md#L41",
+        "severity": "Low",
+        "area": "docs"
+      },
+      {
+        "tag": "ASSUMPTION",
+        "file": "docs/pdd/03_COMPONENT_LIBRARY.md",
+        "line": 275,
+        "text": "**Behavior:** send on button (not Enter, to allow multiline) — **[ASSUMPTION P3-A1]**; disabled offline with note; clears on send.",
+        "href": "https://github.com/siddharthagarwal1983/PanchangPal/blob/main/docs/pdd/03_COMPONENT_LIBRARY.md#L275",
+        "severity": "Low",
+        "area": "docs"
+      },
+      {
+        "tag": "ASSUMPTION",
+        "file": "docs/pdd/03_COMPONENT_LIBRARY.md",
+        "line": 1447,
+        "text": "This section defines the **concrete values** for every token namespace referenced across Parts 1–3. It is the rank-5 source of truth for token values (§3.0A.1).",
+        "href": "https://github.com/siddharthagarwal1983/PanchangPal/blob/main/docs/pdd/03_COMPONENT_LIBRARY.md#L1447",
+        "severity": "Low",
+        "area": "docs"
+      },
+      {
+        "tag": "PRD-FOLLOWUP",
+        "file": "docs/pdd/03_COMPONENT_LIBRARY.md",
+        "line": 1449,
+        "text": "**Design intent (from Part 1 §1.6):** calm, warm, reverent — \"dawn and temple\" tones, generous whitespace, gentle motion; closer to a meditation app than a reli",
+        "href": "https://github.com/siddharthagarwal1983/PanchangPal/blob/main/docs/pdd/03_COMPONENT_LIBRARY.md#L1449",
+        "severity": "Low",
+        "area": "docs"
+      },
+      {
+        "tag": "ASSUMPTION",
+        "file": "docs/pdd/03_COMPONENT_LIBRARY.md",
+        "line": 1453,
+        "text": "**[ASSUMPTION P3-A3] Type families:** Headings/display = **\"Fraunces\"** (a warm humanist serif for reverence) with platform serif fallback; Body/UI = **system**",
+        "href": "https://github.com/siddharthagarwal1983/PanchangPal/blob/main/docs/pdd/03_COMPONENT_LIBRARY.md#L1453",
+        "severity": "Low",
+        "area": "docs"
+      },
+      {
+        "tag": "ASSUMPTION",
+        "file": "docs/pdd/03_COMPONENT_LIBRARY.md",
+        "line": 1623,
+        "text": "**[ASSUMPTION P3-A4]** Icon set = a single consistent **outline** family at 24pt default / 20pt small, 1.75pt stroke; **active tab uses the filled variant** (co",
+        "href": "https://github.com/siddharthagarwal1983/PanchangPal/blob/main/docs/pdd/03_COMPONENT_LIBRARY.md#L1623",
+        "severity": "Low",
+        "area": "docs"
+      },
+      {
+        "tag": "PRD-FOLLOWUP",
+        "file": "docs/pdd/03_COMPONENT_LIBRARY.md",
+        "line": 1649,
+        "text": "**Shared Utilities registry** (referenced by the component dependency graph; these are services/hooks, versioned separately, not duplicated): `AnalyticsService`",
+        "href": "https://github.com/siddharthagarwal1983/PanchangPal/blob/main/docs/pdd/03_COMPONENT_LIBRARY.md#L1649",
+        "severity": "Low",
+        "area": "docs"
+      },
+      {
+        "tag": "ASSUMPTION",
+        "file": "docs/pdd/03_COMPONENT_LIBRARY.md",
+        "line": 1649,
+        "text": "**Shared Utilities registry** (referenced by the component dependency graph; these are services/hooks, versioned separately, not duplicated): `AnalyticsService`",
+        "href": "https://github.com/siddharthagarwal1983/PanchangPal/blob/main/docs/pdd/03_COMPONENT_LIBRARY.md#L1649",
+        "severity": "Low",
+        "area": "docs"
+      },
+      {
+        "tag": "PRD-FOLLOWUP",
+        "file": "docs/pdd/03_COMPONENT_LIBRARY.md",
+        "line": 1651,
+        "text": "### `[PRD FOLLOW-UP]` — new items surfaced in Part 3",
+        "href": "https://github.com/siddharthagarwal1983/PanchangPal/blob/main/docs/pdd/03_COMPONENT_LIBRARY.md#L1651",
+        "severity": "Low",
+        "area": "docs"
+      },
+      {
+        "tag": "ASSUMPTION",
+        "file": "docs/pdd/04_SCREEN_SPECIFICATIONS.md",
+        "line": 64,
+        "text": "**Analytics:** `EVT_012` re-fires on manual refresh only if data changes (avoid double-count) — **[ASSUMPTION P4-A1]** refresh emits a `refresh_source` property",
+        "href": "https://github.com/siddharthagarwal1983/PanchangPal/blob/main/docs/pdd/04_SCREEN_SPECIFICATIONS.md#L64",
+        "severity": "Low",
+        "area": "docs"
+      },
+      {
+        "tag": "ASSUMPTION",
+        "file": "docs/pdd/04_SCREEN_SPECIFICATIONS.md",
+        "line": 208,
+        "text": "**Channels / categories** (Android channels; iOS categories) — **[ASSUMPTION P4-A2]**, per-category toggles in Settings → Notifications:",
+        "href": "https://github.com/siddharthagarwal1983/PanchangPal/blob/main/docs/pdd/04_SCREEN_SPECIFICATIONS.md#L208",
+        "severity": "Low",
+        "area": "docs"
+      },
+      {
+        "tag": "PRD-FOLLOWUP",
+        "file": "docs/pdd/04_SCREEN_SPECIFICATIONS.md",
+        "line": 380,
+        "text": "**AI dependencies (Annex D1):** LLM (vendor TBD — open PRD question), embeddings (query + content), vector search over the reviewed library, prompt builder with",
+        "href": "https://github.com/siddharthagarwal1983/PanchangPal/blob/main/docs/pdd/04_SCREEN_SPECIFICATIONS.md#L380",
+        "severity": "Low",
+        "area": "docs"
+      },
+      {
+        "tag": "ASSUMPTION",
+        "file": "docs/pdd/04_SCREEN_SPECIFICATIONS.md",
+        "line": 431,
+        "text": "**Post-hoc safety net:** even above threshold, generation is constrained to retrieved context; a lightweight **groundedness check** (**[ASSUMPTION P4-A3]**, ser",
+        "href": "https://github.com/siddharthagarwal1983/PanchangPal/blob/main/docs/pdd/04_SCREEN_SPECIFICATIONS.md#L431",
+        "severity": "Low",
+        "area": "docs"
+      },
+      {
+        "tag": "PRD-FOLLOWUP",
+        "file": "docs/pdd/04_SCREEN_SPECIFICATIONS.md",
+        "line": 467,
+        "text": "### `[PRD FOLLOW-UP]` — new items surfaced in Part 4",
+        "href": "https://github.com/siddharthagarwal1983/PanchangPal/blob/main/docs/pdd/04_SCREEN_SPECIFICATIONS.md#L467",
+        "severity": "Low",
+        "area": "docs"
+      },
+      {
+        "tag": "PRD-FOLLOWUP",
+        "file": "docs/pdd/05_GOVERNANCE.md",
+        "line": 13,
+        "text": "- **§10 Accessibility** — the WCAG 2.1 AA audit methodology and per-capability requirements (ratifies the Part 3 token contrast and the per-screen checklists; `",
+        "href": "https://github.com/siddharthagarwal1983/PanchangPal/blob/main/docs/pdd/05_GOVERNANCE.md#L13",
+        "severity": "Low",
+        "area": "docs"
+      },
+      {
+        "tag": "ASSUMPTION",
+        "file": "docs/pdd/05_GOVERNANCE.md",
+        "line": 35,
+        "text": "6. **Sign-off** — Accessibility owner ratifies the palette (`F-13`) and per-screen checklists before Figma lock and before release. **[ASSUMPTION P5-A1]** a hig",
+        "href": "https://github.com/siddharthagarwal1983/PanchangPal/blob/main/docs/pdd/05_GOVERNANCE.md#L35",
+        "severity": "Low",
+        "area": "docs"
+      },
+      {
+        "tag": "ASSUMPTION",
+        "file": "docs/pdd/05_GOVERNANCE.md",
+        "line": 206,
+        "text": "**[ASSUMPTION P5-A2]** English (US) is the v1 copy locale; all strings are externalized keys (10.10) ready for translation. If a `my-writing-style` profile is p",
+        "href": "https://github.com/siddharthagarwal1983/PanchangPal/blob/main/docs/pdd/05_GOVERNANCE.md#L206",
+        "severity": "Low",
+        "area": "docs"
+      },
+      {
+        "tag": "PRD-FOLLOWUP",
+        "file": "docs/pdd/05_GOVERNANCE.md",
+        "line": 326,
+        "text": "☐ Every feature traces MRD→PRD→Story→metric (§3.0A.2); no orphan features. ☐ Resolve open `[PRD FOLLOW-UP]` items (F-1…F-17) before the dependent build. ☐ Confi",
+        "href": "https://github.com/siddharthagarwal1983/PanchangPal/blob/main/docs/pdd/05_GOVERNANCE.md#L326",
+        "severity": "Low",
+        "area": "docs"
+      },
+      {
+        "tag": "PRD-FOLLOWUP",
+        "file": "docs/pdd/05_GOVERNANCE.md",
+        "line": 348,
+        "text": "*(No new `[PRD FOLLOW-UP]` items; §15.7 consolidates all F-1…F-17 for owner action.)*",
+        "href": "https://github.com/siddharthagarwal1983/PanchangPal/blob/main/docs/pdd/05_GOVERNANCE.md#L348",
+        "severity": "Low",
+        "area": "docs"
+      },
+      {
+        "tag": "PRD-FOLLOWUP",
+        "file": "docs/tdd/01_SYSTEM_ARCHITECTURE.md",
+        "line": 8,
+        "text": "**Source-of-truth hierarchy (PDD §3.0A.1):** MRD v2 → PRD v2 → PDD/UXS Parts 1–5 → **this TDD**. The TDD never contradicts the above; where it improves on an im",
+        "href": "https://github.com/siddharthagarwal1983/PanchangPal/blob/main/docs/tdd/01_SYSTEM_ARCHITECTURE.md#L8",
+        "severity": "Low",
+        "area": "docs"
+      },
+      {
+        "tag": "PRD-FOLLOWUP",
+        "file": "docs/tdd/01_SYSTEM_ARCHITECTURE.md",
+        "line": 16,
+        "text": "**Conventions.** `[MANDATORY]` = a binding requirement. `[RECOMMENDATION]` = a strong default, overridable only with a recorded ADR. `[TECHNICAL IMPROVEMENT]` =",
+        "href": "https://github.com/siddharthagarwal1983/PanchangPal/blob/main/docs/tdd/01_SYSTEM_ARCHITECTURE.md#L16",
+        "severity": "Low",
+        "area": "docs"
+      },
+      {
+        "tag": "ASSUMPTION",
+        "file": "docs/tdd/01_SYSTEM_ARCHITECTURE.md",
+        "line": 16,
+        "text": "**Conventions.** `[MANDATORY]` = a binding requirement. `[RECOMMENDATION]` = a strong default, overridable only with a recorded ADR. `[TECHNICAL IMPROVEMENT]` =",
+        "href": "https://github.com/siddharthagarwal1983/PanchangPal/blob/main/docs/tdd/01_SYSTEM_ARCHITECTURE.md#L16",
+        "severity": "Low",
+        "area": "docs"
+      },
+      {
+        "tag": "PRD-FOLLOWUP",
+        "file": "docs/tdd/01_SYSTEM_ARCHITECTURE.md",
+        "line": 39,
+        "text": "3. **Contracts before code.** Every `API_*` has a typed contract (shared package) generated/validated against the DB schema; the mobile app never hand-rolls req",
+        "href": "https://github.com/siddharthagarwal1983/PanchangPal/blob/main/docs/tdd/01_SYSTEM_ARCHITECTURE.md#L39",
+        "severity": "Low",
+        "area": "docs"
+      },
+      {
+        "tag": "PRD-FOLLOWUP",
+        "file": "docs/tdd/01_SYSTEM_ARCHITECTURE.md",
+        "line": 219,
+        "text": "**Explanation.** The app is **feature-sliced** (one slice per PDD tab/area), each composing `CMP_*` from `packages/ui` (bound to `packages/design-tokens`) and c",
+        "href": "https://github.com/siddharthagarwal1983/PanchangPal/blob/main/docs/tdd/01_SYSTEM_ARCHITECTURE.md#L219",
+        "severity": "Low",
+        "area": "docs"
+      },
+      {
+        "tag": "PRD-FOLLOWUP",
+        "file": "docs/tdd/01_SYSTEM_ARCHITECTURE.md",
+        "line": 361,
+        "text": "**Explanation.** Realizes UX-2 (deferred auth). Supabase **anonymous sign-in** gives every first-launch user a real `auth.uid` so RLS works from the start and o",
+        "href": "https://github.com/siddharthagarwal1983/PanchangPal/blob/main/docs/tdd/01_SYSTEM_ARCHITECTURE.md#L361",
+        "severity": "Low",
+        "area": "docs"
+      },
+      {
+        "tag": "ASSUMPTION",
+        "file": "docs/tdd/01_SYSTEM_ARCHITECTURE.md",
+        "line": 463,
+        "text": "| 17 | **Testing** | Jest + React Native Testing Library (unit/snapshot/interaction), Detox or Maestro (E2E), custom a11y assertions, Vitest for Edge Functions ",
+        "href": "https://github.com/siddharthagarwal1983/PanchangPal/blob/main/docs/tdd/01_SYSTEM_ARCHITECTURE.md#L463",
+        "severity": "Low",
+        "area": "docs"
+      },
+      {
+        "tag": "ASSUMPTION",
+        "file": "docs/tdd/01_SYSTEM_ARCHITECTURE.md",
+        "line": 471,
+        "text": "| 25 | **Dependency injection** | Lightweight — module boundaries + a small service-locator/context for domain services; no heavy DI container | Keeps seams (§1",
+        "href": "https://github.com/siddharthagarwal1983/PanchangPal/blob/main/docs/tdd/01_SYSTEM_ARCHITECTURE.md#L471",
+        "severity": "Low",
+        "area": "docs"
+      },
+      {
+        "tag": "ASSUMPTION",
+        "file": "docs/tdd/01_SYSTEM_ARCHITECTURE.md",
+        "line": 478,
+        "text": "`[MANDATORY]` A **pnpm + Turborepo monorepo** (`[ASSUMPTION T5]` pnpm workspaces + Turborepo for fast, cached CI). One repo keeps app, Edge Functions, DB, and s",
+        "href": "https://github.com/siddharthagarwal1983/PanchangPal/blob/main/docs/tdd/01_SYSTEM_ARCHITECTURE.md#L478",
+        "severity": "Low",
+        "area": "docs"
+      },
+      {
+        "tag": "PRD-FOLLOWUP",
+        "file": "docs/tdd/01_SYSTEM_ARCHITECTURE.md",
+        "line": 582,
+        "text": "- **7.3 Feature flags.** `feature_flags` table (`FF_*`) read at launch + cached; Realtime invalidation; gates post-v1 scope (greeting card, Jain, family plan, e",
+        "href": "https://github.com/siddharthagarwal1983/PanchangPal/blob/main/docs/tdd/01_SYSTEM_ARCHITECTURE.md#L582",
+        "severity": "Low",
+        "area": "docs"
+      },
+      {
+        "tag": "ASSUMPTION",
+        "file": "docs/tdd/01_SYSTEM_ARCHITECTURE.md",
+        "line": 599,
+        "text": "Measurable targets (SLOs); tracked in Sentry/dashboards, owned per §9. Inherit PDD §3.0.4 budgets; `[ASSUMPTION T6]` percentiles are p75 on a mid-tier device / ",
+        "href": "https://github.com/siddharthagarwal1983/PanchangPal/blob/main/docs/tdd/01_SYSTEM_ARCHITECTURE.md#L599",
+        "severity": "Low",
+        "area": "docs"
+      },
+      {
+        "tag": "PRD-FOLLOWUP",
+        "file": "docs/tdd/01_SYSTEM_ARCHITECTURE.md",
+        "line": 674,
+        "text": "This TDD Part 1 is **consistent with the MRD v2, PRD v2, and PDD/UXS Parts 1–5** and contradicts none of them. It realizes: the 4-tab IA and deferred auth (UX-1",
+        "href": "https://github.com/siddharthagarwal1983/PanchangPal/blob/main/docs/tdd/01_SYSTEM_ARCHITECTURE.md#L674",
+        "severity": "Low",
+        "area": "docs"
+      },
+      {
+        "tag": "PRD-FOLLOWUP",
+        "file": "docs/tdd/02_BACKEND_ARCHITECTURE.md",
+        "line": 9,
+        "text": "**Source-of-truth hierarchy:** MRD → PRD → PDD → **TDD**. Never contradicts the above. `[TECHNICAL IMPROVEMENT]` = improvement over an implied approach; `[PRD F",
+        "href": "https://github.com/siddharthagarwal1983/PanchangPal/blob/main/docs/tdd/02_BACKEND_ARCHITECTURE.md#L9",
+        "severity": "Low",
+        "area": "docs"
+      },
+      {
+        "tag": "ASSUMPTION",
+        "file": "docs/tdd/02_BACKEND_ARCHITECTURE.md",
+        "line": 9,
+        "text": "**Source-of-truth hierarchy:** MRD → PRD → PDD → **TDD**. Never contradicts the above. `[TECHNICAL IMPROVEMENT]` = improvement over an implied approach; `[PRD F",
+        "href": "https://github.com/siddharthagarwal1983/PanchangPal/blob/main/docs/tdd/02_BACKEND_ARCHITECTURE.md#L9",
+        "severity": "Low",
+        "area": "docs"
+      },
+      {
+        "tag": "ASSUMPTION",
+        "file": "docs/tdd/02_BACKEND_ARCHITECTURE.md",
+        "line": 291,
+        "text": "**RLS:** owner-only (private/grief-sensitive — not household-visible by default). Next-occurrence computed by `SVC_panchang` tithi engine; ambiguity yields dual",
+        "href": "https://github.com/siddharthagarwal1983/PanchangPal/blob/main/docs/tdd/02_BACKEND_ARCHITECTURE.md#L291",
+        "severity": "Low",
+        "area": "docs"
+      },
+      {
+        "tag": "BLOCKED",
+        "file": "docs/tdd/02_BACKEND_ARCHITECTURE.md",
+        "line": 430,
+        "text": "- **`F-3` deletion:** `account_deletion` row with `execute_after` grace window; owner-with-members must transfer ownership first (`SVC_account`), else deletion ",
+        "href": "https://github.com/siddharthagarwal1983/PanchangPal/blob/main/docs/tdd/02_BACKEND_ARCHITECTURE.md#L430",
+        "severity": "Critical",
+        "area": "docs"
+      },
+      {
+        "tag": "PRD-FOLLOWUP",
+        "file": "docs/tdd/02_BACKEND_ARCHITECTURE.md",
+        "line": 651,
+        "text": "- `[PRD FOLLOW-UP F-21]` Confirm household-read visibility of members' completion **counts** for social proof (PDD §8.5) vs. stricter privacy — the RLS §3.7 def",
+        "href": "https://github.com/siddharthagarwal1983/PanchangPal/blob/main/docs/tdd/02_BACKEND_ARCHITECTURE.md#L651",
+        "severity": "Low",
+        "area": "docs"
+      },
+      {
+        "tag": "ASSUMPTION",
+        "file": "docs/tdd/02_BACKEND_ARCHITECTURE.md",
+        "line": 652,
+        "text": "- `[ASSUMPTION T7]` Personal dates are per-user private in v1 (no household sharing).",
+        "href": "https://github.com/siddharthagarwal1983/PanchangPal/blob/main/docs/tdd/02_BACKEND_ARCHITECTURE.md#L652",
+        "severity": "Low",
+        "area": "docs"
+      },
+      {
+        "tag": "PRD-FOLLOWUP",
+        "file": "docs/tdd/02_BACKEND_ARCHITECTURE.md",
+        "line": 656,
+        "text": "Consistent with MRD v2, PRD v2, PDD Parts 1–5, and TDD Part 1. Realizes: deferred/anonymous identity + merge (E1/F-1), one-household rule (F-2), grief-aware pri",
+        "href": "https://github.com/siddharthagarwal1983/PanchangPal/blob/main/docs/tdd/02_BACKEND_ARCHITECTURE.md#L656",
+        "severity": "Low",
+        "area": "docs"
+      },
+      {
+        "tag": "PRD-FOLLOWUP",
+        "file": "docs/tdd/03_AI_RAG.md",
+        "line": 10,
+        "text": "**Source-of-truth hierarchy:** MRD → PRD → PDD → TDD. `[TECHNICAL IMPROVEMENT]` = improvement over an implied approach; `[PRD FOLLOW-UP Fn]` = product decision;",
+        "href": "https://github.com/siddharthagarwal1983/PanchangPal/blob/main/docs/tdd/03_AI_RAG.md#L10",
+        "severity": "Low",
+        "area": "docs"
+      },
+      {
+        "tag": "ASSUMPTION",
+        "file": "docs/tdd/03_AI_RAG.md",
+        "line": 10,
+        "text": "**Source-of-truth hierarchy:** MRD → PRD → PDD → TDD. `[TECHNICAL IMPROVEMENT]` = improvement over an implied approach; `[PRD FOLLOW-UP Fn]` = product decision;",
+        "href": "https://github.com/siddharthagarwal1983/PanchangPal/blob/main/docs/tdd/03_AI_RAG.md#L10",
+        "severity": "Low",
+        "area": "docs"
+      },
+      {
+        "tag": "ASSUMPTION",
+        "file": "docs/tdd/03_AI_RAG.md",
+        "line": 130,
+        "text": "- **Semantic-aware, size-bounded chunks:** target **~350 tokens** per chunk with **~15% overlap** (≈50 tokens), split on natural boundaries (headings, paragraph",
+        "href": "https://github.com/siddharthagarwal1983/PanchangPal/blob/main/docs/tdd/03_AI_RAG.md#L130",
+        "severity": "Low",
+        "area": "docs"
+      },
+      {
+        "tag": "ASSUMPTION",
+        "file": "docs/tdd/03_AI_RAG.md",
+        "line": 176,
+        "text": "4. **ANN search**: `top-k = 6` (`[ASSUMPTION T9]`, tuned in §9) with cosine similarity, filtered by scope (§4.3).",
+        "href": "https://github.com/siddharthagarwal1983/PanchangPal/blob/main/docs/tdd/03_AI_RAG.md#L176",
+        "severity": "Low",
+        "area": "docs"
+      },
+      {
+        "tag": "ASSUMPTION",
+        "file": "docs/tdd/03_AI_RAG.md",
+        "line": 270,
+        "text": "After generation (or on the completed stream), an optional **groundedness verification** checks that the answer's claims are supported by the retrieved chunks. ",
+        "href": "https://github.com/siddharthagarwal1983/PanchangPal/blob/main/docs/tdd/03_AI_RAG.md#L270",
+        "severity": "Low",
+        "area": "docs"
+      },
+      {
+        "tag": "ASSUMPTION",
+        "file": "docs/tdd/03_AI_RAG.md",
+        "line": 283,
+        "text": "Follow-up context is bounded (`[ASSUMPTION T11]` last ~4 turns or a token cap) and is **retrieved-context-first**: even in a thread, the answer is grounded in f",
+        "href": "https://github.com/siddharthagarwal1983/PanchangPal/blob/main/docs/tdd/03_AI_RAG.md#L283",
+        "severity": "Low",
+        "area": "docs"
+      },
+      {
+        "tag": "PRD-FOLLOWUP",
+        "file": "docs/tdd/03_AI_RAG.md",
+        "line": 293,
+        "text": "Model per-answer cost = query embedding + (classifier tokens) + (retrieved-context + generated tokens at GPT‑5 mini rates) + (optional post-check). `[RECOMMENDA",
+        "href": "https://github.com/siddharthagarwal1983/PanchangPal/blob/main/docs/tdd/03_AI_RAG.md#L293",
+        "severity": "Low",
+        "area": "docs"
+      },
+      {
+        "tag": "PRD-FOLLOWUP",
+        "file": "docs/tdd/03_AI_RAG.md",
+        "line": 388,
+        "text": "Consistent with MRD v2, PRD v2, PDD (esp. §9 + Annex D1), and TDD Parts 1–2. Realizes grounded-or-silent RAG, honest decline (`EVT_033`), scope refusal (`EVT_03",
+        "href": "https://github.com/siddharthagarwal1983/PanchangPal/blob/main/docs/tdd/03_AI_RAG.md#L388",
+        "severity": "Low",
+        "area": "docs"
+      },
+      {
+        "tag": "PRD-FOLLOWUP",
+        "file": "docs/tdd/04_MOBILE_ARCHITECTURE.md",
+        "line": 9,
+        "text": "**Source-of-truth hierarchy:** MRD → PRD → PDD → TDD. `[TECHNICAL IMPROVEMENT]` = improvement over an implied approach; `[PRD FOLLOW-UP Fn]` = product decision;",
+        "href": "https://github.com/siddharthagarwal1983/PanchangPal/blob/main/docs/tdd/04_MOBILE_ARCHITECTURE.md#L9",
+        "severity": "Low",
+        "area": "docs"
+      },
+      {
+        "tag": "ASSUMPTION",
+        "file": "docs/tdd/04_MOBILE_ARCHITECTURE.md",
+        "line": 9,
+        "text": "**Source-of-truth hierarchy:** MRD → PRD → PDD → TDD. `[TECHNICAL IMPROVEMENT]` = improvement over an implied approach; `[PRD FOLLOW-UP Fn]` = product decision;",
+        "href": "https://github.com/siddharthagarwal1983/PanchangPal/blob/main/docs/tdd/04_MOBILE_ARCHITECTURE.md#L9",
+        "severity": "Low",
+        "area": "docs"
+      },
+      {
+        "tag": "ASSUMPTION",
+        "file": "docs/tdd/04_MOBILE_ARCHITECTURE.md",
+        "line": 221,
+        "text": "- **Reconciliation:** server truth overwrites optimistic cache; `EVT_*` for the underlying action fire on confirm (e.g., `EVT_017`), not on optimistic apply, to",
+        "href": "https://github.com/siddharthagarwal1983/PanchangPal/blob/main/docs/tdd/04_MOBILE_ARCHITECTURE.md#L221",
+        "severity": "Low",
+        "area": "docs"
+      },
+      {
+        "tag": "ASSUMPTION",
+        "file": "docs/tdd/04_MOBILE_ARCHITECTURE.md",
+        "line": 232,
+        "text": "- **Transport:** streaming fetch (Expo/RN fetch with `ReadableStream`, or an SSE polyfill) — `[ASSUMPTION T13]`; buffers partial tokens.",
+        "href": "https://github.com/siddharthagarwal1983/PanchangPal/blob/main/docs/tdd/04_MOBILE_ARCHITECTURE.md#L232",
+        "severity": "Low",
+        "area": "docs"
+      },
+      {
+        "tag": "PRD-FOLLOWUP",
+        "file": "docs/tdd/05_PLATFORM_DEVOPS.md",
+        "line": 9,
+        "text": "**Source-of-truth hierarchy:** MRD → PRD → PDD → TDD. `[TECHNICAL IMPROVEMENT]` = improvement over an implied approach; `[PRD FOLLOW-UP Fn]` = product decision;",
+        "href": "https://github.com/siddharthagarwal1983/PanchangPal/blob/main/docs/tdd/05_PLATFORM_DEVOPS.md#L9",
+        "severity": "Low",
+        "area": "docs"
+      },
+      {
+        "tag": "ASSUMPTION",
+        "file": "docs/tdd/05_PLATFORM_DEVOPS.md",
+        "line": 9,
+        "text": "**Source-of-truth hierarchy:** MRD → PRD → PDD → TDD. `[TECHNICAL IMPROVEMENT]` = improvement over an implied approach; `[PRD FOLLOW-UP Fn]` = product decision;",
+        "href": "https://github.com/siddharthagarwal1983/PanchangPal/blob/main/docs/tdd/05_PLATFORM_DEVOPS.md#L9",
+        "severity": "Low",
+        "area": "docs"
+      },
+      {
+        "tag": "PRD-FOLLOWUP",
+        "file": "docs/tdd/05_PLATFORM_DEVOPS.md",
+        "line": 172,
+        "text": "CCPA baseline for US (PRD P0 #9); Australia APP and NZ Privacy Act reviewed for the launch geography; **GDPR remains undated** (UK is a later wave — the founder",
+        "href": "https://github.com/siddharthagarwal1983/PanchangPal/blob/main/docs/tdd/05_PLATFORM_DEVOPS.md#L172",
+        "severity": "Low",
+        "area": "docs"
+      },
+      {
+        "tag": "PRD-FOLLOWUP",
+        "file": "docs/tdd/05_PLATFORM_DEVOPS.md",
+        "line": 240,
+        "text": "**Business:** ☐ NZ paywall/pricing signal test instrumented (MRD §13) · ☐ temple-partnership pilot ready · ☐ activation/retention dashboards live · ☐ runway con",
+        "href": "https://github.com/siddharthagarwal1983/PanchangPal/blob/main/docs/tdd/05_PLATFORM_DEVOPS.md#L240",
+        "severity": "Low",
+        "area": "docs"
+      },
+      {
+        "tag": "ASSUMPTION",
+        "file": "docs/tdd/05_PLATFORM_DEVOPS.md",
+        "line": 255,
+        "text": "`[ASSUMPTION]` weekly-or-on-demand release train; minimal solo on-call; restore drill on staging. Open items unchanged: `F-11` AI cost ceiling / free-tier limit",
+        "href": "https://github.com/siddharthagarwal1983/PanchangPal/blob/main/docs/tdd/05_PLATFORM_DEVOPS.md#L255",
+        "severity": "Low",
+        "area": "docs"
+      }
+    ],
+    "source": {
+      "label": "code + docs grep",
+      "href": "https://github.com/siddharthagarwal1983/PanchangPal/blob/main"
+    }
+  },
+  "docDrift": {
+    "newest": "2026-07-12 06:15",
+    "rows": [
+      {
+        "file": ".claude/DASHBOARD.md",
+        "lastUpdated": "2026-07-12 06:15",
+        "href": "https://github.com/siddharthagarwal1983/PanchangPal/blob/main/.claude/DASHBOARD.md",
+        "stale": false
+      },
+      {
+        "file": ".claude/CURRENT_MILESTONE.md",
+        "lastUpdated": "2026-07-12 06:15",
+        "href": "https://github.com/siddharthagarwal1983/PanchangPal/blob/main/.claude/CURRENT_MILESTONE.md",
+        "stale": false
+      },
+      {
+        "file": ".claude/PROJECT_STATUS.md",
+        "lastUpdated": "2026-07-12 06:00",
+        "href": "https://github.com/siddharthagarwal1983/PanchangPal/blob/main/.claude/PROJECT_STATUS.md",
+        "stale": false
+      },
+      {
+        "file": ".claude/SESSION.md",
+        "lastUpdated": "2026-07-12 06:00",
+        "href": "https://github.com/siddharthagarwal1983/PanchangPal/blob/main/.claude/SESSION.md",
+        "stale": false
+      },
+      {
+        "file": ".claude/TASK.md",
+        "lastUpdated": "2026-07-12 06:00",
+        "href": "https://github.com/siddharthagarwal1983/PanchangPal/blob/main/.claude/TASK.md",
+        "stale": false
+      },
+      {
+        "file": ".claude/PROJECT_MEMORY.md",
+        "lastUpdated": "2026-07-12",
+        "href": "https://github.com/siddharthagarwal1983/PanchangPal/blob/main/.claude/PROJECT_MEMORY.md",
+        "stale": false
+      },
+      {
+        "file": ".claude/IMPLEMENTATION_ROADMAP.md",
+        "lastUpdated": "2026-07-12 03:40",
+        "href": "https://github.com/siddharthagarwal1983/PanchangPal/blob/main/.claude/IMPLEMENTATION_ROADMAP.md",
+        "stale": false
+      }
+    ],
+    "source": {
+      "label": ".claude/ state files",
+      "href": "https://github.com/siddharthagarwal1983/PanchangPal/blob/main/.claude/DASHBOARD.md"
+    }
+  },
+  "tests": {
+    "totalFiles": 22,
+    "totalCases": 102,
+    "pgtapAssertions": 21,
+    "areas": {
+      "apps/backend": {
+        "files": 7,
+        "cases": 25
+      },
+      "apps/mobile": {
+        "files": 9,
+        "cases": 41
+      },
+      "packages/ai": {
+        "files": 3,
+        "cases": 13
+      },
+      "packages/ui": {
+        "files": 3,
+        "cases": 23
+      }
+    },
+    "note": "Static counts (Vitest/jest-expo + pgTAP). No live coverage % — sandbox is offline; runs in CI.",
+    "source": {
+      "label": "test files",
+      "href": "https://github.com/siddharthagarwal1983/PanchangPal/blob/main"
+    }
+  },
+  "ci": {
+    "workflows": [
+      {
+        "file": ".github/workflows/cd.yml",
+        "name": "CD",
+        "jobs": [
+          "Apply DB migrations → staging",
+          "Deploy Edge Functions (SVC_*) → staging",
+          "Maestro E2E (FLOW_*) on staging",
+          "EAS build → internal distribution",
+          "Promote to production (manual go/no-go §10.1)"
+        ],
+        "href": "https://github.com/siddharthagarwal1983/PanchangPal/blob/main/.github/workflows/cd.yml"
+      },
+      {
+        "file": ".github/workflows/ci.yml",
+        "name": "CI",
+        "jobs": [
+          "Lint + Typecheck",
+          "Unit + Component + Accessibility",
+          "API / zod contract tests",
+          "RLS policy + DB integration suites (§4.4 security gate)",
+          "AI eval subset (refusal + golden, TDD Part 3 §9.4)",
+          "Secret + dependency scan"
+        ],
+        "href": "https://github.com/siddharthagarwal1983/PanchangPal/blob/main/.github/workflows/ci.yml"
+      },
+      {
+        "file": ".github/workflows/ota.yml",
+        "name": "OTA",
+        "jobs": [
+          "Publish Expo Update"
+        ],
+        "href": "https://github.com/siddharthagarwal1983/PanchangPal/blob/main/.github/workflows/ota.yml"
+      }
+    ],
+    "note": "Configured pipeline (GitHub Actions). Live run status requires the GitHub API — not available offline.",
+    "source": {
+      "label": ".github/workflows/",
+      "href": "https://github.com/siddharthagarwal1983/PanchangPal/blob/main/.github/workflows/ci.yml"
+    }
+  },
+  "blockers": {
+    "count": 2,
+    "items": [
+      {
+        "severity": "critical",
+        "title": "Canonical Panchang Engine (ADR-033, Proposed)",
+        "detail": "Astronomical algorithm undocumented — panchang compute, calendar/festival markers, sunrise/tithi notifications blocked until Part B ratified.",
+        "href": "https://github.com/siddharthagarwal1983/PanchangPal/blob/main/docs/architecture/adr/ADR-033-Canonical-Panchang-Computation-Engine.md"
+      },
+      {
+        "severity": "gated",
+        "title": "Ask Guru live answers gated (GURU_LIVE=false)",
+        "detail": "Client complete; live answers off until reviewed corpus + eval readiness (TDD Part 3 §10B).",
+        "href": "https://github.com/siddharthagarwal1983/PanchangPal/blob/main/apps/mobile/src/domain/guru/transportFactory.ts"
+      }
+    ],
+    "source": {
+      "label": ".claude/DASHBOARD.md · Blockers",
+      "href": "https://github.com/siddharthagarwal1983/PanchangPal/blob/main/.claude/DASHBOARD.md"
+    }
+  },
+  "risks": {
+    "count": 7,
+    "byLevel": {
+      "High": 3,
+      "Medium": 1,
+      "Low": 3
+    },
+    "items": [
+      {
+        "risk": "Canonical Panchang Engine (ADR-033, Proposed)",
+        "probability": "High",
+        "impact": "High",
+        "level": "High",
+        "owner": "unassigned",
+        "mitigation": "Astronomical algorithm undocumented — panchang compute, calendar/festival markers, sunrise/tithi notifications blocked until Part B ratified.",
+        "status": "Open",
+        "href": "https://github.com/siddharthagarwal1983/PanchangPal/blob/main/docs/architecture/adr/ADR-033-Canonical-Panchang-Computation-Engine.md"
+      },
+      {
+        "risk": "Ask Guru live answers gated (GURU_LIVE=false)",
+        "probability": "Medium",
+        "impact": "High",
+        "level": "High",
+        "owner": "unassigned",
+        "mitigation": "Client complete; live answers off until reviewed corpus + eval readiness (TDD Part 3 §10B).",
+        "status": "Open",
+        "href": "https://github.com/siddharthagarwal1983/PanchangPal/blob/main/apps/mobile/src/domain/guru/transportFactory.ts"
+      },
+      {
+        "risk": "Panchang accuracy validated (ADR-033)",
+        "probability": "High",
+        "impact": "Medium",
+        "level": "High",
+        "owner": "unassigned",
+        "mitigation": "Blocked — engine not implemented",
+        "status": "Open",
+        "href": "https://github.com/siddharthagarwal1983/PanchangPal/blob/main/docs/tdd/05_PLATFORM_DEVOPS.md"
+      },
+      {
+        "risk": "Unratified decision: ADR-033 — Canonical Panchang Computation Engine",
+        "probability": "Medium",
+        "impact": "Medium",
+        "level": "Medium",
+        "owner": "unassigned",
+        "mitigation": "Ratify ADR before dependent work proceeds.",
+        "status": "Open",
+        "href": "https://github.com/siddharthagarwal1983/PanchangPal/blob/main/docs/architecture/adr/ADR-033-Canonical-Panchang-Computation-Engine.md"
+      },
+      {
+        "risk": "AI §10B passed (corpus + eval)",
+        "probability": "Medium",
+        "impact": "Medium",
+        "level": "Low",
+        "owner": "unassigned",
+        "mitigation": "Pending — GURU_LIVE off",
+        "status": "Open",
+        "href": "https://github.com/siddharthagarwal1983/PanchangPal/blob/main/docs/tdd/05_PLATFORM_DEVOPS.md"
+      },
+      {
+        "risk": "Live Supabase project + secrets provisioned",
+        "probability": "Medium",
+        "impact": "Medium",
+        "level": "Low",
+        "owner": "unassigned",
+        "mitigation": "Not yet provisioned",
+        "status": "Open",
+        "href": "https://github.com/siddharthagarwal1983/PanchangPal/blob/main/docs/tdd/05_PLATFORM_DEVOPS.md"
+      },
+      {
+        "risk": "Store submission / phased rollout",
+        "probability": "Medium",
+        "impact": "Medium",
+        "level": "Low",
+        "owner": "unassigned",
+        "mitigation": "Future milestone (TDD Part 5)",
+        "status": "Open",
+        "href": "https://github.com/siddharthagarwal1983/PanchangPal/blob/main/docs/tdd/05_PLATFORM_DEVOPS.md"
+      }
+    ],
+    "source": {
+      "label": "derived: blockers + proposed ADRs + open release gates",
+      "href": "https://github.com/siddharthagarwal1983/PanchangPal/blob/main/.claude/DASHBOARD.md"
+    }
+  },
+  "decisions": {
+    "count": 33,
+    "items": [
+      {
+        "id": "ADR-033",
+        "title": "Canonical Panchang Computation Engine",
+        "date": "2026-07-12",
+        "status": "Proposed",
+        "impact": "Positive. All independent backend work proceeds; the accuracy decision is made deliberately with reviewers; the deterministic, cacheable architecture (ADR010) is preserved; the engine is swappable and versionstamped. Tradeoffs. SVCpanchang (Today/calendar/detail) and sunrise/tithitimed notifications remain unavailable until Part B is ratified and an engine is implemented + validated. Engine dependent tests are…",
+        "href": "https://github.com/siddharthagarwal1983/PanchangPal/blob/main/docs/architecture/adr/ADR-033-Canonical-Panchang-Computation-Engine.md",
+        "related": [
+          "SVC_panchang",
+          "SVC_notify_scheduler"
+        ]
+      },
+      {
+        "id": "ADR-032",
+        "title": "API Versioning Strategy",
+        "date": "2026-07-11",
+        "status": "Accepted",
+        "impact": "Positive. Older installs and queued offline work keep functioning (N/N1 guarantee), protecting the trustcritical daily loop; additive evolution keeps the maintenance surface small for a solo founder; flags + expandthencontract make rollout and rollback lowrisk; adoption telemetry makes deprecation evidencebased rather than guesswork. Tradeoffs. Additiveonly discipline means the schema accumulates optional fields and…",
+        "href": "https://github.com/siddharthagarwal1983/PanchangPal/blob/main/docs/architecture/adr/ADR-032-API-Versioning-Strategy.md",
+        "related": [
+          "SVC_sync"
+        ]
+      },
+      {
+        "id": "ADR-031",
+        "title": "Privacy & Data-Minimization Model",
+        "date": "2026-07-11",
+        "status": "Accepted",
+        "impact": "Positive. Smaller privacy attack surface; CCPAaligned export/delete; griefaware handling of personal dates; trust reinforced. Tradeoffs. No PII in analytics/prompts constrains some personali",
+        "href": "https://github.com/siddharthagarwal1983/PanchangPal/blob/main/docs/architecture/adr/ADR-031-Privacy-Data-Minimization.md",
+        "related": [
+          "SVC_account"
+        ]
+      },
+      {
+        "id": "ADR-030",
+        "title": "Security Model (Least Privilege, No Secrets on Device)",
+        "date": "2026-07-11",
+        "status": "Accepted",
+        "impact": "Positive. Secrets cannot leak from the device; compromised components have minimal reach; serverside receipt validation resists IAP fraud. Tradeoffs. All privileged paths must be routed through Edge Functions; secret management spans Supabase, CI, and EAS and must be maintained carefully. Operational.",
+        "href": "https://github.com/siddharthagarwal1983/PanchangPal/blob/main/docs/architecture/adr/ADR-030-Security-Model.md",
+        "related": []
+      },
+      {
+        "id": "ADR-029",
+        "title": "Accessibility-First (WCAG 2.1 AA, Release-Blocking)",
+        "date": "2026-07-11",
+        "status": "Accepted",
+        "impact": "Positive. An inclusive product for all household members; accessibility regressions are caught in CI, not in the field. Tradeoffs. Every component carries accessibility implementation and test cost; the release gate can block shipping until issues are fixed. Operational. WCAG 2.1 AA pass is an NFR (NFR17); a11y checks run in CI (ADR024) and the QA plan (PDD §15.4).",
+        "href": "https://github.com/siddharthagarwal1983/PanchangPal/blob/main/docs/architecture/adr/ADR-029-Accessibility-First.md",
+        "related": []
+      },
+      {
+        "id": "ADR-028",
+        "title": "Managed-Services-First",
+        "date": "2026-07-11",
+        "status": "Accepted",
+        "impact": "Positive. Minimal operations; faster delivery; effort concentrated on the differentiating logic; costs scale with milestones. Tradeoffs. Dependence on thirdparty platforms and their pricing/limits, mitigated by adapters (ADR017), exportable PostgreSQL data, and documented scale triggers. Operational. Vendor lockin is an explicitly tracked risk (TRISK01) with ADR review triggers and quarterly dependency reviews.",
+        "href": "https://github.com/siddharthagarwal1983/PanchangPal/blob/main/docs/architecture/adr/ADR-028-Managed-Services-First.md",
+        "related": []
+      },
+      {
+        "id": "ADR-027",
+        "title": "Documentation-First Development",
+        "date": "2026-07-11",
+        "status": "Accepted",
+        "impact": "Positive. Preserved institutional memory; endtoend traceability; AI agents and future hires can extend the system without rederiving context; conflicts are surfaced, not guessed. Tradeoffs. Upfront documentation effort and the discipline to keep docs synchroni",
+        "href": "https://github.com/siddharthagarwal1983/PanchangPal/blob/main/docs/architecture/adr/ADR-027-Documentation-First.md",
+        "related": []
+      },
+      {
+        "id": "ADR-026",
+        "title": "Time-Zone Correctness (UTC Store, IANA Compute)",
+        "date": "2026-07-11",
+        "status": "Accepted",
+        "impact": "Positive. Correct local tithis, sunrise, and reminder timing everywhere; a single, testable code path for all date logic. Tradeoffs. Location→t",
+        "href": "https://github.com/siddharthagarwal1983/PanchangPal/blob/main/docs/architecture/adr/ADR-026-Time-Zone-Correctness.md",
+        "related": []
+      },
+      {
+        "id": "ADR-025",
+        "title": "Background Jobs (pg_cron + Jobs Table)",
+        "date": "2026-07-11",
+        "status": "Accepted",
+        "impact": "Positive. No extra infrastructure; scheduling and workers live where the data is; idempotent workers make retries safe. Tradeoffs. pgcron and Edge Functions have platform limits; very high job throughput or longrunning jobs would need a dedicated worker/queue later. Operational. Job workers reuse the idempotencykey discipline (TDD §7.7); the scheduler is idempotent (ADR020).",
+        "href": "https://github.com/siddharthagarwal1983/PanchangPal/blob/main/docs/architecture/adr/ADR-025-Background-Jobs.md",
+        "related": []
+      },
+      {
+        "id": "ADR-024",
+        "title": "Delivery & Release Strategy (GitHub Actions + EAS + OTA)",
+        "date": "2026-07-11",
+        "status": "Accepted",
+        "impact": "Positive. Fast, repeatable releases; app, functions, and DB deploy together; OTA enables rapid policycompliant fixes; feature flags (ADR021) decouple deploy from release. Tradeoffs. OTA is limited to JScompatible changes and must respect store policy; versioncompatibility windows require disciplined, backwardcompatible migrations. Operational. CI fails on lint/type/test/a11y; CODEOWNERS enforces PDD §3.0A.5…",
+        "href": "https://github.com/siddharthagarwal1983/PanchangPal/blob/main/docs/architecture/adr/ADR-024-Delivery-Release-OTA.md",
+        "related": []
+      },
+      {
+        "id": "ADR-023",
+        "title": "Observability (Sentry + Correlation IDs)",
+        "date": "2026-07-11",
+        "status": "Accepted",
+        "impact": "Positive. Endtoend traceability; SLOs become dashboards + alerts; AI quality and cost are measurable and audited. Tradeoffs. CorrelationID propagation and structuredlogging discipline must be maintained across every function and client call. Operational. Dashboards per PDD §11; NFR ownership assigned per TDD §9; no PII in any telemetry (ADR031).",
+        "href": "https://github.com/siddharthagarwal1983/PanchangPal/blob/main/docs/architecture/adr/ADR-023-Observability.md",
+        "related": []
+      },
+      {
+        "id": "ADR-022",
+        "title": "Standard Error Envelope & ERR_* Taxonomy",
+        "date": "2026-07-11",
+        "status": "Accepted",
+        "impact": "Positive. Consistent, safe, observable errors; a stable contract between client and server; locali",
+        "href": "https://github.com/siddharthagarwal1983/PanchangPal/blob/main/docs/architecture/adr/ADR-022-Error-Envelope.md",
+        "related": []
+      },
+      {
+        "id": "ADR-021",
+        "title": "Feature-Flag Architecture (Postgres-backed)",
+        "date": "2026-07-11",
+        "status": "Accepted",
+        "impact": "Positive. Simple, auditable flags with no extra vendor; Realtime invalidation avoids stale gating; scope is decoupled from release branches. Tradeoffs. Flag values themselves are product followups (F9/F11/F15/F17); flags must be cleaned up once features graduate. Operational. Flags are read at launch and cached; the same table is a natural home for lightweight remote config.",
+        "href": "https://github.com/siddharthagarwal1983/PanchangPal/blob/main/docs/architecture/adr/ADR-021-Feature-Flag-Architecture.md",
+        "related": []
+      },
+      {
+        "id": "ADR-020",
+        "title": "Notification Architecture (Expo Push + pg_cron)",
+        "date": "2026-07-11",
+        "status": "Accepted",
+        "impact": "Positive. One crossplatform push path; serverside timing logic is consistent and testable; deep links land users on a valid backstack. Tradeoffs. Delivery depends on APNs/FCM and Expo receipts; timing accuracy requires careful t",
+        "href": "https://github.com/siddharthagarwal1983/PanchangPal/blob/main/docs/architecture/adr/ADR-020-Notification-Architecture.md",
+        "related": [
+          "SVC_notify_scheduler"
+        ]
+      },
+      {
+        "id": "ADR-019",
+        "title": "Streaming AI Responses",
+        "date": "2026-07-11",
+        "status": "Accepted",
+        "impact": "Positive. Meets NFR05; the assistant feels responsive; errors degrade to a calm retry rather than a dead end. Tradeoffs. Streaming adds client and Edge Function complexity (partial rendering, cancellation, error midstream). Operational. Firsttoken latency and cost/query are firstclass AI metrics (PDD §9.9); embeddings and evergreen answers are cached to cut latency/cost (ADR004 improvement).",
+        "href": "https://github.com/siddharthagarwal1983/PanchangPal/blob/main/docs/architecture/adr/ADR-019-Streaming-AI-Responses.md",
+        "related": [
+          "SVC_ask_guru"
+        ]
+      },
+      {
+        "id": "ADR-018",
+        "title": "Row-Level Security as the Authorization Boundary",
+        "date": "2026-07-11",
+        "status": "Accepted",
+        "impact": "Positive. A strong, uniform authori",
+        "href": "https://github.com/siddharthagarwal1983/PanchangPal/blob/main/docs/architecture/adr/ADR-018-Row-Level-Security.md",
+        "related": []
+      },
+      {
+        "id": "ADR-017",
+        "title": "Provider Adapter Pattern (Hexagonal Boundaries)",
+        "date": "2026-07-11",
+        "status": "Accepted",
+        "impact": "Positive. Vendors are swappable with contained blast radius; adapters are natural seams for test doubles; lockin risk is bounded and exportable data (PostgreSQL) reinforces portability. Tradeoffs. A small amount of indirection and interface maintenance; teams must resist reaching around the adapter for a vendoronly feature. Operational. ADR review triggers and a quarterly dependency review watch for lockin creep…",
+        "href": "https://github.com/siddharthagarwal1983/PanchangPal/blob/main/docs/architecture/adr/ADR-017-Provider-Adapter-Pattern.md",
+        "related": []
+      },
+      {
+        "id": "ADR-016",
+        "title": "Thin Client / Server-Authoritative State",
+        "date": "2026-07-11",
+        "status": "Accepted",
+        "impact": "Positive. One source of truth for correctnesscritical state; consistent multidevice/household behavior; secrets stay serverside (ADR030). Tradeoffs. More roundtrips for computed state, mitigated by cachedfirst reads (ADR007) and deterministic caching (ADR010). Operational. The offline exception (clientauthoritative daily completion) is explicit and bounded, not a general pattern.",
+        "href": "https://github.com/siddharthagarwal1983/PanchangPal/blob/main/docs/architecture/adr/ADR-016-Thin-Client-Server-Authoritative.md",
+        "related": []
+      },
+      {
+        "id": "ADR-015",
+        "title": "Offline-First Architecture",
+        "date": "2026-07-11",
+        "status": "Accepted",
+        "impact": "Positive. The habit loop never loses a completion to a bad network (NFR09/NFR10); instant, calm completion UX. Tradeoffs. Requires explicit conflict rules, idempotency keys, and a durable queue; reconciliation logic must be tested against conflict cases. Operational. ERRSYNCCONFLICT surfaces only usermeaningful conflicts; sync success is an SLO (NFR10).",
+        "href": "https://github.com/siddharthagarwal1983/PanchangPal/blob/main/docs/architecture/adr/ADR-015-Offline-First.md",
+        "related": [
+          "SVC_sync"
+        ]
+      },
+      {
+        "id": "ADR-014",
+        "title": "Monorepo (pnpm + Turborepo)",
+        "date": "2026-07-11",
+        "status": "Accepted",
+        "impact": "Positive. App, functions, DB, and contracts move together; one type source endtoend; Turborepo gives fast, cached CI. Tradeoffs. A monorepo needs dependencydirection discipline (enforced by lint: features → domain → data → packages); tooling must scope builds per package. Operational. CODEOWNERS enforces ownership across areas within the one repo (TDD §4/§5).",
+        "href": "https://github.com/siddharthagarwal1983/PanchangPal/blob/main/docs/architecture/adr/ADR-014-Monorepo.md",
+        "related": []
+      },
+      {
+        "id": "ADR-013",
+        "title": "Analytics Adapter with Postgres Sink",
+        "date": "2026-07-11",
+        "status": "Accepted",
+        "impact": "Positive.",
+        "href": "https://github.com/siddharthagarwal1983/PanchangPal/blob/main/docs/architecture/adr/ADR-013-Analytics-Adapter.md",
+        "related": []
+      },
+      {
+        "id": "ADR-012",
+        "title": "Single US Supabase Region for Launch",
+        "date": "2026-07-11",
+        "status": "Accepted",
+        "impact": "Positive. Simplest possible operations; CDN caching covers most read latency for AU/N",
+        "href": "https://github.com/siddharthagarwal1983/PanchangPal/blob/main/docs/architecture/adr/ADR-012-Single-US-Region.md",
+        "related": []
+      },
+      {
+        "id": "ADR-011",
+        "title": "LLM Provider Adapter (GPT-5 mini + text-embedding-3-small)",
+        "date": "2026-07-11",
+        "status": "Accepted",
+        "impact": "Positive. Model/vendor are swappable via config without touching callers; launch cost/latency fit the groundedanswer workload and the AIcost ceiling. Tradeoffs. A model or embedding change requires reembedding the corpus (bounded by corpus si",
+        "href": "https://github.com/siddharthagarwal1983/PanchangPal/blob/main/docs/architecture/adr/ADR-011-LLM-Provider-Adapter.md",
+        "related": []
+      },
+      {
+        "id": "ADR-010",
+        "title": "Deterministic, Cacheable Panchang Engine",
+        "date": "2026-07-11",
+        "status": "Accepted",
+        "impact": "Positive. Very high cache hit rates make read latency largely CDNbound (supporting the singleregion choice, ADR012) and keep marginal cost near",
+        "href": "https://github.com/siddharthagarwal1983/PanchangPal/blob/main/docs/architecture/adr/ADR-010-Deterministic-Panchang.md",
+        "related": [
+          "SVC_panchang"
+        ]
+      },
+      {
+        "id": "ADR-009",
+        "title": "Anonymous-Auth-First Identity",
+        "date": "2026-07-11",
+        "status": "Accepted",
+        "impact": "Positive. RLS works universally from first launch; onboarding needs no signin wall; no unowned data window. Tradeoffs. Requires a robust, welltested merge path (SVCaccount, F1), including conflict resolution. Operational. Anonymous accounts are an abuse vector; device attestation / rate limits are the documented mitigation.",
+        "href": "https://github.com/siddharthagarwal1983/PanchangPal/blob/main/docs/architecture/adr/ADR-009-Anonymous-Auth-First.md",
+        "related": [
+          "SVC_account"
+        ]
+      },
+      {
+        "id": "ADR-008",
+        "title": "Zustand for Client / UI State",
+        "date": "2026-07-11",
+        "status": "Accepted",
+        "impact": "Positive. Simple, testable stores with a tiny API and no boilerplate; easy to seed test doubles. Tradeoffs. Discipline is required to keep server state out of",
+        "href": "https://github.com/siddharthagarwal1983/PanchangPal/blob/main/docs/architecture/adr/ADR-008-Zustand.md",
+        "related": []
+      },
+      {
+        "id": "ADR-007",
+        "title": "TanStack Query for Server State",
+        "date": "2026-07-11",
+        "status": "Accepted",
+        "impact": "Positive. Less boilerplate; robust caching, retries, and offline persistence; directly reali",
+        "href": "https://github.com/siddharthagarwal1983/PanchangPal/blob/main/docs/architecture/adr/ADR-007-TanStack-Query.md",
+        "related": []
+      },
+      {
+        "id": "ADR-006",
+        "title": "Edge Functions (Deno) for Privileged & Compute Logic",
+        "date": "2026-07-11",
+        "status": "Accepted",
+        "impact": "Positive. A clean, secretholding server boundary; stateless functions scale hori",
+        "href": "https://github.com/siddharthagarwal1983/PanchangPal/blob/main/docs/architecture/adr/ADR-006-Edge-Functions.md",
+        "related": [
+          "SVC_panchang",
+          "SVC_ask_guru",
+          "SVC_notify_scheduler",
+          "SVC_revenuecat_webhook",
+          "SVC_sync",
+          "SVC_account",
+          "SVC_content_ingest"
+        ]
+      },
+      {
+        "id": "ADR-005",
+        "title": "RevenueCat for Billing & Entitlements",
+        "date": "2026-07-11",
+        "status": "Accepted",
+        "impact": "Positive. Fast, robust crossplatform entitlements including familyplan propagation via webhook; storecompliant. Tradeoffs. A billingvendor dependency, mitigated by the payment adapter (ADR017). Operational. The webhook handler is idempotent (dedupe by event id) so redeliveries never doubleapply entitlements (TDD §7.7).",
+        "href": "https://github.com/siddharthagarwal1983/PanchangPal/blob/main/docs/architecture/adr/ADR-005-RevenueCat.md",
+        "related": [
+          "SVC_revenuecat_webhook",
+          "API_POST_SUB_VALIDATE"
+        ]
+      },
+      {
+        "id": "ADR-004",
+        "title": "RAG with pgvector + OpenAI (Grounded-or-Silent)",
+        "date": "2026-07-11",
+        "status": "Accepted",
+        "impact": "Positive. One datastore for content and vectors gives transactional content↔embedding consistency and lower cost/ops; grounding is enforceable and testable (refusal test set, groundedness metrics). Tradeoffs. pgvector index parameters (HNSW/IVFFlat) must be tuned as the corpus grows; retrieval quality depends on corpus curation. Operational. Confidence threshold and optional groundedness postcheck are calibrated…",
+        "href": "https://github.com/siddharthagarwal1983/PanchangPal/blob/main/docs/architecture/adr/ADR-004-RAG-pgvector-OpenAI.md",
+        "related": []
+      },
+      {
+        "id": "ADR-003",
+        "title": "Supabase as the Backend Platform",
+        "date": "2026-07-11",
+        "status": "Accepted",
+        "impact": "Positive. One platform covers ~80% of backend needs; PostgreSQL + RLS provide a strong authori",
+        "href": "https://github.com/siddharthagarwal1983/PanchangPal/blob/main/docs/architecture/adr/ADR-003-Supabase.md",
+        "related": []
+      },
+      {
+        "id": "ADR-002",
+        "title": "Expo (Managed Workflow) + EAS",
+        "date": "2026-07-11",
+        "status": "Accepted",
+        "impact": "Positive. No native toolchain to operate; faster delivery; OTA enables rapid, policycompliant JS fixes (ADR024); EAS handles build and store submission. Tradeoffs. The app must remain within Expo's supported native capabilities; custom native needs are met with config plugins, and a genuinely unsupported dependency could force a devclient or bare eject. Operational. OTA updates are limited to JScompatible changes…",
+        "href": "https://github.com/siddharthagarwal1983/PanchangPal/blob/main/docs/architecture/adr/ADR-002-Expo-Managed-Workflow.md",
+        "related": []
+      },
+      {
+        "id": "ADR-001",
+        "title": "React Native for the Mobile Client",
+        "date": "2026-07-11",
+        "status": "Accepted",
+        "impact": "Positive. One shared codebase and one skill set (TypeScript) across the whole client; fast iteration; a large ecosystem of libraries for audio, notifications, and IAP; easier future hiring. Tradeoffs. Some platformspecific polish must still be written perOS; certain native capabilities depend on the health of community modules; the JavaScript bridge imposes performance discipline (see ADR007, ADR010 for the…",
+        "href": "https://github.com/siddharthagarwal1983/PanchangPal/blob/main/docs/architecture/adr/ADR-001-React-Native.md",
+        "related": []
+      }
+    ],
+    "source": {
+      "label": "ADR log (dates + consequences) · .claude/DECISIONS.md",
+      "href": "https://github.com/siddharthagarwal1983/PanchangPal/blob/main/docs/architecture/adr/README.md"
+    }
+  },
+  "releaseReadiness": {
+    "ready": 4,
+    "total": 8,
+    "items": [
+      {
+        "item": "CI gates defined (lint/type/test/a11y/RLS)",
+        "done": true
+      },
+      {
+        "item": "RLS policy test-suite present",
+        "done": true
+      },
+      {
+        "item": "DB integration tests present",
+        "done": true
+      },
+      {
+        "item": "Migrations + seed present",
+        "done": true
+      },
+      {
+        "item": "Panchang accuracy validated (ADR-033)",
+        "done": false,
+        "note": "Blocked — engine not implemented"
+      },
+      {
+        "item": "AI §10B passed (corpus + eval)",
+        "done": false,
+        "note": "Pending — GURU_LIVE off"
+      },
+      {
+        "item": "Live Supabase project + secrets provisioned",
+        "done": false,
+        "note": "Not yet provisioned"
+      },
+      {
+        "item": "Store submission / phased rollout",
+        "done": false,
+        "note": "Future milestone (TDD Part 5)"
+      }
+    ],
+    "source": {
+      "label": "TDD Part 5 §10.1 go/no-go",
+      "href": "https://github.com/siddharthagarwal1983/PanchangPal/blob/main/docs/tdd/05_PLATFORM_DEVOPS.md"
+    }
+  },
+  "sessions": {
+    "currentObjective": "Continue and complete Mobile MVP Milestone 5 — Ask Guru Client (SCR_GURU_*). Architecture-first;\nclient uses the server SSE adapter only; no LLM/fabrication; live answers stay corpus/eval-gated.\n\n---",
+    "currentLastUpdated": "2026-07-12 06:00",
+    "journal": {
+      "objective": "Continue and complete Mobile MVP Milestone 5 — Ask Guru Client (SCR_GURU_*). Architecture-first;\nclient uses the server SSE adapter only; no LLM/fabrication; live answers stay corpus/eval-gated.\n\n---",
+      "workCompleted": [
+        "Started from the partial M5 (home + chat streaming + AIChatBubble/ChatInput/GuruHeader/",
+        "SourceChip/TypingIndicator + answer-state reducer + UnavailableGuruTransport). Filled the gaps:",
+        "SSE transport: generali"
+      ],
+      "architecture": [
+        "No architecture changes. Client calls only the server SSE adapter — no OpenAI/LLM refs anywhere",
+        "(grep-verified), never fabricates, never infers an outcome (server-owned). Live answers gated",
+        "(GURU_LIVE=false). No panchang-engine changes; ADR-033 untouched. Tokens-only, locali"
+      ],
+      "validation": [
+        "New: 5 domain/data files + 1 CMP_* (ConversationRow) + 3 test suites. No hardcoded hex. GURU_LIVE",
+        "false + factory returns UnavailableGuruTransport (verified). No live run (offline sandbox) — tsc/jest in CI."
+      ],
+      "remaining": [
+        "Milestone 5 complete. Blockers:",
+        "⛔ Canonical Panchang Engine (ADR-033) — unrelated to Ask Guru.",
+        "Ask Guru live answers remain OFF (GURU_LIVE=false) pending reviewed corpus + eval readiness",
+        "(§9/§10B). Flipping GURU_LIVE is the only change to go live once ready.",
+        "Deferred: source-chip → source sheet (CMP_INFO_SHEET), helpful rating (EVT_032), conversation",
+        "thread persistence to server (client history is the offline cache).",
+        "Note: DASHBOARD.md + CURRENT_MILESTONE.md still describe the older \"Repository & Platform",
+        "Foundation\" milestone and are stale vs the Mobile MVP M1–M5 track — worth reconciling."
+      ]
+    },
+    "commits": [
+      {
+        "hash": "c8def11",
+        "date": "2026-07-12",
+        "subject": "M5 Ask Guru completion + state-doc reconciliation",
+        "files": [
+          ".claude/CURRENT_MILESTONE.md",
+          ".claude/DASHBOARD.md",
+          ".claude/PROJECT_MEMORY.md",
+          ".claude/PROJECT_STATUS.md",
+          ".claude/SESSION.md",
+          ".claude/TASK.md",
+          "apps/mobile/app/(tabs)/guru/chat.tsx",
+          "apps/mobile/app/(tabs)/guru/history.tsx",
+          "apps/mobile/src/data/hooks/useAskGuru.ts",
+          "apps/mobile/src/data/hooks/useGuruHistory.ts",
+          ".../src/domain/__tests__/guru-history.test.ts",
+          ".../src/domain/__tests__/guru-transport.test.ts",
+          ".../src/domain/guru/ProductionGuruTransport.ts",
+          "apps/mobile/src/domain/guru/history.ts",
+          "apps/mobile/src/domain/guru/index.ts",
+          "apps/mobile/src/domain/guru/sseParser.ts",
+          "apps/mobile/src/domain/guru/transportFactory.ts",
+          "apps/mobile/src/i18n/en-US.ts",
+          "packages/ui/src/components/ConversationRow.tsx",
+          ".../components/__tests__/guru-components.test.tsx"
+        ],
+        "fileCount": 20
+      },
+      {
+        "hash": "d8d7833",
+        "date": "2026-07-12",
+        "subject": "milestone 5 in progress",
+        "files": [
+          ".claude/PROJECT_STATUS.md",
+          ".claude/SESSION.md",
+          ".claude/TASK.md",
+          ".gitignore",
+          "AGENTS.md",
+          "apps/mobile/app/(tabs)/_layout.tsx",
+          "apps/mobile/app/(tabs)/calendar/index.tsx",
+          "apps/mobile/app/(tabs)/guru/chat.tsx",
+          "apps/mobile/app/(tabs)/guru/history.tsx",
+          "apps/mobile/app/(tabs)/guru/index.tsx",
+          "apps/mobile/src/data/calendarRepository.ts",
+          "apps/mobile/src/data/hooks/useAskGuru.ts",
+          "apps/mobile/src/data/hooks/useCalendarMonth.ts",
+          ".../src/domain/__tests__/calendar-month.test.ts",
+          ".../src/domain/__tests__/guru-domain.test.ts",
+          ".../mobile/src/domain/calendar/CalendarProvider.ts",
+          ".../src/domain/calendar/calendarMonthService.ts",
+          "apps/mobile/src/domain/calendar/index.ts",
+          "apps/mobile/src/domain/guru/GuruTransport.ts",
+          "apps/mobile/src/domain/guru/index.ts"
+        ],
+        "fileCount": 20
+      },
+      {
+        "hash": "db337f6",
+        "date": "2026-07-12",
+        "subject": "feat(ritual): add guided ritual player",
+        "files": [
+          ".claude/PROJECT_STATUS.md",
+          ".claude/SESSION.md",
+          ".claude/TASK.md",
+          "apps/mobile/app/(tabs)/_layout.tsx",
+          "apps/mobile/app/(tabs)/today/index.tsx",
+          "apps/mobile/app/(tabs)/today/ritual.tsx",
+          ".../data/__tests__/ritualSessionRepository.test.ts",
+          "apps/mobile/src/data/hooks/useRitualToday.ts",
+          "apps/mobile/src/data/ritualRepository.ts",
+          "apps/mobile/src/data/ritualSessionRepository.ts",
+          ".../src/domain/__tests__/ritual-engine.test.ts",
+          "apps/mobile/src/domain/ritual/AudioAdapter.ts",
+          "apps/mobile/src/domain/ritual/RitualEngine.ts",
+          ".../mobile/src/domain/ritual/RitualSessionModel.ts",
+          "apps/mobile/src/domain/ritual/index.ts",
+          "apps/mobile/src/domain/ritual/types.ts",
+          "apps/mobile/src/i18n/en-US.ts",
+          "packages/api/src/contracts/today.ts",
+          "packages/shared/src/index.ts",
+          "packages/ui/src/components/AudioControls.tsx"
+        ],
+        "fileCount": 20
+      },
+      {
+        "hash": "de9323b",
+        "date": "2026-07-12",
+        "subject": "Mobile M2: Today (MOD_today) — daily loop shell",
+        "files": [
+          ".claude/DASHBOARD.md",
+          ".claude/PROJECT_STATUS.md",
+          ".claude/SESSION.md",
+          ".claude/TASK.md",
+          "apps/mobile/app/(tabs)/today/index.tsx",
+          "apps/mobile/src/data/hooks/useChecklist.ts",
+          "apps/mobile/src/data/hooks/useCompleteRitual.ts",
+          "apps/mobile/src/data/hooks/useToday.ts",
+          "apps/mobile/src/data/todayRepository.ts",
+          ".../src/domain/__tests__/today-domain.test.ts",
+          ".../domain/panchang/MockPanchangProvider.dev.ts",
+          ".../mobile/src/domain/panchang/PanchangProvider.ts",
+          ".../domain/panchang/ProductionPanchangProvider.ts",
+          "apps/mobile/src/domain/ritualProgressService.ts",
+          "apps/mobile/src/domain/streakService.ts",
+          "apps/mobile/src/i18n/en-US.ts",
+          "packages/ui/src/components/Card.tsx",
+          "packages/ui/src/components/Checklist.tsx",
+          "packages/ui/src/components/FestivalCard.tsx",
+          "packages/ui/src/components/LocationChip.tsx"
+        ],
+        "fileCount": 20
+      },
+      {
+        "hash": "5378202",
+        "date": "2026-07-12",
+        "subject": "Mobile M1: Application Shell (nav, anon-first auth, shared UI, tokens)",
+        "files": [
+          ".claude/DASHBOARD.md",
+          ".claude/PROJECT_STATUS.md",
+          ".claude/SESSION.md",
+          ".claude/TASK.md",
+          ".github/workflows/ci.yml",
+          "apps/mobile/app/(onboarding)/_layout.tsx",
+          "apps/mobile/app/(onboarding)/index.tsx",
+          "apps/mobile/app/(onboarding)/sign-in.tsx",
+          "apps/mobile/app/(onboarding)/verify-otp.tsx",
+          "apps/mobile/app/(tabs)/_layout.tsx",
+          "apps/mobile/app/(tabs)/calendar/index.tsx",
+          "apps/mobile/app/(tabs)/guru/index.tsx",
+          "apps/mobile/app/(tabs)/today/index.tsx",
+          "apps/mobile/app/(tabs)/you/index.tsx",
+          "apps/mobile/app/_layout.tsx",
+          "apps/mobile/app/index.tsx",
+          "apps/mobile/jest.config.js",
+          "apps/mobile/package.json",
+          "apps/mobile/src/data/authRepository.ts",
+          "apps/mobile/src/data/supabaseClient.ts"
+        ],
+        "fileCount": 20
+      },
+      {
+        "hash": "d14466b",
+        "date": "2026-07-12",
+        "subject": "Backend Foundation: complete independent work; abstract PanchangEngine + ADR-033",
+        "files": [
+          ".claude/CURRENT_MILESTONE.md",
+          ".claude/DASHBOARD.md",
+          ".claude/IMPLEMENTATION_ROADMAP.md",
+          ".claude/PROJECT_STATUS.md",
+          ".claude/SESSION.md",
+          ".claude/TASK.md",
+          ".github/workflows/ci.yml",
+          "apps/backend/functions/_shared/db/accountRepo.ts",
+          "apps/backend/functions/_shared/db/aiStores.ts",
+          "apps/backend/functions/_shared/db/billingRepo.ts",
+          "apps/backend/functions/_shared/db/contentRepo.ts",
+          ".../functions/_shared/db/notificationRepo.ts",
+          "apps/backend/functions/_shared/db/syncRepo.ts",
+          "apps/backend/functions/account/index.ts",
+          "apps/backend/functions/ask-guru/index.ts",
+          ".../functions/content-ingest/chunker.test.ts",
+          "apps/backend/functions/content-ingest/chunker.ts",
+          "apps/backend/functions/content-ingest/index.ts",
+          "apps/backend/functions/notify-scheduler/index.ts",
+          ".../functions/notify-scheduler/logic.test.ts"
+        ],
+        "fileCount": 20
+      },
+      {
+        "hash": "7cbe283",
+        "date": "2026-07-12",
+        "subject": "Backend Foundation: SVC_* Edge Functions (first increment)",
+        "files": [
+          ".claude/CURRENT_MILESTONE.md",
+          ".claude/DASHBOARD.md",
+          ".claude/PROJECT_STATUS.md",
+          ".claude/SESSION.md",
+          ".claude/TASK.md",
+          ".github/workflows/ci.yml",
+          "apps/backend/deno.json",
+          "apps/backend/functions/README.md",
+          "apps/backend/functions/_shared/auth.ts",
+          "apps/backend/functions/_shared/crypto.ts",
+          "apps/backend/functions/_shared/env.ts",
+          "apps/backend/functions/_shared/errors.ts",
+          "apps/backend/functions/_shared/http.ts",
+          "apps/backend/functions/_shared/logging.ts",
+          "apps/backend/functions/_shared/supabase.ts",
+          "apps/backend/functions/account/index.ts",
+          "apps/backend/functions/account/logic.test.ts",
+          "apps/backend/functions/account/logic.ts",
+          "apps/backend/functions/ask-guru/index.ts",
+          "apps/backend/functions/content-ingest/index.ts"
+        ],
+        "fileCount": 20
+      },
+      {
+        "hash": "a0ec572",
+        "date": "2026-07-12",
+        "subject": "Expo Application & Configure GitHub Actions CI",
+        "files": [
+          ".claude/CURRENT_MILESTONE.md",
+          ".claude/DASHBOARD.md",
+          ".claude/PROJECT_STATUS.md",
+          ".claude/SESSION.md",
+          ".claude/TASK.md",
+          ".github/CODEOWNERS",
+          ".github/workflows/cd.yml",
+          ".github/workflows/ci.yml",
+          ".github/workflows/ota.yml",
+          "apps/mobile/app/(onboarding)/_layout.tsx",
+          "apps/mobile/app/(onboarding)/index.tsx",
+          "apps/mobile/app/(tabs)/_layout.tsx",
+          "apps/mobile/app/(tabs)/calendar/index.tsx",
+          "apps/mobile/app/(tabs)/guru/index.tsx",
+          "apps/mobile/app/(tabs)/today/index.tsx",
+          "apps/mobile/app/(tabs)/you/index.tsx",
+          "apps/mobile/app/_layout.tsx",
+          "apps/mobile/babel.config.js",
+          "apps/mobile/metro.config.js",
+          "apps/mobile/package.json"
+        ],
+        "fileCount": 20
+      },
+      {
+        "hash": "b1405bf",
+        "date": "2026-07-12",
+        "subject": "Repository Scaffolding & Shared Packages",
+        "files": [
+          ".claude/CURRENT_MILESTONE.md",
+          ".claude/DASHBOARD.md",
+          ".claude/DECISIONS.md",
+          ".claude/PROJECT_STATUS.md",
+          ".claude/SESSION.md",
+          ".claude/TASK.md",
+          ".eslintrc.cjs",
+          ".github/workflows/.gitkeep",
+          ".github/workflows/README.md",
+          ".npmrc",
+          ".nvmrc",
+          ".prettierrc",
+          "apps/backend/README.md",
+          "apps/backend/functions/_shared/README.md",
+          "apps/backend/functions/account/README.md",
+          "apps/backend/functions/ask-guru/README.md",
+          "apps/backend/functions/content-ingest/README.md",
+          "apps/backend/functions/notify-scheduler/README.md",
+          "apps/backend/functions/panchang/README.md",
+          ".../backend/functions/revenuecat-webhook/README.md"
+        ],
+        "fileCount": 20
+      },
+      {
+        "hash": "95c36a6",
+        "date": "2026-07-12",
+        "subject": "Database Schema & Supabase Migrations",
+        "files": [
+          ".claude/CURRENT_MILESTONE.md",
+          ".claude/DASHBOARD.md",
+          ".claude/PROJECT_STATUS.md",
+          ".claude/SESSION.md",
+          ".claude/TASK.md",
+          "docs/database/README.md",
+          "docs/database/SCHEMA.md",
+          "supabase/migrations/20260712000010_identity.sql",
+          "supabase/migrations/20260712000020_household.sql",
+          "supabase/migrations/20260712000030_content.sql",
+          "supabase/migrations/20260712000040_habits.sql",
+          "supabase/migrations/20260712000050_ai.sql",
+          "supabase/migrations/20260712000060_billing.sql",
+          ".../migrations/20260712000070_notifications.sql",
+          "supabase/migrations/20260712000080_platform.sql",
+          "supabase/seed.sql"
+        ],
+        "fileCount": 16
+      },
+      {
+        "hash": "afe99c7",
+        "date": "2026-07-12",
+        "subject": "openapi specs added",
+        "files": [
+          ".claude/CLAUDE.md",
+          ".claude/CURRENT_MILESTONE.md",
+          ".claude/DASHBOARD.md",
+          ".claude/PROJECT_STATUS.md",
+          ".claude/SESSION.md",
+          ".claude/TASK.md",
+          "docs/api/README.md",
+          "docs/api/openapi.yaml",
+          "supabase/migrations/20260712000001_extensions.sql",
+          "supabase/migrations/20260712000002_enums.sql",
+          "supabase/migrations/20260712000003_functions.sql"
+        ],
+        "fileCount": 11
+      },
+      {
+        "hash": "22cde67",
+        "date": "2026-07-11",
+        "subject": "initial commit: add docs, ADRs and project structure",
+        "files": [
+          ".claude/ARCHITECTURE_SUMMARY.md",
+          ".claude/CLAUDE.md",
+          ".claude/CURRENT_MILESTONE.md",
+          ".claude/DASHBOARD.md",
+          ".claude/DECISIONS.md",
+          ".claude/PLAYBOOK.md",
+          ".claude/PROJECT_MEMORY.md",
+          ".claude/PROJECT_STATUS.md",
+          ".claude/SESSION.md",
+          ".claude/TASK.md",
+          ".gitignore",
+          "CONTRIBUTING.md",
+          "LICENSE",
+          "README.md",
+          "docs/ai/00_QUICK_START.md",
+          "docs/ai/01_PROJECT_CONTEXT.md",
+          "docs/ai/02_PRODUCT_CONTEXT.md",
+          "docs/ai/03_ARCHITECTURE_CONTEXT.md",
+          "docs/ai/04_DESIGN_CONTEXT.md",
+          "docs/ai/05_CODING_STANDARDS.md"
+        ],
+        "fileCount": 20
+      }
+    ],
+    "source": {
+      "label": ".claude/SESSION.md + git log",
+      "href": "https://github.com/siddharthagarwal1983/PanchangPal/blob/main/.claude/SESSION.md"
+    }
+  }
+}

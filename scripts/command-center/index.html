@@ -1,0 +1,29 @@
+<!DOCTYPE html>
+<html lang="en" data-theme="light">
+<head>
+  <meta charset="utf-8" />
+  <meta name="viewport" content="width=device-width, initial-scale=1" />
+  <title>PanchangPal — Engineering Command Center</title>
+  <meta name="robots" content="noindex" />
+  <link rel="stylesheet" href="./styles.css" />
+</head>
+<body>
+  <header class="topbar">
+    <button id="menu" class="btn menu-toggle" aria-label="Toggle navigation">☰</button>
+    <span class="brand"><span class="logo" aria-hidden="true"></span> PanchangPal</span>
+    <span id="gonogo" class="gonogo" role="status" aria-live="polite"></span>
+    <span class="spacer"></span>
+    <span id="head-meta" class="sub"></span>
+    <span id="stale" class="pill warn" style="display:none">data source unreachable</span>
+    <button id="reload" class="btn" aria-label="Reload data">↻ Reload</button>
+    <button id="theme" class="btn" aria-label="Toggle theme">◐ Theme</button>
+  </header>
+  <div class="layout">
+    <nav id="nav" class="nav" aria-label="Command center sections"></nav>
+    <main id="main" class="main" tabindex="-1"></main>
+  </div>
+  <div id="scrim" class="scrim"></div>
+  <aside id="drawer" class="drawer" role="dialog" aria-modal="true" aria-label="Details"></aside>
+  <script src="./app.js"></script>
+</body>
+</html>
