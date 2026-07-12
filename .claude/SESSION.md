@@ -11,7 +11,7 @@ Purpose: records the current working session. Not permanent project memory.
 
 # Session Objective
 
-Implement Mobile MVP Milestone 2 — Today (MOD_today) — and visualize screens as built.
+Implement Mobile MVP Milestone 3 — Guided Ritual Player (SCR_RITUAL_001) within MOD_today.
 Architecture-first; panchang stays behind the frozen abstraction; do not touch ADR-033.
 
 ---
@@ -39,6 +39,22 @@ Architecture-first; panchang stays behind the frozen abstraction; do not touch A
 
 ---
 
+# Work Completed (Milestone 3 — Guided Ritual Player / SCR_RITUAL_001)
+
+- Reusable ritual domain: `RitualSession`, pure session model, and `RitualEngine` own begin,
+  next, skip, pause, resume, leave, restore, and a dedicated `completed` state. Screens consume
+  `RitualPlayerViewModel` and only forward intents.
+- Persistence/data: MMKV-backed `RitualSessionRepository` saves the complete session for offline
+  app-restores; `RitualRepository` + `useRitualToday` keep server ritual content in Query.
+- Audio is deliberately an `AudioAdapter` port with `NullAudioAdapter`; written guidance remains
+  fully functional and announces the audio-unavailable fallback. No playback library was added.
+- UI: SCR_RITUAL_001 route plus CMP_RITUAL_INTRO, RITUAL_STEP, PROGRESS_RING, AUDIO_CONTROLS,
+  and COMPLETION_MOMENT; token-bound, localized, screen-reader labeled, Reduced-Motion safe.
+- Tests: RitualEngine transitions/audio port/restore; RitualSessionRepository persistence;
+  ritual component interactions, progress semantics, text-only fallback, completion alert.
+
+---
+
 # Architecture Compliance
 
 No architecture changes. Panchang stays behind PanchangProvider; ADR-033 untouched; NO
@@ -57,15 +73,15 @@ loading/empty/offline/error states. Reused M1 Screen/AppHeader; extended the com
 
 # Remaining Work / Blockers
 
-Milestone 2 complete. Blocker unchanged: ⛔ Canonical Panchang Engine (ADR-033) — Today's
-panchang card + festival stay "unavailable"/hidden until ratified; the rest of Today works.
-Deferred to later Today polish: pull-to-refresh, ritual completion moment animation, real
-festival/rotating content (needs corpus + engine).
+Milestone 3 complete. Blocker unchanged: ⛔ Canonical Panchang Engine (ADR-033) — Today's
+panchang card + festival stay "unavailable"/hidden until ratified. Ritual audio playback is
+intentionally not implemented: the NullAudioAdapter preserves the full text-guided flow until a
+production audio adapter is separately approved. Verification could not complete in this sandbox
+because package-manager dependency downloads fail after the network is unavailable.
 
 ---
 
 # STOP
 
-Milestone 2 complete. Do NOT begin Milestone 3. Awaiting review + approval.
-Recommended next: Milestone 3 — Ritual experience (SCR_RITUAL_001: steps, audio, completion
-moment) OR Calendar shell — your call.
+Milestone 3 complete. Do NOT begin Calendar or another feature. Awaiting review + approval.
+Recommended next: Calendar shell (MOD_calendar).

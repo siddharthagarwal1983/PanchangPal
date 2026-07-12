@@ -9,6 +9,9 @@ import { ThemeProvider } from '../../theme';
 import { PanchangCard } from '../PanchangCard';
 import { Checklist } from '../Checklist';
 import { RitualCard } from '../RitualCard';
+import { RitualIntro } from '../RitualIntro';
+import { RitualStep } from '../RitualStep';
+import { CompletionMoment } from '../CompletionMoment';
 
 const wrap = (ui: ReactElement) => render(<ThemeProvider>{ui}</ThemeProvider>);
 
@@ -65,5 +68,32 @@ describe('RitualCard', () => {
     );
     expect(screen.getByText('Done for today')).toBeTruthy();
     expect(screen.queryByRole('button', { name: 'Done for today' })).toBeNull();
+  });
+});
+
+describe('Guided ritual player components', () => {
+  it('exposes a labeled intro action and step progress to assistive technology', () => {
+    const begin = jest.fn();
+    wrap(<RitualIntro title="Daily practice" body="A calm moment" beginLabel="Begin guidance" onBegin={begin} />);
+    fireEvent.press(screen.getByRole('button', { name: 'Begin guidance' }));
+    expect(begin).toHaveBeenCalled();
+  });
+
+  it('renders text-only fallback and routes next/skip interactions declaratively', () => {
+    const next = jest.fn();
+    const skip = jest.fn();
+    wrap(<RitualStep text="Light a lamp" current={2} total={4} progressLabel="Step 2 of 4" nextLabel="Next" skipLabel="Skip this step" playLabel="Play narration" audioUnavailableLabel="Audio needs internet" audioAvailable={false} canSkip onNext={next} onSkip={skip} onPlayAudio={() => {}} />);
+    expect(screen.getByRole('progressbar', { name: 'Step 2 of 4' })).toBeTruthy();
+    expect(screen.getByText('Audio needs internet')).toBeTruthy();
+    fireEvent.press(screen.getByTestId('ritual-next'));
+    fireEvent.press(screen.getByTestId('ritual-skip'));
+    expect(next).toHaveBeenCalled();
+    expect(skip).toHaveBeenCalled();
+  });
+
+  it('renders a dedicated, announced completion state', () => {
+    wrap(<CompletionMoment title="Done for today" body="Recorded" continueLabel="Return to Today" onContinue={() => {}} />);
+    expect(screen.getByRole('alert')).toBeTruthy();
+    expect(screen.getByRole('button', { name: 'Return to Today' })).toBeTruthy();
   });
 });

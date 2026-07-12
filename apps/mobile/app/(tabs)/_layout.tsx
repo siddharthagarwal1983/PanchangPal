@@ -30,6 +30,7 @@ export default function TabsLayout() {
       }}
     >
       <Tabs.Screen name="today/index" />
+      <Tabs.Screen name="today/ritual" options={{ href: null, tabBarStyle: { display: 'none' } }} />
       <Tabs.Screen name="calendar/index" />
       <Tabs.Screen name="guru/index" />
       <Tabs.Screen name="you/index" />

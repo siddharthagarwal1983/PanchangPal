@@ -166,7 +166,7 @@ Implementation has not yet begun.
 | Design System | 🟡 Tokens + shell components |
 | Components | ⏳ Pending |
 | Authentication Flow | ✅ Anon-first + OAuth/OTP (shell) |
-| Ritual Experience | 🟡 Today shell (ritual card) |
+| Ritual Experience | ✅ Guided player (session engine, offline restore, text-first audio seam) |
 | Ask Guru | ⏳ Pending |
 | Household | ⏳ Pending |
 
@@ -274,6 +274,10 @@ Expo application
 - Backend Foundation: 7 SVC_* Edge Functions wired; OpenAI adapters + RAG pipeline; DB repositories + 2 pgvector/AI migrations; Ask Guru rate limit + cost circuit-breaker; 10 Vitest suites + pgTAP integration suite; ADR-033 + panchang-engine work item
 - Mobile Milestone 1 (Application Shell): PDD §6 design tokens; 11 CMP_* shell components (a11y-first); anon-first + OAuth/OTP auth (AuthRepository + STORE_session); splash/onboarding/4-tab navigation + guards + deep links + error boundary; i18n; 3 test suites
 - Mobile Milestone 2 (Today / MOD_today): 9 Today CMP_* (panchang/ritual/streak/checklist/rotating/festival cards + primary button/location chip/card); client PanchangProvider abstraction + ProductionPanchangProvider + dev-only MockPanchangProvider; useToday/useChecklist/useCompleteRitual hooks (optimistic + offline queue); StreakService/RitualProgressService; SCR_HOME_001 composed (panchang shows unavailable per ADR-033); 2 test suites
+- Mobile Milestone 3 (Guided Ritual Player / SCR_RITUAL_001): reusable RitualSession +
+  RitualEngine; MMKV ritual-session repository; RitualRepository/query hook; NullAudioAdapter
+  text-first seam; dedicated accessible completion state; 5 ritual CMP_* and domain/repository/UI
+  tests. Playback is intentionally deferred to a separately approved AudioAdapter.
 
 Do not duplicate SESSION.md.
 

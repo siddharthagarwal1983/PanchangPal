@@ -54,7 +54,7 @@ export default function TodayScreen() {
           stateAnnouncement={t(
             ritual.state === 'completed' ? 'ritual.stateCompleted' : ritual.state === 'in_progress' ? 'ritual.stateInProgress' : 'ritual.stateNotStarted',
           )}
-          onAction={() => router.push('/(tabs)/today')}
+          onAction={() => router.push('/(tabs)/today/ritual')}
           testID="today-ritual"
         />
 

@@ -26,3 +26,9 @@ export { StreakCounter, type StreakCounterProps } from './components/StreakCount
 export { Checklist, type ChecklistProps, type ChecklistItemData } from './components/Checklist';
 export { RotatingElement, type RotatingType } from './components/RotatingElement';
 export { FestivalCard, type FestivalCardProps } from './components/FestivalCard';
+// Guided ritual player (SCR_RITUAL_001)
+export { RitualIntro, type RitualIntroProps } from './components/RitualIntro';
+export { RitualStep, type RitualStepProps } from './components/RitualStep';
+export { ProgressRing, type ProgressRingProps } from './components/ProgressRing';
+export { AudioControls, type AudioControlsProps } from './components/AudioControls';
+export { CompletionMoment, type CompletionMomentProps } from './components/CompletionMoment';

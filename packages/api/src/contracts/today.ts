@@ -30,13 +30,19 @@ export const panchangSchema = z.object({
   rahu_kaal: z.string(),
 });
 
+export const ritualStepSchema = z.object({
+  text: z.string(),
+  audio_key: z.string().optional(),
+  duration: z.number().int().positive().optional(),
+});
+
 export const getTodayResponse = z.object({
   panchang: panchangSchema,
   ritual: z.object({
     id: z.string().uuid(),
     title: z.string(),
     intro: z.string().optional(),
-    steps: z.array(z.unknown()),
+    steps: z.array(ritualStepSchema).min(1),
     audio_key: z.string().optional(),
     depth: z.enum(['quick', 'deep']),
   }),
