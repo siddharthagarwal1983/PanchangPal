@@ -39,4 +39,3 @@ export function RolePicker<T extends string>({ options, value, onChange, label, 
     </View>
   );
 }
-</content>

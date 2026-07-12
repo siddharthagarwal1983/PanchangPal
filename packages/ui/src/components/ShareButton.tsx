@@ -45,4 +45,3 @@ export function ShareButton({ message, url, label, onShared, testID }: ShareButt
     </Pressable>
   );
 }
-</content>

@@ -81,4 +81,3 @@ export function InviteAcceptCard({ headline, detail, joinLabel, onJoin, loading,
     </Card>
   );
 }
-</content>

@@ -46,7 +46,7 @@ export class OpenAiLLMProvider implements LLMProvider {
     const reader = res.body.getReader();
     const decoder = new TextDecoder();
     let buffer = '';
-    for (;;) {
+    for (; ;) {
       const { value, done } = await reader.read();
       if (done) break;
       buffer += decoder.decode(value, { stream: true });
@@ -82,7 +82,10 @@ export class OpenAiLLMProvider implements LLMProvider {
       }),
     });
     if (!res.ok) throw new Error(`openai_complete_${res.status}`);
-    const data = await res.json();
+    const data = await res.json() as {
+      choices?: { message?: { content?: string } }[];
+    };
+  };
     return data.choices?.[0]?.message?.content ?? '';
   }
 }

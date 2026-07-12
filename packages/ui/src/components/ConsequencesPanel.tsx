@@ -47,4 +47,3 @@ export function ConsequencesPanel({ title, consequences, testID }: ConsequencesP
     </View>
   );
 }
-</content>

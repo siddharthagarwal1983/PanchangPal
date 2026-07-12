@@ -85,4 +85,3 @@ export function MemberRow({ initials, name, subtitle, onRemove, removeLabel, own
     </View>
   );
 }
-</content>
