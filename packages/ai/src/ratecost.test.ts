@@ -36,8 +36,8 @@ describe('AI cost + circuit breaker (TDD Part 3 §8.1, F-11)', () => {
 
   it('ledger accumulates spend', async () => {
     const ledger = new InMemoryCostLedger();
-    await ledger.record(1.5, { model: 'gpt-5-mini', correlationId: 'c' });
-    await ledger.record(2.0, { model: 'gpt-5-mini', correlationId: 'c' });
+    await ledger.record(1.5);
+    await ledger.record(2.0);
     expect(await ledger.windowSpendUsd()).toBe(3.5);
   });
 });

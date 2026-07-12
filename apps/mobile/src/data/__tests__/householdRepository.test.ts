@@ -105,4 +105,3 @@ describe('HouseholdRepository', () => {
     expect(spy.removed).toBe(true);
   });
 });
-</content>

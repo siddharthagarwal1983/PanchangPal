@@ -20,4 +20,3 @@ export {
   type HouseholdRow,
   type HouseholdMemberRow,
 } from './household';
-</content>

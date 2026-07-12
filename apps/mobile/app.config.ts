@@ -1,5 +1,4 @@
 import type { ExpoConfig } from 'expo/config';
-
 /**
  * Expo config (TDD Part 1 §2.3/§3). Deep-link scheme `panchangpal://` powers the
  * notification/invite/referral flows (FLOW D4). Public config only — no secrets on
@@ -12,7 +11,6 @@ const config: ExpoConfig = {
   version: '0.1.0',
   orientation: 'portrait',
   platforms: ['ios', 'android'],
-  newArchEnabled: true,
   extra: {
     // Populated from EXPO_PUBLIC_* env at build time (TDD Part 1 §7.2).
     supabaseUrl: process.env.EXPO_PUBLIC_SUPABASE_URL,

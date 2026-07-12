@@ -1,12 +1,14 @@
 import { MMKV } from 'react-native-mmkv';
-import type { RitualSession } from '../domain/ritual';
-import type { RitualSessionStore } from '../domain/ritual';
+import type {
+  RitualSession,
+  RitualSessionStore,
+} from '../domain/ritual';
 
 interface KeyValueStore { getString(key: string): string | undefined; set(key: string, value: string): void; delete(key: string): void; }
 
 /** Durable local repository for ritual sessions; independent of network/server state. */
 export class RitualSessionRepository implements RitualSessionStore {
-  constructor(private readonly storage: KeyValueStore = new MMKV(), private readonly prefix = 'ritual-session') {}
+  constructor(private readonly storage: KeyValueStore = new MMKV(), private readonly prefix = 'ritual-session') { }
 
   async load(ritualId: string, localDate: string): Promise<RitualSession | null> {
     const raw = this.storage.getString(this.key(ritualId, localDate));

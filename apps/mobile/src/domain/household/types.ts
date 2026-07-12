@@ -53,4 +53,3 @@ export const DEFAULT_MEMBER_INPUT: MemberInput = {
   role: 'other',
   depth: 'quick',
 };
-</content>

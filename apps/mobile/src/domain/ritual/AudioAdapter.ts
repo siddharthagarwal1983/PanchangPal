@@ -1,17 +1,39 @@
 /**
- * Audio is an infrastructure concern. The player depends only on this port so text guidance
- * remains fully usable offline and before a production playback adapter is approved.
+ * Audio adapter abstraction (TDD Part 4 §8).
+ * Keeps the ritual domain independent of Expo AV / native audio APIs.
+ * A concrete implementation will be provided by the data layer.
  */
+
 export interface AudioAdapter {
-  play(audioKey: string): Promise<void>;
-  pause(): Promise<void>;
+  /**
+   * Play an audio resource identified by its key.
+   */
+  play(_audioKey: string): Promise<void>;
+
+  /**
+   * Stop any currently playing audio.
+   */
   stop(): Promise<void>;
-  isAvailable(audioKey: string): Promise<boolean>;
+
+  /**
+   * Returns whether an audio resource is available locally.
+   */
+  isAvailable(_audioKey: string): Promise<boolean>;
 }
 
-export class NullAudioAdapter implements AudioAdapter {
-  async play(_audioKey: string): Promise<void> {}
-  async pause(): Promise<void> {}
-  async stop(): Promise<void> {}
-  async isAvailable(_audioKey: string): Promise<boolean> { return false; }
+/**
+ * Default no-op implementation used during development and tests.
+ */
+export class NoopAudioAdapter implements AudioAdapter {
+  async play(_audioKey: string): Promise<void> {
+    // Intentionally empty.
+  }
+
+  async stop(): Promise<void> {
+    // Intentionally empty.
+  }
+
+  async isAvailable(_audioKey: string): Promise<boolean> {
+    return false;
+  }
 }

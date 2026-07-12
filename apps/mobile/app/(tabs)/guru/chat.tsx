@@ -10,9 +10,9 @@ import { useEffect, useState } from 'react';
 import { View } from 'react-native';
 import { useLocalSearchParams } from 'expo-router';
 import { AIChatBubble, ChatInput, GuruHeader, PrimaryButton, Screen, SourceChip, Text, TypingIndicator, useTheme } from '@panchangpal/ui';
-import { useOnline } from '../../../../src/data/useOnline';
-import { useAskGuru } from '../../../../src/data/hooks/useAskGuru';
-import { t } from '../../../../src/i18n';
+import { useOnline } from '../../../src/data/useOnline';
+import { useAskGuru } from '../../../src/data/hooks/useAskGuru';
+import { t } from '../../../src/i18n';
 
 export default function GuruChatScreen() {
   const online = useOnline();
@@ -53,7 +53,7 @@ export default function GuruChatScreen() {
           <AIChatBubble author="assistant" text={answer.text} state={answer.isStreaming ? 'streaming' : 'complete'} />
         ) : null}
 
-        {answer?.outcome === 'grounded' ? answer.sources.map((s) => <SourceChip key={s.id} title={s.title} onPress={() => {}} />) : null}
+        {answer?.outcome === 'grounded' ? answer.sources.map((s) => <SourceChip key={s.id} title={s.title} onPress={() => { }} />) : null}
 
         {outcomeCopy ? (
           <View accessibilityRole="alert" style={{ gap: theme.spacing.sm }}>

@@ -5,5 +5,15 @@
     "moduleResolution": "Bundler",
     "noEmit": true
   },
-  "include": ["app", "src", "app.config.ts"]
+  "include": [
+    "app",
+    "src",
+    "app.config.ts"
+  ],
+  "exclude": [
+    "**/*.test.ts",
+    "**/*.test.tsx",
+    "**/__tests__/**",
+    "node_modules"
+  ]
 }

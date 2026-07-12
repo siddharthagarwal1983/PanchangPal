@@ -35,4 +35,3 @@ export function useRequestDeletion() {
     },
   });
 }
-</content>

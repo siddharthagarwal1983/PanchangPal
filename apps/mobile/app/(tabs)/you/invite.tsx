@@ -159,4 +159,3 @@ export default function InviteScreen() {
     </Screen>
   );
 }
-</content>

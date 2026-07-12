@@ -6,9 +6,9 @@
 import { View } from 'react-native';
 import { router } from 'expo-router';
 import { Screen, AppHeader, ConversationRow, useTheme } from '@panchangpal/ui';
-import type { GuruOutcome } from '../../../../src/domain/guru';
-import { useGuruHistory } from '../../../../src/data/hooks/useGuruHistory';
-import { t } from '../../../../src/i18n';
+import type { GuruOutcome } from '../../../src/domain/guru';
+import { useGuruHistory } from '../../../src/data/hooks/useGuruHistory';
+import { t } from '../../../src/i18n';
 
 const OUTCOME_KEY: Record<GuruOutcome, string> = {
   grounded: 'guru.outcomeGrounded',

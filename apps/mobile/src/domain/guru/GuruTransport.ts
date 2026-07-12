@@ -1,10 +1,19 @@
-import type { GuruStreamEvent } from './types';
+/**
+ * Guru transport abstraction (TDD Part 4 §7).
+ */
 
-export interface GuruTransport { stream(question: string, conversationId?: string): AsyncIterable<GuruStreamEvent>; }
+export interface GuruTransport {
+  stream(
+    _question: string,
+    _conversationId?: string
+  ): AsyncIterable<string>;
+}
 
-/** Safe launch gate until reviewed corpus/evaluation readiness enables the production transport. */
-export class UnavailableGuruTransport implements GuruTransport {
-  async *stream(_question: string, _conversationId?: string): AsyncIterable<GuruStreamEvent> {
-    yield { type: 'done', outcome: 'declined', errorCode: 'ERR_RAG_EMPTY' };
+export class NoopGuruTransport implements GuruTransport {
+  stream(
+    _question: string,
+    _conversationId?: string
+  ): AsyncIterable<string> {
+    throw new Error('Guru transport not configured');
   }
 }

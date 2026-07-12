@@ -72,10 +72,19 @@ export function useUpdateMember() {
       await qc.cancelQueries({ queryKey: HOUSEHOLD_KEY });
       const prev = qc.getQueryData<Household | null>(HOUSEHOLD_KEY) ?? null;
       if (prev) {
-        qc.setQueryData<Household | null>(HOUSEHOLD_KEY, {
-          ...prev,
-          members: prev.members.map((m) => (m.id === memberId ? { ...m, ...patch } : m)),
-        });
+        qc.setQueryData<Household | null>(
+          HOUSEHOLD_KEY,
+          (prev) => {
+            if (!prev) return prev;
+
+            return {
+              ...prev,
+              members: prev.members.map((m) =>
+                m.id === memberId ? { ...m, ...patch } : m
+              ),
+            };
+          }
+        );
       }
       return { prev };
     },
@@ -94,10 +103,17 @@ export function useRemoveMember() {
       await qc.cancelQueries({ queryKey: HOUSEHOLD_KEY });
       const prev = qc.getQueryData<Household | null>(HOUSEHOLD_KEY) ?? null;
       if (prev) {
-        qc.setQueryData<Household | null>(HOUSEHOLD_KEY, {
-          ...prev,
-          members: prev.members.filter((m) => m.id !== memberId),
-        });
+        qc.setQueryData<Household | null>(
+          HOUSEHOLD_KEY,
+          (prev) => {
+            if (!prev) return prev;
+
+            return {
+              ...prev,
+              members: prev.members.filter((m) => m.id !== memberId),
+            };
+          }
+        );
       }
       return { prev };
     },
@@ -115,4 +131,3 @@ export function useCreateHousehold() {
     onSuccess: (household) => qc.setQueryData<Household | null>(HOUSEHOLD_KEY, household),
   });
 }
-</content>

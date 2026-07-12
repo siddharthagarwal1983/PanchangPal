@@ -6,4 +6,3 @@ export {
   type DeletionGate,
   type DeletionVariant,
 } from './deletion';
-</content>

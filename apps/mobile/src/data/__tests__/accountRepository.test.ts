@@ -47,4 +47,3 @@ describe('AccountRepository', () => {
     await expect(new AccountRepository(db).requestDeletion('rt')).rejects.toThrow('ERR_UNKNOWN');
   });
 });
-</content>

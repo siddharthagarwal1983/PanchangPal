@@ -130,4 +130,3 @@ export function getHouseholdRepository(): HouseholdRepository {
   if (!defaultRepository) defaultRepository = new HouseholdRepository();
   return defaultRepository;
 }
-</content>

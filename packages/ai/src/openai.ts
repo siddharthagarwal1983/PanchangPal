@@ -82,10 +82,14 @@ export class OpenAiLLMProvider implements LLMProvider {
       }),
     });
     if (!res.ok) throw new Error(`openai_complete_${res.status}`);
-    const data = await res.json() as {
-      choices?: { message?: { content?: string } }[];
+    const data = (await res.json()) as {
+      choices?: {
+        message?: {
+          content?: string;
+        };
+      }[];
     };
-  };
+
     return data.choices?.[0]?.message?.content ?? '';
   }
 }
@@ -109,8 +113,13 @@ export class OpenAiEmbeddingProvider implements EmbeddingProvider {
       body: JSON.stringify({ model: this.modelId, input: texts }),
     });
     if (!res.ok) throw new Error(`openai_embed_${res.status}`);
-    const data = await res.json();
-    return (data.data as { embedding: number[] }[]).map((d) => d.embedding);
+    const data = (await res.json()) as {
+      data: {
+        embedding: number[];
+      }[];
+    };
+
+    return data.data.map((d) => d.embedding);
   }
 }
 

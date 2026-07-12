@@ -86,4 +86,3 @@ describe('household rules', () => {
     expect(isSolo(null)).toBe(true);
   });
 });
-</content>

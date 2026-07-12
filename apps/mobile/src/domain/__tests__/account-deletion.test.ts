@@ -58,4 +58,3 @@ describe('account deletion gate (F-3)', () => {
     expect(canRequestDeletion(hh, 'u1')).toBe(true);
   });
 });
-</content>

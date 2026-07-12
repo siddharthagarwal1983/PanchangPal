@@ -54,4 +54,3 @@ export function getAccountRepository(): AccountRepository {
   if (!defaultRepository) defaultRepository = new AccountRepository();
   return defaultRepository;
 }
-</content>

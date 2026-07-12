@@ -9,7 +9,6 @@ import { Screen } from '../Screen';
 import { AuthButton } from '../AuthButton';
 import { BottomTabBar } from '../BottomTabBar';
 import { OfflineBanner } from '../OfflineBanner';
-import { EmptyState } from '../EmptyState';
 import { ErrorState } from '../ErrorState';
 
 const wrap = (ui: ReactElement) => render(<ThemeProvider>{ui}</ThemeProvider>);

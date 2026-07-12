@@ -114,4 +114,3 @@ export function isSolo(household: Household | null | undefined): boolean {
 export function activeMemberCount(household: Household | null | undefined): number {
   return household ? household.members.filter((m) => m.isActive).length : 0;
 }
-</content>

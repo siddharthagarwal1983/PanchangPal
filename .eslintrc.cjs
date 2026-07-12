@@ -1,27 +1,78 @@
-// PanchangPal — root ESLint config (TDD Part 1 §5 engineering standards).
-// Enforces strict TypeScript, import hygiene, and the dependency-direction rule
-// features → domain → data → packages (UI never imports data; domain never imports UI;
-// the app never imports the OpenAI SDK or service-role key). Rule packages are added
-// with the toolchain install; this config declares the intent and boundaries.
 module.exports = {
   root: true,
+
   parser: '@typescript-eslint/parser',
-  parserOptions: { ecmaVersion: 2022, sourceType: 'module' },
-  plugins: ['@typescript-eslint', 'import'],
+
+  parserOptions: {
+    ecmaVersion: 2022,
+    sourceType: 'module',
+    tsconfigRootDir: __dirname,
+    project: ['./tsconfig.base.json'],
+  },
+
+  plugins: [
+    '@typescript-eslint',
+    'import',
+    'react-hooks',
+  ],
+
   extends: [
     'eslint:recommended',
     'plugin:@typescript-eslint/recommended',
     'plugin:import/recommended',
     'plugin:import/typescript',
+    'plugin:react-hooks/recommended',
     'prettier',
   ],
+
+  settings: {
+    'import/parsers': {
+      '@typescript-eslint/parser': ['.ts', '.tsx'],
+    },
+
+    'import/resolver': {
+      typescript: {
+        alwaysTryTypes: true,
+        project: ['./tsconfig.base.json'],
+      },
+
+      node: {
+        extensions: ['.js', '.jsx', '.ts', '.tsx'],
+      },
+    },
+  },
+
+  ignorePatterns: [
+    '**/node_modules/**',
+    '**/dist/**',
+    '**/.turbo/**',
+    '**/coverage/**',
+    '*.config.js',
+    '*.config.ts',
+  ],
+
   rules: {
-    // Strict typing (TDD §5): no `any`, prefer `unknown` + narrowing.
     '@typescript-eslint/no-explicit-any': 'error',
     '@typescript-eslint/no-non-null-assertion': 'warn',
+
+    '@typescript-eslint/no-unused-vars': [
+      'error',
+      {
+        argsIgnorePattern: '^_',
+        varsIgnorePattern: '^_',
+        caughtErrorsIgnorePattern: '^_',
+        destructuredArrayIgnorePattern: '^_',
+        ignoreRestSiblings: true,
+      },
+    ],
+
     'import/no-cycle': 'error',
-    // Dependency-direction & secret-safety boundaries (enforced via import/no-restricted-paths
-    // once packages are installed; documented here as the standard).
+    'import/export': 'off',
+
+    // Disable noisy false positives
+    'import/no-named-as-default': 'off',
+    'import/no-named-as-default-member': 'off',
+
     'no-restricted-imports': [
       'error',
       {
@@ -29,11 +80,10 @@ module.exports = {
           {
             name: 'openai',
             message:
-              'The mobile app must never import the OpenAI SDK. LLM access is server-side only (ADR-006/011).',
+              'The mobile app must never import the OpenAI SDK. LLM access is server-side only.',
           },
         ],
       },
     ],
   },
-  ignorePatterns: ['dist/', 'node_modules/', '*.config.js', '*.config.ts'],
 };

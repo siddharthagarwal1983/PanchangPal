@@ -46,4 +46,3 @@ export function canRequestDeletion(household: Household | null | undefined, user
 }
 
 export { activeMemberCount };
-</content>

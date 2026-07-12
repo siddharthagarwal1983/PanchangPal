@@ -6,12 +6,12 @@ import { useCallback, useEffect, useRef, useState } from 'react';
 import { View } from 'react-native';
 import { router } from 'expo-router';
 import { CompletionMoment, PrimaryButton, RitualIntro, RitualStep, Screen, useTheme } from '@panchangpal/ui';
-import { RitualEngine, NullAudioAdapter, type RitualPlayerViewModel } from '../../../../src/domain/ritual';
-import { getRitualSessionRepository } from '../../../../src/data/ritualSessionRepository';
-import { useRitualToday } from '../../../../src/data/hooks/useRitualToday';
-import { useCompleteRitual } from '../../../../src/data/hooks/useCompleteRitual';
-import { usePrefsStore } from '../../../../src/store/prefs';
-import { t } from '../../../../src/i18n';
+import { RitualEngine, NullAudioAdapter, type RitualPlayerViewModel } from '../../../src/domain/ritual';
+import { getRitualSessionRepository } from '../../../src/data/ritualSessionRepository';
+import { useRitualToday } from '../../../src/data/hooks/useRitualToday';
+import { useCompleteRitual } from '../../../src/data/hooks/useCompleteRitual';
+import { usePrefsStore } from '../../../src/store/prefs';
+import { t } from '../../../src/i18n';
 
 const TODAY = new Date().toISOString().slice(0, 10);
 

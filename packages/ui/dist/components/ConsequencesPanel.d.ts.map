@@ -1,0 +1,1 @@
+{"version":3,"file":"ConsequencesPanel.d.ts","sourceRoot":"","sources":["../../src/components/ConsequencesPanel.tsx"],"names":[],"mappings":"AAWA,MAAM,WAAW,sBAAsB;IACrC,KAAK,EAAE,MAAM,CAAC;IACd,YAAY,EAAE,SAAS,MAAM,EAAE,CAAC;IAChC,MAAM,CAAC,EAAE,MAAM,CAAC;CACjB;AAED,wBAAgB,iBAAiB,CAAC,EAAE,KAAK,EAAE,YAAY,EAAE,MAAM,EAAE,EAAE,sBAAsB,2CA+BxF"}
