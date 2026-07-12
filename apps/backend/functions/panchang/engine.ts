@@ -1,16 +1,17 @@
 /**
- * ⚠️ DOCUMENTATION GAP — panchang astronomical engine.
+ * PanchangEngine — abstract provider interface (ADR-010).
  *
- * ADR-010 mandates a DETERMINISTIC panchang engine (pure function of instant, lat/lng,
- * tz, tradition, versioned by engine_version) validated against Drik Panchang / mPanchang
- * and paid reviewers (MRD Risk §1). However, the actual astronomical ALGORITHM (ephemeris,
- * tithi/nakshatra/yoga/karana derivation, sunrise/sunset, muhurta, Rahu Kaal) is NOT
- * specified in any TDD/PDD/MRD document. A wrong tithi destroys trust, so it must NOT be
- * invented here.
+ * ⚠️ THE ONLY BLOCKED COMPONENT IN THE BACKEND. The deterministic astronomical
+ * algorithm (ephemeris; tithi/nakshatra/yoga/karana; sunrise/sunset; muhurta; Rahu
+ * Kaal) is NOT specified in any MRD/PRD/PDD/TDD and MUST NOT be invented — a wrong
+ * tithi destroys trust (MRD Risk §1). See the architecture work item
+ * "Canonical Panchang Computation Engine" (ADR-033 [Proposed] +
+ * docs/architecture/canonical-panchang-engine/) which decides the ephemeris, ayanamsa,
+ * traditions, methodology, validation dataset, and acceptance tolerances.
  *
- * This seam defines the pure contract the engine must satisfy. Implementation is BLOCKED
- * pending the approved algorithm/ephemeris source (e.g. a vetted Swiss Ephemeris-based
- * computation) + the reviewer-validation harness. Flagged to the product/architecture owner.
+ * Everything else in the backend depends ONLY on this interface. When the decision is
+ * approved, add a concrete implementation (e.g. SwissEphemerisPanchangEngine) and inject
+ * it; no caller changes are needed.
  */
 import type { TraditionCode } from '@panchangpal/shared';
 
@@ -33,11 +34,41 @@ export interface PanchangResult {
   rahu_kaal: string;
 }
 
-export const ENGINE_VERSION = 'panchang-v0-unimplemented';
-
-/** BLOCKED: requires the approved, reviewer-validated astronomical algorithm (see file header). */
-export function computePanchang(_input: PanchangInput): PanchangResult {
-  throw new Error(
-    'panchang engine not implemented: awaiting approved astronomical algorithm + reviewer validation (ADR-010; documentation gap).',
-  );
+/** Recurrence query for personal-date tithi (SVC_panchang / personal dates). */
+export interface TithiRecurrenceInput {
+  tithi: { paksha: string; month: string; tithi: string };
+  fromDate: string; // ISO date
+  tz: string;
 }
+
+export interface PanchangEngine {
+  /** Engine version stamped into panchang_cache (ADR-010); bump invalidates cache. */
+  readonly engineVersion: string;
+  compute(input: PanchangInput): PanchangResult;
+  /** Next occurrence(s) of a tithi; returns dual candidates on ambiguity (ERR_TITHI_AMBIGUOUS). */
+  nextTithiOccurrence(input: TithiRecurrenceInput): { next_occurrence: string; candidates?: string[] };
+}
+
+/** Thrown by the placeholder engine until the canonical engine is approved + implemented. */
+export class PanchangEngineUnavailableError extends Error {
+  constructor() {
+    super(
+      'Panchang engine not available: blocked on the "Canonical Panchang Computation Engine" decision (ADR-033, Proposed). Do not implement astronomical calculations until approved.',
+    );
+    this.name = 'PanchangEngineUnavailableError';
+  }
+}
+
+/**
+ * The ONLY registered engine until the decision lands. It satisfies the interface so the
+ * whole backend compiles and runs, but every compute call fails closed (never fabricates).
+ */
+export const unimplementedPanchangEngine: PanchangEngine = {
+  engineVersion: 'panchang-v0-unimplemented',
+  compute() {
+    throw new PanchangEngineUnavailableError();
+  },
+  nextTithiOccurrence() {
+    throw new PanchangEngineUnavailableError();
+  },
+};

@@ -72,13 +72,13 @@ jobs:
       # Validates packages/api zod contracts against docs/api/openapi.yaml (ADR-032).
       - run: pnpm exec vitest run packages/api --passWithNoTests
 
-  rls-policy:
-    name: RLS policy test-suite (§4.4 security gate)
+  db-tests:
+    name: RLS policy + DB integration suites (§4.4 security gate)
     runs-on: ubuntu-latest
     needs: lint-typecheck
     services:
       postgres:
-        image: postgres:15
+        image: pgvector/pgvector:pg15 # pgvector + pgtap-capable base for the migrations
         env:
           POSTGRES_PASSWORD: postgres
         ports: ['5432:5432']
@@ -87,13 +87,14 @@ jobs:
           --health-timeout 5s --health-retries 5
     steps:
       - uses: actions/checkout@v4
-      # Apply migrations then run the pgTAP suite (asserts cross-user/household denial,
-      # service-only writes, F-21 counts). See apps/backend/tests/rls/.
+      # Apply all migrations (incl. AI operational + retrieval RPC), then run both pgTAP
+      # suites: RLS policies (cross-user/household denial, service-only, F-21) and DB
+      # integration (idempotent upserts, household entitlement, merge, AI helpers).
       - name: Apply migrations
         run: bash scripts/migrate.sh "postgresql://postgres:postgres@localhost:5432/postgres"
-      - name: Run pgTAP RLS suite
+      - name: Run pgTAP suites
         run: |
-          echo "pg_prove -d \"$DATABASE_URL\" apps/backend/tests/rls/*.test.sql"
+          pg_prove -d "$DATABASE_URL" apps/backend/tests/rls/*.test.sql apps/backend/tests/integration/*.test.sql
         env:
           DATABASE_URL: postgresql://postgres:postgres@localhost:5432/postgres
 

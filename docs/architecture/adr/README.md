@@ -44,7 +44,8 @@ This directory holds the Architecture Decision Records for PanchangPal, in Micha
 | [ADR-030](ADR-030-Security-Model.md) | Security Model (Least Privilege, No Secrets on Device) | Accepted | 2026-07-11 | Least privilege everywhere; server-only secrets; validated inputs; server-side receipt checks. |
 | [ADR-031](ADR-031-Privacy-Data-Minimization.md) | Privacy & Data-Minimization Model | Accepted | 2026-07-11 | Minimize collection; no PII in analytics/logs/prompts; no cross-session AI memory; export/delete. |
 | [ADR-032](ADR-032-API-Versioning-Strategy.md) | API Versioning Strategy | Accepted | 2026-07-11 | Compatibility-first SemVer contracts; support N & N-1; additive evolution + expand-then-contract. |
+| [ADR-033](ADR-033-Canonical-Panchang-Computation-Engine.md) | Canonical Panchang Computation Engine | Proposed | 2026-07-12 | Panchang behind an abstract `PanchangEngine` provider; astronomical choices (ephemeris/ayanamsa/methodology/validation/tolerances) to ratify. Only blocked backend component. |
 
 ---
 
-*32 ADRs. Statuses follow the TDD (`Accepted` for v1). Two are marked `[TECHNICAL IMPROVEMENT]` in their source (ADR-009, ADR-010; ADR-021 improves an implied approach). ADR-011/012/013 resolve TDD follow-ups F-20/F-18/F-19 respectively. See `ADR_TEMPLATE.md` for the official template and authoring guidelines for future ADRs.*
+*33 ADRs (ADR-033 is **Proposed** — the canonical panchang engine decision; all others `Accepted` for v1). Two are marked `[TECHNICAL IMPROVEMENT]` in their source (ADR-009, ADR-010; ADR-021 improves an implied approach). ADR-011/012/013 resolve TDD follow-ups F-20/F-18/F-19; ADR-033 realizes ADR-010's engine. See `ADR_TEMPLATE.md` for the official template and authoring guidelines. Companion docs for ADR-033: `docs/architecture/canonical-panchang-engine/`.*

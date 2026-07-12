@@ -3,55 +3,51 @@
 # PanchangPal — Current Session
 
 Version: 1.0.0
+Last Updated: 2026-07-12 03:40
 
-Last Updated: 2026-07-12 02:55
-
-Purpose:
-This document records the current working session. It is **not** permanent project memory.
+Purpose: records the current working session. Not permanent project memory.
 
 ---
 
 # Session Objective
 
-Backend Foundation — begin implementing the SVC_* Edge Functions against the API_* contracts (TDD Part 2 §5) and the AI/RAG subsystem (TDD Part 3). Read Part 3 first; flag any missing specs.
+Complete all Backend Foundation work that is INDEPENDENT of the Panchang astronomical
+calculations, keep the engine as an abstract provider (only blocked component), and create the
+"Canonical Panchang Engine Decision" architecture work item (ADR + MRD/PRD/PDD/TDD).
 
 ---
 
-# Work Completed (first increment)
+# Work Completed
 
-- Read TDD Part 3 (AI/RAG): retrieval config, F-6/F-16 thresholds, chunking, prompt/config registries, SSE contract — all specified; no blocking AI-spec gaps.
-- `_shared` core (Deno + Vitest-safe): env, supabase clients (service + user), ERR_* envelope + AppError, http/cors/sse, structured logging + correlation id, auth/withHandler boundary, HMAC crypto.
-- Fully-specified DB functions with PURE logic + Vitest tests:
-  - `sync` — per-kind conflict rules (§6.6): client-authoritative daily completion, checklist union, personal-date LWW+tombstone, longer-streak-wins.
-  - `revenuecat-webhook` — HMAC verify + event→(subscription, entitlement) mapping at household grain (F-4).
-  - `account` — anon→auth merge (F-1), deletion gate (F-3), grace window, transfer.
-- Conformant skeletons + flagged seams: `panchang` (cache-key tested; engine BLOCKED), `notify-scheduler` (sweep/quiet-hours/Expo seams), `ask-guru` (SSE pipeline + confidence gate wired), `content-ingest` (chunk→embed→upsert seams).
-- `packages/ai` fleshed out: LLMProvider/EmbeddingProvider adapters, AI config registry (§8A defaults), retrieval confidence gate (§4.4, tested), scope/refusal taxonomy.
-- Vitest wired: root vitest.config.ts (alias + include), root `test` script, CI updated (vitest + mobile jest steps).
+Independent backend work (all 9 requested items):
+1. OpenAI providers behind the AI abstraction: OpenAiLLMProvider (SSE stream) + OpenAiEmbeddingProvider (1536), prompts registry, scope classifier + groundedness (fail-safe). Tested with mock fetch.
+2. DB repositories + Supabase wiring: SyncRepository, BillingRepository (F-4), AccountRepository (F-1/F-3), NotificationRepository, ContentRepository (pgvector RPC), aiStores (Pg rate-limit/cost). All SVC_* handlers wired to repos.
+3. DB integration tests (pgTAP): idempotent upserts, household entitlement, merge reassignment, AI helpers — apps/backend/tests/integration/.
+4. Ask Guru rate limiting: pure sliding-window + in-memory/Postgres stores (anon tighter). Tested.
+5. Cost monitoring + circuit breaker: cost estimator + rolling-window ledger + breaker (opens before ceiling). Tested. Migration for ai_config/ai_rate_limit/ai_cost_ledger + atomic RPCs.
+6. Remaining Edge Function wiring: ask-guru full pipeline (rate→cost→scope→embed→retrieve→gate→stream→sources→groundedness); content-ingest (chunk→embed→upsert); notify-scheduler (engine-independent sweep).
+7. CI/CD: Vitest wired (root config), db-tests job runs RLS + integration pgTAP on pgvector image; mobile jest step.
+8. notify-scheduler depends ONLY on the PanchangEngine interface (no calculation assumed).
+9. Engine-dependent tests marked it.skip with TODO(ADR-033); no fake data.
 
----
+Panchang engine: refactored to abstract PanchangEngine interface + unimplementedPanchangEngine (fails closed). The ONLY blocked component.
 
-# Files Created / Modified
-
-Created ~28: apps/backend/{deno.json, functions/_shared/*, functions/{sync,revenuecat-webhook,account,panchang,notify-scheduler,ask-guru,content-ingest}/*}, packages/ai/src/{providers,config,retrieval,scope,retrieval.test}.ts, vitest.config.ts.
-Modified: package.json (vitest), .github/workflows/ci.yml, packages/ai/src/index.ts, apps/backend/functions/README.md; .claude state files.
-
----
-
-# ⚠️ BLOCKER / GAP (needs owner input)
-
-**Panchang astronomical engine is undocumented.** ADR-010 mandates a deterministic engine validated vs Drik/mPanchang, but the actual algorithm (ephemeris; tithi/nakshatra/yoga/karana; sunrise/sunset; muhurta; Rahu Kaal) is NOT specified in any MRD/PRD/PDD/TDD. Not invented (a wrong tithi breaks trust, MRD Risk §1). `panchang/engine.ts` is an explicit blocked seam; `panchang` + `notify-scheduler` (sunrise/tithi timing) are gated on it. Needs the approved algorithm/ephemeris source + reviewer-validation harness.
+Architecture work item "Canonical Panchang Engine Decision": ADR-033 (Proposed) + docs/architecture/canonical-panchang-engine/{README,MRD,PRD,PDD,TDD}.md covering ephemeris, ayanamsa, traditions, methodology, validation dataset, tolerances, provider architecture. ADR index updated (33 ADRs).
 
 ---
 
 # Validation
 
-- 7 handlers use Deno.serve; pure logic/test graph has ZERO Deno.* usage (Vitest-safe). 5 test files (sync, rc, account, panchang cacheKey, ai retrieval).
-- JSON/deno.json valid; CI api-contract → vitest, unit job runs vitest + mobile jest.
-- No live run: sandbox offline (no node_modules/vitest). Tests + TS run in CI.
+34 backend .ts files; 10 Vitest suites (+2 skipped engine tests); RLS + integration pgTAP; 13 migrations; packages/ai 10 modules. JSON/YAML valid; pure test graph Deno-free. No live run (offline sandbox) — runs in CI.
+
+---
+
+# BLOCKER (only one)
+
+⛔ Canonical Panchang Engine (ADR-033, Proposed). Astronomical algorithm undocumented; do NOT implement until ratified. Blocks SVC_panchang compute + sunrise/tithi notifications only.
 
 ---
 
 # Recommended Next Task
 
-Continue Backend Foundation: (1) resolve the panchang-engine gap with the owner; (2) add the concrete OpenAI adapters (GPT-5 mini + text-embedding-3-small) in packages/ai with OPENAI_API_KEY; (3) wire the DB upserts (sync/webhook/account) + integration tests vs a Supabase test project; (4) add ask-guru rate limits + cost circuit-breaker (§8.4).
+Design System & Component Library (packages/ui CMP_* + tokens from PDD Part 3 §6), then mobile feature slices (MOD_*). In parallel (owner-driven): ratify ADR-033 Part B to unblock the engine.

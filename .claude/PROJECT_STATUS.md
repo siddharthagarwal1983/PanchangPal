@@ -4,7 +4,7 @@
 
 Version: 1.0.0
 
-Last Updated: 2026-07-12 02:55
+Last Updated: 2026-07-12 03:40
 
 Purpose:
 This document provides a high-level snapshot of the overall project.
@@ -35,7 +35,7 @@ Overall Progress
 
 ██████████░░░░░░░░░░
 
-**70% Complete**
+**76% Complete**
 
 Project Health
 
@@ -148,12 +148,12 @@ Implementation has not yet begun.
 |--------|---------|
 | Authentication | ⏳ Pending |
 | Database | ⏳ Pending |
-| Edge Functions | 🟡 First increment |
+| Edge Functions | 🟢 Wired (panchang engine blocked) |
 | APIs | ⏳ Pending |
 | RLS Policies | ⏳ Pending |
-| AI Provider | 🟡 Adapters + gate (packages/ai) |
+| AI Provider | ✅ OpenAI adapters + RAG pipeline + rate limit/cost |
 | Analytics Adapter | ⏳ Pending |
-| Payment Adapter | 🟡 Webhook logic + tests |
+| Payment Adapter | ✅ Webhook + BillingRepository (F-4) |
 
 ---
 
@@ -240,14 +240,11 @@ Expo application
 
 # Known Blockers
 
-None
-
-If blockers exist, list:
-
-- Issue
-- Impact
-- Owner
-- Expected Resolution
+⛔ **Canonical Panchang Computation Engine** (ADR-033, Proposed)
+- Issue: the deterministic astronomical algorithm (ephemeris, ayanamsa, per-tradition conventions, sunrise/tithi/muhurta) is not specified in any MRD/PRD/PDD/TDD and must not be guessed (a wrong tithi breaks trust, MRD Risk §1).
+- Impact: SVC_panchang compute (Today/calendar/detail) and sunrise/tithi-timed notifications are blocked. Everything else in Backend Foundation is done. The whole backend depends only on the abstract PanchangEngine interface, so no rework when it lands.
+- Owner: Architecture + Product (+ pandit reviewer).
+- Expected Resolution: ratify ADR-033 Part B (ephemeris/ayanamsa/traditions/methodology/validation dataset/tolerances) → implement a concrete engine → pass golden dataset. See docs/architecture/canonical-panchang-engine/.
 
 ---
 
@@ -274,6 +271,7 @@ If blockers exist, list:
 - Database Schema & Migrations (29 tables + RLS, apps/backend/migrations/ + docs/database/)
 - Monorepo scaffold (pnpm + Turborepo; packages/api,shared,database,ui,design-tokens,ai; apps/mobile,backend)
 - Expo app shell (4-tab router, providers, Zustand stores, theme, i18n) + GitHub Actions CI/CD (ci/cd/ota, CODEOWNERS, scripts)
+- Backend Foundation: 7 SVC_* Edge Functions wired; OpenAI adapters + RAG pipeline; DB repositories + 2 pgvector/AI migrations; Ask Guru rate limit + cost circuit-breaker; 10 Vitest suites + pgTAP integration suite; ADR-033 + panchang-engine work item
 
 Do not duplicate SESSION.md.
 

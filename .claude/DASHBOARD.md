@@ -4,7 +4,7 @@
 
 Version: 1.0.0
 
-Last Updated: 2026-07-12 02:55
+Last Updated: 2026-07-12 03:40
 
 Purpose:
 This is the first file Claude should read at the beginning of every session.
@@ -42,7 +42,7 @@ PanchangPal
 
 Progress
 
-70%
+76%
 
 ---
 
@@ -58,7 +58,7 @@ CURRENT_MILESTONE.md
 
 # Current Task
 
-Backend Foundation (continued) — panchang engine, AI adapters, DB wiring
+Design System & Mobile feature slices (MOD_*)
 
 See:
 
@@ -68,7 +68,7 @@ TASK.md
 
 # Today's Objective
 
-SVC_* first increment done: _shared core; sync/revenuecat-webhook/account logic + Vitest tests; panchang/notify/ask-guru/content-ingest conformant skeletons; packages/ai adapters+config+gate. Next: unblock panchang engine, add OpenAI adapters + DB integration wiring.
+Backend Foundation independent work COMPLETE: OpenAI adapters, DB repositories/wiring, integration tests, Ask Guru rate limit + cost circuit-breaker, all SVC_* wired. Panchang engine remains the ONLY blocked component (ADR-033 Proposed). Next: design system + mobile features.
 
 Do not introduce new architecture.
 
@@ -96,10 +96,10 @@ Do not introduce new architecture.
 
 # Current Priorities
 
-1. Backend SVC_* completion (panchang engine gap, AI adapters, DB wiring)
-2. Design System / Component Library
-3. Mobile feature slices (MOD_*)
-4. Apply migrations to a live Supabase project
+1. Design System / Component Library (tokens PDD Part 3 §6)
+2. Mobile feature slices (MOD_*)
+3. ⛔ Canonical Panchang Engine decision (ADR-033) — unblocks panchang/notifications
+4. Apply migrations to a live Supabase project + integration run
 5. AI corpus ingestion + eval harness
 
 ---
@@ -112,19 +112,19 @@ main
 
 # Blockers
 
-None
+⛔ Canonical Panchang Engine (ADR-033, Proposed): astronomical algorithm undocumented — panchang compute + sunrise/tithi notifications blocked until ratified. All other backend work is unblocked and done. See docs/architecture/canonical-panchang-engine/.
 
 ---
 
 # Next Deliverable
 
-Backend SVC_* completion (engine + adapters + DB wiring)
+Design System & Component Library
 
 ---
 
 # After Current Deliverable
 
-Design System & Mobile feature slices
+Mobile feature slices (MOD_*)
 
 ---
 
