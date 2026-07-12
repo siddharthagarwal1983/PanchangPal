@@ -1,10 +1,10 @@
 {
-  "generatedAt": "2026-07-12T07:22:10.393Z",
+  "generatedAt": "2026-07-12T12:36:23.127Z",
   "repo": {
     "name": "PanchangPal",
     "branch": "main",
     "github": "https://github.com/siddharthagarwal1983/PanchangPal",
-    "head": "c8def11"
+    "head": "61b659a"
   },
   "executive": {
     "progress": 84,
@@ -64,9 +64,9 @@
       },
       {
         "phase": "Repository Foundation",
-        "status": "In Progress",
-        "icon": "🟡",
-        "progress": 95
+        "status": "Complete",
+        "icon": "✅",
+        "progress": 100
       },
       {
         "phase": "ADR Repository",
@@ -85,30 +85,6 @@
         "status": "Complete",
         "icon": "✅",
         "progress": 100
-      },
-      {
-        "phase": "Backend Development",
-        "status": "Pending",
-        "icon": "⏳",
-        "progress": 0
-      },
-      {
-        "phase": "Mobile Development",
-        "status": "Pending",
-        "icon": "⏳",
-        "progress": 0
-      },
-      {
-        "phase": "AI Platform",
-        "status": "Pending",
-        "icon": "⏳",
-        "progress": 0
-      },
-      {
-        "phase": "Testing",
-        "status": "Pending",
-        "icon": "⏳",
-        "progress": 0
       },
       {
         "phase": "Beta",
@@ -857,15 +833,15 @@
     "metrics": [
       {
         "label": "TS/TSX files",
-        "value": 168
+        "value": 180
       },
       {
         "label": "Lines of code",
-        "value": 6873
+        "value": 7650
       },
       {
         "label": "Doc files",
-        "value": 68
+        "value": 74
       },
       {
         "label": "Workspace packages",
@@ -917,15 +893,15 @@
         "metrics": [
           {
             "k": "Files",
-            "v": 70
+            "v": 79
           },
           {
             "k": "LOC",
-            "v": 2607
+            "v": 3165
           },
           {
             "k": "Test cases",
-            "v": 41
+            "v": 49
           },
           {
             "k": "Debt",
@@ -967,7 +943,7 @@
         "metrics": [
           {
             "k": "Files",
-            "v": 41
+            "v": 44
           },
           {
             "k": "Test cases",
@@ -990,7 +966,7 @@
         "metrics": [
           {
             "k": "Doc files",
-            "v": 68
+            "v": 74
           },
           {
             "k": "ADRs",
@@ -1009,11 +985,11 @@
         "metrics": [
           {
             "k": "Test files",
-            "v": 22
+            "v": 24
           },
           {
             "k": "Cases",
-            "v": 102
+            "v": 110
           },
           {
             "k": "pgTAP",
@@ -2551,31 +2527,31 @@
       },
       {
         "file": ".claude/PROJECT_STATUS.md",
-        "lastUpdated": "2026-07-12 06:00",
+        "lastUpdated": "2026-07-12 (DevOps platform audit + hardening)",
         "href": "https://github.com/siddharthagarwal1983/PanchangPal/blob/main/.claude/PROJECT_STATUS.md",
         "stale": false
       },
       {
         "file": ".claude/SESSION.md",
-        "lastUpdated": "2026-07-12 06:00",
+        "lastUpdated": "2026-07-12 (evening — DevOps platform audit + hardening)",
         "href": "https://github.com/siddharthagarwal1983/PanchangPal/blob/main/.claude/SESSION.md",
         "stale": false
       },
       {
         "file": ".claude/TASK.md",
-        "lastUpdated": "2026-07-12 06:00",
+        "lastUpdated": "2026-07-12 (evening — after DevOps hardening interlude)",
         "href": "https://github.com/siddharthagarwal1983/PanchangPal/blob/main/.claude/TASK.md",
         "stale": false
       },
       {
         "file": ".claude/PROJECT_MEMORY.md",
-        "lastUpdated": "2026-07-12",
+        "lastUpdated": "2026-07-12 (memory rev: command-center tooling noted)",
         "href": "https://github.com/siddharthagarwal1983/PanchangPal/blob/main/.claude/PROJECT_MEMORY.md",
         "stale": false
       },
       {
         "file": ".claude/IMPLEMENTATION_ROADMAP.md",
-        "lastUpdated": "2026-07-12 03:40",
+        "lastUpdated": "2026-07-12 (DevOps platform audit + hardening)",
         "href": "https://github.com/siddharthagarwal1983/PanchangPal/blob/main/.claude/IMPLEMENTATION_ROADMAP.md",
         "stale": false
       }
@@ -2586,8 +2562,8 @@
     }
   },
   "tests": {
-    "totalFiles": 22,
-    "totalCases": 102,
+    "totalFiles": 24,
+    "totalCases": 110,
     "pgtapAssertions": 21,
     "areas": {
       "apps/backend": {
@@ -2595,8 +2571,8 @@
         "cases": 25
       },
       "apps/mobile": {
-        "files": 9,
-        "cases": 41
+        "files": 11,
+        "cases": 49
       },
       "packages/ai": {
         "files": 3,
@@ -3141,36 +3117,107 @@
     }
   },
   "sessions": {
-    "currentObjective": "Continue and complete Mobile MVP Milestone 5 — Ask Guru Client (SCR_GURU_*). Architecture-first;\nclient uses the server SSE adapter only; no LLM/fabrication; live answers stay corpus/eval-gated.\n\n---",
-    "currentLastUpdated": "2026-07-12 06:00",
+    "currentObjective": "Complete audit + hardening of the deployment platform BEFORE further feature work. Goal: make\nPanchangPal reproducible, self-documenting, and deployment-ready for any developer / CI-CD system.\nConstraints honored: no product features, no architecture changes, no deploy-behavior changes, no\ninvented env vars, no real secrets.\n\n---",
+    "currentLastUpdated": "2026-07-12 (evening — DevOps platform audit + hardening)",
     "journal": {
-      "objective": "Continue and complete Mobile MVP Milestone 5 — Ask Guru Client (SCR_GURU_*). Architecture-first;\nclient uses the server SSE adapter only; no LLM/fabrication; live answers stay corpus/eval-gated.\n\n---",
+      "objective": "Complete audit + hardening of the deployment platform BEFORE further feature work. Goal: make\nPanchangPal reproducible, self-documenting, and deployment-ready for any developer / CI-CD system.\nConstraints honored: no product features, no architecture changes, no deploy-behavior changes, no\ninvented env vars, no real secrets.\n\n---",
       "workCompleted": [
-        "Started from the partial M5 (home + chat streaming + AIChatBubble/ChatInput/GuruHeader/",
-        "SourceChip/TypingIndicator + answer-state reducer + UnavailableGuruTransport). Filled the gaps:",
-        "SSE transport: generali"
+        "Phase 1–3 (audit): inventoried 3 workflows (ci/cd/ota), scripts, 8 package.json, turbo, Supabase/",
+        "Expo/Deno config, Edge Functions, and every env reference. Produced a canonical 14-variable",
+        "inventory (docs/devops/ENVIRONMENT_VARIABLES.md) + workflow audit (docs/devops/GITHUB_ACTIONS_AUDIT.md).",
+        "Phase 4 (templates): 6 `.env.*.example` (master/local/development/staging/production/ci),",
+        "placeholders only. Fixed `.gitignore` — `.env.*`/`*.env` was ignoring the templates; added negations.",
+        "Phase 5 (secrets): docs/devops/SECRETS_MATRIX.md — 18 secrets/vars classified by store + sensitivity.",
+        "Phase 6–7 (tooling): scripts/preflight.sh (fail-fast deploy validator, per-target) + scripts/",
+        "bootstrap.sh (dev-machine PASS/WARN/FAIL + %). Both syntax-checked and run.",
+        "Phase 8 (hardening, behavior-preserving): least-privilege permissions; version pins from workflow",
+        "env (fixed 8× duplication); pnpm install retries; db-tests now installs psql + pg_prove;",
+        "security-scan gets Node/pnpm+cache; preflight gate on every CD/OTA deploy job; supabase/setup-cli;",
+        "step summaries; OTA env aligned to staging/production; refreshed workflows/README. All 3 workflows"
       ],
-      "architecture": [
-        "No architecture changes. Client calls only the server SSE adapter — no OpenAI/LLM refs anywhere",
-        "(grep-verified), never fabricates, never infers an outcome (server-owned). Live answers gated",
-        "(GURU_LIVE=false). No panchang-engine changes; ADR-033 untouched. Tokens-only, locali"
-      ],
-      "validation": [
-        "New: 5 domain/data files + 1 CMP_* (ConversationRow) + 3 test suites. No hardcoded hex. GURU_LIVE",
-        "false + factory returns UnavailableGuruTransport (verified). No live run (offline sandbox) — tsc/jest in CI."
-      ],
-      "remaining": [
-        "Milestone 5 complete. Blockers:",
-        "⛔ Canonical Panchang Engine (ADR-033) — unrelated to Ask Guru.",
-        "Ask Guru live answers remain OFF (GURU_LIVE=false) pending reviewed corpus + eval readiness",
-        "(§9/§10B). Flipping GURU_LIVE is the only change to go live once ready.",
-        "Deferred: source-chip → source sheet (CMP_INFO_SHEET), helpful rating (EVT_032), conversation",
-        "thread persistence to server (client history is the offline cache).",
-        "Note: DASHBOARD.md + CURRENT_MILESTONE.md still describe the older \"Repository & Platform",
-        "Foundation\" milestone and are stale vs the Mobile MVP M1–M5 track — worth reconciling."
-      ]
+      "architecture": [],
+      "validation": [],
+      "remaining": []
     },
     "commits": [
+      {
+        "hash": "61b659a",
+        "date": "2026-07-12",
+        "subject": "chore(devops): platform audit + hardening — env/secrets/config registry, workflow hardening, setup docs",
+        "files": [
+          ".claude/IMPLEMENTATION_ROADMAP.md",
+          ".claude/PROJECT_STATUS.md",
+          ".claude/SESSION.md",
+          ".claude/TASK.md",
+          ".env.ci.example",
+          ".env.development.example",
+          ".env.example",
+          ".env.local.example",
+          ".env.production.example",
+          ".env.staging.example",
+          ".github/workflows/README.md",
+          ".github/workflows/cd.yml",
+          ".github/workflows/ci.yml",
+          ".github/workflows/ota.yml",
+          ".gitignore",
+          "DEVOPS_AUDIT_REPORT.md",
+          "docs/SETUP.md",
+          "docs/devops/CONFIGURATION_REGISTRY.md",
+          "docs/devops/DEPLOYMENT_READINESS.md",
+          "docs/devops/ENVIRONMENT_VARIABLES.md"
+        ],
+        "fileCount": 20
+      },
+      {
+        "hash": "54fac77",
+        "date": "2026-07-12",
+        "subject": "feat(you): M6 increment 1 — preferences, Settings (SCR_SETTINGS_001), Profile (SCR_PROFILE_001)",
+        "files": [
+          "apps/mobile/app/(tabs)/_layout.tsx",
+          "apps/mobile/app/(tabs)/you/household.tsx",
+          "apps/mobile/app/(tabs)/you/index.tsx",
+          "apps/mobile/app/(tabs)/you/settings.tsx",
+          ".../src/data/__tests__/profileRepository.test.ts",
+          "apps/mobile/src/data/hooks/usePreferences.ts",
+          "apps/mobile/src/data/profileRepository.ts",
+          ".../src/domain/__tests__/preferences.test.ts",
+          "apps/mobile/src/domain/profile/index.ts",
+          "apps/mobile/src/domain/profile/preferences.ts",
+          "apps/mobile/src/domain/profile/types.ts",
+          "apps/mobile/src/i18n/en-US.ts",
+          "apps/mobile/src/store/offlineQueue.ts",
+          "packages/ui/src/components/SegmentedControl.tsx",
+          "packages/ui/src/components/SettingsRow.tsx",
+          "packages/ui/src/components/Toggle.tsx",
+          "packages/ui/src/index.ts"
+        ],
+        "fileCount": 17
+      },
+      {
+        "hash": "c0344ba",
+        "date": "2026-07-12",
+        "subject": "docs(state): end-session update — Command Center upgrade",
+        "files": [
+          ".claude/PROJECT_MEMORY.md",
+          ".claude/SESSION.md"
+        ],
+        "fileCount": 2
+      },
+      {
+        "hash": "30c3bab",
+        "date": "2026-07-12",
+        "subject": "tools(command-center): world-class engineering command center",
+        "files": [
+          "scripts/command-center/README.md",
+          "scripts/command-center/app.js",
+          "scripts/command-center/command-center.json",
+          "scripts/command-center/generate.mjs",
+          "scripts/command-center/index.html",
+          "scripts/command-center/serve.mjs",
+          "scripts/command-center/styles.css"
+        ],
+        "fileCount": 7
+      },
       {
         "hash": "c8def11",
         "date": "2026-07-12",

@@ -2,9 +2,9 @@
 
 # PanchangPal Dashboard
 
-Version: 1.1.0
+Version: 1.2.0
 
-Last Updated: 2026-07-12 06:15
+Last Updated: 2026-07-13
 
 Purpose:
 This is the first file Claude should read at the beginning of every session.
@@ -41,7 +41,7 @@ PanchangPal
 
 Progress
 
-84%
+88%
 
 Prior phases ✅ complete: Documentation → Repository & Platform Foundation → Backend Foundation.
 
@@ -59,8 +59,8 @@ CURRENT_MILESTONE.md
 
 # Current Task
 
-Milestone 5 — Ask Guru Client ✅ COMPLETE (awaiting review).
-Next recommended: Milestone 6 — Profile / Household (MOD_you).
+Milestone 6 — Profile / Household (MOD_you) ✅ COMPLETE (all 3 increments; awaiting review).
+Next recommended: Milestone 7 — Notifications.
 
 See:
 
@@ -70,9 +70,10 @@ TASK.md
 
 # Today's Objective
 
-Mobile MVP feature slices are progressing: M1 App Shell, M2 Today, M3 Guided Ritual, M4 Calendar
-Shell, and M5 Ask Guru Client are complete. Panchang compute + Ask Guru live answers remain gated
-(ADR-033 / corpus+eval). Next: Profile/Household, then Notifications and Subscription.
+Mobile MVP feature slices M1–M6 are complete: App Shell, Today, Guided Ritual, Calendar Shell,
+Ask Guru Client, and Profile/Household (Preferences+Settings+Profile, Household, Account deletion).
+Panchang compute + Ask Guru live answers remain gated (ADR-033 / corpus+eval). Next: Notifications,
+then Subscription.
 
 Do not introduce new architecture.
 
@@ -89,9 +90,10 @@ Do not introduce new architecture.
 | TDD | ✅ |
 | AI Knowledge Base | ✅ |
 | Repository & Platform Foundation | ✅ |
-| Backend Foundation (SVC_*) | ✅ (panchang engine blocked) |
+| Backend Foundation (SVC_*) | ✅ (panchang engine blocked; SVC_household pending) |
 | Mobile — App Shell / Today / Ritual / Calendar / Ask Guru | ✅ M1–M5 |
-| Mobile — Profile / Notifications / Subscription | ⏳ M6–M8 |
+| Mobile — Profile / Household (Preferences, Household, Account deletion) | ✅ M6 |
+| Mobile — Notifications / Subscription | ⏳ M7–M8 |
 | AI Platform | 🟡 adapters done; corpus + eval pending |
 | Testing | 🟡 unit/component/domain in place; E2E pending |
 | Beta | ⏳ |
@@ -101,11 +103,12 @@ Do not introduce new architecture.
 
 # Current Priorities
 
-1. Mobile feature slices — Profile/Household (M6), Notifications (M7), Subscription (M8)
+1. Mobile feature slices — Notifications (M7), Subscription (M8)
 2. ⛔ Canonical Panchang Engine decision (ADR-033) — unblocks Today panchang, Calendar markers, notifications
 3. AI corpus ingestion + eval readiness — unblocks live Ask Guru (GURU_LIVE)
-4. Apply migrations to a live Supabase project + integration run
-5. E2E (Maestro FLOW_*) + first live CI run
+4. Backend SVC_household Edge Function (member/invite endpoints; client contract already coded)
+5. Apply migrations to a live Supabase project + integration run
+6. E2E (Maestro FLOW_*) + first live CI run
 
 ---
 
@@ -124,17 +127,20 @@ is ratified. Everything else is unblocked. See docs/architecture/canonical-panch
 🔒 Ask Guru live answers are gated OFF (GURU_LIVE=false) until reviewed corpus + eval readiness
 (TDD Part 3 §9/§10B). The client is complete; flipping the flag goes live.
 
+ℹ️ Backend SVC_household Edge Function not yet implemented — M6 Household member/invite calls are
+the client's OpenAPI contract (pending backend deliverable). Transfer/delete use SVC_account (exists).
+
 ---
 
 # Next Deliverable
 
-Milestone 6 — Profile / Household (MOD_you)
+Milestone 7 — Notifications (opt-in priming, per-channel prefs, token registration, deep-link routing)
 
 ---
 
 # After Current Deliverable
 
-Milestone 7 — Notifications, then Milestone 8 — Subscription
+Milestone 8 — Subscription
 
 ---
 
@@ -171,7 +177,7 @@ Only retrieve additional documentation if required.
 
 Documentation and architecture are frozen. The repository, platform foundation, and backend
 SVC_* are complete. The mobile app is being built as sequenced feature slices — App Shell, Today,
-Guided Ritual, Calendar Shell, and Ask Guru are done (M1–M5). The only architectural blocker is
-the Canonical Panchang Engine decision (ADR-033); Ask Guru live answers are intentionally gated
-until corpus/eval readiness. Current focus: the remaining mobile slices (Profile/Household,
-Notifications, Subscription).
+Guided Ritual, Calendar Shell, Ask Guru, and Profile/Household are done (M1–M6). The only
+architectural blocker is the Canonical Panchang Engine decision (ADR-033); Ask Guru live answers
+are intentionally gated until corpus/eval readiness. Current focus: the remaining mobile slices
+(Notifications, Subscription).

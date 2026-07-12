@@ -2,15 +2,15 @@
 
 # PanchangPal — Project Memory
 
-Version: 1.1.0
+Version: 1.2.0
 
-Last Updated: 2026-07-12 (memory rev: command-center tooling noted)
+Last Updated: 2026-07-13 (M6 Profile/Household complete)
 
 Current Phase:
 Mobile MVP — Phase 1 (Feature Slices)
 
 Status:
-Foundation + Backend complete; mobile feature slices in progress (M1–M5 done)
+Foundation + Backend complete; mobile feature slices in progress (M1–M6 done)
 
 Purpose:
 This file is the permanent memory of the PanchangPal project.
@@ -106,7 +106,7 @@ Completed
 
 ✓ AI Knowledge Base
 
-Implementation is underway: Repository & Platform Foundation and Backend Foundation (SVC_* Edge Functions) are complete; the mobile app is being built as feature slices (App Shell, Today, Guided Ritual, Calendar Shell, Ask Guru done). Live progress lives in DASHBOARD.md / CURRENT_MILESTONE.md / SESSION.md — not here.
+Implementation is underway: Repository & Platform Foundation and Backend Foundation (SVC_* Edge Functions) are complete; the mobile app is being built as feature slices (App Shell, Today, Guided Ritual, Calendar Shell, Ask Guru, Profile/Household done). Live progress lives in DASHBOARD.md / CURRENT_MILESTONE.md / SESSION.md — not here.
 
 ---
 
@@ -335,9 +335,9 @@ milestone.
 Completed:
 1. Repository scaffolding · ADR repository · OpenAPI spec · Database schema + migrations
 2. Backend Foundation — all SVC_* Edge Functions, provider adapters, DB repositories
-3. Mobile slices: M1 App Shell · M2 Today · M3 Guided Ritual · M4 Calendar Shell · M5 Ask Guru
+3. Mobile slices: M1 App Shell · M2 Today · M3 Guided Ritual · M4 Calendar Shell · M5 Ask Guru · M6 Profile/Household
 
-Remaining mobile slices: M6 Profile/Household · M7 Notifications · M8 Subscription.
+Remaining mobile slices: M7 Notifications · M8 Subscription.
 Then: Beta Readiness & Platform Hardening (TDD Part 5).
 
 ---
@@ -345,11 +345,11 @@ Then: Beta Readiness & Platform Hardening (TDD Part 5).
 # Major Pending Deliverables
 
 Done: ADR repository, OpenAPI spec, database schema + migrations, GitHub Actions CI/CD, shared
-packages, Expo project, backend SVC_* services, and mobile slices M1–M5.
+packages, Expo project, backend SVC_* services, and mobile slices M1–M6.
 
 Remaining:
 
-- Mobile — Profile/Household (M6), Notifications (M7), Subscription (M8)
+- Mobile — Notifications (M7), Subscription (M8)
 - AI platform — reviewed content corpus + evaluation harness (unblocks live Ask Guru)
 - Testing — E2E (Maestro FLOW_*), first live CI run
 - Deployment — live Supabase project, TestFlight / Play Internal, production release
@@ -371,6 +371,10 @@ Stable, cross-cutting facts (permanent until an approved decision changes them):
 - **AudioAdapter** — ritual narration is behind a port with a NullAudioAdapter fallback; the
   text-guided flow is fully functional until a production audio adapter is approved.
 - **MockPanchangProvider** is DEV/TEST ONLY and must never be imported by production code.
+- **SVC_household (backend) pending** — M6 Household member/invite calls are coded on the client
+  to the OpenAPI contract; the SVC_household Edge Function is a pending backend deliverable.
+  Household ownership transfer + account deletion use SVC_account (implemented). Client Edge
+  Function calls follow OpenAPI operation paths (e.g. `account/merge`, `household/member`).
 
 # Repository Rules
 

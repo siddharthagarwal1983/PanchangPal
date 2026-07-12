@@ -119,6 +119,14 @@ export default function SettingsScreen() {
               onPress={() => void signOut()}
               testID="settings-signout"
             />
+            <SettingsRow
+              title={t('settings.deleteAccount')}
+              description={t('settings.deleteAccountHint')}
+              danger
+              value="→"
+              onPress={() => router.push('/(tabs)/you/delete-account')}
+              testID="settings-delete-account"
+            />
           </Section>
         ) : null}
       </View>

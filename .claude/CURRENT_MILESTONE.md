@@ -2,9 +2,9 @@
 
 # PanchangPal — Current Milestone
 
-Version: 2.0.0
+Version: 2.1.0
 
-Last Updated: 2026-07-12 06:15
+Last Updated: 2026-07-13
 
 Purpose:
 This document defines the current milestone. Unlike SESSION.md (daily work) or TASK.md (current
@@ -23,7 +23,7 @@ Status
 
 Overall Progress
 
-~65% (5 of 8 planned slices complete)
+~75% (6 of 8 slices complete)
 
 Previous Milestones
 
@@ -56,7 +56,7 @@ the previous is reviewed.
 | M3 | Guided Ritual Player | SCR_RITUAL_001 | ✅ Complete |
 | M4 | Calendar Shell | SCR_CALENDAR_001 | ✅ Complete |
 | M5 | Ask Guru Client | SCR_GURU_HOME/CHAT/HISTORY_001 | ✅ Complete |
-| M6 | Profile / Household | SCR_PROFILE_001, SCR_HOUSEHOLD_*, SCR_SETTINGS_001 | ⏳ Next |
+| M6 | Profile / Household | SCR_PROFILE_001, SCR_HOUSEHOLD_*, SCR_SETTINGS_001, SCR_DELETE_ACCOUNT_001 | ✅ Complete |
 | M7 | Notifications | opt-in, prefs, deep-link routing | ⏳ Pending |
 | M8 | Subscription | SCR_SUBSCRIPTION_001 (RevenueCat) | ⏳ Pending |
 
@@ -64,7 +64,7 @@ the previous is reviewed.
 
 # Milestone Deliverables
 
-## Completed slices (M1–M5)
+## Completed slices (M1–M6)
 
 - [x] M1 Application Shell — design tokens (PDD §6), shell CMP_*, anon-first + OAuth/OTP auth,
       splash/onboarding/4-tab navigation, guards, deep links, error boundaries, i18n.
@@ -77,9 +77,9 @@ the previous is reviewed.
 - [x] M5 Ask Guru Client — home + streamed conversation + cached history; readiness-gated SSE
       transport (GURU_LIVE=false → honest decline until corpus/eval); no LLM/fabrication on device.
 
-## Remaining slices (M6–M8)
+## Remaining slices (M7–M8)
 
-- [ ] M6 Profile / Household — profile, household members/invites, settings, account deletion.
+- [x] M6 Profile / Household — preferences/settings, profile, household members/roles/invites/realtime, account deletion (F-3 grace window).
 - [ ] M7 Notifications — opt-in priming, per-channel prefs, token registration, deep-link routing.
 - [ ] M8 Subscription — plans, purchase/restore via RevenueCat, entitlement gating (daily loop never gated).
 
@@ -142,5 +142,5 @@ inclusive launch.
 # Milestone Summary
 
 > **Current focus: build the mobile app as sequenced, production-quality feature slices — App
-> Shell, Today, Ritual, Calendar, Ask Guru done (M1–M5); Profile/Household, Notifications, and
-> Subscription remain.**
+> Shell, Today, Ritual, Calendar, Ask Guru (M1–M5) and Profile/Household (M6) done; Notifications
+> and Subscription remain.**

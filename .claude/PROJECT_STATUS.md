@@ -2,9 +2,9 @@
 
 # PanchangPal — Project Status Dashboard
 
-Version: 1.1.2
+Version: 1.1.3
 
-Last Updated: 2026-07-12 (DevOps platform audit + hardening)
+Last Updated: 2026-07-13 (M6 Profile/Household complete)
 
 Purpose:
 This document provides a high-level snapshot of the overall project.
@@ -33,9 +33,9 @@ Current Phase
 
 Overall Progress
 
-████████████████░░░░
+██████████████████░░
 
-**84% Complete**
+**88% Complete**
 
 Project Health
 
@@ -67,7 +67,7 @@ TBD
 | API Specification | ✅ Complete | 100% |
 | Database Design | ✅ Complete | 100% |
 | Backend Foundation (SVC_*) | ✅ Complete | 100% (panchang compute blocked by ADR-033) |
-| Mobile Development (feature slices) | 🚧 In Progress | ~68% (M1–M5 done; M6 increment 1 done) |
+| Mobile Development (feature slices) | 🚧 In Progress | ~75% (M1–M6 done; M7–M8 remain) |
 | AI Platform | 🟡 In Progress | Adapters + RAG pipeline done; corpus + eval pending |
 | Testing | 🟡 In Progress | Unit/component/domain in place; E2E pending |
 | Beta | ⏳ Pending | 0% |
@@ -86,12 +86,12 @@ Build the mobile application as a sequence of vertical, production-quality featu
 
 Current Focus
 
-- M6 Profile / Household — 🚧 in progress (increment 1 done: Preferences/Settings/Profile;
-  next: Household members/invites/realtime, then account deletion)
-- M7 Notifications (pending)
+- M6 Profile / Household — ✅ complete (Increment 1 Preferences/Settings/Profile; Increment 2
+  Household members/roles/invites/realtime; Increment 3 Account deletion). Awaiting review.
+- M7 Notifications (next)
 - M8 Subscription (pending)
 
-Completed slices: M1 App Shell · M2 Today · M3 Guided Ritual · M4 Calendar Shell · M5 Ask Guru Client.
+Completed slices: M1 App Shell · M2 Today · M3 Guided Ritual · M4 Calendar Shell · M5 Ask Guru · M6 Profile/Household.
 
 See:
 
@@ -165,7 +165,7 @@ Implementation is underway (Mobile MVP Phase 1; M1–M5 complete).
 | Expo Setup | ✅ App shell |
 | Navigation | ✅ Shell (splash/auth/4-tab/guards/deep links) |
 | Design System | ✅ Tokens + shell/feature components (extends per slice) |
-| Components | 🟢 CMP_* for M1–M5 + settings atoms (Segmented/Toggle/SettingsRow); Notifications/Subscription pending |
+| Components | 🟢 CMP_* for M1–M6 (+ Member/RolePicker/Share/Invite/Consequences/DestructiveAction); Notifications/Subscription pending |
 | Authentication Flow | ✅ Anon-first + OAuth/OTP (shell) |
 | Today (MOD_today) | ✅ SCR_HOME_001 (panchang unavailable per ADR-033) |
 | Ritual Experience | ✅ Guided player (session engine, offline restore, text-first audio seam) |
@@ -173,7 +173,8 @@ Implementation is underway (Mobile MVP Phase 1; M1–M5 complete).
 | Ask Guru | 🟢 Client complete (live answers gated, GURU_LIVE=false) |
 | Settings / Preferences | ✅ SCR_SETTINGS_001 (server-authoritative prefs; optimistic + offline) |
 | Profile | ✅ SCR_PROFILE_001 (account state, deferred-auth prompt, entries) |
-| Household | 🟡 Shell (SCR_HOUSEHOLD_001; members/invites/realtime next) |
+| Household | ✅ SCR_HOUSEHOLD_001 + SCR_HOUSEHOLD_INVITE_001 (members/roles/depth, invites, realtime) |
+| Account deletion | ✅ SCR_DELETE_ACCOUNT_001 (F-3 transfer gate + grace window) |
 | Notifications | ⏳ Pending (M7) |
 | Subscription | ⏳ Pending (M8) |
 
@@ -222,15 +223,15 @@ Implementation is underway (Mobile MVP Phase 1; M1–M5 complete).
 
 Priority 1
 
-Mobile Milestone 6 — Profile / Household (MOD_you)
+Mobile Milestone 7 — Notifications
 
 Priority 2
 
-Mobile Milestone 7 — Notifications
+Mobile Milestone 8 — Subscription
 
 Priority 3
 
-Mobile Milestone 8 — Subscription
+Backend SVC_household Edge Function (member/invite endpoints; client contract coded in M6)
 
 Priority 4
 
@@ -303,7 +304,15 @@ Apply migrations to a live Supabase project + integration run
   STORE_prefs mirror, offline queue); SCR_SETTINGS_001 (appearance/tradition/depth/sign-out) and
   SCR_PROFILE_001 (account state, deferred-auth prompt, Settings/Household entries); new settings
   CMP_* (Segmented/Toggle/SettingsRow); Household shell (no dead end); mapping + repository tests.
-  Household members/invites/realtime and account deletion remain (later M6 increments).
+  (Increments 2 and 3 below complete the slice.)
+- Mobile Milestone 6 — Increment 2 (Household): household/member domain (pure, safe fallbacks);
+  householdRepository (RLS read + SVC_household writes via OpenAPI paths + Realtime member seam);
+  HOOK_useHousehold/useInvite (optimistic, auth-gated, idempotent); CMP_MEMBER_ROW/ROLE_PICKER/
+  SHARE_BUTTON/INVITE_*; SCR_HOUSEHOLD_001 recomposed + SCR_HOUSEHOLD_INVITE_001; domain/repo tests.
+- Mobile Milestone 6 — Increment 3 (Account deletion): account domain (F-3 gate mirroring
+  SVC_account); accountRepository (reauth/delete/transfer); useAccountDeletion (reauth→request→anon);
+  CMP_CONSEQUENCES_PANEL/DESTRUCTIVE_ACTION; SCR_DELETE_ACCOUNT_001 + Settings entry; tests. Deletion
+  is a reversible grace-window request; server stays authoritative.
 - DevOps Platform Audit & Hardening (interlude, 2026-07-12): canonical env inventory (14 vars),
   secrets matrix, 6 .env.*.example templates, scripts/preflight.sh + bootstrap.sh, behavior-
   preserving workflow hardening (ci/cd/ota), docs/SETUP.md + docs/devops/*, DEVOPS_AUDIT_REPORT.md;
@@ -419,8 +428,8 @@ The PanchangPal project has completed the product definition and architecture ph
 repository and platform foundation, and the backend SVC_* services.
 
 The current focus is the Mobile MVP Phase 1 feature-slice milestone: App Shell, Today, Guided
-Ritual, Calendar Shell, and Ask Guru Client (M1–M5) are complete; Profile/Household,
-Notifications, and Subscription (M6–M8) remain. The only architectural blocker is the Canonical
+Ritual, Calendar Shell, and Ask Guru Client (M1–M5) plus
+Profile/Household (M6) are complete; Notifications and Subscription (M7–M8) remain. The only architectural blocker is the Canonical
 Panchang Engine decision (ADR-033); Ask Guru live answers are intentionally gated until
 corpus/eval readiness.
 

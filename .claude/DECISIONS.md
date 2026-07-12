@@ -421,3 +421,22 @@ Do not turn this file into a session log.
 # One-Line Reminder
 
 > Build software that users can trust, engineers can maintain, and AI can understand.
+
+---
+
+# Mobile Client Conventions (M6, 2026-07-13)
+
+## Edge Function invocation
+The mobile data layer calls Supabase Edge Functions via `functions.invoke` using the **OpenAPI
+operation paths** (e.g. `account/merge`, `household/member`, `invite/accept`), matching authRepository
+and the panchang repositories. Not a per-function body-`action` dispatch.
+
+## Household mutations are online-only
+Household member/invite mutations require a server round-trip (tokens, one-active-household F-2) and
+are **not** placed on the offline queue. The daily loop is never gated (P4); household errors surface
+calm, retryable states. Preferences remain the optimistic + offline-queued path.
+
+## Account deletion (F-3)
+Deletion is a **reversible grace-window request** (returns `execute_after`), not an immediate wipe.
+The client mirrors the F-3 ownership-transfer gate for early UX, but the server re-checks and stays
+authoritative. Destructive confirms use a native focus-trapped Alert until CMP_DIALOG exists.
