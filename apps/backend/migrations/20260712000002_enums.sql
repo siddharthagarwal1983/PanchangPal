@@ -6,20 +6,180 @@
 -- packages/shared (TDD Part 2 §2.2/§2.3) and stored as text to avoid DB/app drift.
 -- =============================================================================
 
-create type member_role      as enum ('anchor', 'parent', 'elder', 'youth', 'other');            -- PDD A3
-create type content_depth    as enum ('quick', 'deep');                                           -- PDD A3
-create type tradition_code   as enum ('generic', 'north_indian', 'south_indian_tamil', 'bengali'); -- F-9 (extensible via ALTER TYPE)
-create type date_basis       as enum ('tithi', 'gregorian');                                      -- PERSONAL_DATE (C2)
-create type reminder_lead    as enum ('same_day', 'one_day', 'custom');
-create type message_role     as enum ('user', 'assistant');
-create type message_outcome  as enum ('grounded', 'declined', 'refused', 'error');                -- EVT_030/033/034/054
-create type notif_type       as enum ('morning', 'festival', 'evening', 'streak', 'household', 'personal', 'household_invite', 'subscription', 'winback');
-create type notif_channel    as enum ('daily', 'festival', 'personal', 'household', 'growth', 'lifecycle'); -- PDD §8.0
-create type entitlement_kind as enum ('individual', 'family');                                    -- SCR_SUBSCRIPTION_001
-create type sub_status       as enum ('active', 'in_grace', 'expired', 'cancelled', 'paused');
-create type appearance_mode  as enum ('system', 'light', 'dark');
-create type job_type         as enum ('notify_schedule', 'winback_segment', 'content_ingest', 'analytics_rollup', 'entitlement_reconcile');
-create type job_status       as enum ('pending', 'running', 'done', 'failed');
+DO $$
+BEGIN
+  BEGIN
+    CREATE TYPE member_role AS ENUM (
+      'anchor',
+      'parent',
+      'elder',
+      'youth',
+      'other'
+    );
+  EXCEPTION
+    WHEN duplicate_object THEN
+      RAISE NOTICE 'Type member_role already exists, skipping.';
+  END;
 
--- error_code / event_id: text columns generated from packages/shared enums (PDD §3.0A.3).
---   error_code mirrors PDD §3.0.2 (ERR_*); event_id mirrors PDD §3.0.1 (EVT_*).
+  BEGIN
+    CREATE TYPE content_depth AS ENUM (
+      'quick',
+      'deep'
+    );
+  EXCEPTION
+    WHEN duplicate_object THEN
+      RAISE NOTICE 'Type content_depth already exists, skipping.';
+  END;
+
+  BEGIN
+    CREATE TYPE tradition_code AS ENUM (
+      'generic',
+      'north_indian',
+      'south_indian_tamil',
+      'bengali'
+    );
+  EXCEPTION
+    WHEN duplicate_object THEN
+      RAISE NOTICE 'Type tradition_code already exists, skipping.';
+  END;
+
+  BEGIN
+    CREATE TYPE date_basis AS ENUM (
+      'tithi',
+      'gregorian'
+    );
+  EXCEPTION
+    WHEN duplicate_object THEN
+      RAISE NOTICE 'Type date_basis already exists, skipping.';
+  END;
+
+  BEGIN
+    CREATE TYPE reminder_lead AS ENUM (
+      'same_day',
+      'one_day',
+      'custom'
+    );
+  EXCEPTION
+    WHEN duplicate_object THEN
+      RAISE NOTICE 'Type reminder_lead already exists, skipping.';
+  END;
+
+  BEGIN
+    CREATE TYPE message_role AS ENUM (
+      'user',
+      'assistant'
+    );
+  EXCEPTION
+    WHEN duplicate_object THEN
+      RAISE NOTICE 'Type message_role already exists, skipping.';
+  END;
+
+  BEGIN
+    CREATE TYPE message_outcome AS ENUM (
+      'grounded',
+      'declined',
+      'refused',
+      'error'
+    );
+  EXCEPTION
+    WHEN duplicate_object THEN
+      RAISE NOTICE 'Type message_outcome already exists, skipping.';
+  END;
+
+  BEGIN
+    CREATE TYPE notif_type AS ENUM (
+      'morning',
+      'festival',
+      'evening',
+      'streak',
+      'household',
+      'personal',
+      'household_invite',
+      'subscription',
+      'winback'
+    );
+  EXCEPTION
+    WHEN duplicate_object THEN
+      RAISE NOTICE 'Type notif_type already exists, skipping.';
+  END;
+
+  BEGIN
+    CREATE TYPE notif_channel AS ENUM (
+      'daily',
+      'festival',
+      'personal',
+      'household',
+      'growth',
+      'lifecycle'
+    );
+  EXCEPTION
+    WHEN duplicate_object THEN
+      RAISE NOTICE 'Type notif_channel already exists, skipping.';
+  END;
+
+  BEGIN
+    CREATE TYPE entitlement_kind AS ENUM (
+      'individual',
+      'family'
+    );
+  EXCEPTION
+    WHEN duplicate_object THEN
+      RAISE NOTICE 'Type entitlement_kind already exists, skipping.';
+  END;
+
+  BEGIN
+    CREATE TYPE sub_status AS ENUM (
+      'active',
+      'in_grace',
+      'expired',
+      'cancelled',
+      'paused'
+    );
+  EXCEPTION
+    WHEN duplicate_object THEN
+      RAISE NOTICE 'Type sub_status already exists, skipping.';
+  END;
+
+  BEGIN
+    CREATE TYPE appearance_mode AS ENUM (
+      'system',
+      'light',
+      'dark'
+    );
+  EXCEPTION
+    WHEN duplicate_object THEN
+      RAISE NOTICE 'Type appearance_mode already exists, skipping.';
+  END;
+
+  BEGIN
+    CREATE TYPE job_type AS ENUM (
+      'notify_schedule',
+      'winback_segment',
+      'content_ingest',
+      'analytics_rollup',
+      'entitlement_reconcile'
+    );
+  EXCEPTION
+    WHEN duplicate_object THEN
+      RAISE NOTICE 'Type job_type already exists, skipping.';
+  END;
+
+  BEGIN
+    CREATE TYPE job_status AS ENUM (
+      'pending',
+      'running',
+      'done',
+      'failed'
+    );
+  EXCEPTION
+    WHEN duplicate_object THEN
+      RAISE NOTICE 'Type job_status already exists, skipping.';
+  END;
+END;
+$$ LANGUAGE plpgsql;
+
+-- =============================================================================
+-- error_code / event_id
+-- These are intentionally stored as TEXT and generated from packages/shared
+-- to avoid database/application drift (TDD Part 2 §2.2/§2.3).
+-- =============================================================================
