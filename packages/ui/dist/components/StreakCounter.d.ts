@@ -6,5 +6,5 @@ export interface StreakCounterProps {
     onPress?: () => void;
     testID?: string;
 }
-export declare function StreakCounter({ days, graceUsed, label, graceCopy, onPress, testID }: StreakCounterProps): import("react/jsx-runtime").JSX.Element;
+export declare function StreakCounter({ days: _days, graceUsed, label, graceCopy, onPress, testID }: StreakCounterProps): import("react/jsx-runtime").JSX.Element;
 //# sourceMappingURL=StreakCounter.d.ts.map

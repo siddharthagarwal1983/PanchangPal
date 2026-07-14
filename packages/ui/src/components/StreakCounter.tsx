@@ -16,7 +16,7 @@ export interface StreakCounterProps {
   testID?: string;
 }
 
-export function StreakCounter({ _days, graceUsed = false, label, graceCopy, onPress, testID }: StreakCounterProps) {
+export function StreakCounter({ days: _days, graceUsed = false, label, graceCopy, onPress, testID }: StreakCounterProps) {
   const { theme } = useTheme();
   return (
     <View

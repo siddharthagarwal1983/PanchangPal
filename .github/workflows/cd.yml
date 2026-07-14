@@ -37,6 +37,10 @@ jobs:
         run: |
           sudo apt-get update
           sudo apt-get install -y --no-install-recommends postgresql-client
+      - uses: actions/setup-node@v4
+        with:
+          node-version: 22
+          cache: pnpm
       - name: Preflight (fail fast on missing config)
         run: bash scripts/preflight.sh staging
         env:
@@ -53,6 +57,16 @@ jobs:
         if: always()
         run: |
           echo "### Staging migrations: ${{ job.status }}" >> "$GITHUB_STEP_SUMMARY"
+      - uses: pnpm/action-setup@v4
+        with:
+          version: 10
+
+      - uses: actions/setup-node@v4
+        with:
+          node-version: 22
+          cache: pnpm
+
+      - run: pnpm install --frozen-lockfile
 
   deploy-functions:
     name: Deploy Edge Functions (SVC_*) → staging
@@ -63,7 +77,7 @@ jobs:
       - uses: actions/checkout@v4
       - name: Set up Supabase CLI
         uses: supabase/setup-cli@v1
-        with: { version: latest }
+        with: { version: 2.33.9 }
       - name: Preflight (fail fast on missing config)
         run: bash scripts/preflight.sh staging
         env:
@@ -72,7 +86,8 @@ jobs:
           SUPABASE_ACCESS_TOKEN: ${{ secrets.SUPABASE_ACCESS_TOKEN }}
           EXPO_ACCESS_TOKEN: ${{ secrets.EXPO_ACCESS_TOKEN }}
       - name: Deploy functions
-        run: echo "supabase functions deploy --project-ref $SUPABASE_STAGING_REF (apps/backend/functions)"
+        run: |
+         supabase functions deploy --project-ref "$SUPABASE_STAGING_REF (apps/backend/functions)"
         env:
           SUPABASE_STAGING_REF: ${{ secrets.SUPABASE_STAGING_REF }}
           SUPABASE_ACCESS_TOKEN: ${{ secrets.SUPABASE_ACCESS_TOKEN }}
@@ -85,7 +100,7 @@ jobs:
       - uses: actions/checkout@v4
       # FLOW_* journeys: onboarding (A1), morning ritual (B1), Ask Guru (D1),
       # household invite (D2), offline loop + sync (E5), payment (F1). tests/flows/.
-      - run: echo "maestro test tests/flows (wired with the E2E task)"
+      - run: maestro test tests/flows (wired with the E2E task)
 
   eas-build:
     name: EAS build → internal distribution
@@ -102,7 +117,11 @@ jobs:
           SUPABASE_ACCESS_TOKEN: ${{ secrets.SUPABASE_ACCESS_TOKEN }}
           EXPO_ACCESS_TOKEN: ${{ secrets.EXPO_ACCESS_TOKEN }}
       - name: EAS build + submit (staging profile)
-        run: echo "eas build --profile staging && eas submit (TestFlight / Play Internal)"
+        run: |
+         eas build \ 
+           --platform all \
+           --profile staging \
+           --non-interactive
         env:
           EXPO_ACCESS_TOKEN: ${{ secrets.EXPO_ACCESS_TOKEN }}
 

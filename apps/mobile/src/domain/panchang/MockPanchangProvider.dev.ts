@@ -6,45 +6,24 @@
 
 import type {
   PanchangProvider,
-  PanchangQuery,
+  TodayQuery,
   PanchangResult,
 } from './PanchangProvider';
 
 export class MockPanchangProvider implements PanchangProvider {
-  async getToday(_q: PanchangQuery): Promise<PanchangResult> {
+  async getToday(_q: TodayQuery): Promise<PanchangResult> {
     return {
-      date: '2026-01-14',
-      sunrise: '06:52',
-      sunset: '17:58',
-
-      tithi: {
-        name: 'Shukla Paksha Pratipada',
+      status: 'ok',
+      summary: {
+        dateLabel: '14 January 2026',
+        city: 'Bengaluru',
+        tithi: 'Shukla Paksha Pratipada',
+        nakshatra: 'Ashwini',
+        festivalHint: 'Makar Sankranti',
       },
-
-      nakshatra: {
-        name: 'Ashwini',
-      },
-
-      yoga: {
-        name: 'Shubha',
-      },
-
-      karana: {
-        name: 'Bava',
-      },
-
-      rahuKaal: {
-        start: '13:30',
-        end: '15:00',
-      },
-
-      festivals: [],
-
-      muhurta: [],
-
-      metadata: {
-        source: 'mock',
-        cached: false,
+      festival: {
+        name: 'Makar Sankranti',
+        significance: 'Festival of harvest and the Sun’s northward journey.',
       },
     };
   }

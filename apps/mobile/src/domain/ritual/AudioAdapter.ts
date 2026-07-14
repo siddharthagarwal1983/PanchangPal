@@ -1,36 +1,39 @@
 /**
- * Audio adapter abstraction (TDD Part 4 §8).
- * Keeps the ritual domain independent of Expo AV / native audio APIs.
- * A concrete implementation will be provided by the data layer.
+ * Audio abstraction for ritual playback.
+ * Keeps the RitualEngine independent of Expo AV or any concrete player.
  */
 
 export interface AudioAdapter {
-  /**
-   * Play an audio resource identified by its key.
-   */
-  play(_audioKey: string): Promise<void>;
-
-  /**
-   * Stop any currently playing audio.
-   */
+  play(audioKey: string): Promise<void>;
+  pause(): Promise<void>;
+  resume(): Promise<void>;
   stop(): Promise<void>;
 
   /**
-   * Returns whether an audio resource is available locally.
+   * Returns true if the requested audio asset is available for playback.
    */
-  isAvailable(_audioKey: string): Promise<boolean>;
+  isAvailable(audioKey: string): Promise<boolean>;
 }
 
 /**
- * Default no-op implementation used during development and tests.
+ * Default no-op implementation used until a real audio backend
+ * (Expo AV / react-native-track-player) is wired in.
  */
-export class NoopAudioAdapter implements AudioAdapter {
+export class NullAudioAdapter implements AudioAdapter {
   async play(_audioKey: string): Promise<void> {
-    // Intentionally empty.
+    // no-op
+  }
+
+  async pause(): Promise<void> {
+    // no-op
+  }
+
+  async resume(): Promise<void> {
+    // no-op
   }
 
   async stop(): Promise<void> {
-    // Intentionally empty.
+    // no-op
   }
 
   async isAvailable(_audioKey: string): Promise<boolean> {
