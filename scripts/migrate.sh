@@ -11,7 +11,6 @@ MIGRATIONS_DIR="$(cd "$(dirname "$0")/.." && pwd)/apps/backend/migrations"
 
 echo "Applying migrations from ${MIGRATIONS_DIR} → ${DB_URL%%\?*}"
 for f in "${MIGRATIONS_DIR}"/*.sql; do
-  echo "  → $(basename "$f")"
   psql "${DB_URL}" -v ON_ERROR_STOP=1 -f "$f"
 done
 echo "Migrations applied."
