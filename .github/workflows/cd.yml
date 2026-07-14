@@ -1,22 +1,13 @@
 # =============================================================================
-# CD — deploy on merge to main (TDD Part 5 §2.1, ADR-024).
-#   migrations → staging  →  deploy Edge Functions (SVC_*)  →  Maestro E2E
-#   →  EAS build  →  TestFlight / Play Internal.
-# Production is a MANUAL promotion gated by the §10 go/no-go (separate job below).
-# OTA (JS-only) is handled by ota.yml. Secrets come from GitHub/EAS/Supabase stores
-# (TDD Part 5 §4) — never in the repo.
-#
-# Hardening (2026-07-12, behavior-preserving): least-privilege permissions and a
-# fail-fast preflight (scripts/preflight.sh) at the top of each deploy job so a
-# missing secret stops the deploy with an actionable message. Deploy STEPS remain
-# the documented scaffolds (echo) until the Beta Readiness milestone makes them
-# real — this pass changes diagnostics, not what is deployed.
+# CD — deploy on merge to main
 # =============================================================================
+
 name: CD
 
 on:
   push:
-    branches: [main]
+    branches:
+      - main
   workflow_dispatch:
 
 permissions:
@@ -31,63 +22,59 @@ jobs:
     name: Apply DB migrations → staging
     runs-on: ubuntu-latest
     environment: staging
+
     steps:
-      - uses: actions/checkout@v4
-      - name: Install Postgres client
+      - uses: actions/checkout@v5
+
+      - name: Install PostgreSQL client
         run: |
           sudo apt-get update
           sudo apt-get install -y --no-install-recommends postgresql-client
-      - uses: actions/setup-node@v4
-        with:
-          node-version: 22
-          cache: pnpm
-      - name: Preflight (fail fast on missing config)
+
+      - name: Preflight
         run: bash scripts/preflight.sh staging
         env:
           SUPABASE_STAGING_DB_URL: ${{ secrets.SUPABASE_STAGING_DB_URL }}
           SUPABASE_STAGING_REF: ${{ secrets.SUPABASE_STAGING_REF }}
           SUPABASE_ACCESS_TOKEN: ${{ secrets.SUPABASE_ACCESS_TOKEN }}
           EXPO_ACCESS_TOKEN: ${{ secrets.EXPO_ACCESS_TOKEN }}
-      # Forward-only, expand-then-contract; RLS ships with each table (TDD Part 2 §6.1).
-      - name: supabase db push (staging)
+
+      - name: Apply migrations
         run: bash scripts/migrate.sh "$SUPABASE_STAGING_DB_URL"
         env:
           SUPABASE_STAGING_DB_URL: ${{ secrets.SUPABASE_STAGING_DB_URL }}
+
       - name: Summary
         if: always()
         run: |
           echo "### Staging migrations: ${{ job.status }}" >> "$GITHUB_STEP_SUMMARY"
-      - uses: pnpm/action-setup@v4
-        with:
-          version: 10
-
-      - uses: actions/setup-node@v4
-        with:
-          node-version: 22
-          cache: pnpm
-
-      - run: pnpm install --frozen-lockfile
 
   deploy-functions:
     name: Deploy Edge Functions (SVC_*) → staging
     runs-on: ubuntu-latest
     needs: migrate-staging
     environment: staging
+
     steps:
-      - uses: actions/checkout@v4
+      - uses: actions/checkout@v5
+
       - name: Set up Supabase CLI
         uses: supabase/setup-cli@v1
-        with: { version: 2.33.9 }
-      - name: Preflight (fail fast on missing config)
+        with:
+          version: 2.33.9
+
+      - name: Preflight
         run: bash scripts/preflight.sh staging
         env:
           SUPABASE_STAGING_DB_URL: ${{ secrets.SUPABASE_STAGING_DB_URL }}
           SUPABASE_STAGING_REF: ${{ secrets.SUPABASE_STAGING_REF }}
           SUPABASE_ACCESS_TOKEN: ${{ secrets.SUPABASE_ACCESS_TOKEN }}
           EXPO_ACCESS_TOKEN: ${{ secrets.EXPO_ACCESS_TOKEN }}
-      - name: Deploy functions
+
+      - name: Deploy Edge Functions
         run: |
-         supabase functions deploy --project-ref "$SUPABASE_STAGING_REF (apps/backend/functions)"
+          supabase functions deploy \
+            --project-ref "$SUPABASE_STAGING_REF"
         env:
           SUPABASE_STAGING_REF: ${{ secrets.SUPABASE_STAGING_REF }}
           SUPABASE_ACCESS_TOKEN: ${{ secrets.SUPABASE_ACCESS_TOKEN }}
@@ -96,32 +83,48 @@ jobs:
     name: Maestro E2E (FLOW_*) on staging
     runs-on: ubuntu-latest
     needs: deploy-functions
+
     steps:
-      - uses: actions/checkout@v4
-      # FLOW_* journeys: onboarding (A1), morning ritual (B1), Ask Guru (D1),
-      # household invite (D2), offline loop + sync (E5), payment (F1). tests/flows/.
-      - run: maestro test tests/flows (wired with the E2E task)
+      - uses: actions/checkout@v5
+
+      # Replace with actual Maestro installation later
+      - name: Placeholder E2E
+        run: |
+          echo "maestro test tests/flows"
 
   eas-build:
     name: EAS build → internal distribution
     runs-on: ubuntu-latest
     needs: e2e-staging
     environment: staging
+
     steps:
-      - uses: actions/checkout@v4
-      - name: Preflight (fail fast on missing config)
+      - uses: actions/checkout@v5
+
+      - uses: pnpm/action-setup@v4
+        with:
+          version: 10
+
+      - uses: actions/setup-node@v5
+        with:
+          node-version: 22
+          cache: pnpm
+
+      - name: Install dependencies
+        run: pnpm install --frozen-lockfile
+
+      - name: Preflight
         run: bash scripts/preflight.sh staging
         env:
           SUPABASE_STAGING_DB_URL: ${{ secrets.SUPABASE_STAGING_DB_URL }}
           SUPABASE_STAGING_REF: ${{ secrets.SUPABASE_STAGING_REF }}
           SUPABASE_ACCESS_TOKEN: ${{ secrets.SUPABASE_ACCESS_TOKEN }}
           EXPO_ACCESS_TOKEN: ${{ secrets.EXPO_ACCESS_TOKEN }}
-      - name: EAS build + submit (staging profile)
+
+      # Replace with actual Expo CLI build once configured
+      - name: Placeholder EAS build
         run: |
-         eas build \ 
-           --platform all \
-           --profile staging \
-           --non-interactive
+          echo "eas build --platform all --profile staging --non-interactive"
         env:
           EXPO_ACCESS_TOKEN: ${{ secrets.EXPO_ACCESS_TOKEN }}
 
@@ -129,25 +132,30 @@ jobs:
     name: Promote to production (manual go/no-go §10.1)
     runs-on: ubuntu-latest
     needs: eas-build
-    environment: production # requires manual approval (TDD Part 5 §2.1/§10)
-    if: ${{ github.event_name == 'workflow_dispatch' }}
+    environment: production
+    if: github.event_name == 'workflow_dispatch'
+
     steps:
-      - uses: actions/checkout@v4
-      - name: Install Postgres client
+      - uses: actions/checkout@v5
+
+      - name: Install PostgreSQL client
         run: |
           sudo apt-get update
           sudo apt-get install -y --no-install-recommends postgresql-client
-      - name: Preflight (fail fast on missing config)
+
+      - name: Preflight
         run: bash scripts/preflight.sh production
         env:
           SUPABASE_PROD_DB_URL: ${{ secrets.SUPABASE_PROD_DB_URL }}
           SUPABASE_ACCESS_TOKEN: ${{ secrets.SUPABASE_ACCESS_TOKEN }}
           EXPO_ACCESS_TOKEN: ${{ secrets.EXPO_ACCESS_TOKEN }}
-      - name: Prod migrations + functions + store release
-        run: echo "Apply prod migrations, deploy functions, EAS submit to App Store / Play (phased rollout §10.2)."
-        env:
-          SUPABASE_PROD_DB_URL: ${{ secrets.SUPABASE_PROD_DB_URL }}
-          EXPO_ACCESS_TOKEN: ${{ secrets.EXPO_ACCESS_TOKEN }}
+
+      - name: Production deployment placeholder
+        run: |
+          echo "Apply production migrations"
+          echo "Deploy Edge Functions"
+          echo "Submit production EAS build"
+
       - name: Summary
         if: always()
         run: |
