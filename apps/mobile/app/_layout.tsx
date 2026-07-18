@@ -7,10 +7,13 @@
 import { Stack } from 'expo-router';
 import { StatusBar } from 'expo-status-bar';
 import { AppProviders } from '../src/providers/AppProviders';
+import { useNotificationRouting } from '../src/navigation/useNotificationRouting';
 
 export { ErrorBoundary } from 'expo-router'; // per-route error boundary (TDD Part 4 §5.3)
 
 export default function RootLayout() {
+  // Route notification taps to a valid back-stack (TDD §7.2/§3.3). No-op with the Null adapter.
+  useNotificationRouting();
   return (
     <AppProviders>
       <StatusBar style="auto" />

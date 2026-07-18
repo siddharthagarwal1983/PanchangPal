@@ -18,6 +18,9 @@ export const DEEP_LINKS: DeepLinkRoute[] = [
   { pattern: 'panchangpal://you', route: '/(tabs)/you' },
   { pattern: 'panchangpal://festival/:id', route: '/(tabs)/calendar' },
   { pattern: 'panchangpal://personal-date/:id', route: '/(tabs)/calendar' },
-  { pattern: 'panchangpal://invite/:token', route: '/(onboarding)/sign-in' },
+  // M7: invite lands on the household invite-accept screen (SCR_HOUSEHOLD_INVITE_001). For an
+  // authenticated user the token is applied directly; anonymous users hit the deferred-auth
+  // prompt on that screen (UX-2). Deferred (post-install) invites are captured at first launch.
+  { pattern: 'panchangpal://invite/:token', route: '/(tabs)/you/invite' },
   { pattern: 'panchangpal://subscription', route: '/(tabs)/you' },
 ];

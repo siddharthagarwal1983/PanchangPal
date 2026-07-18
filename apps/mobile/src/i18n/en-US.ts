@@ -116,6 +116,8 @@ export const enUS = {
     signedInAs: 'Signed in',
     settingsEntry: 'Settings',
     settingsEntryHint: 'Appearance, tradition, and practice preferences',
+    notificationsEntry: 'Notifications',
+    notificationsEntryHint: 'Reminders for your practice, festivals, and family',
     householdEntry: 'Household',
     householdEntryHint: 'Practice together with your family',
     aboutEntry: 'About PanchangPal',
@@ -144,6 +146,44 @@ export const enUS = {
     signOutHint: 'Return to using the app without an account',
     deleteAccount: 'Delete account',
     deleteAccountHint: 'Permanently remove your account and data',
+  },
+  notifications: {
+    title: 'Notifications',
+    // ADR-033: sunrise/tithi-timed reminders are not available yet.
+    panchangUnavailable: 'Sunrise- and tithi-timed reminders are coming soon. Other reminders work now.',
+    // Priming (undetermined)
+    primeTitle: 'Gentle reminders for your practice',
+    primeBody: 'Get a calm nudge for your daily ritual, upcoming festivals, and dates your family cares about. No spam — you choose what to hear about.',
+    turnOn: 'Turn on notifications',
+    notNow: 'Not now',
+    // Denied (non-blocking)
+    deniedNote: 'Notifications are turned off in your device settings. The app works fully without them.',
+    openSettings: 'Open device settings',
+    openSettingsHint: 'Turn on notifications for PanchangPal to receive reminders',
+    // Channels (granted)
+    channelsSection: 'What to hear about',
+    saveError: "We couldn't save that change. It will retry when you're back online.",
+    channel: {
+      daily: 'Daily practice',
+      festival: 'Festivals',
+      personal: 'Personal dates',
+      household: 'Household',
+      growth: 'Tips & suggestions',
+      lifecycle: 'Account & updates',
+    },
+    channelHint: {
+      daily: 'A gentle reminder for your daily ritual',
+      festival: 'Upcoming festivals for your tradition',
+      personal: 'Anniversaries and dates you add',
+      household: 'When family members join or share',
+      growth: 'Occasional ways to get more from the app',
+      lifecycle: 'Important account and subscription notices',
+    },
+    // Quiet hours
+    quietSection: 'Quiet hours',
+    quietHours: 'Quiet hours',
+    quietHoursHint: 'Pause notifications overnight',
+    quietWindow: 'Paused from {{start}} to {{end}}',
   },
   household: {
     title: 'Household',

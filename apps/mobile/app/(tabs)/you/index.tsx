@@ -54,6 +54,13 @@ export default function YouScreen() {
             testID="you-household-entry"
           />
           <SettingsRow
+            title={t('you.notificationsEntry')}
+            description={t('you.notificationsEntryHint')}
+            value="→"
+            onPress={() => router.push('/(tabs)/you/notifications')}
+            testID="you-notifications-entry"
+          />
+          <SettingsRow
             title={t('you.settingsEntry')}
             description={t('you.settingsEntryHint')}
             value="→"

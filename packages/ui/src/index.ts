@@ -59,3 +59,10 @@ export {
 } from './components/InviteCards';
 export { ConsequencesPanel, type ConsequencesPanelProps } from './components/ConsequencesPanel';
 export { DestructiveAction, type DestructiveActionProps } from './components/DestructiveAction';
+// Notifications (MOD_notifications) — Milestone 7
+export { InfoBanner, type InfoBannerProps, type InfoBannerTone } from './components/InfoBanner';
+export {
+  PermissionPriming,
+  type PermissionPrimingProps,
+  type PermissionKind,
+} from './components/PermissionPriming';
