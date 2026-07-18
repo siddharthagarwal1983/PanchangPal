@@ -2,9 +2,9 @@
 
 # PanchangPal Dashboard
 
-Version: 1.2.0
+Version: 1.4.0
 
-Last Updated: 2026-07-13
+Last Updated: 2026-07-18
 
 Purpose:
 This is the first file Claude should read at the beginning of every session.
@@ -41,7 +41,7 @@ PanchangPal
 
 Progress
 
-88%
+96%
 
 Prior phases ✅ complete: Documentation → Repository & Platform Foundation → Backend Foundation.
 
@@ -59,8 +59,9 @@ CURRENT_MILESTONE.md
 
 # Current Task
 
-Milestone 6 — Profile / Household (MOD_you) ✅ COMPLETE (all 3 increments; awaiting review).
-Next recommended: Milestone 7 — Notifications.
+Milestone 7 — Notifications ✅ COMPLETE (reviewed/approved).
+Milestone 8 — Subscription: Increment 1 (entitlement read + gating) ✅ COMPLETE (awaiting review).
+Next: M8 Increment 2 — SCR_SUBSCRIPTION_001 (plans/purchase/restore) + affordance wiring.
 
 See:
 
@@ -70,10 +71,11 @@ TASK.md
 
 # Today's Objective
 
-Mobile MVP feature slices M1–M6 are complete: App Shell, Today, Guided Ritual, Calendar Shell,
-Ask Guru Client, and Profile/Household (Preferences+Settings+Profile, Household, Account deletion).
-Panchang compute + Ask Guru live answers remain gated (ADR-033 / corpus+eval). Next: Notifications,
-then Subscription.
+Mobile MVP feature slices M1–M7 are complete: App Shell, Today, Guided Ritual, Calendar Shell,
+Ask Guru, Profile/Household, and Notifications. M8 Subscription is underway — Increment 1
+(household-grain entitlement read + usePremiumGate) is done; Increment 2 (subscription screen +
+affordance wiring) and Increment 3 (paywall sheet + routing + FF_FAMILY_PLAN) remain. Panchang
+compute + Ask Guru live answers remain gated (ADR-033 / corpus+eval).
 
 Do not introduce new architecture.
 
@@ -90,10 +92,11 @@ Do not introduce new architecture.
 | TDD | ✅ |
 | AI Knowledge Base | ✅ |
 | Repository & Platform Foundation | ✅ |
-| Backend Foundation (SVC_*) | ✅ (panchang engine blocked; SVC_household pending) |
+| Backend Foundation (SVC_*) | ✅ (panchang engine blocked; SVC_household/notify/revenuecat pending) |
 | Mobile — App Shell / Today / Ritual / Calendar / Ask Guru | ✅ M1–M5 |
-| Mobile — Profile / Household (Preferences, Household, Account deletion) | ✅ M6 |
-| Mobile — Notifications / Subscription | ⏳ M7–M8 |
+| Mobile — Profile / Household | ✅ M6 |
+| Mobile — Notifications | ✅ M7 |
+| Mobile — Subscription | 🟡 M8 (Increment 1 of 3 done) |
 | AI Platform | 🟡 adapters done; corpus + eval pending |
 | Testing | 🟡 unit/component/domain in place; E2E pending |
 | Beta | ⏳ |
@@ -103,10 +106,10 @@ Do not introduce new architecture.
 
 # Current Priorities
 
-1. Mobile feature slices — Notifications (M7), Subscription (M8)
+1. Mobile feature slices — Subscription (M8: Increments 2–3)
 2. ⛔ Canonical Panchang Engine decision (ADR-033) — unblocks Today panchang, Calendar markers, notifications
 3. AI corpus ingestion + eval readiness — unblocks live Ask Guru (GURU_LIVE)
-4. Backend SVC_household Edge Function (member/invite endpoints; client contract already coded)
+4. Backend Edge Functions: SVC_household, SVC_notify_scheduler, SVC_revenuecat_webhook (client contracts coded)
 5. Apply migrations to a live Supabase project + integration run
 6. E2E (Maestro FLOW_*) + first live CI run
 
@@ -127,20 +130,22 @@ is ratified. Everything else is unblocked. See docs/architecture/canonical-panch
 🔒 Ask Guru live answers are gated OFF (GURU_LIVE=false) until reviewed corpus + eval readiness
 (TDD Part 3 §9/§10B). The client is complete; flipping the flag goes live.
 
-ℹ️ Backend SVC_household Edge Function not yet implemented — M6 Household member/invite calls are
-the client's OpenAPI contract (pending backend deliverable). Transfer/delete use SVC_account (exists).
+ℹ️ Vendor deps deferred: `expo-notifications` (M7) and `react-native-purchases` (M8) are not yet
+installed (sandbox can't regenerate the lockfile). Their adapters ship as pure ports + Null impls;
+concrete adapters are one-line swaps once the deps + keys land on the Mac.
 
 ---
 
 # Next Deliverable
 
-Milestone 7 — Notifications (opt-in priming, per-channel prefs, token registration, deep-link routing)
+Milestone 8 — Subscription, Increment 2 (SCR_SUBSCRIPTION_001 + plans/purchase/restore + affordance wiring)
 
 ---
 
 # After Current Deliverable
 
-Milestone 8 — Subscription
+Milestone 8 — Subscription, Increment 3 (paywall sheet + routing + FF_FAMILY_PLAN), then
+Beta Readiness & Platform Hardening (TDD Part 5)
 
 ---
 
@@ -155,7 +160,8 @@ MRD ✅ Approved · PRD ✅ Approved · PDD ✅ Approved · TDD ✅ Approved · 
 Frontend: React Native + Expo (Expo Router, Zustand, TanStack Query)
 Backend: Supabase (Postgres + RLS + Edge Functions)
 AI: GPT-5 mini + RAG (behind adapters; live answers gated)
-Payments: RevenueCat · State: Zustand + TanStack Query
+Payments: RevenueCat (behind PaymentAdapter; entitlement household-grain, read-only on device)
+State: Zustand + TanStack Query
 
 ---
 
@@ -177,7 +183,7 @@ Only retrieve additional documentation if required.
 
 Documentation and architecture are frozen. The repository, platform foundation, and backend
 SVC_* are complete. The mobile app is being built as sequenced feature slices — App Shell, Today,
-Guided Ritual, Calendar Shell, Ask Guru, and Profile/Household are done (M1–M6). The only
-architectural blocker is the Canonical Panchang Engine decision (ADR-033); Ask Guru live answers
-are intentionally gated until corpus/eval readiness. Current focus: the remaining mobile slices
-(Notifications, Subscription).
+Guided Ritual, Calendar Shell, Ask Guru, Profile/Household, and Notifications are done (M1–M7).
+Subscription (M8) is underway: Increment 1 (household-grain entitlement read + gating) is complete;
+the subscription screen and paywall remain. The only architectural blocker is the Canonical Panchang
+Engine decision (ADR-033); Ask Guru live answers are intentionally gated until corpus/eval readiness.

@@ -2,88 +2,85 @@
 
 # PanchangPal — Current Task
 
-Version: 2.0.0
-Last Updated: 2026-07-13
+Version: 2.2.0
+Last Updated: 2026-07-18
 
 Purpose: the current implementation task. Stay focused; avoid unrelated work unless instructed.
 
 ---
 
-# Previous Task
+# Previous Tasks
 
-## Title
-Mobile MVP Milestone 6 — Profile / Household (MOD_you)
+## M7 — Notifications (MOD_notifications)
+Status: ✅ COMPLETE — reviewed/approved 2026-07-18. Opt-in priming, per-channel server-authoritative
+prefs, push-token registration behind the NotificationAdapter seam, notification-tap deep-link routing
+(incl. panchangpal://invite/{token}). Sunrise/tithi content gated by ADR-033.
 
-Status
-✅ COMPLETE — all three increments delivered (awaiting review).
-
-Outcome
-- Increment 1 — Preferences + Settings + Profile (server-authoritative prefs, optimistic + offline;
-  SCR_SETTINGS_001, SCR_PROFILE_001; Segmented/Toggle/SettingsRow).
-- Increment 2 — Household (members/roles/depth, invites, realtime): household/member domain,
-  householdRepository (RLS read + SVC_household writes via OpenAPI paths + Realtime seam),
-  HOOK_useHousehold/useInvite, CMP_MEMBER_ROW/ROLE_PICKER/SHARE_BUTTON/INVITE_*; SCR_HOUSEHOLD_001
-  recomposed + SCR_HOUSEHOLD_INVITE_001.
-- Increment 3 — Account deletion (F-3 gate + grace window): account domain, accountRepository
-  (SVC_account reauth/delete/transfer), useAccountDeletion, CMP_CONSEQUENCES_PANEL/DESTRUCTIVE_ACTION;
-  SCR_DELETE_ACCOUNT_001 + Settings entry.
-Also aligned householdRepository to the OpenAPI-path invoke convention (no public-API change).
+## M8 Increment 1 — Entitlement read + gating foundation
+Status: ✅ COMPLETE (awaiting review). Household-grain (F-4) entitlement read via supabase-js RLS +
+realtime seam; pure mapping/rules (isEntitled/hasFamily/activeKind); PremiumCapability registry
+(deep_dive_content, extended_ask_guru) + usePremiumGate; PaymentAdapter port + NullPaymentAdapter.
+Client never writes entitlements. Domain + repository tests.
 
 ---
 
 # Current Task
 
 ## Title
-Mobile MVP Milestone 7 — Notifications (MOD_notifications)
+Mobile MVP Milestone 8 — Subscription, Increment 2 (SCR_SUBSCRIPTION_001 + affordance wiring)
 
 Status
-⏳ NOT STARTED — do not begin until M6 is reviewed/approved.
+⏳ NOT STARTED — do not begin until M8 Increment 1 is reviewed/approved.
 
 Priority
-🔴 Critical
+🔴 Critical (final Phase-1 slice)
 
 Estimated Effort
-1–2 Sessions
+1 Session
 
 ---
 
 # Objective
-Build the Notifications slice: opt-in priming, per-channel preferences (server-authoritative),
-Expo push-token registration, and deep-link routing — including the `panchangpal://invite/{token}`
-route into the invite-accept screen (SCR_HOUSEHOLD_INVITE_001). Reuse CMP_* + existing seams; no new
-architecture. Sunrise/tithi-timed notifications remain gated by ADR-033 (calm "unavailable").
+Build the subscription screen and wire the v1 gates. Reuse CMP_* + existing seams; no new architecture.
+- SCR_SUBSCRIPTION_001 with all documented states (default/loading/skeleton/empty/offline/error/success);
+  never an interstitial over the ritual (UX-9); daily loop never gated (P4).
+- CMP_PLAN_CARD (individual/family; best-value as TEXT not color), CMP_VALUE_LIST, CMP_LEGAL_FOOTNOTE.
+- Plans/purchase/restore via the PaymentAdapter seam (API_GET_SUB_PLANS / API_POST_SUB_VALIDATE /
+  API_POST_SUB_RESTORE). No receipt logic on device; entitlement never granted client-side.
+- Wire `usePremiumGate` at the two gated affordances: deep-dive content (Settings depth) and extended
+  Ask Guru — contextual, dismissible upgrade → the new screen.
 
 # Inputs
-- docs/tdd/04_MOBILE_ARCHITECTURE.md (§3 routing/deep links, §4 state, §5 hooks, §5.4 realtime)
-- docs/pdd/03_COMPONENT_LIBRARY.md (notification opt-in / settings CMP_*)
-- docs/pdd/02_USER_FLOWS.md (notification priming + deep-link flows)
-- docs/api/openapi.yaml (notification token registration + preferences endpoints)
-- apps/backend/functions/notify-scheduler (existing SVC scheduler)
+- docs/tdd/04_MOBILE_ARCHITECTURE.md (§7.3 payments, §3.4 entitlement, §8.2 rendering)
+- docs/pdd/02_USER_FLOWS.md (SCR_SUBSCRIPTION_001, FLOW F1, AC-SUB-01..04)
+- docs/pdd/03_COMPONENT_LIBRARY.md (CMP_PLAN_CARD, CMP_VALUE_LIST, CMP_LEGAL_FOOTNOTE)
+- docs/api/openapi.yaml (§5.6 subscription endpoints; Entitlement/Plan schemas)
 If ambiguous/conflicting: stop, explain, request clarification.
 
 # Deliverables (to plan at kickoff)
-- [ ] Opt-in priming screen/flow (deferred, non-nagging; UX-2)
-- [ ] Per-channel notification preferences (server-authoritative, optimistic + offline)
-- [ ] Expo push-token registration + NotificationAdapter seam
-- [ ] Deep-link routing (incl. panchangpal://invite/{token} → invite accept)
+- [ ] CMP_PLAN_CARD / CMP_VALUE_LIST / CMP_LEGAL_FOOTNOTE
+- [ ] SCR_SUBSCRIPTION_001 (all states) + You-hub entry + tab registration
+- [ ] usePlans / usePurchase / useRestore (EVT_049–052)
+- [ ] Affordance wiring: deep-dive content + extended Ask Guru → usePremiumGate → contextual upgrade
 - [ ] Unit/component/domain tests
 
 # Success Criteria
-- Screens compose approved CMP_* with tokens-only styling + localized strings; no business logic in
-  screens; loading/empty/offline/error states covered.
-- Notification prefs are server-authoritative and optimistic; the daily loop is never gated.
-- Sunrise/tithi-timed notifications surface a calm "unavailable" state until ADR-033 is ratified.
-- Unit/component/domain tests pass in CI.
+AC-SUB-01 (dismissible, never blocks loop, EVT_049) · AC-SUB-02 (server-validated grant → warm
+confirmation) · AC-SUB-03 (ERR_PAYMENT_FAILED → clear reason, no grant) · AC-SUB-04 (restore, EVT_052).
+Tokens-only styling; localized strings; no business logic in screens; tests pass in CI.
 
 # Constraints
-Do not change architecture; do not touch the panchang engine; no cross-feature imports; no
-fabricated data; no hardcoded tokens.
+No architecture change; no receipt logic on device; client never writes entitlement; the daily loop is
+never gated; no fabricated data; no hardcoded prices (offerings come from the store).
 
 # After Completion
-Update SESSION.md, PROJECT_STATUS.md, TASK.md; stop for review.
+Update SESSION.md, PROJECT_STATUS.md, TASK.md; stop for review. Then Increment 3 (paywall sheet +
+routing + FF_FAMILY_PLAN).
 
 ---
 
 # Parallel (owner-driven, not this task)
-⛔ Ratify ADR-033 (Canonical Panchang Engine) Part B. See docs/architecture/canonical-panchang-engine/.
-ℹ️ Implement backend SVC_household Edge Function (member/invite endpoints — client contract already coded in M6).
+⛔ Ratify ADR-033 (Canonical Panchang Engine) Part B.
+ℹ️ Backend: SVC_household, SVC_notify_scheduler, SVC_revenuecat_webhook Edge Functions (client
+contracts already coded). Add `react-native-purchases` + RC public key on the Mac (lockfile) to swap
+NullPaymentAdapter for the concrete RevenueCat adapter.

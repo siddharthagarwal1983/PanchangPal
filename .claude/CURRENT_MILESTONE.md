@@ -2,9 +2,9 @@
 
 # PanchangPal — Current Milestone
 
-Version: 2.1.0
+Version: 2.2.0
 
-Last Updated: 2026-07-13
+Last Updated: 2026-07-18
 
 Purpose:
 This document defines the current milestone. Unlike SESSION.md (daily work) or TASK.md (current
@@ -23,7 +23,7 @@ Status
 
 Overall Progress
 
-~75% (6 of 8 slices complete)
+~92% (7 of 8 slices complete; M8 Increment 1 of 3 done)
 
 Previous Milestones
 
@@ -57,31 +57,32 @@ the previous is reviewed.
 | M4 | Calendar Shell | SCR_CALENDAR_001 | ✅ Complete |
 | M5 | Ask Guru Client | SCR_GURU_HOME/CHAT/HISTORY_001 | ✅ Complete |
 | M6 | Profile / Household | SCR_PROFILE_001, SCR_HOUSEHOLD_*, SCR_SETTINGS_001, SCR_DELETE_ACCOUNT_001 | ✅ Complete |
-| M7 | Notifications | opt-in, prefs, deep-link routing | ⏳ Pending |
-| M8 | Subscription | SCR_SUBSCRIPTION_001 (RevenueCat) | ⏳ Pending |
+| M7 | Notifications | opt-in, prefs, deep-link routing | ✅ Complete |
+| M8 | Subscription | SCR_SUBSCRIPTION_001 (RevenueCat) | 🟡 In Progress (Inc 1/3) |
 
 ---
 
 # Milestone Deliverables
 
-## Completed slices (M1–M6)
+## Completed slices (M1–M7)
 
-- [x] M1 Application Shell — design tokens (PDD §6), shell CMP_*, anon-first + OAuth/OTP auth,
-      splash/onboarding/4-tab navigation, guards, deep links, error boundaries, i18n.
-- [x] M2 Today — panchang/ritual/streak/checklist/rotating cards; PanchangProvider abstraction
-      (production "unavailable" per ADR-033 + dev-only mock); useToday/useChecklist/useCompleteRitual.
-- [x] M3 Guided Ritual Player — RitualEngine/session model, MMKV persistence, AudioAdapter port
-      (NullAudioAdapter; text-guided fallback), intro/step/progress/audio/completion CMP_*.
-- [x] M4 Calendar Shell — month grid/nav/day-cell/tradition switcher; markers stay unavailable
-      (ADR-033) via the calendar provider seam.
-- [x] M5 Ask Guru Client — home + streamed conversation + cached history; readiness-gated SSE
-      transport (GURU_LIVE=false → honest decline until corpus/eval); no LLM/fabrication on device.
+- [x] M1 Application Shell — design tokens, shell CMP_*, anon-first auth, splash/onboarding/4-tab nav.
+- [x] M2 Today — panchang/ritual/streak/checklist cards; PanchangProvider abstraction (ADR-033 unavailable).
+- [x] M3 Guided Ritual Player — RitualEngine/session model, MMKV persistence, AudioAdapter port.
+- [x] M4 Calendar Shell — month grid/nav/day-cell/tradition switcher; markers unavailable (ADR-033).
+- [x] M5 Ask Guru Client — home + streamed conversation + cached history; readiness-gated SSE (GURU_LIVE).
+- [x] M6 Profile / Household — preferences/settings, profile, household members/roles/invites/realtime, deletion.
+- [x] M7 Notifications — opt-in priming, per-channel prefs, token registration (NotificationAdapter seam),
+      deep-link routing (incl. panchangpal://invite/{token}); sunrise/tithi gated (ADR-033).
 
-## Remaining slices (M7–M8)
+## Remaining slice (M8 — Subscription, in 3 increments)
 
-- [x] M6 Profile / Household — preferences/settings, profile, household members/roles/invites/realtime, account deletion (F-3 grace window).
-- [ ] M7 Notifications — opt-in priming, per-channel prefs, token registration, deep-link routing.
-- [ ] M8 Subscription — plans, purchase/restore via RevenueCat, entitlement gating (daily loop never gated).
+- [x] M8 Increment 1 — Entitlement read + gating: household-grain (F-4) entitlement read (supabase-js
+      RLS + realtime), PaymentAdapter port + NullPaymentAdapter, PremiumCapability registry
+      (deep_dive_content, extended_ask_guru), HOOK_useEntitlement + usePremiumGate.
+- [ ] M8 Increment 2 — SCR_SUBSCRIPTION_001 (CMP_PLAN_CARD/VALUE_LIST/LEGAL_FOOTNOTE), plans/purchase/
+      restore via the PaymentAdapter, and affordance wiring (deep-dive content; extended Ask Guru).
+- [ ] M8 Increment 3 — contextual paywall sheet, panchangpal://subscription routing, FF_FAMILY_PLAN.
 
 ---
 
@@ -89,6 +90,8 @@ the previous is reviewed.
 
 - Astronomical panchang calculations — frozen behind the PanchangEngine interface until ADR-033.
 - Live Ask Guru answers — gated (GURU_LIVE) until reviewed corpus + eval readiness (TDD Part 3 §10B).
+- RevenueCat webhook / receipt reconciliation — server-only (SVC_revenuecat_webhook).
+- Final pricing / ad-supported free tier — open PRD decision (F-11).
 - E2E automation, store submission, and platform hardening — the next milestone (TDD Part 5).
 
 ---
@@ -104,8 +107,10 @@ offline/empty/error states are covered, and unit/component/domain tests pass in 
 # Current Risks
 
 - Documentation/code drift (kept in check by per-slice SESSION/TASK updates).
-- Unapproved architectural changes (guarded by the PanchangEngine + provider abstractions).
+- Unapproved architectural changes (guarded by the provider abstractions).
 - ADR-033 remaining unratified — keeps Today panchang, Calendar markers, and notifications partial.
+- Deferred vendor deps (expo-notifications, react-native-purchases) — adapters ship as Null seams;
+  concrete impls land once deps/keys are added on the Mac.
 - Offline sandbox prevents local install/test runs — verification lands in CI.
 
 ---
@@ -114,7 +119,7 @@ offline/empty/error states are covered, and unit/component/domain tests pass in 
 
 - All eight slices implemented, reviewed, and green in CI.
 - Architecture matches the TDD; abstractions (PanchangEngine, PanchangProvider, GuruTransport,
-  AudioAdapter) never bypassed.
+  AudioAdapter, NotificationAdapter, PaymentAdapter) never bypassed.
 - Documentation synchronized; the app runs from a clean clone once dependencies install.
 
 ---
@@ -142,5 +147,5 @@ inclusive launch.
 # Milestone Summary
 
 > **Current focus: build the mobile app as sequenced, production-quality feature slices — App
-> Shell, Today, Ritual, Calendar, Ask Guru (M1–M5) and Profile/Household (M6) done; Notifications
-> and Subscription remain.**
+> Shell, Today, Ritual, Calendar, Ask Guru, Profile/Household, and Notifications (M1–M7) done;
+> Subscription (M8) in progress (Increment 1 of 3 complete).**

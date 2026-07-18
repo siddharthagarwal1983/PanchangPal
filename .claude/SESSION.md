@@ -2,81 +2,82 @@
 
 # PanchangPal — Current Session
 
-Version: 1.3.0
-Last Updated: 2026-07-13
+Version: 1.5.0
+Last Updated: 2026-07-18
 
-Date/Time: 2026-07-13.
+Date/Time: 2026-07-18.
 
 ---
 
 # Session Objective
 
-Complete Mobile MVP Milestone 6 (Profile / Household, MOD_you) by implementing the two remaining
-increments on the reviewed Increment-1 foundation: Increment 2 — Household, and Increment 3 —
-Account deletion. No architecture changes; reuse CMP_* + existing seams.
+M7 (Notifications) reviewed/approved. Begin Mobile MVP Milestone 8 — Subscription
+(MOD_subscription). Implement Increment 1: server-authoritative, household-grain (F-4) entitlement
+read + the premium-gating mechanism. No purchase UI yet. No architecture changes; reuse existing
+seams + the Provider Adapter pattern.
 
 ---
 
-# Work Completed
+# Work Completed (M8 Increment 1 — client-side, awaiting review)
 
-- **Increment 2 — Household:** household/member domain (pure mapping with safe enum fallbacks +
-  rules: sort, initials, canManage, isSolo); `householdRepository` (RLS read via supabase-js +
-  SVC_household writes + Realtime member seam); `HOOK_useHousehold` (query + realtime invalidate,
-  optimistic member add/edit/remove) and `HOOK_useInvite` (create/preview/accept, idempotent,
-  deferred-auth); CMP_MEMBER_ROW / ROLE_PICKER / SHARE_BUTTON / INVITE_* ; SCR_HOUSEHOLD_001
-  recomposed from shell to the real feature + SCR_HOUSEHOLD_INVITE_001; i18n; domain + repo tests.
-- **Increment 3 — Account deletion:** account domain (F-3 gate mirroring SVC_account
-  `canDeleteAccount`); `accountRepository` (reauth / delete / ownership-transfer via SVC_account);
-  `useAccountDeletion` (reauth → grace-window request → return to anon session); CMP_CONSEQUENCES_PANEL
-  / CMP_DESTRUCTIVE_ACTION; SCR_DELETE_ACCOUNT_001 + authenticated-only Settings entry; i18n; tests.
-- **Convention fix:** `householdRepository` switched from a body-`action` dispatch to OpenAPI-path
-  `functions.invoke` (matches `account/merge`, `panchang/…`); its test updated. Public methods
-  unchanged — no impact on hooks/screens.
+- **Entitlement domain (`domain/subscription`):** `types` (Entitlement, EntitlementKind, SubStatus,
+  `PREMIUM_CAPABILITIES` = deep_dive_content + extended_ask_guru, GateResult); `entitlement` (strict
+  row -> Entitlement mapping — only a real boolean `true` is active, never coerced; rules: isEntitled
+  / hasFamily / activeKind / isCapabilityUnlocked); `PaymentAdapter` port + `NullPaymentAdapter`
+  (mirrors Audio/Notification adapters — no vendor import; never fabricates a purchase/entitlement).
+- **Data layer:** `subscriptionRepository` (household-member entitlement READ via supabase-js RLS +
+  `subscribeEntitlements` realtime seam for webhook grant/revoke propagation); `paymentAdapter`
+  composition root (Null); `HOOK_useEntitlement` (query + realtime invalidate) + `usePremiumGate`
+  (fails open while loading; daily loop never gated, P4).
+- **Tests:** domain (mapping/rules/capability gating) + subscriptionRepository (read + realtime seam).
 
-M6 (all three increments) is now implemented client-side, awaiting review.
+Entitlement is READ-ONLY on the client — the `entitlement` table denies all client writes
+(migration 20260712000060); the RevenueCat webhook (SVC_revenuecat_webhook) is the sole writer.
 
 ---
 
-# Files Created (22)
-domain/household/{types,household,index}.ts · data/householdRepository.ts ·
-data/hooks/{useHousehold,useInvite}.ts · ui/{MemberRow,RolePicker,ShareButton,InviteCards}.tsx ·
-app/(tabs)/you/invite.tsx · __tests__/{household,householdRepository}.test.* ·
-domain/account/{deletion,index}.ts · data/accountRepository.ts · data/hooks/useAccountDeletion.ts ·
-ui/{ConsequencesPanel,DestructiveAction}.tsx · app/(tabs)/you/delete-account.tsx ·
-__tests__/{account-deletion,accountRepository}.test.*
+# Files Created (9)
+domain/subscription/{types,entitlement,PaymentAdapter,index}.ts ·
+data/{subscriptionRepository,paymentAdapter}.ts · data/hooks/useEntitlement.ts ·
+__tests__: domain/subscription.test.ts · data/subscriptionRepository.test.ts
 
-# Files Modified (4)
-packages/ui/src/index.ts (barrel exports) · app/(tabs)/you/household.tsx (shell → feature) ·
-app/(tabs)/you/settings.tsx (delete-account entry) · apps/mobile/src/i18n/en-US.ts
-(household/invite/deleteAccount keys)
+# Files Modified (0)
+None. `guards.isEntitled` (raw-row splash predicate) left untouched; the domain
+`isEntitled(Entitlement[])` is the feature-grain equivalent used by the hook.
 
 ---
 
 # Important Observations
-- No backend **SVC_household** Edge Function exists yet — member/invite calls are the client's
-  OpenAPI contract (a pending backend deliverable). Transfer/delete use **SVC_account** (exists).
-- Sandbox has no installed dependencies → tsc/jest/vitest run in CI. Static verification clean:
-  all i18n keys resolve, all `@panchangpal/ui` imports exported, no hardcoded hex, no cross-feature
-  imports, en-US braces balanced, all files brace/paren-balanced.
-- Deletion is a reversible grace-window request; the server stays authoritative and re-checks F-3.
-- A stray empty `.claude/.write_test_5` was left by a write-probe (the `.claude` dir is read-only
-  to this session and blocks unlink) — delete it on the Mac: `rm .claude/.write_test_5`.
+- **Entitlement is server-authoritative + household-grain (F-4), read-only on device.** Client never
+  writes entitlements; realtime propagates webhook-driven grant/revoke.
+- `react-native-purchases` is NOT yet a dependency (offline sandbox can't regenerate the lockfile).
+  PaymentAdapter is a pure port + Null impl (Audio/Notification precedent) so tsc/CI stay green; the
+  concrete `RevenueCatPaymentAdapter` is a one-line swap in `data/paymentAdapter.ts` once the dep +
+  RC public key land. Entitlement READS work today, so gating is real before the SDK is wired.
+- v1 gated capabilities (product decision 2026-07-18): **deep_dive_content, extended_ask_guru**.
+  Family plan = an offering behind FF_FAMILY_PLAN (Increment 3), not an in-app gate.
+- **Sequencing adjustment:** affordance wiring (deep-dive in Settings; extended Ask Guru) moves to
+  Increment 2 alongside SCR_SUBSCRIPTION_001, so the upgrade CTA has a destination.
+- Static verification clean: shared enums resolve, no hardcoded hex, no cross-domain imports, all 9
+  files brace/paren-balanced. tsc/jest run in CI (sandbox has no installed deps).
 
 ---
 
 # Blockers (unchanged)
-⛔ Canonical Panchang Engine (ADR-033). 🔒 Ask Guru GURU_LIVE gate. Cannot commit/push from the
-session (Cowork GitHub connector read-only; user pushes from their Mac).
+Canonical Panchang Engine (ADR-033). Ask Guru GURU_LIVE gate. Backend SVC_revenuecat_webhook +
+entitlement/subscription tables/RLS are the server contract this client targets. Cannot commit/push
+from the session (Cowork GitHub connector read-only; push from Mac).
 
 ---
 
 # Pending Work
-M6 review (Increments 1–3 + the householdRepository convention fix); then M7 Notifications
-(including the `panchangpal://invite/{token}` deep link into the invite-accept screen) and M8
-Subscription.
+M8 Increment 1 review. Then **Increment 2** — SCR_SUBSCRIPTION_001 (CMP_PLAN_CARD / CMP_VALUE_LIST /
+CMP_LEGAL_FOOTNOTE), plans/purchase/restore via the PaymentAdapter, and wire the two gated affordances
+to `usePremiumGate`. Then **Increment 3** — contextual paywall sheet, `panchangpal://subscription`
+routing, FF_FAMILY_PLAN gating of the Family plan.
 
 ---
 
 # Recommended Next Task
-Review M6. On approval, begin **M7 — Notifications** (opt-in priming, per-channel prefs, token
-registration, deep-link routing). Do not start M7 until approved.
+Review M8 Increment 1. On approval, begin **M8 Increment 2** (subscription screen + affordance wiring).
+Do not start Increment 2 until approved.
