@@ -8,7 +8,7 @@ import { useTheme } from '../theme';
 import { Text } from './Text';
 export function ErrorState({ message, onRetry, retryLabel = 'Try again', testID }) {
     const { theme } = useTheme();
-    return (_jsxs(View, { style: { flex: 1, alignItems: 'center', justifyContent: 'center', paddingVertical: theme.spacing.xxl, gap: theme.spacing.md }, accessibilityRole: "alert", testID: testID, children: [_jsx(Text, { variant: "titleMedium", color: "primary", style: { textAlign: 'center' }, children: message }), onRetry ? (_jsx(Pressable, { onPress: onRetry, accessibilityRole: "button", accessibilityLabel: retryLabel, hitSlop: 12, style: {
+    return (_jsxs(View, { style: { flex: 1, alignItems: 'center', justifyContent: 'center', paddingVertical: theme.spacing.xxl, gap: theme.spacing.md }, testID: testID, children: [_jsx(Text, { accessibilityRole: "alert", variant: "titleMedium", color: "primary", style: { textAlign: 'center' }, children: message }), onRetry ? (_jsx(Pressable, { onPress: onRetry, accessibilityRole: "button", accessibilityLabel: retryLabel, hitSlop: 12, style: {
                     minHeight: 44,
                     paddingHorizontal: theme.spacing.lg,
                     justifyContent: 'center',

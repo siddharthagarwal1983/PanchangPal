@@ -11,6 +11,7 @@ export function OfflineBanner({ label = "You're offline — showing saved conten
   const { theme } = useTheme();
   return (
     <View
+      accessible
       accessibilityRole="alert"
       accessibilityLiveRegion="polite"
       testID={testID}

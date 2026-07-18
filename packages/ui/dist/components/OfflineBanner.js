@@ -9,7 +9,7 @@ import { useTheme } from '../theme';
 import { Text } from './Text';
 export function OfflineBanner({ label = "You're offline — showing saved content.", testID }) {
     const { theme } = useTheme();
-    return (_jsx(View, { accessibilityRole: "alert", accessibilityLiveRegion: "polite", testID: testID, style: {
+    return (_jsx(View, { accessible: true, accessibilityRole: "alert", accessibilityLiveRegion: "polite", testID: testID, style: {
             backgroundColor: theme.colors.notice.neutral,
             paddingVertical: theme.spacing.sm,
             paddingHorizontal: theme.spacing.gutter,
