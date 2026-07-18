@@ -1,9 +1,10 @@
 {
   "//": "Supabase Edge Functions (Deno) config. Functions are Deno; pure logic modules (*.logic.ts) avoid Deno globals so they run under Vitest (Node) in CI (TDD Part 1 §3 #17).",
+  "//imports": "@panchangpal/shared and /ai map to their BUILT dist output: Deno does not rewrite the packages' TS-ESM '.js' import specifiers to '.ts', so it must consume the emitted .js (run `pnpm build` first — CD builds them before deploy). Vitest/Jest use their own src aliases and are unaffected.",
   "imports": {
     "@supabase/supabase-js": "npm:@supabase/supabase-js@2",
-    "@panchangpal/shared": "../../packages/shared/src/index.ts",
-    "@panchangpal/ai": "../../packages/ai/src/index.ts"
+    "@panchangpal/shared": "../../packages/shared/dist/index.js",
+    "@panchangpal/ai": "../../packages/ai/dist/index.js"
   },
   "compilerOptions": {
     "strict": true,
