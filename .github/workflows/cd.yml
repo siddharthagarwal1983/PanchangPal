@@ -63,6 +63,21 @@ jobs:
         with:
           version: 2.33.9
 
+      # The Deno import map resolves @panchangpal/shared + /ai to their built dist
+      # (Deno cannot rewrite the packages' TS-ESM '.js' specifiers to '.ts'), so build
+      # them before deploy. dist/ is git-ignored, so this must run in CD.
+      - uses: pnpm/action-setup@v4
+        with:
+          version: 9.6.0
+      - uses: actions/setup-node@v4
+        with:
+          node-version: 20.11.0
+          cache: pnpm
+      - name: Install workspace deps
+        run: pnpm install --frozen-lockfile
+      - name: Build shared + ai packages (for Deno import map)
+        run: pnpm build --filter=@panchangpal/shared --filter=@panchangpal/ai
+
       - name: Preflight
         run: bash scripts/preflight.sh staging
         env:
@@ -107,11 +122,11 @@ jobs:
 
       - uses: pnpm/action-setup@v4
         with:
-          version: 10
+          version: 9.6.0
 
-      - uses: actions/setup-node@v5
+      - uses: actions/setup-node@v4
         with:
-          node-version: 22
+          node-version: 20.11.0
           cache: pnpm
 
       - name: Install dependencies
