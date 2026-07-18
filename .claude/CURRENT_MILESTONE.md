@@ -44,11 +44,41 @@ Take the feature-complete Mobile MVP to a shippable beta. **No new product scope
 is environments, verification, observability, security, and release mechanics — everything in the
 TDD Part 5 §10.1 pre-launch go/no-go checklist that engineering owns.
 
-The organizing risk: **CD currently reports green while two of its jobs are placeholders.** The
-Maestro E2E step is `echo "maestro test tests/flows"` and the EAS build step is a stub, while
-`scripts/preflight.sh` only *warns* on unset secrets and exits 0. Staging migrations and Edge
-Function deploys are genuinely real. Closing that gap between reported and actual verification is
-the through-line of this milestone.
+The organizing risk: **CD reports green while much of it verifies nothing.** Staging migrations and
+Edge Function deploys are genuinely real; four gates are not.
+
+---
+
+# Corrected Premise (2026-07-18, during B1)
+
+The milestone was opened stating that `scripts/preflight.sh` "only warns on unset secrets and exits
+0 — it cannot fail a deploy". **That was false.** `require_var` calls `fail()`, and the script exits
+1; `cd.yml` invokes it without `|| true` in all four jobs. Verified by running it with the secrets
+unset: exit code 1, four required items reported missing, "Stopping deployment."
+
+The single `|| true` is in `ci.yml`'s db-tests job and is explicitly commented as advisory, which
+reads as deliberate.
+
+So B1's headline deliverable was already satisfied before B1 began. The real fail-open gaps were
+different, and are fixed in `feat/b1-bundle-gate`:
+
+- **`SUPABASE_PROD_REF` did not exist.** Staging requires a project ref for
+  `supabase functions deploy --project-ref`; production required only a DB URL, so a promotion could
+  pass preflight with no way to deploy Edge Functions at all. Now required, and registered.
+- **Production treated billing secrets as warnings.** `REVENUECAT_WEBHOOK_SECRET` is now required at
+  the production tier — absent, a live release ships with webhook signatures unverifiable.
+- **No `dev` target existed.** preflight accepted `staging|production|ci|local` while §1.1 mandates
+  three isolated environments. `dev` added (`SUPABASE_DEV_DB_URL`, `SUPABASE_DEV_REF`,
+  `SUPABASE_ACCESS_TOKEN`), distinct from `local`, which is the fully-local `supabase start` stack.
+
+Two further placeholders were found that the milestone had not recorded: the **AI eval subset** gate
+is an `echo`, and the **API / zod contract** gate runs `--passWithNoTests` against a package with no
+test files. Both are declared release-blocking and validate nothing. Neither is fixed yet — a gate
+that reads green while checking nothing is worse than an absent one, so they should be implemented
+or explicitly de-declared.
+
+**Lesson for the remaining slices:** the B1–B8 scoping was written from documentation rather than
+from the code. Verify each slice's premise against the repository before implementing it.
 
 ---
 
@@ -64,7 +94,9 @@ the through-line of this milestone.
 | **Local backend bring-up** | ⚠️ **Was impossible until 2026-07-18** — `supabase start` always rolled back |
 | Maestro E2E (FLOW_*) | ❌ Placeholder — `echo`, no flow specs, no `.maestro/` |
 | EAS build / distribution | ❌ Placeholder — no `eas.json`, no build profiles, no signing |
-| Preflight secret checks | ⚠️ Warns then `exit 0` — cannot fail a deploy on a missing secret |
+| Preflight secret checks | ✅ **Already fail-closed** (exits 1) — the earlier "warns then exit 0" claim was wrong; see Corrected Premise below |
+| **AI eval subset gate** | ❌ Placeholder — `echo`, undocumented until 2026-07-18; "passed" in 5s on PR #9 |
+| **API / zod contract gate** | ❌ Hollow — `--passWithNoTests` and `packages/api` contains no test files |
 | dev / prod environments | ❔ Unconfirmed — only staging is proven by a green run |
 | Sentry / dashboards / alerts | ❌ Not wired |
 | DR restore drill | ❌ Not performed |
@@ -128,9 +160,13 @@ One slice per session, same cadence as M1–M8: implemented, self-verified, revi
 
 # Milestone Deliverables
 
-- [ ] **B1** — dev + prod Supabase projects provisioned alongside staging; per-environment secrets
-      placed per §4.1; `preflight.sh` made fail-closed so a missing secret blocks a deploy instead
-      of warning; RevenueCat sandbox wired for dev/staging.
+- [ ] **B1** — dev + prod Supabase projects provisioned alongside staging (owner-performed);
+      per-environment secrets placed per §4.1; RevenueCat sandbox wired for dev/staging.
+      - [x] CI **bundle gate** (`expo export`, ios+android) — pulled forward from B2; verified to
+            fail on a reintroduced resolver defect, not merely to pass on green.
+      - [x] preflight `dev` target added; `SUPABASE_PROD_REF` required; `REVENUECAT_WEBHOOK_SECRET`
+            required at the production tier.
+      - [x] ~~make preflight fail-closed~~ — **already was**; premise corrected above.
 - [ ] **B2** — a **bundle gate** (`expo export` for ios+android) added to CI so a change that cannot
       build fails the PR — this alone would have caught three of the six defects above at M1;
       Maestro installed in CD; `FLOW_*` specs authored for the daily loop, ritual, Ask Guru,

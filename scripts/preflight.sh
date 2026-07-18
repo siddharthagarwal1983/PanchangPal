@@ -7,7 +7,11 @@
 # locally before a manual promotion.
 #
 #   Usage:  scripts/preflight.sh <target>
-#   target: staging | production | ci | local
+#   target: dev | staging | production | ci | local
+#
+# `dev`/`staging`/`production` map to the three isolated Supabase projects in
+# TDD Part 5 §1.1 (no shared databases; migrations promote dev→staging→prod).
+# `local` is the fully-local stack (`supabase start`), not the shared dev project.
 #
 # It validates ONLY variables/tools this repository actually uses
 # (see docs/devops/ENVIRONMENT_VARIABLES.md + SECRETS_MATRIX.md). It never
@@ -52,17 +56,18 @@ check_tool() { # cmd, note
 usage() {
   cat <<EOF
 ${BLD}PanchangPal preflight${RST}
-Usage: scripts/preflight.sh <staging|production|ci|local>
+Usage: scripts/preflight.sh <dev|staging|production|ci|local>
 
+  dev          Validate config for the shared dev Supabase project (§1.1)
   staging      Validate config for the staging CD pipeline
   production   Validate config for the production promotion (go/no-go)
   ci           Validate CI test prerequisites
-  local        Validate a local dev deploy/run
+  local        Validate a fully-local run (supabase start) — not the dev project
 EOF
 }
 
 case "$TARGET" in
-  staging|production|ci|local) ;;
+  dev|staging|production|ci|local) ;;
   ""|-h|--help) usage; exit 2 ;;
   *) printf "%sUnknown target: %s%s\n" "$RED" "$TARGET" "$RST"; usage; exit 2 ;;
 esac
@@ -72,6 +77,25 @@ printf "%s=== PanchangPal deployment preflight: %s ===%s\n" "$BLD" "$TARGET" "$R
 
 # -----------------------------------------------------------------------------
 case "$TARGET" in
+  dev)
+    hdr "Toolchain (warn-only here)"
+    check_tool psql "needed for scripts/migrate.sh"
+    check_tool supabase "needed to deploy Edge Functions"
+
+    # The dev project is the first link in the dev→staging→prod promotion chain
+    # (§1.1), so it needs the same trio staging does. It is a real, separate
+    # Supabase project — `local` covers the fully-local stack instead.
+    hdr "Required secrets — dev"
+    require_var SUPABASE_DEV_DB_URL   "$GH_SECRETS → Environment: dev"
+    require_var SUPABASE_DEV_REF      "$GH_SECRETS → Environment: dev"
+    require_var SUPABASE_ACCESS_TOKEN "$GH_SECRETS → Repository secrets"
+
+    hdr "Edge Function runtime secrets (set on the dev Supabase project)"
+    optional_var SUPABASE_SERVICE_ROLE_KEY "set via 'supabase secrets set' on the dev project"
+    optional_var OPENAI_API_KEY            "ask-guru / content-ingest disabled without it"
+    optional_var REVENUECAT_WEBHOOK_SECRET "RevenueCat SANDBOX secret for dev (§1.1)"
+    ;;
+
   staging)
     hdr "Toolchain (installed by CD, warn-only here)"
     check_tool psql "needed for scripts/migrate.sh"
@@ -98,13 +122,21 @@ case "$TARGET" in
 
     hdr "Required secrets — production"
     require_var SUPABASE_PROD_DB_URL "$GH_SECRETS → Environment: production"
+    # Symmetric with SUPABASE_STAGING_REF: `supabase functions deploy --project-ref`
+    # needs a project ref, and production previously required only a DB URL — so a
+    # promotion could pass preflight with no way to deploy Edge Functions at all.
+    require_var SUPABASE_PROD_REF    "$GH_SECRETS → Environment: production"
     require_var SUPABASE_ACCESS_TOKEN "$GH_SECRETS → Repository secrets"
     require_var EXPO_ACCESS_TOKEN     "$GH_SECRETS → Repository secrets"
 
-    hdr "Production guardrails"
+    # Production-only promotions. These are warnings for dev/staging, where a missing
+    # key merely disables a feature, but in production the same absence ships a live
+    # release with billing webhooks unverifiable (revenuecat-webhook cannot check
+    # signatures) or Ask Guru dark. Fail the go/no-go instead.
+    hdr "Production guardrails (required at this tier)"
+    require_var REVENUECAT_WEBHOOK_SECRET "$GH_SECRETS → Environment: production"
     optional_var SUPABASE_SERVICE_ROLE_KEY "set on the PROD Supabase project"
-    optional_var OPENAI_API_KEY            "required for live Ask Guru"
-    optional_var REVENUECAT_WEBHOOK_SECRET "required for billing webhooks"
+    optional_var OPENAI_API_KEY            "live Ask Guru stays dark without it (GURU_LIVE gate)"
     printf "  %sReminder: production requires manual approval on the 'production' Environment.%s\n" "$DIM" "$RST"
     ;;
 

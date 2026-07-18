@@ -84,6 +84,37 @@ jobs:
         run: |
           echo "### Unit + Component + a11y: ${{ job.status }}" >> "$GITHUB_STEP_SUMMARY"
 
+  bundle:
+    name: Bundle (expo export, ios + android)
+    runs-on: ubuntu-latest
+    needs: lint-typecheck
+    steps:
+      - uses: actions/checkout@v4
+      - uses: pnpm/action-setup@v4
+        with: { version: '${{ env.PNPM_VERSION }}' }
+      - uses: actions/setup-node@v4
+        with:
+          node-version: '${{ env.NODE_VERSION }}'
+          cache: pnpm
+      - name: Install (with retry)
+        run: |
+          n=0; until pnpm install --frozen-lockfile; do
+            n=$((n+1)); [ "$n" -ge 3 ] && { echo "::error::pnpm install failed after $n attempts"; exit 1; }
+            echo "::warning::pnpm install failed (attempt $n) — retrying in $((n*5))s"; sleep $((n*5));
+          done
+      # Compiles every module through Metro for both platforms. This is the only gate that
+      # executes the app's real entrypoint: lint, typecheck, and jest all pass without ever
+      # invoking Metro, which is how three bundle-blocking defects reached M8 undetected
+      # (see CURRENT_MILESTONE.md → Execution Gap). Deliberately needs no secrets —
+      # EXPO_PUBLIC_* are absent here and the export must still succeed.
+      - name: Export iOS + Android bundles
+        working-directory: apps/mobile
+        run: pnpm exec expo export --platform all --output-dir "$RUNNER_TEMP/expo-export"
+      - name: Summary
+        if: always()
+        run: |
+          echo "### Bundle (expo export): ${{ job.status }}" >> "$GITHUB_STEP_SUMMARY"
+
   api-contract:
     name: API / zod contract tests
     runs-on: ubuntu-latest
