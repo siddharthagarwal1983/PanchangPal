@@ -67,6 +67,36 @@ jobs:
           SUPABASE_ACCESS_TOKEN: ${{ secrets.SUPABASE_ACCESS_TOKEN }}
           EXPO_ACCESS_TOKEN: ${{ secrets.EXPO_ACCESS_TOKEN }}
 
+      # Fail fast, and legibly, on a credential problem.
+      #
+      # scripts/preflight.sh only checks that EXPO_ACCESS_TOKEN is SET — presence, not
+      # capability. The v0.1.0 tag run passed preflight, installed dependencies, and then
+      # died inside `eas build` with a raw GraphQL error:
+      #
+      #   Entity not authorized: AppEntity[...] (viewer = RobotViewerContext, action = READ)
+      #
+      # The token was a robot token without access to this project. Two probes separate the
+      # two failure modes that error conflates:
+      #
+      #   whoami        — is the token valid at all, and who is it?
+      #   project:info  — can that identity READ this specific app? This is the exact
+      #                   operation that failed, so it reproduces the fault in seconds
+      #                   rather than after a dependency install.
+      - name: Verify EAS credentials and project access
+        working-directory: apps/mobile
+        run: |
+          set -uo pipefail
+          if ! pnpm dlx eas-cli@latest whoami; then
+            echo "::error::EXPO_ACCESS_TOKEN is missing, invalid, or expired — eas-cli could not authenticate."
+            exit 1
+          fi
+          if ! pnpm dlx eas-cli@latest project:info; then
+            echo "::error::Authenticated, but this identity cannot read the EAS project. If the token belongs to a robot user, grant it access to the project (expo.dev -> project -> Access) with at least Developer permission, or use a token from the account that owns the project."
+            exit 1
+          fi
+        env:
+          EXPO_TOKEN: ${{ secrets.EXPO_ACCESS_TOKEN }}
+
       # ANDROID ONLY. iOS signing needs an Apple Developer membership that does not exist
       # yet, so `--platform all` would fail on the iOS half of every run. Add `ios` once
       # the membership and credentials are in place (B3 remainder).
