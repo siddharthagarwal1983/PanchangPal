@@ -1,6 +1,6 @@
 # CLAUDE.md — Global Engineering Instructions for PanchangPal
 
-Version: 2.0.0
+Version: 2.1.0
 
 Purpose:
 This document defines how Claude should work within the PanchangPal repository.
@@ -434,13 +434,43 @@ Do not skip steps.
 
 ---
 
+# Increment & Milestone Completion Checkpoint
+
+Status/tracking documentation must be refreshed at **every increment or milestone completion** — not
+only when I say "End Session." The moment a slice, increment, or milestone is finished (implemented +
+self-verified, whether or not it has been reviewed yet), automatically update, in the same session:
+
+1. **DASHBOARD.md** — progress %, Current Task, Today's Objective, Overall Progress table, Next Deliverable.
+2. **PROJECT_STATUS.md** — phase table, Current Focus, mobile/backend status, Top Priorities, Recently Completed, roadmap, Executive Summary.
+3. **CURRENT_MILESTONE.md** — the per-slice / per-increment status table and progress.
+4. **IMPLEMENTATION_ROADMAP.md** — the "Where we are" position and any track that advanced.
+5. **SESSION.md** — completed work, modified/created files, pending work, blockers, recommended next task.
+6. **TASK.md** — mark the finished task done; set the next task.
+
+Then, only if warranted:
+
+7. **DECISIONS.md** — append a dated convention block only if the increment established a permanent client/product decision.
+8. **PROJECT_MEMORY.md** — only if permanent project knowledge changed (never as a session log).
+
+**Single canonical progress %.** The Mobile MVP milestone percentage must be identical in
+DASHBOARD.md, PROJECT_STATUS.md, and CURRENT_MILESTONE.md. If they ever diverge, **DASHBOARD.md is
+authoritative** and the others are reconciled to it. Compute it as slices-complete over total slices,
+counting a partially-done multi-increment slice by its finished increments (e.g. 7 of 8 slices with
+1 of 3 increments of the 8th done = (7 + 1/3)/8 ≈ 92%).
+
+This checkpoint is a superset of the End Session updates below; performing it at each increment keeps
+the tracking files from drifting between sessions.
+
+---
+
 # End of Session Workflow
 
 When I say:
 
 "End Session"
 
-Automatically perform the following.
+Automatically perform the following. (Note: these updates are also part of the Increment &
+Milestone Completion Checkpoint above and should already be current if an increment just finished.)
 
 1. Update SESSION.md
 

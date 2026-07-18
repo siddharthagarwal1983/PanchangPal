@@ -2,9 +2,9 @@
 
 # PanchangPal — Project Status Dashboard
 
-Version: 1.1.3
+Version: 1.2.0
 
-Last Updated: 2026-07-13 (M6 Profile/Household complete)
+Last Updated: 2026-07-18 (M7 Notifications + M8 Subscription Increment 1 complete)
 
 Purpose:
 This document provides a high-level snapshot of the overall project.
@@ -23,6 +23,10 @@ For day-to-day work see:
 - SESSION.md
 - TASK.md
 
+Canonical progress metric: the **Mobile MVP — Phase 1 (Feature Slices)** milestone percentage,
+shared verbatim with DASHBOARD.md and CURRENT_MILESTONE.md. If these three disagree, DASHBOARD.md
+is authoritative and the others must be reconciled to it.
+
 ---
 
 # Overall Status
@@ -33,9 +37,9 @@ Current Phase
 
 Overall Progress
 
-██████████████████░░
+██████████████████▏░
 
-**88% Complete**
+**92% Complete** (Mobile MVP — Phase 1: 7 of 8 slices done; M8 Subscription Increment 1 of 3 complete)
 
 Project Health
 
@@ -67,7 +71,7 @@ TBD
 | API Specification | ✅ Complete | 100% |
 | Database Design | ✅ Complete | 100% |
 | Backend Foundation (SVC_*) | ✅ Complete | 100% (panchang compute blocked by ADR-033) |
-| Mobile Development (feature slices) | 🚧 In Progress | ~75% (M1–M6 done; M7–M8 remain) |
+| Mobile Development (feature slices) | 🚧 In Progress | ~92% (M1–M7 done; M8 Increment 1 of 3 done) |
 | AI Platform | 🟡 In Progress | Adapters + RAG pipeline done; corpus + eval pending |
 | Testing | 🟡 In Progress | Unit/component/domain in place; E2E pending |
 | Beta | ⏳ Pending | 0% |
@@ -86,12 +90,14 @@ Build the mobile application as a sequence of vertical, production-quality featu
 
 Current Focus
 
-- M6 Profile / Household — ✅ complete (Increment 1 Preferences/Settings/Profile; Increment 2
-  Household members/roles/invites/realtime; Increment 3 Account deletion). Awaiting review.
-- M7 Notifications (next)
-- M8 Subscription (pending)
+- M7 Notifications — ✅ complete (reviewed/approved 2026-07-18).
+- M8 Subscription — 🟡 in progress (3 increments):
+  - Increment 1 (household-grain entitlement read + gating) — ✅ complete, awaiting review.
+  - Increment 2 (SCR_SUBSCRIPTION_001 + plans/purchase/restore + affordance wiring) — ⏳ next.
+  - Increment 3 (contextual paywall sheet + routing + FF_FAMILY_PLAN) — ⏳ pending.
 
-Completed slices: M1 App Shell · M2 Today · M3 Guided Ritual · M4 Calendar Shell · M5 Ask Guru · M6 Profile/Household.
+Completed slices: M1 App Shell · M2 Today · M3 Guided Ritual · M4 Calendar Shell · M5 Ask Guru ·
+M6 Profile/Household · M7 Notifications.
 
 See:
 
@@ -126,7 +132,7 @@ See:
 | Security Architecture | ✅ Complete |
 | Release Architecture | ✅ Complete |
 
-Implementation is underway (Mobile MVP Phase 1; M1–M5 complete).
+Implementation is underway (Mobile MVP Phase 1; M1–M7 complete, M8 Increment 1 done).
 
 ---
 
@@ -136,7 +142,7 @@ Implementation is underway (Mobile MVP Phase 1; M1–M5 complete).
 |--------|---------|
 | Repository Structure | ✅ Complete |
 | Shared Packages | ✅ Scaffolded |
-| Expo App | ✅ App shell + M1–M5 slices |
+| Expo App | ✅ App shell + M1–M7 slices + M8 Increment 1 |
 | Supabase Project | ⏳ Pending (migrations defined; not yet applied to a live project) |
 | GitHub Actions | ✅ Complete |
 | CI/CD | ✅ Defined |
@@ -149,12 +155,12 @@ Implementation is underway (Mobile MVP Phase 1; M1–M5 complete).
 |--------|---------|
 | Authentication | ✅ AuthRepository + anon-first/OAuth/OTP (backend + shell) |
 | Database | ✅ Schema + RLS + repositories (migrations not yet applied live) |
-| Edge Functions | 🟢 7 SVC_* wired (panchang compute blocked by ADR-033) |
+| Edge Functions | 🟢 7 SVC_* wired (panchang compute blocked by ADR-033); SVC_household / SVC_notify_scheduler / SVC_revenuecat_webhook pending (client contracts coded) |
 | APIs | ✅ OpenAPI (65 operations) + SVC_* handlers |
 | RLS Policies | ✅ Defined across 29 tables |
 | AI Provider | ✅ OpenAI adapters + RAG pipeline + rate limit/cost |
 | Analytics Adapter | ⏳ Pending |
-| Payment Adapter | ✅ Webhook + BillingRepository (F-4) |
+| Payment Adapter | ✅ Webhook + BillingRepository (F-4) — webhook Edge Function pending |
 
 ---
 
@@ -165,7 +171,7 @@ Implementation is underway (Mobile MVP Phase 1; M1–M5 complete).
 | Expo Setup | ✅ App shell |
 | Navigation | ✅ Shell (splash/auth/4-tab/guards/deep links) |
 | Design System | ✅ Tokens + shell/feature components (extends per slice) |
-| Components | 🟢 CMP_* for M1–M6 (+ Member/RolePicker/Share/Invite/Consequences/DestructiveAction); Notifications/Subscription pending |
+| Components | 🟢 CMP_* for M1–M7; Subscription CMP_* (PLAN_CARD/VALUE_LIST/LEGAL_FOOTNOTE) pending (M8 Inc 2) |
 | Authentication Flow | ✅ Anon-first + OAuth/OTP (shell) |
 | Today (MOD_today) | ✅ SCR_HOME_001 (panchang unavailable per ADR-033) |
 | Ritual Experience | ✅ Guided player (session engine, offline restore, text-first audio seam) |
@@ -175,8 +181,8 @@ Implementation is underway (Mobile MVP Phase 1; M1–M5 complete).
 | Profile | ✅ SCR_PROFILE_001 (account state, deferred-auth prompt, entries) |
 | Household | ✅ SCR_HOUSEHOLD_001 + SCR_HOUSEHOLD_INVITE_001 (members/roles/depth, invites, realtime) |
 | Account deletion | ✅ SCR_DELETE_ACCOUNT_001 (F-3 transfer gate + grace window) |
-| Notifications | ⏳ Pending (M7) |
-| Subscription | ⏳ Pending (M8) |
+| Notifications | ✅ Opt-in priming, per-channel prefs, token registration (NotificationAdapter seam), deep-link routing; sunrise/tithi content gated by ADR-033 |
+| Subscription | 🟡 Increment 1 done (household-grain entitlement read + usePremiumGate + PaymentAdapter/Null); Increments 2–3 pending |
 
 ---
 
@@ -210,7 +216,7 @@ Implementation is underway (Mobile MVP Phase 1; M1–M5 complete).
 
 | Area | Status |
 |--------|---------|
-| Unit Tests | 🟢 In place (10+ Vitest suites) |
+| Unit Tests | 🟢 In place (12+ Vitest suites) |
 | Integration Tests | 🟢 pgTAP integration suite |
 | Component Tests | 🟢 In place for delivered slices |
 | Accessibility Tests | 🟢 a11y assertions in slice tests |
@@ -223,27 +229,27 @@ Implementation is underway (Mobile MVP Phase 1; M1–M5 complete).
 
 Priority 1
 
-Mobile Milestone 7 — Notifications
+Mobile Milestone 8 — Subscription, Increments 2–3 (SCR_SUBSCRIPTION_001 + affordance wiring; paywall + routing + FF_FAMILY_PLAN)
 
 Priority 2
 
-Mobile Milestone 8 — Subscription
+⛔ Ratify ADR-033 (Canonical Panchang Engine) — unblocks Today panchang, Calendar markers, notifications
 
 Priority 3
 
-Backend SVC_household Edge Function (member/invite endpoints; client contract coded in M6)
+AI corpus ingestion + eval readiness — unblocks live Ask Guru (GURU_LIVE)
 
 Priority 4
 
-⛔ Ratify ADR-033 (Canonical Panchang Engine) — unblocks Today panchang, Calendar markers, notifications
+Backend Edge Functions — SVC_household, SVC_notify_scheduler, SVC_revenuecat_webhook (client contracts already coded)
 
 Priority 5
 
-AI corpus ingestion + eval readiness — unblocks live Ask Guru (GURU_LIVE)
+Apply migrations to a live Supabase project + integration run
 
 Priority 6
 
-Apply migrations to a live Supabase project + integration run
+E2E (Maestro FLOW_*) + first live CI run
 
 ---
 
@@ -251,19 +257,26 @@ Apply migrations to a live Supabase project + integration run
 
 ⛔ **Canonical Panchang Computation Engine** (ADR-033, Proposed)
 - Issue: the deterministic astronomical algorithm (ephemeris, ayanamsa, per-tradition conventions, sunrise/tithi/muhurta) is not specified in any MRD/PRD/PDD/TDD and must not be guessed (a wrong tithi breaks trust, MRD Risk §1).
-- Impact: SVC_panchang compute (Today/calendar/detail) and sunrise/tithi-timed notifications are blocked. Everything else in Backend Foundation is done. The whole backend depends only on the abstract PanchangEngine interface, so no rework when it lands.
+- Impact: SVC_panchang compute (Today/calendar/detail) and sunrise/tithi-timed notifications are blocked. Everything else is done. The whole system depends only on the abstract PanchangEngine/PanchangProvider interfaces, so no rework when it lands.
 - Owner: Architecture + Product (+ pandit reviewer).
 - Expected Resolution: ratify ADR-033 Part B (ephemeris/ayanamsa/traditions/methodology/validation dataset/tolerances) → implement a concrete engine → pass golden dataset. See docs/architecture/canonical-panchang-engine/.
 
 🔒 **Ask Guru live answers gated** (GURU_LIVE = false)
 - The Ask Guru client is complete but streams live answers only once a reviewed content corpus and evaluation readiness are in place (TDD Part 3 §9/§10B). Until then it honestly declines. Flipping the flag goes live.
 
+ℹ️ **Deferred vendor dependencies** — `expo-notifications` (M7) and `react-native-purchases` (M8) are
+not yet installed (offline sandbox can't regenerate the lockfile). Their adapters ship as pure ports +
+Null implementations (NullNotificationAdapter / NullPaymentAdapter); the concrete adapters are one-line
+swaps in the composition roots once the deps + keys land on the Mac. Entitlement READS and notification
+prefs work today, so gating and prefs are real before the SDKs are wired.
+
 ---
 
 # Next Major Deliverables
 
-- Mobile feature slices M6–M8 (Profile/Household, Notifications, Subscription)
+- Mobile feature slices — M8 Subscription Increments 2–3 (SCR_SUBSCRIPTION_001, plans/purchase/restore, paywall, FF_FAMILY_PLAN)
 - Reviewed AI content corpus + evaluation harness (unblocks live Ask Guru)
+- Backend Edge Functions — SVC_household, SVC_notify_scheduler, SVC_revenuecat_webhook
 - Initial Supabase Project (apply migrations) + integration run
 - E2E automation (Maestro FLOW_*) + first live CI run
 
@@ -278,45 +291,21 @@ Apply migrations to a live Supabase project + integration run
 - Technical Design Document
 - AI Knowledge Base
 - Repository Organization
-- ADR Repository (32 ADRs + template + governance guide)
+- ADR Repository (33 ADRs + template + governance guide)
 - OpenAPI Specification (65 operations, docs/api/)
 - Database Schema & Migrations (29 tables + RLS, apps/backend/migrations/ + docs/database/)
 - Monorepo scaffold (pnpm + Turborepo; packages/api,shared,database,ui,design-tokens,ai; apps/mobile,backend)
 - Expo app shell (4-tab router, providers, Zustand stores, theme, i18n) + GitHub Actions CI/CD (ci/cd/ota, CODEOWNERS, scripts)
-- Backend Foundation: 7 SVC_* Edge Functions wired; OpenAI adapters + RAG pipeline; DB repositories + 2 pgvector/AI migrations; Ask Guru rate limit + cost circuit-breaker; 10 Vitest suites + pgTAP integration suite; ADR-033 + panchang-engine work item
+- Backend Foundation: 7 SVC_* Edge Functions wired; OpenAI adapters + RAG pipeline; DB repositories + 2 pgvector/AI migrations; Ask Guru rate limit + cost circuit-breaker; Vitest suites + pgTAP integration suite; ADR-033 + panchang-engine work item
 - Mobile Milestone 1 (Application Shell): PDD §6 design tokens; 11 CMP_* shell components (a11y-first); anon-first + OAuth/OTP auth (AuthRepository + STORE_session); splash/onboarding/4-tab navigation + guards + deep links + error boundary; i18n; 3 test suites
-- Mobile Milestone 2 (Today / MOD_today): 9 Today CMP_* (panchang/ritual/streak/checklist/rotating/festival cards + primary button/location chip/card); client PanchangProvider abstraction + ProductionPanchangProvider + dev-only MockPanchangProvider; useToday/useChecklist/useCompleteRitual hooks (optimistic + offline queue); StreakService/RitualProgressService; SCR_HOME_001 composed (panchang shows unavailable per ADR-033); 2 test suites
-- Mobile Milestone 3 (Guided Ritual Player / SCR_RITUAL_001): reusable RitualSession +
-  RitualEngine; MMKV ritual-session repository; RitualRepository/query hook; NullAudioAdapter
-  text-first seam; dedicated accessible completion state; 5 ritual CMP_* and domain/repository/UI
-  tests. Playback is intentionally deferred to a separately approved AudioAdapter.
-- Mobile Milestone 4 (Calendar Shell / SCR_CALENDAR_001): reusable Gregorian month layout,
-  CalendarProvider/repository/query seam, accessible month navigation/grid/day cells and
-  tradition switcher. Festival, vrat, and panchang markers remain explicitly unavailable until
-  ADR-033 is ratified.
-- Mobile Milestone 5 (Ask Guru Client / SCR_GURU_HOME/CHAT/HISTORY_001): trust-first home,
-  streamed conversation, source/decline/error/offline states, and cached history via a
-  readiness-gated SSE transport. The client calls only the server API/SSE adapter — never an LLM
-  directly and never fabricates. Live answers stay gated (GURU_LIVE=false) until corpus/eval
-  readiness; component/domain/UI + a11y tests included.
-- Mobile Milestone 6 — Increment 1 (Profile/Household / MOD_you): server-authoritative
-  preferences (profileRepository owner-RLS + usePreferences/useUpdatePreferences: optimistic,
-  STORE_prefs mirror, offline queue); SCR_SETTINGS_001 (appearance/tradition/depth/sign-out) and
-  SCR_PROFILE_001 (account state, deferred-auth prompt, Settings/Household entries); new settings
-  CMP_* (Segmented/Toggle/SettingsRow); Household shell (no dead end); mapping + repository tests.
-  (Increments 2 and 3 below complete the slice.)
-- Mobile Milestone 6 — Increment 2 (Household): household/member domain (pure, safe fallbacks);
-  householdRepository (RLS read + SVC_household writes via OpenAPI paths + Realtime member seam);
-  HOOK_useHousehold/useInvite (optimistic, auth-gated, idempotent); CMP_MEMBER_ROW/ROLE_PICKER/
-  SHARE_BUTTON/INVITE_*; SCR_HOUSEHOLD_001 recomposed + SCR_HOUSEHOLD_INVITE_001; domain/repo tests.
-- Mobile Milestone 6 — Increment 3 (Account deletion): account domain (F-3 gate mirroring
-  SVC_account); accountRepository (reauth/delete/transfer); useAccountDeletion (reauth→request→anon);
-  CMP_CONSEQUENCES_PANEL/DESTRUCTIVE_ACTION; SCR_DELETE_ACCOUNT_001 + Settings entry; tests. Deletion
-  is a reversible grace-window request; server stays authoritative.
-- DevOps Platform Audit & Hardening (interlude, 2026-07-12): canonical env inventory (14 vars),
-  secrets matrix, 6 .env.*.example templates, scripts/preflight.sh + bootstrap.sh, behavior-
-  preserving workflow hardening (ci/cd/ota), docs/SETUP.md + docs/devops/*, DEVOPS_AUDIT_REPORT.md;
-  fixed .gitignore ignoring env templates. No product/architecture/deploy-behavior changes.
+- Mobile Milestone 2 (Today / MOD_today): 9 Today CMP_*; client PanchangProvider abstraction + ProductionPanchangProvider + dev-only MockPanchangProvider; useToday/useChecklist/useCompleteRitual hooks (optimistic + offline queue); StreakService/RitualProgressService; SCR_HOME_001 composed (panchang unavailable per ADR-033); 2 test suites
+- Mobile Milestone 3 (Guided Ritual Player / SCR_RITUAL_001): reusable RitualSession + RitualEngine; MMKV ritual-session repository; RitualRepository/query hook; NullAudioAdapter text-first seam; accessible completion state; 5 ritual CMP_* + domain/repository/UI tests
+- Mobile Milestone 4 (Calendar Shell / SCR_CALENDAR_001): reusable Gregorian month layout, CalendarProvider/repository/query seam, accessible month navigation/grid/day cells + tradition switcher. Festival/vrat/panchang markers explicitly unavailable until ADR-033 is ratified
+- Mobile Milestone 5 (Ask Guru Client / SCR_GURU_HOME/CHAT/HISTORY_001): trust-first home, streamed conversation, source/decline/error/offline states, cached history via a readiness-gated SSE transport. Client calls only the server API/SSE adapter — never an LLM directly and never fabricates. Live answers stay gated (GURU_LIVE=false) until corpus/eval readiness; component/domain/UI + a11y tests
+- Mobile Milestone 6 (Profile/Household / MOD_you): server-authoritative preferences (owner-RLS, optimistic + offline queue); SCR_SETTINGS_001 / SCR_PROFILE_001; household domain + householdRepository (RLS read + SVC_household writes + Realtime member seam); useHousehold/useInvite; CMP_MEMBER_ROW/ROLE_PICKER/SHARE_BUTTON/INVITE_*; SCR_HOUSEHOLD_001 + SCR_HOUSEHOLD_INVITE_001; account deletion (F-3 gate + grace window, SCR_DELETE_ACCOUNT_001); domain/repository tests
+- DevOps Platform Audit & Hardening (interlude, 2026-07-12): canonical env inventory (14 vars), secrets matrix, 6 .env.*.example templates, scripts/preflight.sh + bootstrap.sh, behavior-preserving workflow hardening (ci/cd/ota), docs/SETUP.md + docs/devops/*, DEVOPS_AUDIT_REPORT.md. No product/architecture/deploy-behavior changes
+- **Mobile Milestone 7 (Notifications / MOD_notifications, 2026-07-18):** opt-in priming, per-channel server-authoritative prefs (user_profile.notif_prefs JSON), push-token registration behind the NotificationAdapter seam (NullNotificationAdapter until expo-notifications lands), notification-tap deep-link routing (incl. panchangpal://invite/{token}). Scheduling is always server-side (SVC_notify_scheduler); the client only registers token + prefs. Sunrise/tithi content gated by ADR-033. Reviewed/approved
+- **Mobile Milestone 8 — Increment 1 (Subscription entitlement read + gating, 2026-07-18):** household-grain (F-4) entitlement READ via supabase-js RLS + realtime seam; pure mapping/rules (strict is_active; isEntitled/hasFamily/activeKind); PremiumCapability registry (deep_dive_content, extended_ask_guru) + usePremiumGate (fails open while loading; daily loop never gated); PaymentAdapter port + NullPaymentAdapter (never fabricates a purchase). Entitlement is READ-ONLY on device — the entitlement table denies all client writes (migration 20260712000060); the RevenueCat webhook is the sole writer. Domain + repository tests. Awaiting review
 
 Do not duplicate SESSION.md.
 
@@ -328,7 +317,7 @@ Only major milestones belong here.
 
 Current Goal
 
-Complete the Mobile MVP Phase 1 feature slices (M6–M8) and reach Beta Readiness.
+Complete the Mobile MVP Phase 1 feature slices (finish M8 Subscription) and reach Beta Readiness.
 
 The project is considered ready for Beta Readiness & Platform Hardening when:
 
@@ -342,10 +331,11 @@ The project is considered ready for Beta Readiness & Platform Hardening when:
 
 # Claude Update Rules
 
-Update this document only when:
+Update this document when:
 
 - A project phase changes.
-- A milestone completes.
+- A milestone **or increment** completes (see the Increment & Milestone Completion Checkpoint in
+  CLAUDE.md — this file is updated at each increment boundary, not only at End Session).
 - Overall progress changes significantly.
 - Major deliverables are completed.
 
@@ -362,63 +352,10 @@ Those belong in SESSION.md.
 
 # Project Roadmap
 
-✅ Documentation
-
-↓
-
-✅ Repository Foundation
-
-↓
-
-✅ Backend Foundation
-
-↓
-
-✅ Design System
-
-↓
-
-✅ Authentication
-
-↓
-
-✅ Today's Panchang (shell; compute blocked by ADR-033)
-
-↓
-
-✅ Ritual Experience
-
-↓
-
-✅ Calendar Shell
-
-↓
-
-✅ Ask Guru AI (client; live answers gated)
-
-↓
-
-🚧 Household
-
-↓
-
-Notifications
-
-↓
-
-Payments
-
-↓
-
-Testing
-
-↓
-
-Beta
-
-↓
-
-Production
+✅ Documentation → ✅ Repository Foundation → ✅ Backend Foundation → ✅ Design System →
+✅ Authentication → ✅ Today's Panchang (shell; compute blocked by ADR-033) → ✅ Ritual Experience →
+✅ Calendar Shell → ✅ Ask Guru AI (client; live answers gated) → ✅ Profile / Household →
+✅ Notifications → 🚧 Payments (M8: Increment 1 done; 2–3 remain) → Testing → Beta → Production
 
 ---
 
@@ -427,10 +364,11 @@ Production
 The PanchangPal project has completed the product definition and architecture phases, the
 repository and platform foundation, and the backend SVC_* services.
 
-The current focus is the Mobile MVP Phase 1 feature-slice milestone: App Shell, Today, Guided
-Ritual, Calendar Shell, and Ask Guru Client (M1–M5) plus
-Profile/Household (M6) are complete; Notifications and Subscription (M7–M8) remain. The only architectural blocker is the Canonical
-Panchang Engine decision (ADR-033); Ask Guru live answers are intentionally gated until
-corpus/eval readiness.
+The current focus is the Mobile MVP Phase 1 feature-slice milestone (92%). App Shell, Today, Guided
+Ritual, Calendar Shell, Ask Guru Client, Profile/Household, and Notifications (M1–M7) are complete;
+Subscription (M8) is in progress — Increment 1 (household-grain entitlement read + gating) is done
+and awaiting review, with the subscription screen (Increment 2) and paywall (Increment 3) remaining.
+The only architectural blocker is the Canonical Panchang Engine decision (ADR-033); Ask Guru live
+answers are intentionally gated until corpus/eval readiness.
 
 The project remains on track and architecture is considered stable.
