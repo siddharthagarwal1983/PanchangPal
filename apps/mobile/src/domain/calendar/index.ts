@@ -1,4 +1,4 @@
-export { moveMonth, toCalendarMonthView, type CalendarDayCellModel, type CalendarMonthViewModel } from './calendarMonthService';
+export { moveMonth, toCalendarMonthView, toMonthGridDays, type CalendarDayCellModel, type CalendarMonthViewModel, type MonthGridDayModel } from './calendarMonthService';
 export {
     ProductionCalendarProvider,
     type CalendarMonthQuery,
