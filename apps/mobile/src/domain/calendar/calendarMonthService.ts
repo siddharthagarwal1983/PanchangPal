@@ -32,6 +32,37 @@ export function toCalendarMonthView(month: Date, today: Date = new Date()): Cale
   };
 }
 
+/** Shape CMP_MONTH_GRID consumes. Declared structurally so the domain stays UI-free. */
+export interface MonthGridDayModel {
+  key: string;
+  day: number;
+  date: string;
+  today: boolean;
+  label: string;
+}
+
+/**
+ * Project month days onto the grid's contract.
+ *
+ * The domain says `isToday`; CMP_MONTH_GRID's prop is `today`. Spreading the day straight
+ * into the component silently dropped the flag — the prop is optional, so it typechecked
+ * cleanly and simply defaulted to false, leaving today's date unmarked in every month.
+ * Translating explicitly here keeps the boundary honest and, unlike a spread buried in JSX,
+ * makes it testable.
+ */
+export function toMonthGridDays(
+  days: readonly CalendarDayCellModel[],
+  labelForDate: (date: string) => string,
+): MonthGridDayModel[] {
+  return days.map((day) => ({
+    key: day.key,
+    day: day.day,
+    date: day.date,
+    today: day.isToday,
+    label: labelForDate(day.date),
+  }));
+}
+
 export function moveMonth(month: Date, offset: number): Date {
   return new Date(month.getFullYear(), month.getMonth() + offset, 1);
 }

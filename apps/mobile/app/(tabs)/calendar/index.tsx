@@ -4,7 +4,7 @@ import { View } from 'react-native';
 import { Screen, AppHeader, MonthNav, MonthGrid, TraditionSwitcher, Text, Skeleton, useTheme } from '@panchangpal/ui';
 import { TRADITION_CODES, type TraditionCode } from '@panchangpal/shared';
 import { useOnline } from '../../../src/data/useOnline';
-import { moveMonth, toCalendarMonthView } from '../../../src/domain/calendar';
+import { moveMonth, toCalendarMonthView, toMonthGridDays } from '../../../src/domain/calendar';
 import { useCalendarMonth } from '../../../src/data/hooks/useCalendarMonth';
 import { usePrefsStore } from '../../../src/store/prefs';
 import { t } from '../../../src/i18n';
@@ -31,7 +31,7 @@ export default function CalendarScreen() {
       <View style={{ gap: theme.spacing.lg, paddingTop: theme.spacing.md }}>
         <TraditionSwitcher label={t('calendar.tradition')} selected={tradition} options={TRADITION_CODES.map((value) => ({ value, label: t(TRADITION_KEYS[value]) }))} onSelect={(value) => setPrefs({ tradition: value as TraditionCode })} />
         <MonthNav label={view.label} previousLabel={t('calendar.previousMonth', { month: formatMonth(moveMonth(month, -1)) })} nextLabel={t('calendar.nextMonth', { month: formatMonth(moveMonth(month, 1)) })} todayLabel={t('calendar.today')} onPrevious={() => setMonth((value) => moveMonth(value, -1))} onNext={() => setMonth((value) => moveMonth(value, 1))} onToday={() => setMonth(new Date())} />
-        {calendar.isLoading ? <Skeleton height={theme.spacing.xxl} /> : <MonthGrid weekdayLabels={view.weekdayLabels} leadingBlankCells={view.leadingBlankCells} days={view.days.map((day) => ({ ...day, label: labelForDate(day.date) }))} selectedDate={selectedDate} onSelectDay={setSelectedDate} />}
+        {calendar.isLoading ? <Skeleton height={theme.spacing.xxl} /> : <MonthGrid weekdayLabels={view.weekdayLabels} leadingBlankCells={view.leadingBlankCells} days={toMonthGridDays(view.days, labelForDate)} selectedDate={selectedDate} onSelectDay={setSelectedDate} />}
         {calendar.data?.status === 'unavailable' ? <View accessibilityRole="alert" style={{ gap: theme.spacing.xs }}><Text variant="bodyMedium">{t('calendar.unavailable')}</Text><Text variant="bodySmall" color="secondary">{t('calendar.unavailableDetail')}</Text></View> : null}
       </View>
     </Screen>
