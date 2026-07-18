@@ -6,17 +6,18 @@
  */
 import { useSessionStore } from '../session';
 
-const restore = jest.fn();
-const signInAnonymously = jest.fn();
-const merge = jest.fn();
-const signOut = jest.fn();
+// jest.mock factories may only reference variables prefixed with `mock` (out-of-scope guard).
+const mockRestore = jest.fn();
+const mockSignInAnonymously = jest.fn();
+const mockMerge = jest.fn();
+const mockSignOut = jest.fn();
 
 jest.mock('../../data/authRepository', () => ({
   authRepository: {
-    restore: (...a: unknown[]) => restore(...a),
-    signInAnonymously: (...a: unknown[]) => signInAnonymously(...a),
-    merge: (...a: unknown[]) => merge(...a),
-    signOut: (...a: unknown[]) => signOut(...a),
+    restore: (...a: unknown[]) => mockRestore(...a),
+    signInAnonymously: (...a: unknown[]) => mockSignInAnonymously(...a),
+    merge: (...a: unknown[]) => mockMerge(...a),
+    signOut: (...a: unknown[]) => mockSignOut(...a),
   },
 }));
 
@@ -30,23 +31,23 @@ beforeEach(() => {
 
 describe('session bootstrap (restore or anonymous)', () => {
   it('restores an existing anonymous session', async () => {
-    restore.mockResolvedValue({ userId: 'anon-1', isAnonymous: true, jwt: 'jwt' });
+    mockRestore.mockResolvedValue({ userId: 'anon-1', isAnonymous: true, jwt: 'jwt' });
     await useSessionStore.getState().bootstrap();
-    expect(signInAnonymously).not.toHaveBeenCalled();
+    expect(mockSignInAnonymously).not.toHaveBeenCalled();
     expect(useSessionStore.getState().status).toBe('anonymous');
     expect(useSessionStore.getState().userId).toBe('anon-1');
   });
 
   it('creates an anonymous session when none exists (ADR-009)', async () => {
-    restore.mockResolvedValue(null);
-    signInAnonymously.mockResolvedValue({ userId: 'anon-2', isAnonymous: true, jwt: 'jwt' });
+    mockRestore.mockResolvedValue(null);
+    mockSignInAnonymously.mockResolvedValue({ userId: 'anon-2', isAnonymous: true, jwt: 'jwt' });
     await useSessionStore.getState().bootstrap();
-    expect(signInAnonymously).toHaveBeenCalledTimes(1);
+    expect(mockSignInAnonymously).toHaveBeenCalledTimes(1);
     expect(useSessionStore.getState().status).toBe('anonymous');
   });
 
   it('sets error status if bootstrap fails', async () => {
-    restore.mockRejectedValue(new Error('network'));
+    mockRestore.mockRejectedValue(new Error('network'));
     await useSessionStore.getState().bootstrap();
     expect(useSessionStore.getState().status).toBe('error');
   });
@@ -54,11 +55,11 @@ describe('session bootstrap (restore or anonymous)', () => {
 
 describe('upgradeAndMerge (F-1)', () => {
   it('merges when upgrading from a different anon uid, then becomes authenticated', async () => {
-    merge.mockResolvedValue(undefined);
+    mockMerge.mockResolvedValue(undefined);
     await useSessionStore
       .getState()
       .upgradeAndMerge({ userId: 'auth-1', isAnonymous: false, jwt: 'jwt2' }, 'anon-9');
-    expect(merge).toHaveBeenCalledWith('anon-9');
+    expect(mockMerge).toHaveBeenCalledWith('anon-9');
     expect(useSessionStore.getState().status).toBe('authenticated');
     expect(useSessionStore.getState().isAnonymous).toBe(false);
   });
@@ -67,16 +68,16 @@ describe('upgradeAndMerge (F-1)', () => {
     await useSessionStore
       .getState()
       .upgradeAndMerge({ userId: 'auth-2', isAnonymous: false, jwt: 'jwt3' }, null);
-    expect(merge).not.toHaveBeenCalled();
+    expect(mockMerge).not.toHaveBeenCalled();
   });
 });
 
 describe('signOut returns to anonymous (deferred auth)', () => {
   it('signs out then re-anon so the offline loop keeps working', async () => {
-    signOut.mockResolvedValue(undefined);
-    signInAnonymously.mockResolvedValue({ userId: 'anon-3', isAnonymous: true, jwt: 'jwt' });
+    mockSignOut.mockResolvedValue(undefined);
+    mockSignInAnonymously.mockResolvedValue({ userId: 'anon-3', isAnonymous: true, jwt: 'jwt' });
     await useSessionStore.getState().signOut();
-    expect(signOut).toHaveBeenCalled();
+    expect(mockSignOut).toHaveBeenCalled();
     expect(useSessionStore.getState().status).toBe('anonymous');
   });
 });

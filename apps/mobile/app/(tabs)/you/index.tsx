@@ -10,6 +10,8 @@ import { router } from 'expo-router';
 import { Screen, AppHeader, Card, Text, PrimaryButton, SettingsRow, useTheme } from '@panchangpal/ui';
 import { useOnline } from '../../../src/data/useOnline';
 import { useSessionStore } from '../../../src/store/session';
+import { useEntitlement } from '../../../src/data/hooks/useEntitlement';
+import { isEntitled } from '../../../src/domain/subscription';
 import { t } from '../../../src/i18n';
 
 export default function YouScreen() {
@@ -17,6 +19,7 @@ export default function YouScreen() {
   const { theme } = useTheme();
   const status = useSessionStore((s) => s.status);
   const isAnonymous = status !== 'authenticated';
+  const premium = isEntitled(useEntitlement().data);
 
   return (
     <Screen offline={!online} scroll edges={['top']} testID="you-screen">
@@ -59,6 +62,13 @@ export default function YouScreen() {
             value="→"
             onPress={() => router.push('/(tabs)/you/notifications')}
             testID="you-notifications-entry"
+          />
+          <SettingsRow
+            title={t('you.subscriptionEntry')}
+            description={premium ? t('you.subscriptionEntryActive') : t('you.subscriptionEntryHint')}
+            value="→"
+            onPress={() => router.push('/(tabs)/you/subscription')}
+            testID="you-subscription-entry"
           />
           <SettingsRow
             title={t('you.settingsEntry')}

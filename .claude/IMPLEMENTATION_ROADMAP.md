@@ -2,8 +2,8 @@
 
 # PanchangPal — Implementation Roadmap
 
-Version: 1.2.0
-Last Updated: 2026-07-18 (M7 Notifications + M8 Subscription Increment 1 complete)
+Version: 1.3.0
+Last Updated: 2026-07-18 (M8 Subscription Increment 2 complete)
 
 Purpose: the forward plan from the current state. Complements PROJECT_STATUS.md (snapshot) and
 CURRENT_MILESTONE.md (active milestone). Updated when scope or sequencing changes — and at every
@@ -15,12 +15,13 @@ increment/milestone boundary per the Increment & Milestone Completion Checkpoint
 
 Documentation, ADRs (33), OpenAPI, DB schema + migrations, monorepo scaffold, Expo app shell,
 CI/CD, Backend Foundation, and the design system are complete. The Mobile MVP — Phase 1 feature
-slices are ~92% done: M1 App Shell, M2 Today, M3 Guided Ritual, M4 Calendar Shell, M5 Ask Guru,
+slices are ~96% done: M1 App Shell, M2 Today, M3 Guided Ritual, M4 Calendar Shell, M5 Ask Guru,
 M6 Profile/Household, and M7 Notifications are complete; M8 Subscription is in progress with
-Increment 1 (household-grain entitlement read + gating) complete and awaiting review.
+Increments 1 (household-grain entitlement read + gating) and 2 (SCR_SUBSCRIPTION_001 +
+plans/purchase/restore + affordance wiring) complete — Increment 2 awaiting review.
 
-Next up: **M8 Subscription Increment 2** (SCR_SUBSCRIPTION_001 + plans/purchase/restore via the
-PaymentAdapter + affordance wiring), then Increment 3 (paywall sheet + routing + FF_FAMILY_PLAN).
+Next up: **M8 Subscription Increment 3** (contextual paywall sheet + panchangpal://subscription
+routing + FF_FAMILY_PLAN), which completes the Subscription slice and the Mobile MVP milestone.
 
 One blocker: the Canonical Panchang Engine (ADR-033, Proposed) — astronomical algorithm
 undocumented; the whole system depends only on the abstract PanchangEngine/PanchangProvider
@@ -35,10 +36,10 @@ when it lands.
 2. Mobile feature slices (MOD_*) — 🚧 nearly done.
    - ✅ M1 App Shell · M2 Today · M3 Guided Ritual · M4 Calendar Shell · M5 Ask Guru ·
      M6 Profile/Household · M7 Notifications.
-   - 🚧 M8 Subscription — Increment 1 done (entitlement read + gating); **Increment 2 next**
-     (SCR_SUBSCRIPTION_001, CMP_PLAN_CARD/VALUE_LIST/LEGAL_FOOTNOTE, plans/purchase/restore via the
-     PaymentAdapter, deep-dive + extended-Ask-Guru affordance wiring); Increment 3 after
-     (contextual paywall sheet, panchangpal://subscription routing, FF_FAMILY_PLAN).
+   - 🚧 M8 Subscription — Increments 1–2 done (entitlement read + gating; SCR_SUBSCRIPTION_001,
+     CMP_PLAN_CARD/VALUE_LIST/LEGAL_FOOTNOTE, plans/purchase/restore via the PaymentAdapter, deep-dive
+     + extended-Ask-Guru affordance wiring); **Increment 3 next** (contextual paywall sheet,
+     panchangpal://subscription routing, FF_FAMILY_PLAN).
    - Note: the Today panchang view and Calendar markers render "temporarily unavailable" until the
      engine lands; ritual completion / streak / checklist / Ask Guru / household / notifications
      prefs all work now. Live Ask Guru answers stay gated (GURU_LIVE=false).

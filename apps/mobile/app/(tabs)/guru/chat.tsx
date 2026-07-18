@@ -8,10 +8,11 @@
  */
 import { useEffect, useState } from 'react';
 import { View } from 'react-native';
-import { useLocalSearchParams } from 'expo-router';
-import { AIChatBubble, ChatInput, GuruHeader, PrimaryButton, Screen, SourceChip, Text, TypingIndicator, useTheme } from '@panchangpal/ui';
+import { router, useLocalSearchParams } from 'expo-router';
+import { AIChatBubble, Card, ChatInput, GuruHeader, PrimaryButton, Screen, SettingsRow, SourceChip, Text, TypingIndicator, useTheme } from '@panchangpal/ui';
 import { useOnline } from '../../../src/data/useOnline';
 import { useAskGuru } from '../../../src/data/hooks/useAskGuru';
+import { usePremiumGate } from '../../../src/data/hooks/useEntitlement';
 import { t } from '../../../src/i18n';
 
 export default function GuruChatScreen() {
@@ -20,6 +21,12 @@ export default function GuruChatScreen() {
   const { question: seeded } = useLocalSearchParams<{ question?: string }>();
   const { answer, question, ask, retry } = useAskGuru();
   const [draft, setDraft] = useState('');
+
+  // Extended answers are a Premium capability (extended_ask_guru). After an answer settles, offer a
+  // contextual, dismissible upgrade to non-entitled users — it never blocks asking (P4) and fails
+  // open while the gate loads. Ask Guru here always stays free.
+  const guruGate = usePremiumGate('extended_ask_guru');
+  const [upsellDismissed, setUpsellDismissed] = useState(false);
 
   useEffect(() => {
     if (seeded && !question) void ask(seeded);
@@ -37,6 +44,10 @@ export default function GuruChatScreen() {
   const outcomeCopy =
     outcome === 'refused' ? t('guru.refused') : outcome === 'declined' ? t('guru.declined') : outcome === 'error' ? t('guru.error') : null;
   const showRetry = outcome === 'error';
+
+  // Show the upgrade affordance once an answer has settled (not mid-stream), gated + dismissible.
+  const showGuruUpsell =
+    Boolean(answer) && !answer?.isStreaming && !guruGate.entitled && !guruGate.isLoading && !upsellDismissed;
 
   return (
     <Screen offline={!online} scroll edges={['top']} testID="guru-chat-screen">
@@ -62,6 +73,31 @@ export default function GuruChatScreen() {
             </Text>
             {showRetry ? <PrimaryButton label={t('guru.retry')} onPress={retry} testID="guru-retry" /> : null}
           </View>
+        ) : null}
+
+        {showGuruUpsell ? (
+          <Card testID="guru-upsell">
+            <View style={{ gap: theme.spacing.sm }}>
+              <Text variant="titleSmall" color="primary">
+                {t('guru.upgradeTitle')}
+              </Text>
+              <Text variant="bodyMedium" color="secondary">
+                {t('guru.upgradeBody')}
+              </Text>
+              <View style={{ gap: theme.spacing.sm }}>
+                <PrimaryButton
+                  label={t('guru.upgradeCta')}
+                  onPress={() => router.push('/(tabs)/you/subscription')}
+                  testID="guru-upsell-cta"
+                />
+                <SettingsRow
+                  title={t('guru.upgradeDismiss')}
+                  onPress={() => setUpsellDismissed(true)}
+                  testID="guru-upsell-dismiss"
+                />
+              </View>
+            </View>
+          </Card>
         ) : null}
 
         <ChatInput
