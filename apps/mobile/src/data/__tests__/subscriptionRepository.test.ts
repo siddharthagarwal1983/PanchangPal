@@ -60,9 +60,27 @@ describe('SubscriptionRepository', () => {
     let channelName = '';
     const db = makeDb({ channelSpy, captureChannel: (n) => (channelName = n) });
     const unsubscribe = new SubscriptionRepository(db).subscribeEntitlements(() => {});
-    expect(channelName).toBe('entitlement:self');
+    // The topic carries a per-subscription suffix (see realtimeChannelId.ts), so assert the
+    // scope prefix rather than an exact match.
+    expect(channelName).toMatch(/^entitlement:self:/);
     expect((channelSpy.onArgs?.[1] as { table: string }).table).toBe('entitlement');
     unsubscribe();
     expect(channelSpy.removed).toBe(true);
+  });
+
+  it('gives each subscription a distinct channel topic', () => {
+    // Regression: a fixed topic made supabase-js return the already-subscribed channel on
+    // remount, and the subsequent .on() threw "cannot add `postgres_changes` callbacks for
+    // `realtime:entitlement:self` after `subscribe()`", crashing SCR_YOU_001 on render.
+    const names: string[] = [];
+    const repository = new SubscriptionRepository(
+      makeDb({ channelSpy: {}, captureChannel: (n) => names.push(n) }),
+    );
+    const first = repository.subscribeEntitlements(() => {});
+    const second = repository.subscribeEntitlements(() => {});
+    expect(names).toHaveLength(2);
+    expect(names[0]).not.toBe(names[1]);
+    first();
+    second();
   });
 });

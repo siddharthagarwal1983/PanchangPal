@@ -9,6 +9,7 @@
  */
 import type { RealtimeChannel, SupabaseClient } from '@supabase/supabase-js';
 import { getSupabase } from './supabaseClient';
+import { nextChannelId } from './realtimeChannelId';
 import {
   rowToHousehold,
   type Household,
@@ -110,8 +111,10 @@ export class HouseholdRepository {
    * a signal to refetch, not a data source — the query stays the single source of truth.
    */
   subscribeMembers(householdId: string, onChange: () => void): () => void {
+    // Per-subscription topic suffix — see realtimeChannelId.ts for why reusing a fixed
+    // topic throws "cannot add `postgres_changes` callbacks ... after `subscribe()`".
     const channel: RealtimeChannel = this.db
-      .channel(`household:${householdId}`)
+      .channel(`household:${householdId}:${nextChannelId()}`)
       .on(
         'postgres_changes',
         { event: '*', schema: 'public', table: 'household_member', filter: `household_id=eq.${householdId}` },
