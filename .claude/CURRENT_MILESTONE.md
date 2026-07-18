@@ -72,10 +72,20 @@ different, and are fixed in `feat/b1-bundle-gate`:
   `SUPABASE_ACCESS_TOKEN`), distinct from `local`, which is the fully-local `supabase start` stack.
 
 Two further placeholders were found that the milestone had not recorded: the **AI eval subset** gate
-is an `echo`, and the **API / zod contract** gate runs `--passWithNoTests` against a package with no
-test files. Both are declared release-blocking and validate nothing. Neither is fixed yet — a gate
-that reads green while checking nothing is worse than an absent one, so they should be implemented
-or explicitly de-declared.
+was an `echo`, and the **API / zod contract** gate ran `--passWithNoTests` against a package with no
+test files. Both were declared release-blocking and validated nothing.
+
+**Both were de-declared on 2026-07-18** rather than left green. A gate that cannot fail is worse than
+an absent one — it reads as coverage, which is precisely the mechanism that let six defects reach M8.
+Removing them makes CI's true coverage legible. What is now owed, tracked in the workflow itself:
+
+- **API contract tests** — real tests under `packages/api/src/contracts/*` validating the zod schemas
+  against `docs/api/openapi.yaml` (ADR-032). No workflow change needed to restore the gate: the root
+  vitest config already includes `packages/**/*.test.ts`, so they will run in `unit-component-a11y`.
+- **AI eval harness** — refusal + golden-set subset (TDD Part 3 §9.4), re-added as a job that can
+  fail once the harness exists. AI regressions must block merge (ADR-029).
+
+Standing rule recorded in `ci.yml`: **a gate is added when it can fail**, never as a placeholder.
 
 **Lesson for the remaining slices:** the B1–B8 scoping was written from documentation rather than
 from the code. Verify each slice's premise against the repository before implementing it.
@@ -95,8 +105,9 @@ from the code. Verify each slice's premise against the repository before impleme
 | Maestro E2E (FLOW_*) | ❌ Placeholder — `echo`, no flow specs, no `.maestro/` |
 | EAS build / distribution | ❌ Placeholder — no `eas.json`, no build profiles, no signing |
 | Preflight secret checks | ✅ **Already fail-closed** (exits 1) — the earlier "warns then exit 0" claim was wrong; see Corrected Premise below |
-| **AI eval subset gate** | ❌ Placeholder — `echo`, undocumented until 2026-07-18; "passed" in 5s on PR #9 |
-| **API / zod contract gate** | ❌ Hollow — `--passWithNoTests` and `packages/api` contains no test files |
+| **AI eval subset gate** | 🚫 **De-declared** 2026-07-18 — was an `echo`. Restore when the Part 3 §9.4 harness lands |
+| **API / zod contract gate** | 🚫 **De-declared** 2026-07-18 — was `--passWithNoTests` against a package with no tests. Owed: real contract tests under `packages/api` |
+| **CI bundle gate** | ✅ Added 2026-07-18 (B1) — `expo export` ios+android, 55s; proven to fail on a reintroduced defect |
 | dev / prod environments | ❔ Unconfirmed — only staging is proven by a green run |
 | Sentry / dashboards / alerts | ❌ Not wired |
 | DR restore drill | ❌ Not performed |

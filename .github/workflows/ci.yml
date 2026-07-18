@@ -1,10 +1,12 @@
 # =============================================================================
 # CI — PR gates (TDD Part 5 §2.1/§2.2, ADR-024). Release-blocking: a red gate
-# blocks merge. Sequence mirrors the documented pipeline:
-#   lint + typecheck → unit/component/a11y → api/zod contract → RLS policy →
-#   AI eval subset → secret scan → dependency scan.
-# Steps that need the full toolchain/DB run once it's provisioned; jobs are wired
-# now so the gates exist and fail closed on missing checks.
+# blocks merge. Current sequence:
+#   lint + typecheck → bundle (expo export) → unit/component/a11y → RLS policy →
+#   secret scan → dependency scan.
+#
+# Every job here can actually fail. Two documented gates (api/zod contract, AI
+# eval subset) were de-declared in B1 because they could not — see the
+# DE-DECLARED GATES block below for what must be built to restore them.
 #
 # Hardening (2026-07-12, behavior-preserving): least-privilege permissions,
 # version pins sourced from workflow env (no per-job duplication), pnpm install
@@ -115,25 +117,30 @@ jobs:
         run: |
           echo "### Bundle (expo export): ${{ job.status }}" >> "$GITHUB_STEP_SUMMARY"
 
-  api-contract:
-    name: API / zod contract tests
-    runs-on: ubuntu-latest
-    needs: lint-typecheck
-    steps:
-      - uses: actions/checkout@v4
-      - uses: pnpm/action-setup@v4
-        with: { version: '${{ env.PNPM_VERSION }}' }
-      - uses: actions/setup-node@v4
-        with:
-          node-version: '${{ env.NODE_VERSION }}'
-          cache: pnpm
-      - name: Install (with retry)
-        run: |
-          n=0; until pnpm install --frozen-lockfile; do
-            n=$((n+1)); [ "$n" -ge 3 ] && exit 1; sleep $((n*5));
-          done
-      # Validates packages/api zod contracts against docs/api/openapi.yaml (ADR-032).
-      - run: pnpm exec vitest run packages/api --passWithNoTests
+  # ---------------------------------------------------------------------------
+  # DE-DECLARED GATES (2026-07-18, B1)
+  #
+  # Two jobs were removed because they reported green while verifying nothing —
+  # worse than an absent gate, because a green check reads as coverage. This is
+  # the same mechanism that let six defects reach M8 behind a fully green CI
+  # (see .claude/CURRENT_MILESTONE.md → Execution Gap).
+  #
+  #   api-contract    ran `vitest run packages/api --passWithNoTests` against a
+  #                   package containing zero test files. Redundant once real
+  #                   ones exist: this root vitest config already includes
+  #                   `packages/**/*.test.ts`, so contract tests added under
+  #                   packages/api will run in `unit-component-a11y` with no
+  #                   workflow change. What is still MISSING is the tests
+  #                   themselves — packages/api/src/contracts/* validating zod
+  #                   schemas against docs/api/openapi.yaml (ADR-032).
+  #
+  #   ai-eval-subset  ran `echo "AI eval subset runs once the TDD Part 3 harness
+  #                   is in place."` and passed in 5s. Restore as a real job when
+  #                   the refusal + golden-set harness lands (TDD Part 3 §9.4);
+  #                   AI regressions must block merge (ADR-029).
+  #
+  # Do not re-add either as a placeholder. A gate is added when it can fail.
+  # ---------------------------------------------------------------------------
 
   db-tests:
     name: RLS policy + DB integration suites (§4.4 security gate)
@@ -188,16 +195,6 @@ jobs:
         if: always()
         run: |
           echo "### DB / RLS suites: ${{ job.status }}" >> "$GITHUB_STEP_SUMMARY"
-
-  ai-eval-subset:
-    name: AI eval subset (refusal + golden, TDD Part 3 §9.4)
-    runs-on: ubuntu-latest
-    needs: lint-typecheck
-    steps:
-      - uses: actions/checkout@v4
-      # Refusal + golden-set eval subset. Harness lands with the AI subsystem (TDD Part 3);
-      # the gate is declared here so AI regressions block merge.
-      - run: echo "AI eval subset runs once the TDD Part 3 harness is in place."
 
   security-scan:
     name: Secret + dependency scan

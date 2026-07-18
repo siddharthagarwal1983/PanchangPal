@@ -119,7 +119,7 @@ No new product scope in this milestone.
 | Mobile — Notifications | ✅ M7 |
 | Mobile — Subscription | ✅ M8 |
 | AI Platform | 🟡 adapters done; corpus + eval pending |
-| Testing | 🟡 unit/component/domain green; **bundle gate added 2026-07-18** (B1); E2E still a CD placeholder (B2); AI-eval + api-contract gates are hollow |
+| Testing | 🟡 unit/component/domain green; **bundle gate added** (B1); AI-eval + api-contract gates **de-declared** (were hollow) — owed: API contract tests + Part 3 §9.4 harness; E2E still a CD placeholder (B2) |
 | Beta | 🚧 In progress (B1–B8) |
 | Production | ⏳ |
 
@@ -230,7 +230,8 @@ Readiness & Platform Hardening** (TDD Part 5), sliced B1–B8: environments, E2E
 observability, DR, security/privacy, release mechanics, and go/no-go.
 
 The defining issue at the start of this milestone is that CD's green status overstates what is
-actually verified — **four** gates check nothing (Maestro E2E, EAS build, AI eval subset, and the
-API/zod contract gate, which runs `--passWithNoTests` against a package with no tests). Preflight,
-contrary to the milestone's original claim, already fails closed. B1 and B2 address the rest. The only architectural blocker is the Canonical Panchang Engine
+actually verified. Four gates checked nothing; two of them (AI eval subset, API/zod contract) were
+**de-declared** in B1 rather than left green, and CD's Maestro E2E and EAS build remain placeholders
+for B2/B3. Preflight, contrary to the milestone's original claim, already fails closed. CI now runs a
+real bundle gate. The only architectural blocker is the Canonical Panchang Engine
 decision (ADR-033); Ask Guru live answers are intentionally gated until corpus/eval readiness.
