@@ -8,7 +8,7 @@
 -- =============================================================================
 
 -- ---- TBL_RITUAL_COMPLETION ---------------------------------------------------
-create table ritual_completion (
+create table if not exists ritual_completion (
   id           uuid primary key default gen_random_uuid(),
   user_id      uuid not null references app_user(id) on delete cascade,
   ritual_id    uuid not null references ritual(id),
@@ -19,10 +19,10 @@ create table ritual_completion (
   created_at   timestamptz not null default now(),
   unique (user_id, local_date)                     -- one completion/day
 );
-create index idx_ritual_completion_user_date on ritual_completion(user_id, local_date);
+create index if not exists idx_ritual_completion_user_date on ritual_completion(user_id, local_date);
 
 -- ---- TBL_STREAK --------------------------------------------------------------
-create table streak (
+create table if not exists streak (
   user_id             uuid primary key references app_user(id) on delete cascade,
   current_len         int not null default 0,
   best_len            int not null default 0,
@@ -30,11 +30,12 @@ create table streak (
   last_completed_date date null,
   updated_at          timestamptz not null default now()
 );
+drop trigger if exists trg_streak_updated_at on streak;
 create trigger trg_streak_updated_at
   before update on streak for each row execute function set_updated_at();
 
 -- ---- TBL_CHECKLIST_COMPLETION ------------------------------------------------
-create table checklist_completion (
+create table if not exists checklist_completion (
   id           uuid primary key default gen_random_uuid(),
   user_id      uuid not null references app_user(id) on delete cascade,
   item_id      uuid not null references checklist_item(id),
@@ -43,10 +44,10 @@ create table checklist_completion (
   completed_at timestamptz null,
   unique (user_id, item_id, local_date)
 );
-create index idx_checklist_completion_user_date on checklist_completion(user_id, local_date);
+create index if not exists idx_checklist_completion_user_date on checklist_completion(user_id, local_date);
 
 -- ---- TBL_PERSONAL_DATE (grief-sensitive, owner-only private) -----------------
-create table personal_date (
+create table if not exists personal_date (
   id              uuid primary key default gen_random_uuid(),
   user_id         uuid not null references app_user(id) on delete cascade,
   name            text not null,                   -- relation/name e.g. "Dadaji"
@@ -62,8 +63,9 @@ create table personal_date (
   updated_at      timestamptz not null default now(),
   deleted_at      timestamptz null                 -- tombstone for offline reconcile (§6.6)
 );
-create index idx_personal_date_user_active on personal_date(user_id, is_active);
-create index idx_personal_date_next on personal_date(next_occurrence);
+create index if not exists idx_personal_date_user_active on personal_date(user_id, is_active);
+create index if not exists idx_personal_date_next on personal_date(next_occurrence);
+drop trigger if exists trg_personal_date_updated_at on personal_date;
 create trigger trg_personal_date_updated_at
   before update on personal_date for each row execute function set_updated_at();
 
@@ -74,6 +76,7 @@ alter table checklist_completion enable row level security;
 alter table personal_date enable row level security;
 
 -- Completions: owner writes; owner + same-household members read (counts/social proof, F-21).
+drop policy if exists rc_sel_household on ritual_completion;
 create policy rc_sel_household on ritual_completion
   for select using (
     user_id = auth.uid()
@@ -83,12 +86,15 @@ create policy rc_sel_household on ritual_completion
           where household_id = current_household_id() and is_active
         ))
   );
+drop policy if exists rc_ins_own on ritual_completion;
 create policy rc_ins_own on ritual_completion
   for insert with check (user_id = auth.uid());
+drop policy if exists rc_upd_own on ritual_completion;
 create policy rc_upd_own on ritual_completion
   for update using (user_id = auth.uid());
 
 -- Streak: owner writes; owner + same-household members read.
+drop policy if exists streak_sel_household on streak;
 create policy streak_sel_household on streak
   for select using (
     user_id = auth.uid()
@@ -98,12 +104,15 @@ create policy streak_sel_household on streak
           where household_id = current_household_id() and is_active
         ))
   );
+drop policy if exists streak_ins_own on streak;
 create policy streak_ins_own on streak
   for insert with check (user_id = auth.uid());
+drop policy if exists streak_upd_own on streak;
 create policy streak_upd_own on streak
   for update using (user_id = auth.uid());
 
 -- Checklist completions: owner write, household read.
+drop policy if exists cc_sel_household on checklist_completion;
 create policy cc_sel_household on checklist_completion
   for select using (
     user_id = auth.uid()
@@ -113,13 +122,19 @@ create policy cc_sel_household on checklist_completion
           where household_id = current_household_id() and is_active
         ))
   );
+drop policy if exists cc_ins_own on checklist_completion;
 create policy cc_ins_own on checklist_completion
   for insert with check (user_id = auth.uid());
+drop policy if exists cc_upd_own on checklist_completion;
 create policy cc_upd_own on checklist_completion
   for update using (user_id = auth.uid());
 
 -- Personal dates: owner-only (private; NOT household-visible by default, T7).
+drop policy if exists pd_sel_own on personal_date;
 create policy pd_sel_own on personal_date for select using (user_id = auth.uid());
+drop policy if exists pd_ins_own on personal_date;
 create policy pd_ins_own on personal_date for insert with check (user_id = auth.uid());
+drop policy if exists pd_upd_own on personal_date;
 create policy pd_upd_own on personal_date for update using (user_id = auth.uid());
+drop policy if exists pd_del_own on personal_date;
 create policy pd_del_own on personal_date for delete using (user_id = auth.uid());

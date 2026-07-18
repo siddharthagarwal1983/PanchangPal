@@ -6,7 +6,7 @@
 -- =============================================================================
 
 -- ---- TBL_HOUSEHOLD -----------------------------------------------------------
-create table household (
+create table if not exists household (
   id             uuid primary key default gen_random_uuid(),
   name           text not null check (char_length(name) between 1 and 40),
   owner_id       uuid not null references app_user(id),
@@ -14,12 +14,13 @@ create table household (
   created_at     timestamptz not null default now(),
   updated_at     timestamptz not null default now()
 );
-create index idx_household_owner on household(owner_id);
+create index if not exists idx_household_owner on household(owner_id);
+drop trigger if exists trg_household_updated_at on household;
 create trigger trg_household_updated_at
   before update on household for each row execute function set_updated_at();
 
 -- ---- TBL_HOUSEHOLD_MEMBER ----------------------------------------------------
-create table household_member (
+create table if not exists household_member (
   id           uuid primary key default gen_random_uuid(),
   household_id uuid not null references household(id) on delete cascade,
   user_id      uuid null references app_user(id) on delete set null, -- null = local (uninvited) member
@@ -31,11 +32,12 @@ create table household_member (
   updated_at   timestamptz not null default now(),
   unique (household_id, user_id)
 );
-create index idx_household_member_household on household_member(household_id);
+create index if not exists idx_household_member_household on household_member(household_id);
 -- F-2: a user is an active member of exactly one household.
-create unique index one_active_household
+create unique index if not exists one_active_household
   on household_member(user_id)
   where is_active and user_id is not null;
+drop trigger if exists trg_household_member_updated_at on household_member;
 create trigger trg_household_member_updated_at
   before update on household_member for each row execute function set_updated_at();
 
@@ -65,7 +67,7 @@ returns boolean language sql stable security definer set search_path = public as
 $$;
 
 -- ---- TBL_INVITE --------------------------------------------------------------
-create table invite (
+create table if not exists invite (
   id           uuid primary key default gen_random_uuid(),
   household_id uuid not null references household(id) on delete cascade,
   token        text not null unique,                 -- opaque, random
@@ -75,11 +77,11 @@ create table invite (
   accepted_at  timestamptz null,
   created_at   timestamptz not null default now()
 );
-create index idx_invite_token on invite(token);
-create index idx_invite_household on invite(household_id);
+create index if not exists idx_invite_token on invite(token);
+create index if not exists idx_invite_household on invite(household_id);
 
 -- ---- TBL_REFERRAL ------------------------------------------------------------
-create table referral (
+create table if not exists referral (
   id               uuid primary key default gen_random_uuid(),
   referrer_id      uuid not null references app_user(id) on delete cascade,
   code             text not null unique,
@@ -87,7 +89,7 @@ create table referral (
   activated_at     timestamptz null,
   created_at       timestamptz not null default now()
 );
-create index idx_referral_referrer on referral(referrer_id);
+create index if not exists idx_referral_referrer on referral(referrer_id);
 
 -- ---- RLS --------------------------------------------------------------------
 alter table household enable row level security;
@@ -96,32 +98,43 @@ alter table invite enable row level security;
 alter table referral enable row level security;
 
 -- Household: members read; owner updates/deletes; any authenticated user may create.
+drop policy if exists household_sel_member on household;
 create policy household_sel_member on household
   for select using (is_household_member(id) or owner_id = auth.uid());
+drop policy if exists household_ins_auth on household;
 create policy household_ins_auth on household
   for insert with check (owner_id = auth.uid());
+drop policy if exists household_upd_owner on household;
 create policy household_upd_owner on household
   for update using (owner_id = auth.uid());
+drop policy if exists household_del_owner on household;
 create policy household_del_owner on household
   for delete using (owner_id = auth.uid());
 
 -- Household member: same-household members read; owner manages; self manages own row.
+drop policy if exists hh_member_sel on household_member;
 create policy hh_member_sel on household_member
   for select using (is_household_member(household_id) or user_id = auth.uid());
+drop policy if exists hh_member_ins on household_member;
 create policy hh_member_ins on household_member
   for insert with check (is_household_owner(household_id) or user_id = auth.uid());
+drop policy if exists hh_member_upd on household_member;
 create policy hh_member_upd on household_member
   for update using (is_household_owner(household_id) or user_id = auth.uid());
+drop policy if exists hh_member_del on household_member;
 create policy hh_member_del on household_member
   for delete using (is_household_owner(household_id) or user_id = auth.uid());
 
 -- Invite: household members read their household's invites. Accept path runs in
 -- SVC_household/SVC_account (service role) because the invitee is not yet a member.
+drop policy if exists invite_sel_member on invite;
 create policy invite_sel_member on invite
   for select using (is_household_member(household_id));
 
 -- Referral: owner-read.
+drop policy if exists referral_sel_own on referral;
 create policy referral_sel_own on referral
   for select using (referrer_id = auth.uid());
+drop policy if exists referral_ins_own on referral;
 create policy referral_ins_own on referral
   for insert with check (referrer_id = auth.uid());

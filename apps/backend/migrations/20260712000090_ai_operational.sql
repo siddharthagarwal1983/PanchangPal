@@ -6,25 +6,26 @@
 -- =============================================================================
 
 -- ---- ai_config — governed, server-tunable AI parameters (§8A) --------------------
-create table ai_config (
+create table if not exists ai_config (
   key        text primary key,          -- e.g. ai.retrieval.confidence_threshold
   value      jsonb not null,
   updated_at timestamptz not null default now()
 );
+drop trigger if exists trg_ai_config_updated_at on ai_config;
 create trigger trg_ai_config_updated_at
   before update on ai_config for each row execute function set_updated_at();
 
 -- ---- ai_rate_limit — fixed-window counters for Ask Guru (§8.4) -------------------
-create table ai_rate_limit (
+create table if not exists ai_rate_limit (
   subject          text not null,        -- u:<uid> | ip:<addr>
   window_start_min bigint not null,      -- epoch minute bucket
   count            int not null default 0,
   primary key (subject, window_start_min)
 );
-create index idx_ai_rate_limit_window on ai_rate_limit(window_start_min);
+create index if not exists idx_ai_rate_limit_window on ai_rate_limit(window_start_min);
 
 -- ---- ai_cost_ledger — per-answer cost for the circuit breaker (§8.1, F-11) -------
-create table ai_cost_ledger (
+create table if not exists ai_cost_ledger (
   id             uuid primary key default gen_random_uuid(),
   ts             timestamptz not null default now(),
   model          text not null,
@@ -32,7 +33,7 @@ create table ai_cost_ledger (
   correlation_id text null,
   user_pseudo_id text null                -- pseudonymous only, no PII (ADR-031)
 );
-create index idx_ai_cost_ledger_ts on ai_cost_ledger(ts);
+create index if not exists idx_ai_cost_ledger_ts on ai_cost_ledger(ts);
 
 -- ---- RLS: service-only (RLS enabled, no client policy → all client access denied)
 alter table ai_config enable row level security;

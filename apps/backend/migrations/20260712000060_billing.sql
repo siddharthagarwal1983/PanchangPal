@@ -7,7 +7,7 @@
 -- =============================================================================
 
 -- ---- TBL_SUBSCRIPTION (RevenueCat-mirrored) ---------------------------------
-create table subscription (
+create table if not exists subscription (
   id                 uuid primary key default gen_random_uuid(),
   household_id       uuid not null references household(id) on delete cascade,
   rc_app_user_id     text null,
@@ -19,12 +19,13 @@ create table subscription (
   created_at         timestamptz not null default now(),
   updated_at         timestamptz not null default now()
 );
-create index idx_subscription_household on subscription(household_id);
+create index if not exists idx_subscription_household on subscription(household_id);
+drop trigger if exists trg_subscription_updated_at on subscription;
 create trigger trg_subscription_updated_at
   before update on subscription for each row execute function set_updated_at();
 
 -- ---- TBL_ENTITLEMENT (active entitlements at household grain) ----------------
-create table entitlement (
+create table if not exists entitlement (
   id           uuid primary key default gen_random_uuid(),
   household_id uuid not null references household(id) on delete cascade,
   kind         entitlement_kind not null,
@@ -33,18 +34,21 @@ create table entitlement (
   expires_at   timestamptz null,
   source       text not null default 'revenuecat'
 );
-create index idx_entitlement_household_active on entitlement(household_id, is_active);
+create index if not exists idx_entitlement_household_active on entitlement(household_id, is_active);
 
 -- ---- RLS --------------------------------------------------------------------
 alter table subscription enable row level security;
 alter table entitlement enable row level security;
 
 -- Household members may read; NO client write policies → all client writes denied.
+drop policy if exists subscription_sel_member on subscription;
 create policy subscription_sel_member on subscription
   for select using (is_household_member(household_id));
+drop policy if exists entitlement_sel_member on entitlement;
 create policy entitlement_sel_member on entitlement
   for select using (is_household_member(household_id));
 
 -- Explicit deny-all-writes guard (belt-and-suspenders; service role bypasses RLS).
+drop policy if exists entitlement_no_client_write on entitlement;
 create policy entitlement_no_client_write on entitlement
   for all using (false) with check (false);
