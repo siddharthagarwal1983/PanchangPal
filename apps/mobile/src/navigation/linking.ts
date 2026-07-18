@@ -22,5 +22,6 @@ export const DEEP_LINKS: DeepLinkRoute[] = [
   // authenticated user the token is applied directly; anonymous users hit the deferred-auth
   // prompt on that screen (UX-2). Deferred (post-install) invites are captured at first launch.
   { pattern: 'panchangpal://invite/:token', route: '/(tabs)/you/invite' },
-  { pattern: 'panchangpal://subscription', route: '/(tabs)/you' },
+  // M8: SCR_SUBSCRIPTION_001, back-stack You → Subscription (TDD §3.3 deep-link table).
+  { pattern: 'panchangpal://subscription', route: '/(tabs)/you/subscription' },
 ];

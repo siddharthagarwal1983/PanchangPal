@@ -142,8 +142,7 @@ export function routeForNotifType(type: NotifType, data?: Record<string, unknown
       return token ? `/(tabs)/you/invite?token=${encodeURIComponent(token)}` : '/(tabs)/you/household';
     }
     case 'subscription':
-      // SCR_SUBSCRIPTION_001 lands in M8; route to the You hub as a safe interim back-stack.
-      return '/(tabs)/you';
+      return '/(tabs)/you/subscription';
     default:
       return '/(tabs)/today';
   }
@@ -171,7 +170,7 @@ export function routeForDeepLink(url: string): string | null {
     case 'invite':
       return param ? `/(tabs)/you/invite?token=${encodeURIComponent(param)}` : '/(tabs)/you/household';
     case 'subscription':
-      return '/(tabs)/you';
+      return '/(tabs)/you/subscription';
     default:
       return null;
   }

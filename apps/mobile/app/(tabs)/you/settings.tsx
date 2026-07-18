@@ -5,15 +5,12 @@
  * approved CMP_* (SegmentedControl / SettingsRow) with tokens-only styling and localized
  * strings. Sign out returns to an anonymous session so the offline loop keeps working.
  */
-import { useState } from 'react';
 import { View } from 'react-native';
 import { router } from 'expo-router';
 import {
   Screen,
   AppHeader,
-  Card,
   Text,
-  PrimaryButton,
   SegmentedControl,
   SettingsRow,
   useTheme,
@@ -48,19 +45,17 @@ export default function SettingsScreen() {
   const update = useUpdatePreferences();
 
   // Deep-dive content is a Premium capability (deep_dive_content). Selecting "Deep" without an
-  // active entitlement surfaces a contextual, dismissible upgrade instead of saving — never a hard
-  // block (fails open while the gate is loading, so cached prefs never flash a paywall).
+  // active entitlement opens the contextual paywall sheet instead of saving — never a hard block
+  // (fails open while the gate is loading, so cached prefs never flash a paywall).
   const deepGate = usePremiumGate('deep_dive_content');
-  const [showDeepUpsell, setShowDeepUpsell] = useState(false);
 
   const prefs = data ?? DEFAULT_PREFERENCES;
 
   const onDepthChange = (depth: ContentDepth) => {
     if (depth === 'deep' && !deepGate.entitled && !deepGate.isLoading) {
-      setShowDeepUpsell(true);
+      router.push('/modal/paywall?capability=deep_dive_content');
       return;
     }
-    setShowDeepUpsell(false);
     update.mutate({ depth });
   };
 
@@ -127,33 +122,6 @@ export default function SettingsScreen() {
             accessibilityLabel={t('settings.depthLabel')}
             testID="settings-depth"
           />
-          {showDeepUpsell ? (
-            <Card testID="settings-deep-upsell">
-              <View accessibilityRole="alert" style={{ gap: theme.spacing.sm }}>
-                <Text variant="titleSmall" color="primary">
-                  {t('settings.deepLockedTitle')}
-                </Text>
-                <Text variant="bodyMedium" color="secondary">
-                  {t('settings.deepLockedBody')}
-                </Text>
-                <View style={{ gap: theme.spacing.sm }}>
-                  <PrimaryButton
-                    label={t('settings.deepLockedCta')}
-                    onPress={() => {
-                      setShowDeepUpsell(false);
-                      router.push('/(tabs)/you/subscription');
-                    }}
-                    testID="settings-deep-upsell-cta"
-                  />
-                  <SettingsRow
-                    title={t('settings.deepLockedDismiss')}
-                    onPress={() => setShowDeepUpsell(false)}
-                    testID="settings-deep-upsell-dismiss"
-                  />
-                </View>
-              </View>
-            </Card>
-          ) : null}
         </Section>
 
         {status === 'authenticated' ? (

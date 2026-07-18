@@ -4,7 +4,7 @@
 
 Version: 1.3.0
 
-Last Updated: 2026-07-18 (M8 Subscription Increment 2 complete)
+Last Updated: 2026-07-18 (M8 Subscription Increment 3 complete — Mobile MVP feature-complete)
 
 Purpose:
 This document provides a high-level snapshot of the overall project.
@@ -39,7 +39,7 @@ Overall Progress
 
 ██████████████████▏░
 
-**96% Complete** (Mobile MVP — Phase 1: 7 of 8 slices done; M8 Subscription Increment 2 of 3 complete)
+**100% Complete** (Mobile MVP — Phase 1: all 8 slices done)
 
 Project Health
 
@@ -71,7 +71,7 @@ TBD
 | API Specification | ✅ Complete | 100% |
 | Database Design | ✅ Complete | 100% |
 | Backend Foundation (SVC_*) | ✅ Complete | 100% (panchang compute blocked by ADR-033) |
-| Mobile Development (feature slices) | 🚧 In Progress | ~96% (M1–M7 done; M8 Increment 2 of 3 done) |
+| Mobile Development (feature slices) | ✅ Complete | 100% (M1–M8 done) |
 | AI Platform | 🟡 In Progress | Adapters + RAG pipeline done; corpus + eval pending |
 | Testing | 🟡 In Progress | Unit/component/domain in place; E2E pending |
 | Beta | ⏳ Pending | 0% |
@@ -91,11 +91,10 @@ Build the mobile application as a sequence of vertical, production-quality featu
 Current Focus
 
 - M7 Notifications — ✅ complete (reviewed/approved 2026-07-18).
-- M8 Subscription — 🟡 in progress (3 increments):
+- M8 Subscription — ✅ complete (3 increments):
   - Increment 1 (household-grain entitlement read + gating) — ✅ complete, approved.
-  - Increment 2 (SCR_SUBSCRIPTION_001 + plans/purchase/restore + affordance wiring) — ✅ complete, awaiting review.
-  - Increment 3 (contextual paywall sheet + panchangpal://subscription routing + FF_FAMILY_PLAN) — ⏳ next.
-  - Increment 3 (contextual paywall sheet + routing + FF_FAMILY_PLAN) — ⏳ pending.
+  - Increment 2 (SCR_SUBSCRIPTION_001 + plans/purchase/restore + affordance wiring) — ✅ complete, merged as PR #4.
+  - Increment 3 (contextual paywall sheet + panchangpal://subscription routing + FF_FAMILY_PLAN) — ✅ complete, awaiting review.
 
 Completed slices: M1 App Shell · M2 Today · M3 Guided Ritual · M4 Calendar Shell · M5 Ask Guru ·
 M6 Profile/Household · M7 Notifications.
@@ -133,7 +132,7 @@ See:
 | Security Architecture | ✅ Complete |
 | Release Architecture | ✅ Complete |
 
-Implementation is underway (Mobile MVP Phase 1; M1–M7 complete, M8 Increment 2 done).
+Implementation: Mobile MVP Phase 1 is feature-complete (M1–M8).
 
 ---
 
@@ -143,7 +142,7 @@ Implementation is underway (Mobile MVP Phase 1; M1–M7 complete, M8 Increment 2
 |--------|---------|
 | Repository Structure | ✅ Complete |
 | Shared Packages | ✅ Scaffolded |
-| Expo App | ✅ App shell + M1–M7 slices + M8 Increments 1–2 |
+| Expo App | ✅ App shell + all M1–M8 slices |
 | Supabase Project | ⏳ Pending (migrations defined; not yet applied to a live project) |
 | GitHub Actions | ✅ Complete |
 | CI/CD | ✅ Defined |
@@ -172,7 +171,7 @@ Implementation is underway (Mobile MVP Phase 1; M1–M7 complete, M8 Increment 2
 | Expo Setup | ✅ App shell |
 | Navigation | ✅ Shell (splash/auth/4-tab/guards/deep links) |
 | Design System | ✅ Tokens + shell/feature components (extends per slice) |
-| Components | 🟢 CMP_* for M1–M8 (Subscription: PLAN_CARD/VALUE_LIST/LEGAL_FOOTNOTE done, Inc 2) |
+| Components | 🟢 CMP_* for M1–M8 (Subscription: PLAN_CARD/VALUE_LIST/LEGAL_FOOTNOTE; BOTTOM_SHEET added Inc 3) |
 | Authentication Flow | ✅ Anon-first + OAuth/OTP (shell) |
 | Today (MOD_today) | ✅ SCR_HOME_001 (panchang unavailable per ADR-033) |
 | Ritual Experience | ✅ Guided player (session engine, offline restore, text-first audio seam) |
@@ -183,7 +182,7 @@ Implementation is underway (Mobile MVP Phase 1; M1–M7 complete, M8 Increment 2
 | Household | ✅ SCR_HOUSEHOLD_001 + SCR_HOUSEHOLD_INVITE_001 (members/roles/depth, invites, realtime) |
 | Account deletion | ✅ SCR_DELETE_ACCOUNT_001 (F-3 transfer gate + grace window) |
 | Notifications | ✅ Opt-in priming, per-channel prefs, token registration (NotificationAdapter seam), deep-link routing; sunrise/tithi content gated by ADR-033 |
-| Subscription | 🟡 Increments 1–2 done (entitlement read + usePremiumGate + PaymentAdapter/Null; SCR_SUBSCRIPTION_001 + plans/purchase/restore + affordance wiring); Increment 3 (paywall sheet) pending |
+| Subscription | ✅ Complete (entitlement read + usePremiumGate + PaymentAdapter/Null; SCR_SUBSCRIPTION_001 + plans/purchase/restore; contextual paywall sheet at app/modal/paywall; panchangpal://subscription routing; FF_FAMILY_PLAN offering gate) |
 
 ---
 
@@ -230,7 +229,7 @@ Implementation is underway (Mobile MVP Phase 1; M1–M7 complete, M8 Increment 2
 
 Priority 1
 
-Mobile Milestone 8 — Subscription, Increment 3 (contextual paywall sheet + panchangpal://subscription routing + FF_FAMILY_PLAN)
+Beta Readiness & Platform Hardening (TDD Part 5) — environments, observability, E2E, security review, phased rollout
 
 Priority 2
 
@@ -275,7 +274,7 @@ prefs work today, so gating and prefs are real before the SDKs are wired.
 
 # Next Major Deliverables
 
-- Mobile feature slices — M8 Subscription Increment 3 (contextual paywall sheet, panchangpal://subscription routing, FF_FAMILY_PLAN)
+- Beta Readiness & Platform Hardening (TDD Part 5) — provision Supabase envs, CD migrations, Sentry + dashboards, Maestro E2E, OWASP review
 - Reviewed AI content corpus + evaluation harness (unblocks live Ask Guru)
 - Backend Edge Functions — SVC_household, SVC_notify_scheduler, SVC_revenuecat_webhook
 - Initial Supabase Project (apply migrations) + integration run
@@ -306,7 +305,8 @@ prefs work today, so gating and prefs are real before the SDKs are wired.
 - Mobile Milestone 6 (Profile/Household / MOD_you): server-authoritative preferences (owner-RLS, optimistic + offline queue); SCR_SETTINGS_001 / SCR_PROFILE_001; household domain + householdRepository (RLS read + SVC_household writes + Realtime member seam); useHousehold/useInvite; CMP_MEMBER_ROW/ROLE_PICKER/SHARE_BUTTON/INVITE_*; SCR_HOUSEHOLD_001 + SCR_HOUSEHOLD_INVITE_001; account deletion (F-3 gate + grace window, SCR_DELETE_ACCOUNT_001); domain/repository tests
 - DevOps Platform Audit & Hardening (interlude, 2026-07-12): canonical env inventory (14 vars), secrets matrix, 6 .env.*.example templates, scripts/preflight.sh + bootstrap.sh, behavior-preserving workflow hardening (ci/cd/ota), docs/SETUP.md + docs/devops/*, DEVOPS_AUDIT_REPORT.md. No product/architecture/deploy-behavior changes
 - **Mobile Milestone 7 (Notifications / MOD_notifications, 2026-07-18):** opt-in priming, per-channel server-authoritative prefs (user_profile.notif_prefs JSON), push-token registration behind the NotificationAdapter seam (NullNotificationAdapter until expo-notifications lands), notification-tap deep-link routing (incl. panchangpal://invite/{token}). Scheduling is always server-side (SVC_notify_scheduler); the client only registers token + prefs. Sunrise/tithi content gated by ADR-033. Reviewed/approved
-- **Mobile Milestone 8 — Increment 2 (SCR_SUBSCRIPTION_001 + affordance wiring, 2026-07-18):** 3 new CMP_* (PLAN_CARD as accessible radio with text-not-color best-value; VALUE_LIST with SR text equivalents; LEGAL_FOOTNOTE at min-AA); SCR_SUBSCRIPTION_001 with all states (default/skeleton/empty/offline/error/success + already-premium) + You-hub entry + route registration; usePlans/usePurchase/useRestore via the PaymentAdapter seam (no device receipt logic; entitlement never granted client-side — success only invalidates the entitlement query); usePremiumGate wired at deep-dive (Settings depth) + extended Ask Guru (contextual, dismissible). Component + hook tests; tsc-clean. Awaiting review
+- **Mobile Milestone 8 — Increment 3 (contextual paywall + routing + FF_FAMILY_PLAN, 2026-07-18):** CMP_BOTTOM_SHEET implemented to PDD §5.12 (specified since the component library but never built; four components already declared it a dependency) — SR-modal with focus trap, required-decision variant, Reduced-Motion fade-in-place. Contextual paywall composed of CMP_BOTTOM_SHEET + CMP_PLAN_CARD (no new CMP_*) as the `app/modal/paywall` route per TDD §3.1, reached by navigation intent so MOD_guru never imports MOD_you (§2.2 forbids cross-feature imports); Settings deep-dive + Ask Guru upsells now open it, replacing both inline cards. `panchangpal://subscription` → SCR_SUBSCRIPTION_001 in the linking table and in notification tap routing (both previously fell back to the You hub). FF_FAMILY_PLAN offering gate via a NEW fail-closed feature-flag read seam (featureFlagRepository + HOOK_useFeatureFlag, ADR-021 — nothing had ever read the `feature_flag` table), applied through the pure `visibleOfferings`. tsc + eslint clean; 153 tests green (mobile 120 / ui 33). Awaiting review
+- **Mobile Milestone 8 — Increment 2 (SCR_SUBSCRIPTION_001 + affordance wiring, 2026-07-18):** 3 new CMP_* (PLAN_CARD as accessible radio with text-not-color best-value; VALUE_LIST with SR text equivalents; LEGAL_FOOTNOTE at min-AA); SCR_SUBSCRIPTION_001 with all states (default/skeleton/empty/offline/error/success + already-premium) + You-hub entry + route registration; usePlans/usePurchase/useRestore via the PaymentAdapter seam (no device receipt logic; entitlement never granted client-side — success only invalidates the entitlement query); usePremiumGate wired at deep-dive (Settings depth) + extended Ask Guru (contextual, dismissible). Component + hook tests; tsc-clean. Approved; merged as PR #4
 - **Mobile Milestone 8 — Increment 1 (Subscription entitlement read + gating, 2026-07-18):** household-grain (F-4) entitlement READ via supabase-js RLS + realtime seam; pure mapping/rules (strict is_active; isEntitled/hasFamily/activeKind); PremiumCapability registry (deep_dive_content, extended_ask_guru) + usePremiumGate (fails open while loading; daily loop never gated); PaymentAdapter port + NullPaymentAdapter (never fabricates a purchase). Entitlement is READ-ONLY on device — the entitlement table denies all client writes (migration 20260712000060); the RevenueCat webhook is the sole writer. Domain + repository tests. Approved
 
 Do not duplicate SESSION.md.
@@ -357,7 +357,7 @@ Those belong in SESSION.md.
 ✅ Documentation → ✅ Repository Foundation → ✅ Backend Foundation → ✅ Design System →
 ✅ Authentication → ✅ Today's Panchang (shell; compute blocked by ADR-033) → ✅ Ritual Experience →
 ✅ Calendar Shell → ✅ Ask Guru AI (client; live answers gated) → ✅ Profile / Household →
-✅ Notifications → 🚧 Payments (M8: Increments 1–2 done; Inc 3 remains) → Testing → Beta → Production
+✅ Notifications → ✅ Payments (M8 complete) → 🚧 Testing → Beta → Production
 
 ---
 
@@ -366,11 +366,10 @@ Those belong in SESSION.md.
 The PanchangPal project has completed the product definition and architecture phases, the
 repository and platform foundation, and the backend SVC_* services.
 
-The current focus is the Mobile MVP Phase 1 feature-slice milestone (96%). App Shell, Today, Guided
-Ritual, Calendar Shell, Ask Guru Client, Profile/Household, and Notifications (M1–M7) are complete;
-Subscription (M8) is in progress — Increments 1 (entitlement read + gating) and 2 (SCR_SUBSCRIPTION_001
-+ plans/purchase/restore + affordance wiring) are done, with only the contextual paywall sheet
-(Increment 3) remaining.
+The Mobile MVP Phase 1 feature-slice milestone is **complete (100%)**. All eight slices — App Shell,
+Today, Guided Ritual, Calendar Shell, Ask Guru Client, Profile/Household, Notifications, and
+Subscription (M1–M8) — are implemented, tsc/eslint clean, and green in test. The project now
+transitions to Beta Readiness & Platform Hardening (TDD Part 5).
 The only architectural blocker is the Canonical Panchang Engine decision (ADR-033); Ask Guru live
 answers are intentionally gated until corpus/eval readiness.
 

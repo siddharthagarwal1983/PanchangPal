@@ -25,8 +25,9 @@ import {
   useTheme,
 } from '@panchangpal/ui';
 import type { ValueListItem } from '@panchangpal/ui';
-import { isEntitled, type PlanOffering } from '../../../src/domain/subscription';
+import { isEntitled, visibleOfferings, type PlanOffering } from '../../../src/domain/subscription';
 import { useEntitlement } from '../../../src/data/hooks/useEntitlement';
+import { useFeatureFlag } from '../../../src/data/hooks/useFeatureFlag';
 import {
   useConfigurePayments,
   usePlans,
@@ -57,6 +58,9 @@ export default function SubscriptionScreen() {
   const { theme } = useTheme();
 
   useConfigurePayments();
+  // The Family plan is an OFFERING gate (ADR-021): hidden until FF_FAMILY_PLAN is on, so Individual
+  // stays the default. Fails closed — an unreadable flag never exposes an unreleased plan.
+  const familyPlanEnabled = useFeatureFlag('FF_FAMILY_PLAN');
   const entitlement = useEntitlement();
   const plans = usePlans();
   const purchase = usePurchase();
@@ -71,7 +75,7 @@ export default function SubscriptionScreen() {
   const alreadyPremium = isEntitled(entitlement.data);
   const justPurchased = purchase.data?.outcome === 'success';
   const purchaseFailed = purchase.data?.outcome === 'failed' || purchase.data?.outcome === 'unavailable';
-  const offerings = plans.data ?? [];
+  const offerings = visibleOfferings(plans.data, familyPlanEnabled);
 
   const back = () => router.back();
 

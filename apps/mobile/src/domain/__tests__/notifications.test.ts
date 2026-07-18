@@ -110,13 +110,15 @@ describe('tap routing (deep-link table)', () => {
     expect(routeForNotifType('household')).toBe('/(tabs)/you/household');
     expect(routeForNotifType('household_invite', { token: 'abc' })).toBe('/(tabs)/you/invite?token=abc');
     expect(routeForNotifType('household_invite')).toBe('/(tabs)/you/household'); // no token → safe fallback
-    expect(routeForNotifType('subscription')).toBe('/(tabs)/you');
+    // M8: SCR_SUBSCRIPTION_001 exists, so the interim You-hub fallback is gone.
+    expect(routeForNotifType('subscription')).toBe('/(tabs)/you/subscription');
   });
 
   it('resolves panchangpal:// deep links', () => {
     expect(routeForDeepLink('panchangpal://today?focus=ritual')).toBe('/(tabs)/today');
     expect(routeForDeepLink('panchangpal://invite/tok_9')).toBe('/(tabs)/you/invite?token=tok_9');
     expect(routeForDeepLink('panchangpal://festival/42')).toBe('/(tabs)/calendar');
+    expect(routeForDeepLink('panchangpal://subscription')).toBe('/(tabs)/you/subscription');
     expect(routeForDeepLink('https://example.com')).toBeNull();
     expect(routeForDeepLink('panchangpal://unknown')).toBeNull();
   });

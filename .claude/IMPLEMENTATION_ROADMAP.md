@@ -15,13 +15,14 @@ increment/milestone boundary per the Increment & Milestone Completion Checkpoint
 
 Documentation, ADRs (33), OpenAPI, DB schema + migrations, monorepo scaffold, Expo app shell,
 CI/CD, Backend Foundation, and the design system are complete. The Mobile MVP — Phase 1 feature
-slices are ~96% done: M1 App Shell, M2 Today, M3 Guided Ritual, M4 Calendar Shell, M5 Ask Guru,
-M6 Profile/Household, and M7 Notifications are complete; M8 Subscription is in progress with
-Increments 1 (household-grain entitlement read + gating) and 2 (SCR_SUBSCRIPTION_001 +
-plans/purchase/restore + affordance wiring) complete — Increment 2 awaiting review.
+slices are **complete (100%)**: M1 App Shell, M2 Today, M3 Guided Ritual, M4 Calendar Shell,
+M5 Ask Guru, M6 Profile/Household, M7 Notifications, and M8 Subscription. M8 closed with
+Increment 3 (contextual paywall sheet at app/modal/paywall, panchangpal://subscription routing,
+FF_FAMILY_PLAN offering gate) — awaiting review.
 
-Next up: **M8 Subscription Increment 3** (contextual paywall sheet + panchangpal://subscription
-routing + FF_FAMILY_PLAN), which completes the Subscription slice and the Mobile MVP milestone.
+Next up: the **Beta Readiness & Platform Hardening** milestone (TDD Part 5) — provision Supabase
+environments, apply migrations via CD, wire Sentry + dashboards, run the Maestro FLOW_* E2E suite,
+complete the OWASP Mobile review, and prepare a phased store rollout.
 
 One blocker: the Canonical Panchang Engine (ADR-033, Proposed) — astronomical algorithm
 undocumented; the whole system depends only on the abstract PanchangEngine/PanchangProvider
@@ -33,13 +34,13 @@ when it lands.
 ## Track A — Product build (unblocked, proceed now)
 
 1. ✅ Design System & Component Library — tokens (PDD Part 3 §6) + CMP_* (a11y-first).
-2. Mobile feature slices (MOD_*) — 🚧 nearly done.
+2. Mobile feature slices (MOD_*) — ✅ complete.
    - ✅ M1 App Shell · M2 Today · M3 Guided Ritual · M4 Calendar Shell · M5 Ask Guru ·
      M6 Profile/Household · M7 Notifications.
-   - 🚧 M8 Subscription — Increments 1–2 done (entitlement read + gating; SCR_SUBSCRIPTION_001,
-     CMP_PLAN_CARD/VALUE_LIST/LEGAL_FOOTNOTE, plans/purchase/restore via the PaymentAdapter, deep-dive
-     + extended-Ask-Guru affordance wiring); **Increment 3 next** (contextual paywall sheet,
-     panchangpal://subscription routing, FF_FAMILY_PLAN).
+   - ✅ M8 Subscription — all 3 increments (entitlement read + gating; SCR_SUBSCRIPTION_001,
+     CMP_PLAN_CARD/VALUE_LIST/LEGAL_FOOTNOTE, plans/purchase/restore via the PaymentAdapter;
+     CMP_BOTTOM_SHEET + the contextual paywall route, panchangpal://subscription routing, and the
+     FF_FAMILY_PLAN offering gate on a new fail-closed feature-flag seam).
    - Note: the Today panchang view and Calendar markers render "temporarily unavailable" until the
      engine lands; ritual completion / streak / checklist / Ask Guru / household / notifications
      prefs all work now. Live Ask Guru answers stay gated (GURU_LIVE=false).
@@ -81,7 +82,7 @@ when it lands.
 ## Milestone sequence
 
 Repository & Platform Foundation (done) -> Backend Foundation (independent done; engine blocked)
--> Design System (done) -> Mobile Features (M1–M7 done; M8 in progress) -> AI corpus + eval ->
+-> Design System (done) -> Mobile Features (M1–M8 done) -> AI corpus + eval ->
 Beta (§10.1 go/no-go) -> Launch (US/AU/NZ phased). Track B runs alongside and must complete before
 a launch that includes panchang.
 
