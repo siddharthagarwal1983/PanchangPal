@@ -127,69 +127,17 @@ jobs:
   #                specs — which additionally require an installable build artifact,
   #                so B2 depends on B3 completing.
   #
-  #   eas-build    RESTORED below as a real build (2026-07-19), once profiles, store
-  #                identifiers, EXPO_ACCESS_TOKEN, and two successful manual Android
-  #                builds existed to prove the process works.
+  #   eas-build    Restored as a REAL build, but in .github/workflows/release-build.yml
+  #                rather than here. It waits for completion (a build that only reports
+  #                "queued" cannot fail, which is what got the placeholder removed), so it
+  #                costs ~15-20 min and one EAS build credit per run — too much for every
+  #                merge to main. Triggered by a `v*` tag or manual dispatch instead.
   #
   # The manual-dispatch jobs (promote-production here, publish-ota in ota.yml) are
   # NOT removed: a deploy job that silently reports success is worse than a missing
   # one, because an operator can believe a promotion happened. They now fail loudly
   # instead. See the explicit failure step below.
   # ---------------------------------------------------------------------------
-
-  eas-build:
-    name: EAS build (Android) → internal distribution
-    runs-on: ubuntu-latest
-    needs: deploy-functions
-    environment: staging
-
-    steps:
-      - uses: actions/checkout@v5
-
-      - uses: pnpm/action-setup@v4
-        with:
-          version: 9.6.0
-
-      - uses: actions/setup-node@v4
-        with:
-          node-version: 20.11.0
-          cache: pnpm
-
-      - name: Install dependencies
-        run: pnpm install --frozen-lockfile
-
-      - name: Preflight
-        run: bash scripts/preflight.sh staging
-        env:
-          SUPABASE_STAGING_DB_URL: ${{ secrets.SUPABASE_STAGING_DB_URL }}
-          SUPABASE_STAGING_REF: ${{ secrets.SUPABASE_STAGING_REF }}
-          SUPABASE_ACCESS_TOKEN: ${{ secrets.SUPABASE_ACCESS_TOKEN }}
-          EXPO_ACCESS_TOKEN: ${{ secrets.EXPO_ACCESS_TOKEN }}
-
-      # ANDROID ONLY, deliberately. iOS signing needs an Apple Developer membership that
-      # does not exist yet, so `--platform all` would fail on the iOS half of every run.
-      # Add ios once the membership and credentials are in place (B3 remainder).
-      #
-      # `--wait` (the default) is the point: without it the job reports success as soon as
-      # the build is QUEUED, which would make this another job that cannot fail — exactly
-      # what was removed from CD this morning. It costs ~15-20 min of wall clock and one
-      # EAS build credit per merge to main. If that pressure becomes a problem, the honest
-      # alternatives are to trigger on release tags or on workflow_dispatch — NOT to add
-      # --no-wait, which restores the appearance of verification without the substance.
-      #
-      # EXPO_PUBLIC_* are not passed here: they live in the EAS "preview" environment,
-      # which apps/mobile/eas.json binds to the staging profile.
-      - name: EAS build (Android, staging profile)
-        working-directory: apps/mobile
-        run: pnpm dlx eas-cli@latest build --platform android --profile staging --non-interactive
-        env:
-          EXPO_TOKEN: ${{ secrets.EXPO_ACCESS_TOKEN }}
-
-      - name: Summary
-        if: always()
-        run: |
-          echo "### EAS Android build: ${{ job.status }}" >> "$GITHUB_STEP_SUMMARY"
-          echo "Artifacts: https://expo.dev/accounts/siddharth2008/projects/panchangpal/builds" >> "$GITHUB_STEP_SUMMARY"
 
   promote-production:
     name: Promote to production (manual go/no-go §10.1)

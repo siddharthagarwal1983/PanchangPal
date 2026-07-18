@@ -1,0 +1,89 @@
+# =============================================================================
+# Release build — EAS native build for internal distribution (TDD Part 5 §2.3).
+#
+# Deliberately NOT part of CD. The build waits for completion, because a job that
+# reports success as soon as a build is QUEUED cannot meaningfully fail — that is
+# what got the original `eas-build` placeholder removed from cd.yml. Waiting costs
+# ~15-20 minutes and one EAS build credit per run, which is too much to spend on
+# every merge to main, so it is triggered explicitly instead.
+#
+# CI's bundle gate (ci.yml → `bundle`) already catches JavaScript-level breakage on
+# every PR; this workflow verifies the NATIVE build, which is a different question
+# and a far more expensive one to answer.
+# =============================================================================
+
+name: Release build
+
+on:
+  push:
+    tags:
+      - 'v*'
+  workflow_dispatch:
+    inputs:
+      profile:
+        description: 'EAS build profile'
+        required: true
+        default: 'staging'
+        type: choice
+        options: [staging, production]
+
+permissions:
+  contents: read
+
+concurrency:
+  group: release-build-${{ github.ref }}
+  cancel-in-progress: false
+
+env:
+  NODE_VERSION: '20.11.0'
+  PNPM_VERSION: '9.6.0'
+
+jobs:
+  android:
+    name: EAS build (Android) → internal distribution
+    runs-on: ubuntu-latest
+    environment: staging
+
+    steps:
+      - uses: actions/checkout@v4
+
+      - uses: pnpm/action-setup@v4
+        with: { version: '${{ env.PNPM_VERSION }}' }
+
+      - uses: actions/setup-node@v4
+        with:
+          node-version: '${{ env.NODE_VERSION }}'
+          cache: pnpm
+
+      - name: Install dependencies
+        run: pnpm install --frozen-lockfile
+
+      # Fails closed on a missing EXPO_ACCESS_TOKEN before any build starts.
+      - name: Preflight
+        run: bash scripts/preflight.sh staging
+        env:
+          SUPABASE_STAGING_DB_URL: ${{ secrets.SUPABASE_STAGING_DB_URL }}
+          SUPABASE_STAGING_REF: ${{ secrets.SUPABASE_STAGING_REF }}
+          SUPABASE_ACCESS_TOKEN: ${{ secrets.SUPABASE_ACCESS_TOKEN }}
+          EXPO_ACCESS_TOKEN: ${{ secrets.EXPO_ACCESS_TOKEN }}
+
+      # ANDROID ONLY. iOS signing needs an Apple Developer membership that does not exist
+      # yet, so `--platform all` would fail on the iOS half of every run. Add `ios` once
+      # the membership and credentials are in place (B3 remainder).
+      #
+      # EXPO_PUBLIC_* are not passed here: they live in the EAS "preview" environment,
+      # which apps/mobile/eas.json binds to the staging profile.
+      #
+      # No `--no-wait`: the wait IS the verification. If this becomes too slow, narrow the
+      # trigger further — do not make the job stop checking.
+      - name: EAS build
+        working-directory: apps/mobile
+        run: pnpm dlx eas-cli@latest build --platform android --profile "${{ inputs.profile || 'staging' }}" --non-interactive
+        env:
+          EXPO_TOKEN: ${{ secrets.EXPO_ACCESS_TOKEN }}
+
+      - name: Summary
+        if: always()
+        run: |
+          echo "### EAS Android build (${{ inputs.profile || 'staging' }}): ${{ job.status }}" >> "$GITHUB_STEP_SUMMARY"
+          echo "Artifacts: https://expo.dev/accounts/siddharth2008/projects/panchangpal/builds" >> "$GITHUB_STEP_SUMMARY"
