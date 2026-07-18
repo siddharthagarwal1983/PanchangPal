@@ -11,6 +11,15 @@ const config: ExpoConfig = {
   version: '0.1.0',
   orientation: 'portrait',
   platforms: ['ios', 'android'],
+  // Store identity. Required by `eas build` in non-interactive mode, and the anchor for
+  // signing certificates, RevenueCat products, and App/Android App Links.
+  //
+  // CHANGEABLE UNTIL THE FIRST STORE SUBMISSION, PERMANENT AFTER. Once an app ships under
+  // these identifiers they cannot be altered — a different one is a new store listing that
+  // loses existing installs and reviews. Revisit before B3's submit step, not after.
+  // `com.panchangpal.*` deliberately does not claim a domain the project may not own.
+  android: { package: 'com.panchangpal.app' },
+  ios: { bundleIdentifier: 'com.panchangpal.app' },
   // Hermes is MANDATORY per TDD Part 5 §2.3. It is already the SDK 54 default (and the
   // only engine supported under the New Architecture) — `expo export` emits .hbc bytecode —
   // but it is stated explicitly so a future default change cannot silently drop it.
