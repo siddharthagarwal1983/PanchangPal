@@ -1,7 +1,8 @@
 // jest-expo config for the UI component library (PDD §5.13A.6 required coverage).
 module.exports = {
   preset: 'jest-expo',
-  setupFilesAfterEnv: ['@testing-library/react-native/extend-expect'],
+  // @testing-library/react-native v13 removed the separate `extend-expect` entry point;
+  // its jest matchers are now registered automatically by the main import.
   moduleNameMapper: {
     '^@panchangpal/(.*)$': '<rootDir>/../$1/src/index.ts',
     '^(\\.{1,2}/.*)\\.js$': '$1',
