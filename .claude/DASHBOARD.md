@@ -68,9 +68,9 @@ CURRENT_MILESTONE.md
 **Mobile MVP Phase 1 (M1–M8) is complete and merged to main** (M8 Increment 3 = PR #7, 2026-07-18).
 
 Beta Readiness & Platform Hardening is now open, sliced B1–B8.
-Current: **B1 — Environments & secrets**. In progress on `feat/b1-bundle-gate`: CI bundle gate
-added (pulled forward from B2), preflight gained a `dev` target and two newly-required production
-secrets. Remaining B1 work is owner-performed provisioning of the dev + prod Supabase projects.
+Current: **B3 — Build & distribution**, reordered ahead of B2 (B2 needs a built app binary, which
+did not exist). eas.json + 3 profiles + Hermes landed; blocked on accounts. B1's code-side work is
+done; its remainder is owner-performed Supabase provisioning.
 
 ⚠️ B1's written premise — "preflight.sh warns then exits 0" — was **false**; it already failed
 closed. See CURRENT_MILESTONE.md → Corrected Premise. Verify each remaining slice's premise against
@@ -127,8 +127,8 @@ No new product scope in this milestone.
 
 # Current Priorities
 
-1. Beta Readiness B1 — environments & per-env secrets (preflight already fails closed; provisioning is owner-performed)
-2. Beta Readiness B2 — replace the Maestro placeholder with real FLOW_* specs
+1. Beta Readiness B3 — a real EAS build (needs Expo account; Android-only is the cheapest path)
+2. Beta Readiness B1 remainder + B2 (3 realistic flows; B2 depends on B3)
 3. ⛔ Canonical Panchang Engine decision (ADR-033) — unblocks Today panchang, Calendar markers, notifications
 3. AI corpus ingestion + eval readiness — unblocks live Ask Guru (GURU_LIVE)
 4. Backend Edge Functions: SVC_household, SVC_notify_scheduler, SVC_revenuecat_webhook (client contracts coded)
@@ -139,7 +139,7 @@ No new product scope in this milestone.
 
 # Active Branch
 
-feat/b1-bundle-gate (B1 code-side; main is at PR #9)
+feat/b3-eas-build-config
 
 ---
 
@@ -170,8 +170,8 @@ CURRENT_MILESTONE.md → Current Risks.
 
 # Next Deliverable
 
-Beta Readiness — Slice B1: Environments & secrets (dev + prod Supabase projects + per-env secrets —
-owner-performed; the code-side work is done)
+Beta Readiness — B3: a real EAS build. Needs an Expo account token; Apple ($99) for iOS, Google
+Play ($25) for the internal track. Android-only unblocks B2 as well.
 
 ---
 
