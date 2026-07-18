@@ -11,6 +11,10 @@ const config: ExpoConfig = {
   version: '0.1.0',
   orientation: 'portrait',
   platforms: ['ios', 'android'],
+  // Hermes is MANDATORY per TDD Part 5 §2.3. It is already the SDK 54 default (and the
+  // only engine supported under the New Architecture) — `expo export` emits .hbc bytecode —
+  // but it is stated explicitly so a future default change cannot silently drop it.
+  jsEngine: 'hermes',
   // Config plugins required from SDK 54 — these packages now ship native config that must
   // be declared explicitly (previously autolinked). `expo install` cannot write to a
   // dynamic (.ts) config, so they are maintained here by hand.
