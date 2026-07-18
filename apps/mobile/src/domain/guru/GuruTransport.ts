@@ -13,8 +13,8 @@ export interface GuruTransport {
 
 export class UnavailableGuruTransport implements GuruTransport {
   stream(
-    question: string,
-    conversationId?: string
+    _question: string,
+    _conversationId?: string
   ): AsyncIterable<GuruStreamEvent> {
     throw new Error('Guru transport not configured');
   }

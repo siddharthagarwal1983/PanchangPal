@@ -54,4 +54,11 @@ export { ShareButton } from './components/ShareButton';
 export { InviteLinkCard, InviteAcceptCard, } from './components/InviteCards';
 export { ConsequencesPanel } from './components/ConsequencesPanel';
 export { DestructiveAction } from './components/DestructiveAction';
+// Notifications (MOD_notifications) — Milestone 7
+export { InfoBanner } from './components/InfoBanner';
+export { PermissionPriming, } from './components/PermissionPriming';
+// Subscription (MOD_subscription) — Milestone 8
+export { ValueList } from './components/ValueList';
+export { PlanCard } from './components/PlanCard';
+export { LegalFootnote } from './components/LegalFootnote';
 //# sourceMappingURL=index.js.map
