@@ -127,12 +127,11 @@ jobs:
   #                specs — which additionally require an installable build artifact,
   #                so B2 depends on B3 completing.
   #
-  #   eas-build    ran `echo "eas build ..."` with no eas.json to reference. The
-  #                profiles now exist (apps/mobile/eas.json), so what remains is
-  #                credentials: an Expo account token, plus an Apple Developer
-  #                membership for iOS and a Google Play account for the internal
-  #                track. Restore as a real `eas build --profile staging` once
-  #                EXPO_ACCESS_TOKEN is configured.
+  #   eas-build    Restored as a REAL build, but in .github/workflows/release-build.yml
+  #                rather than here. It waits for completion (a build that only reports
+  #                "queued" cannot fail, which is what got the placeholder removed), so it
+  #                costs ~15-20 min and one EAS build credit per run — too much for every
+  #                merge to main. Triggered by a `v*` tag or manual dispatch instead.
   #
   # The manual-dispatch jobs (promote-production here, publish-ota in ota.yml) are
   # NOT removed: a deploy job that silently reports success is worse than a missing
