@@ -69,6 +69,45 @@ throwing on absent config, and `react-native-mmkv` being unavailable in Expo Go.
 # Current Task
 
 ## Title
+Beta Readiness — Slice B3: Build & distribution (reordered ahead of B2)
+
+Status
+🟡 CONFIG DONE, BLOCKED ON ACCOUNTS — on `feat/b3-eas-build-config`.
+
+**B3 was pulled ahead of B2** because B2 depends on it: Maestro drives a built app binary, and
+none could be produced (no eas.json, no native projects, no Android SDK/Java/Xcode locally). The
+B1–B8 order was written from documentation, not the dependency graph.
+
+Done:
+- `apps/mobile/eas.json` — development / staging / production profiles matching §1.1 environments
+  and the channels ota.yml already uses. Validated against EAS's own schema via @expo/eas-json
+  (all six profile/platform combinations resolve; validator confirmed to reject a bad value).
+- `jsEngine: 'hermes'` pinned explicitly (§2.3 mandates it; already active — export emits .hbc).
+- Placeholder sweep completed: all six workflow placeholders resolved (see CURRENT_MILESTONE.md →
+  Placeholder audit).
+
+Blocked — owner-performed:
+- [ ] Expo account + `EXPO_ACCESS_TOKEN` — required for ANY eas build
+- [ ] Apple Developer Program ($99/yr) — iOS builds + TestFlight
+- [ ] Google Play Developer ($25 one-time) — Play Internal track
+- [ ] Sentry source-map upload (§2.3) — depends on Sentry, which is B4
+
+Cheapest path to a real build: Expo account + Google Play ($25), Android only. That also unblocks
+B2, since Maestro would then have an APK to drive.
+
+# After Completion
+Restore the `eas-build` CD job as a real `eas build --profile staging`, then proceed to **B2** with
+realistic scope: three flows (FLOW_ONBOARDING, FLOW_RETURNING, FLOW_MORNING_RITUAL).
+FLOW_HOUSEHOLD_INVITE needs the unimplemented SVC_household; the subscription path can only assert
+the "unavailable" state while react-native-purchases is deferred; FLOW_ASK_GURU can only exercise
+the gated path.
+
+---
+
+# Previous Task — B1 (code-side complete)
+
+
+## Title
 Beta Readiness — Slice B1: Environments & secrets
 
 Status

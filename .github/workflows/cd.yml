@@ -98,59 +98,36 @@ jobs:
           SUPABASE_STAGING_REF: ${{ secrets.SUPABASE_STAGING_REF }}
           SUPABASE_ACCESS_TOKEN: ${{ secrets.SUPABASE_ACCESS_TOKEN }}
 
-  e2e-staging:
-    name: Maestro E2E (FLOW_*) on staging
-    runs-on: ubuntu-latest
-    needs: deploy-functions
-
-    steps:
-      - uses: actions/checkout@v5
-
-      # Replace with actual Maestro installation later
-      - name: Placeholder E2E
-        run: |
-          echo "maestro test tests/flows"
-
-  eas-build:
-    name: EAS build → internal distribution
-    runs-on: ubuntu-latest
-    needs: e2e-staging
-    environment: staging
-
-    steps:
-      - uses: actions/checkout@v5
-
-      - uses: pnpm/action-setup@v4
-        with:
-          version: 9.6.0
-
-      - uses: actions/setup-node@v4
-        with:
-          node-version: 20.11.0
-          cache: pnpm
-
-      - name: Install dependencies
-        run: pnpm install --frozen-lockfile
-
-      - name: Preflight
-        run: bash scripts/preflight.sh staging
-        env:
-          SUPABASE_STAGING_DB_URL: ${{ secrets.SUPABASE_STAGING_DB_URL }}
-          SUPABASE_STAGING_REF: ${{ secrets.SUPABASE_STAGING_REF }}
-          SUPABASE_ACCESS_TOKEN: ${{ secrets.SUPABASE_ACCESS_TOKEN }}
-          EXPO_ACCESS_TOKEN: ${{ secrets.EXPO_ACCESS_TOKEN }}
-
-      # Replace with actual Expo CLI build once configured
-      - name: Placeholder EAS build
-        run: |
-          echo "eas build --platform all --profile staging --non-interactive"
-        env:
-          EXPO_ACCESS_TOKEN: ${{ secrets.EXPO_ACCESS_TOKEN }}
+  # ---------------------------------------------------------------------------
+  # DE-DECLARED JOBS (2026-07-18, B3)
+  #
+  # `e2e-staging` and `eas-build` ran `echo` and reported success on every push to
+  # main, making CD's green status claim verification that never happened. Removed
+  # rather than left in place — the same reasoning that removed two hollow CI gates
+  # (see ci.yml → DE-DECLARED GATES): a job that cannot fail reads as coverage.
+  #
+  #   e2e-staging  ran `echo "maestro test tests/flows"`. tests/flows/ contains only
+  #                .gitkeep and there is no .maestro/. Restore in B2 with real FLOW_*
+  #                specs — which additionally require an installable build artifact,
+  #                so B2 depends on B3 completing.
+  #
+  #   eas-build    ran `echo "eas build ..."` with no eas.json to reference. The
+  #                profiles now exist (apps/mobile/eas.json), so what remains is
+  #                credentials: an Expo account token, plus an Apple Developer
+  #                membership for iOS and a Google Play account for the internal
+  #                track. Restore as a real `eas build --profile staging` once
+  #                EXPO_ACCESS_TOKEN is configured.
+  #
+  # The manual-dispatch jobs (promote-production here, publish-ota in ota.yml) are
+  # NOT removed: a deploy job that silently reports success is worse than a missing
+  # one, because an operator can believe a promotion happened. They now fail loudly
+  # instead. See the explicit failure step below.
+  # ---------------------------------------------------------------------------
 
   promote-production:
     name: Promote to production (manual go/no-go §10.1)
     runs-on: ubuntu-latest
-    needs: eas-build
+    needs: deploy-functions
     environment: production
     if: github.event_name == 'workflow_dispatch'
 
@@ -169,11 +146,20 @@ jobs:
           SUPABASE_ACCESS_TOKEN: ${{ secrets.SUPABASE_ACCESS_TOKEN }}
           EXPO_ACCESS_TOKEN: ${{ secrets.EXPO_ACCESS_TOKEN }}
 
-      - name: Production deployment placeholder
+      # This job previously echoed three lines and reported SUCCESS, so dispatching it
+      # looked like a completed production promotion while deploying nothing. It now
+      # fails closed. Preflight above still runs first, so a missing production secret
+      # is reported before this point.
+      #
+      # To implement (B7/B8): apply migrations with scripts/migrate.sh against
+      # SUPABASE_PROD_DB_URL, deploy Edge Functions with --project-ref SUPABASE_PROD_REF,
+      # and submit the production build via `eas submit --profile production`.
+      - name: Production promotion is not implemented
         run: |
-          echo "Apply production migrations"
-          echo "Deploy Edge Functions"
-          echo "Submit production EAS build"
+          echo "::error::Production promotion is NOT implemented. Nothing was deployed."
+          echo "Preflight passed, so production configuration is present — but the"
+          echo "migrate / deploy / submit steps do not exist yet (B7/B8)."
+          exit 1
 
       - name: Summary
         if: always()

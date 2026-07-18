@@ -87,6 +87,40 @@ Removing them makes CI's true coverage legible. What is now owed, tracked in the
 
 Standing rule recorded in `ci.yml`: **a gate is added when it can fail**, never as a placeholder.
 
+## Placeholder audit (2026-07-18, completed during B3)
+
+The milestone opened recording **two** placeholders. A full sweep of all three workflows found
+**six**. All are now resolved one way or the other:
+
+| Placeholder | Where | Resolution |
+|---|---|---|
+| `api-contract` | ci.yml | de-declared (B1) |
+| `ai-eval-subset` | ci.yml | de-declared (B1) |
+| `e2e-staging` | cd.yml | de-declared (B3) — B2 restores it |
+| `eas-build` | cd.yml | de-declared (B3) — pending credentials |
+| `promote-production` | cd.yml | **fails loudly** — manual dispatch previously reported a completed promotion |
+| `publish-ota` | ota.yml | **fails loudly** — previously reported a shipped OTA |
+
+Automatic gates were **removed** (a fake gate reads as coverage). Manual deploy jobs were **kept and
+made to fail**, because a missing job hides a capability while a silently-succeeding one actively
+misleads an operator into believing production was promoted. That asymmetry is the rule going
+forward.
+
+What remains genuinely real in CD: staging migrations and Edge Function deploys.
+
+## B2 depends on B3 (discovered 2026-07-18)
+
+B2 cannot be done before B3. Maestro drives a **built app binary**, and none can be produced: no
+`eas.json` existed, there are no native projects (managed workflow), and no Android SDK, Java, or
+Xcode is available locally. The B1–B8 ordering was written from documentation rather than from the
+dependency graph.
+
+Two of B2's five flows are also blocked on missing backends rather than on tooling:
+`FLOW_HOUSEHOLD_INVITE` needs **SVC_household**, which is an unimplemented Edge Function, and the
+subscription path can only assert the "unavailable" state while `react-native-purchases` is
+deferred. `FLOW_ASK_GURU` can only exercise the gated path (`GURU_LIVE=false`). Realistic B2 scope
+is therefore **three** flows: `FLOW_ONBOARDING`, `FLOW_RETURNING`, `FLOW_MORNING_RITUAL`.
+
 **Lesson for the remaining slices:** the B1–B8 scoping was written from documentation rather than
 from the code. Verify each slice's premise against the repository before implementing it.
 
@@ -102,8 +136,9 @@ from the code. Verify each slice's premise against the repository before impleme
 | **App bundles at all** | ⚠️ **Was broken until 2026-07-18** — no CI gate invokes Metro (see Execution Gap below) |
 | **App runs on a device** | ⚠️ **First ever run 2026-07-18**, Expo Go + local Supabase |
 | **Local backend bring-up** | ⚠️ **Was impossible until 2026-07-18** — `supabase start` always rolled back |
-| Maestro E2E (FLOW_*) | ❌ Placeholder — `echo`, no flow specs, no `.maestro/` |
-| EAS build / distribution | ❌ Placeholder — no `eas.json`, no build profiles, no signing |
+| Maestro E2E (FLOW_*) | 🚫 **De-declared** 2026-07-18 — was an `echo`; still no specs, no `.maestro/`. B2 restores it |
+| EAS build / distribution | 🟡 `eas.json` + 3 profiles + Hermes landed (B3); CD job de-declared pending credentials |
+| Production promotion / OTA | 🔴 **Now fail loudly** — both previously reported success while deploying nothing |
 | Preflight secret checks | ✅ **Already fail-closed** (exits 1) — the earlier "warns then exit 0" claim was wrong; see Corrected Premise below |
 | **AI eval subset gate** | 🚫 **De-declared** 2026-07-18 — was an `echo`. Restore when the Part 3 §9.4 harness lands |
 | **API / zod contract gate** | 🚫 **De-declared** 2026-07-18 — was `--passWithNoTests` against a package with no tests. Owed: real contract tests under `packages/api` |
@@ -158,7 +193,7 @@ possible fix and would have caught defects 1–3 at M1.
 |---|---|---|---|
 | B1 | Environments & secrets | dev/staging/prod projects, per-env secrets, fail-closed preflight (§1, §4) | ⏳ |
 | B2 | E2E verification | **bundle/build gate in CI** + real Maestro FLOW_* replacing the stub; green on staging (§2.2, §10.1) | ⏳ |
-| B3 | Build & distribution | eas.json profiles, Hermes, signing, source maps, TestFlight / Play Internal (§2.3) | ⏳ |
+| B3 | Build & distribution | eas.json profiles, Hermes, signing, source maps, TestFlight / Play Internal (§2.3) | 🟡 config done; blocked on accounts |
 | B4 | Observability | Sentry, telemetry, SLO dashboards + alerts (§7) | ⏳ |
 | B5 | Reliability & DR | backups, restore drill, runbooks, graceful degradation (§8) | ⏳ |
 | B6 | Security & privacy | OWASP Mobile review, CCPA export/delete verification, store privacy labels (§5, §6) | ⏳ |
