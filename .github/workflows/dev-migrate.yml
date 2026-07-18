@@ -1,0 +1,90 @@
+# =============================================================================
+# Dev environment — apply migrations + seed (TDD Part 5 §1.1, §2.5).
+#
+# §1.1 mandates three isolated Supabase projects with no shared databases, and
+# migrations that promote dev -> staging -> prod. The dev project was provisioned on
+# 2026-07-18 (ref in SUPABASE_DEV_REF); this is how it is brought up to date.
+#
+# MANUAL ONLY. Unlike staging — which CD migrates on every merge to main — dev is an
+# integration sandbox. Migrating it automatically would fight with whatever a developer is
+# doing there. Run it deliberately, usually before promoting a migration to staging.
+#
+# SUPABASE_DEV_DB_URL contains a database password and is a write-only GitHub secret by
+# design: it is never fetched to a workstation, so the value cannot be pasted, logged, or
+# leaked by hand. Running migrations through CI is what keeps that true.
+# =============================================================================
+
+name: Dev migrate + seed
+
+on:
+  workflow_dispatch:
+    inputs:
+      seed:
+        description: 'Apply seed.sql after migrating'
+        required: true
+        default: true
+        type: boolean
+
+permissions:
+  contents: read
+
+concurrency:
+  group: dev-migrate
+  cancel-in-progress: false
+
+jobs:
+  migrate-dev:
+    name: Apply migrations → dev
+    runs-on: ubuntu-latest
+
+    steps:
+      - uses: actions/checkout@v4
+
+      - name: Install PostgreSQL client
+        run: |
+          sudo apt-get update
+          sudo apt-get install -y --no-install-recommends postgresql-client
+
+      # Fails closed on any missing dev secret before touching the database.
+      - name: Preflight
+        run: bash scripts/preflight.sh dev
+        env:
+          SUPABASE_DEV_DB_URL: ${{ secrets.SUPABASE_DEV_DB_URL }}
+          SUPABASE_DEV_REF: ${{ secrets.SUPABASE_DEV_REF }}
+          SUPABASE_ACCESS_TOKEN: ${{ secrets.SUPABASE_ACCESS_TOKEN }}
+
+      # First real use of SUPABASE_DEV_DB_URL. It was built as a DIRECT connection string
+      # (db.<ref>.supabase.co); Supabase has been moving new projects toward IPv6-only
+      # direct connections, in which case this step fails to connect and the secret should
+      # be replaced with the SESSION POOLER URI from Settings -> Database — the form
+      # staging already uses. The failure, if it comes, is a connection error here.
+      - name: Apply migrations
+        run: bash scripts/migrate.sh "$SUPABASE_DEV_DB_URL"
+        env:
+          SUPABASE_DEV_DB_URL: ${{ secrets.SUPABASE_DEV_DB_URL }}
+
+      # Same seed staging uses: `on conflict do nothing` throughout, so re-running is safe.
+      # Structure only — reviewer-approved content arrives via SVC_content_ingest.
+      - name: Seed dev data
+        if: ${{ inputs.seed }}
+        run: psql "$SUPABASE_DEV_DB_URL" -v ON_ERROR_STOP=1 -f apps/backend/seed/seed.sql
+        env:
+          SUPABASE_DEV_DB_URL: ${{ secrets.SUPABASE_DEV_DB_URL }}
+
+      # Proves the schema actually landed, rather than trusting a zero exit code.
+      - name: Verify schema
+        run: |
+          COUNT=$(psql "$SUPABASE_DEV_DB_URL" -tAc "select count(*) from information_schema.tables where table_schema='public';")
+          echo "public tables: $COUNT"
+          if [ "$COUNT" -lt 20 ]; then
+            echo "::error::Only $COUNT tables in public schema — migrations did not apply as expected."
+            exit 1
+          fi
+        env:
+          SUPABASE_DEV_DB_URL: ${{ secrets.SUPABASE_DEV_DB_URL }}
+
+      - name: Summary
+        if: always()
+        run: |
+          echo "### Dev migrate + seed: ${{ job.status }}" >> "$GITHUB_STEP_SUMMARY"
+          echo "Seed applied: ${{ inputs.seed }}" >> "$GITHUB_STEP_SUMMARY"
