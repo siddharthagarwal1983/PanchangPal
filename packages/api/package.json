@@ -4,13 +4,10 @@
   "private": true,
   "description": "Typed API_* contracts (zod schemas) shared by the mobile client and Edge Functions. Generated against docs/api/openapi.yaml + TDD Part 2 §5 (F-8 backend-owned).",
   "type": "module",
-  "main": "./dist/index.js",
-  "types": "./dist/index.d.ts",
+  "main": "src/index.ts",
+  "types": "src/index.ts",
   "exports": {
-    ".": {
-      "types": "./dist/index.d.ts",
-      "import": "./dist/index.js"
-    }
+    ".": "./src/index.ts"
   },
   "scripts": {
     "typecheck": "tsc --noEmit",
