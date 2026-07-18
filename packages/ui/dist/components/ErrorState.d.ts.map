@@ -1,1 +1,0 @@
-{"version":3,"file":"ErrorState.d.ts","sourceRoot":"","sources":["../../src/components/ErrorState.tsx"],"names":[],"mappings":"AAQA,MAAM,WAAW,eAAe;IAC9B,OAAO,EAAE,MAAM,CAAC;IAChB,OAAO,CAAC,EAAE,MAAM,IAAI,CAAC;IACrB,UAAU,CAAC,EAAE,MAAM,CAAC;IACpB,MAAM,CAAC,EAAE,MAAM,CAAC;CACjB;AAED,wBAAgB,UAAU,CAAC,EAAE,OAAO,EAAE,OAAO,EAAE,UAAwB,EAAE,MAAM,EAAE,EAAE,eAAe,2CAiCjG"}
