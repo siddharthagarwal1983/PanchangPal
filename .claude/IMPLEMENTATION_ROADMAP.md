@@ -20,9 +20,15 @@ M5 Ask Guru, M6 Profile/Household, M7 Notifications, and M8 Subscription. M8 clo
 Increment 3 (contextual paywall sheet at app/modal/paywall, panchangpal://subscription routing,
 FF_FAMILY_PLAN offering gate) — awaiting review.
 
-Next up: the **Beta Readiness & Platform Hardening** milestone (TDD Part 5) — provision Supabase
-environments, apply migrations via CD, wire Sentry + dashboards, run the Maestro FLOW_* E2E suite,
-complete the OWASP Mobile review, and prepare a phased store rollout.
+The **Beta Readiness & Platform Hardening** milestone (TDD Part 5) is now open, sliced B1–B8:
+environments & secrets · E2E · build/distribution · observability · reliability & DR ·
+security & privacy · release management · go/no-go. Current slice: **B1 — Environments & secrets
+(fail-closed)**.
+
+Verified starting position: staging migrations and Edge Function deploys are real, but the Maestro
+E2E and EAS build CD jobs are placeholders and `preflight.sh` warns-then-exits-0 on missing secrets,
+so CD's green status currently overstates what is verified. B1/B2 address that before anything is
+layered on top.
 
 One blocker: the Canonical Panchang Engine (ADR-033, Proposed) — astronomical algorithm
 undocumented; the whole system depends only on the abstract PanchangEngine/PanchangProvider

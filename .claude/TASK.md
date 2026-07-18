@@ -33,7 +33,7 @@ never granted client-side); usePremiumGate wired at deep-dive (Settings depth) +
 ---
 
 ## M8 Increment 3 — Contextual paywall sheet + routing + FF_FAMILY_PLAN
-Status: ✅ COMPLETE (awaiting review). CMP_BOTTOM_SHEET built to PDD §5.12 (it had never been
+Status: ✅ COMPLETE (merged to main as PR #7). CMP_BOTTOM_SHEET built to PDD §5.12 (it had never been
 implemented); contextual paywall composed from it + CMP_PLAN_CARD at the `app/modal/paywall` route
 (TDD §3.1) and reached by navigation intent so MOD_guru never imports MOD_you (§2.2); Settings
 deep-dive and Ask Guru upsells now open the sheet; `panchangpal://subscription` →
@@ -48,54 +48,58 @@ applied through the pure `visibleOfferings`. tsc + eslint clean; 153 tests green
 # Current Task
 
 ## Title
-Beta Readiness & Platform Hardening (TDD Part 5) — milestone kickoff
+Beta Readiness — Slice B1: Environments & secrets (fail-closed)
 
 Status
-⏳ NOT STARTED — do not begin until M8 Increment 3 is reviewed/approved.
+⏳ NOT STARTED — begin once M8 Increment 3 review is closed out.
 
 Priority
-🔴 Critical (the milestone that takes the feature-complete MVP to a shippable beta)
+🔴 Critical (prerequisite for every later slice; also removes a false-green deploy path)
 
 Estimated Effort
-Multi-session (to be sliced at kickoff)
+1 Session
 
 ---
 
 # Objective
-Take the feature-complete Mobile MVP to beta readiness. No new product scope; this milestone is
-environments, observability, verification, and release mechanics.
-- **Environments** — provision dev/staging/prod Supabase projects + secrets; apply migrations via CD.
-- **Observability** — Sentry, AI/analytics dashboards, alerts; DR restore drill.
-- **Verification** — E2E (Maestro FLOW_*); first live integration run of the entitlement,
-  notification, and feature-flag reads that have only ever run against fakes.
-- **Security** — OWASP Mobile review.
-- **Release** — TestFlight / Play Internal, then phased store rollout (US/AU/NZ).
+Put all three environments on a real, verifiable footing and stop deploys from succeeding when
+configuration is missing.
+- **Provision dev + prod Supabase projects** alongside the working staging project (§1.1 — three
+  isolated projects, no shared databases, migrations promote dev→staging→prod).
+- **Place per-environment secrets** per §4.1; RevenueCat sandbox for dev/staging, production
+  entitlements for prod.
+- **Make `scripts/preflight.sh` fail-closed.** It currently `warn`s on an unset secret and exits 0,
+  so a deploy can report green with nothing configured. Required secrets must fail the job for the
+  target environment; genuinely optional ones stay warnings.
+- **Confirm the prod promotion path** — the CD `Promote to production` job is a manual go/no-go gate
+  (§10.1) and must fail closed too.
 
 # Inputs
-- docs/tdd/ Part 5 (beta readiness, hardening, release)
-- docs/devops/CONFIGURATION_REGISTRY.md (env/secret/flag registry)
-- ADR-033 status (gates a panchang-inclusive launch)
+- docs/tdd/05_PLATFORM_DEVOPS.md §1.1 (environments), §1.3 (infra-as-config), §2.5 (migrations), §4 (secrets)
+- docs/devops/CONFIGURATION_REGISTRY.md (canonical env/secret inventory)
+- scripts/preflight.sh, scripts/migrate.sh, .github/workflows/cd.yml
 If ambiguous/conflicting: stop, explain, request clarification.
 
-# Deliverables (to slice at kickoff)
-- [ ] Supabase dev/staging/prod provisioned; migrations applied via CD
-- [ ] Sentry + dashboards + alerts wired
-- [ ] DR restore drill executed and documented
-- [ ] Maestro FLOW_* E2E green in CI
-- [ ] OWASP Mobile review completed
-- [ ] Store submission prerequisites (assets, privacy disclosures, pricing)
+# Deliverables
+- [ ] dev + prod Supabase projects provisioned; migrations applied dev→staging→prod
+- [ ] Per-environment secrets placed and documented against the registry (no secret in the repo)
+- [ ] preflight.sh fails closed on required secrets, per environment; warnings reserved for optional
+- [ ] CD promote-to-production gate verified as fail-closed
+- [ ] A deliberately-missing-secret run proves the job now fails (evidence, not assertion)
 
 # Success Criteria
-A clean clone builds, migrates, and runs against a live environment; E2E green in CI; alerting
-proven; no unresolved OWASP findings; a beta build distributed to TestFlight / Play Internal.
+A CD run with an unset required secret FAILS. Migrations apply cleanly to all three environments.
+No environment shares a database. No secret is committed. Documentation matches reality.
 
 # Constraints
-No new product scope. Architecture unchanged. Secrets never committed. ADR-033 must be ratified
-before a panchang-inclusive launch; GURU_LIVE stays off until corpus + eval readiness.
+No product/architecture change. Prod changes go through CI only — no manual dashboard edits (§1.3).
+Secrets are never printed to logs or committed. Provisioning real cloud projects and placing
+credentials is **owner-performed** — prepare the config, scripts, and instructions; do not ask for
+or handle credential values.
 
 # After Completion
 Update DASHBOARD/PROJECT_STATUS/CURRENT_MILESTONE/IMPLEMENTATION_ROADMAP/SESSION/TASK; proceed to
-phased production release.
+**B2 — E2E verification** (replace the Maestro placeholder with real FLOW_* specs).
 
 ---
 
