@@ -36,7 +36,17 @@ jobs:
         run: bash scripts/preflight.sh "${{ inputs.channel }}"
         env:
           EXPO_ACCESS_TOKEN: ${{ secrets.EXPO_ACCESS_TOKEN }}
-      - name: eas update
-        run: echo "eas update --channel ${{ inputs.channel }} --message 'OTA ${{ github.sha }}'"
-        env:
-          EXPO_ACCESS_TOKEN: ${{ secrets.EXPO_ACCESS_TOKEN }}
+      # Previously `echo "eas update ..."`, which reported SUCCESS — so dispatching this
+      # looked like an OTA had shipped to users while nothing was published. Fails closed
+      # instead. Preflight above still validates the channel's configuration first.
+      #
+      # To implement (B7): `eas update --channel <channel> --message "OTA <sha>"`, with
+      # runtime-version binding and the crash-spike auto-rollback policy (TDD §3.4).
+      # Build profiles and channels now exist in apps/mobile/eas.json; what is missing is
+      # EXPO_ACCESS_TOKEN and a published build for the channel to update.
+      - name: OTA publish is not implemented
+        run: |
+          echo "::error::OTA publish is NOT implemented. Nothing was published to '${{ inputs.channel }}'."
+          echo "Preflight passed, so the channel's configuration is present — but the"
+          echo "'eas update' step does not exist yet (B7)."
+          exit 1
