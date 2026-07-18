@@ -159,6 +159,9 @@ jobs:
         with: { fetch-depth: 0 }
       - name: Secret scan (gitleaks)
         uses: gitleaks/gitleaks-action@v2
+        env:
+          # gitleaks-action@v2 now requires a token to scan PRs (breaking change).
+          GITHUB_TOKEN: ${{ secrets.GITHUB_TOKEN }}
       # Finding CI-2 fix: set up Node + pnpm (with cache) instead of relying on ambient node.
       - uses: pnpm/action-setup@v4
         with: { version: '${{ env.PNPM_VERSION }}' }
