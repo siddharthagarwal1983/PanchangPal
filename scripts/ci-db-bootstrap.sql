@@ -35,6 +35,14 @@ GRANT anon, authenticated, service_role TO CURRENT_USER;
 -- Roles need schema access; Supabase grants these by default.
 GRANT USAGE ON SCHEMA public TO anon, authenticated, service_role;
 
+-- Supabase grants anon/authenticated/service_role broad table/sequence/function access and relies
+-- on RLS for row-level security. Mirror that with default privileges so the tables the migrations
+-- create (as postgres, after this script) are reachable — RLS policies still do the actual filtering,
+-- so the RLS suite's cross-user/household denials remain meaningful.
+ALTER DEFAULT PRIVILEGES IN SCHEMA public GRANT ALL ON TABLES TO anon, authenticated, service_role;
+ALTER DEFAULT PRIVILEGES IN SCHEMA public GRANT ALL ON SEQUENCES TO anon, authenticated, service_role;
+ALTER DEFAULT PRIVILEGES IN SCHEMA public GRANT ALL ON FUNCTIONS TO anon, authenticated, service_role;
+
 -- auth schema + minimal auth.users mirror (the columns migrations FK to and the RLS
 -- suite inserts: id, is_anonymous). Supabase's real auth.users is a superset.
 CREATE SCHEMA IF NOT EXISTS auth;
