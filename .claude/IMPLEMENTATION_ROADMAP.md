@@ -2,8 +2,8 @@
 
 # PanchangPal — Implementation Roadmap
 
-Version: 1.0.0
-Last Updated: 2026-07-12 03:40
+Version: 1.1.0
+Last Updated: 2026-07-12 (DevOps platform audit + hardening)
 
 Purpose: the forward plan from the current state. Complements PROJECT_STATUS.md (snapshot) and
 CURRENT_MILESTONE.md (active milestone). Updated when scope or sequencing changes.
@@ -45,9 +45,16 @@ blocks ONLY panchang compute + sunrise/tithi notifications, with zero rework whe
 
 ## Track C — Platform hardening (parallel, TDD Part 5)
 
-- Provision dev/staging/prod Supabase projects + secrets; apply migrations via CD.
-- Stand up Sentry + AI/analytics dashboards + alerts; DR restore drill.
-- Rate-limit/cost-ceiling values tuned from real usage; OWASP Mobile review + pen test pre-launch.
+- ✅ DevOps platform audit + hardening (2026-07-12): canonical env inventory, secrets matrix,
+  6 `.env.*.example` templates, `scripts/preflight.sh` (fail-fast) + `scripts/bootstrap.sh`,
+  workflow hardening (least-privilege, retries, `db-tests`/`security-scan` toolchain, preflight
+  gates, summaries), `docs/SETUP.md`, `docs/devops/*`, `DEVOPS_AUDIT_REPORT.md`, and the canonical `docs/devops/CONFIGURATION_REGISTRY.md`. No deploy
+  behavior changed. See DEVOPS_AUDIT_REPORT.md.
+- ⏳ Provision dev/staging/prod Supabase projects + secrets; apply migrations via CD. (Pipeline +
+  preflight ready; infra/credentials not yet configured — see DEPLOYMENT_READINESS.md.)
+- ⏳ Add `eas.json` + EAS credentials; flip CD deploy scaffolds to real.
+- ⏳ Stand up Sentry + AI/analytics dashboards + alerts; DR restore drill.
+- ⏳ Rate-limit/cost-ceiling values tuned from real usage; OWASP Mobile review + pen test pre-launch.
 
 ---
 

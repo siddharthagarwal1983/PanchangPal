@@ -2,75 +2,93 @@
 
 # PanchangPal — Current Task
 
-Version: 1.0.0
-Last Updated: 2026-07-12 06:00
+Version: 1.2.0
+Last Updated: 2026-07-12 (evening — after DevOps hardening interlude)
 
 Purpose: the current implementation task. Stay focused; avoid unrelated work unless instructed.
+
+---
+
+# Most Recent (interlude, this session)
+
+## DevOps Platform Audit & Hardening — ✅ COMPLETE (awaiting review)
+Repo-wide deployment audit + hardening (DX, reliability, env management, docs). Delivered 18 files
+(docs/devops/*, docs/SETUP.md, DEVOPS_AUDIT_REPORT.md, 6 .env.*.example, scripts/preflight.sh +
+bootstrap.sh) and hardened .github/workflows/{ci,cd,ota}.yml. No product/architecture/deploy-behavior
+changes. Gated follow-ups (Platform-owned): provision Supabase projects, GitHub secrets/Environments,
+eas.json/EAS creds. See DEVOPS_AUDIT_REPORT.md + docs/devops/DEPLOYMENT_READINESS.md.
 
 ---
 
 # Previous Task
 
 ## Title
-Mobile MVP Milestone 4 — Calendar Shell (MOD_calendar / SCR_CALENDAR_001)
+Mobile MVP Milestone 5 — Ask Guru Client (MOD_guru / SCR_GURU_*)
 
 Status
-✅ COMPLETE — awaiting review/approval
+✅ COMPLETE — awaiting review/approval.
 
 Outcome
-7 SVC_* wired; OpenAI adapters + RAG pipeline; DB repositories + Supabase integration; pgvector retrieval RPC + AI operational migration; Ask Guru rate limiting + cost circuit-breaker; 10 Vitest suites + pgTAP integration; PanchangEngine abstracted (only blocked component); ADR-033 + canonical-panchang-engine work item (MRD/PRD/PDD/TDD).
+Trust-first Ask Guru home + streamed conversation + cached history via a readiness-gated SSE
+transport (GURU_LIVE=false → honest decline). Client calls only the server API/SSE adapter; no
+LLM/fabrication on device. Component/domain/UI + a11y tests.
 
 ---
 
 # Current Task
 
 ## Title
-Mobile MVP Milestone 5 — Ask Guru Client (MOD_guru / SCR_GURU_*)
+Mobile MVP Milestone 6 — Profile / Household (MOD_you)
 
 Status
-✅ COMPLETE — awaiting review/approval. Do not start the next milestone.
+🚧 IN PROGRESS — Increment 1 complete; a DevOps hardening interlude ran this session. Product
+resumes at Increment 2 (Household). Do not start Increment 2 until approved.
 
 Priority
 🔴 Critical
 
 Estimated Effort
-2–3 Sessions
+2–3 Sessions (delivered as increments)
 
 ---
 
 # Objective
-Build the grounded Ask Guru client: trust-first home, conversation, streamed answer states,
-sources, honest declines, and cached history. The client uses the API/SSE adapter only; it never
-calls an LLM directly or fabricates an answer. Live answers remain gated by reviewed corpus and
-evaluation readiness.
+Build the MOD_you slice — profile hub, household (members/roles/invites + realtime), settings
+(server-authoritative preferences), and account deletion — on the completed foundation. Reuse
+CMP_* + existing seams; no new architecture. Subscription is Milestone 8, out of scope here.
 
 # Inputs
-- docs/pdd/02_USER_FLOWS.md (SCR_GURU_*), docs/pdd/03_COMPONENT_LIBRARY.md (§5.10)
-- docs/pdd/04_SCREEN_SPECIFICATIONS.md (§9), docs/tdd/03_AI_RAG.md, docs/tdd/04_MOBILE_ARCHITECTURE.md (§7.1)
-- docs/architecture/adr/ (ADR-011 AI provider, ADR-029 accessibility)
+- docs/tdd/04_MOBILE_ARCHITECTURE.md (§2.1 MOD_you, §3 routing, §4 state, §5 hooks)
+- docs/pdd/03_COMPONENT_LIBRARY.md (settings/household/profile CMP_*)
+- docs/api/openapi.yaml (API_GET/PATCH_PREFERENCES, API_POST_PROFILE, API_*_HOUSEHOLD*)
+- apps/backend/migrations/20260712000010_identity.sql + ..020_household.sql (schema/RLS)
 If ambiguous/conflicting: stop, explain, request clarification.
 
-# Deliverables
-- SCR_GURU_HOME_001, SCR_GURU_CHAT_001, and SCR_GURU_HISTORY_001 routes composed from approved
-  CMP_AI_* components
-- SSE/data adapter, query hooks, source/decline/error/offline states, and cached history
-- Localized copy plus component/domain/UI interaction tests and a11y assertions
+# Deliverables & Status
+- [x] Increment 1 — Preferences + Settings + Profile:
+      CMP_SEGMENTED / CMP_TOGGLE / CMP_SETTINGS_ROW; domain/profile mapping; profileRepository
+      (owner RLS); usePreferences/useUpdatePreferences (optimistic + STORE_prefs mirror + offline
+      queue); SCR_SETTINGS_001 wired; SCR_PROFILE_001 recomposed (deferred-auth prompt + entries);
+      Household shell (no dead end); routes registered; i18n; mapping + repository tests.
+- [ ] Increment 2 — Household: members/roles, invites (SCR_HOUSEHOLD_INVITE_001), realtime
+      (HOOK_useHousehold / HOOK_useInvite); replace the household shell with the real feature.
+- [ ] Increment 3 — Account deletion (SCR_DELETE_ACCOUNT_001) via CMP_DESTRUCTIVE_ACTION + API.
 
 # Success Criteria
-- Every response carries sources or an honest decline; no model/API details reach the user.
-- Streaming states are accessible and safely recover from errors/offline interruption.
-- Client calls only server-side API/SSE adapters; no direct provider key or LLM access.
-- Tokens-only styling, localized strings, and test coverage pass in CI.
+- Screens compose approved CMP_* with tokens-only styling + localized strings; no business logic
+  in screens; loading/empty/offline/error states covered.
+- Preferences are server-authoritative and optimistic; the daily loop is never gated.
+- Household/cross-device actions honor deferred auth (anon → auth gate) and RLS.
+- Unit/component/domain tests pass in CI.
 
 # Constraints
-Do not change architecture; do not touch the panchang engine; do not add prompts, retrieval logic,
-or business rules on the client; do not present a live answer until corpus/eval readiness permits.
+Do not change architecture; do not touch the panchang engine; no cross-feature imports; no
+fabricated household data; no hardcoded tokens.
 
-# After Completion
-Update SESSION.md, PROJECT_STATUS.md, and TASK.md; stop for review. Recommended next task:
-profile/household module, or calendar detail after ADR-033 is ratified.
+# After Completion (each increment)
+Update SESSION.md, PROJECT_STATUS.md, TASK.md; stop for review.
 
 ---
 
 # Parallel (owner-driven, not this task)
-⛔ Ratify ADR-033 (Canonical Panchang Engine) Part B to unblock SVC_panchang + sunrise/tithi notifications. See docs/architecture/canonical-panchang-engine/.
+⛔ Ratify ADR-033 (Canonical Panchang Engine) Part B. See docs/architecture/canonical-panchang-engine/.

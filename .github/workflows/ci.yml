@@ -5,6 +5,11 @@
 #   AI eval subset → secret scan → dependency scan.
 # Steps that need the full toolchain/DB run once it's provisioned; jobs are wired
 # now so the gates exist and fail closed on missing checks.
+#
+# Hardening (2026-07-12, behavior-preserving): least-privilege permissions,
+# version pins sourced from workflow env (no per-job duplication), pnpm install
+# retries, db-tests + security-scan toolchain setup, and job step summaries.
+# What the pipeline validates is unchanged.
 # =============================================================================
 name: CI
 
@@ -12,6 +17,10 @@ on:
   pull_request:
     branches: [main]
   workflow_dispatch:
+
+# Least privilege: CI only needs to read the repo (gitleaks needs full history).
+permissions:
+  contents: read
 
 concurrency:
   group: ci-${{ github.ref }}
@@ -28,14 +37,23 @@ jobs:
     steps:
       - uses: actions/checkout@v4
       - uses: pnpm/action-setup@v4
-        with: { version: '9.6.0' }
+        with: { version: '${{ env.PNPM_VERSION }}' }
       - uses: actions/setup-node@v4
         with:
-          node-version: '20.11.0'
+          node-version: '${{ env.NODE_VERSION }}'
           cache: pnpm
-      - run: pnpm install --frozen-lockfile
+      - name: Install (with retry)
+        run: |
+          n=0; until pnpm install --frozen-lockfile; do
+            n=$((n+1)); [ "$n" -ge 3 ] && { echo "::error::pnpm install failed after $n attempts"; exit 1; }
+            echo "::warning::pnpm install failed (attempt $n) — retrying in $((n*5))s"; sleep $((n*5));
+          done
       - run: pnpm lint
       - run: pnpm typecheck
+      - name: Summary
+        if: always()
+        run: |
+          echo "### Lint + Typecheck: ${{ job.status }}" >> "$GITHUB_STEP_SUMMARY"
 
   unit-component-a11y:
     name: Unit + Component + Accessibility
@@ -44,18 +62,27 @@ jobs:
     steps:
       - uses: actions/checkout@v4
       - uses: pnpm/action-setup@v4
-        with: { version: '9.6.0' }
+        with: { version: '${{ env.PNPM_VERSION }}' }
       - uses: actions/setup-node@v4
         with:
-          node-version: '20.11.0'
+          node-version: '${{ env.NODE_VERSION }}'
           cache: pnpm
-      - run: pnpm install --frozen-lockfile
+      - name: Install (with retry)
+        run: |
+          n=0; until pnpm install --frozen-lockfile; do
+            n=$((n+1)); [ "$n" -ge 3 ] && { echo "::error::pnpm install failed after $n attempts"; exit 1; }
+            echo "::warning::pnpm install failed (attempt $n) — retrying in $((n*5))s"; sleep $((n*5));
+          done
       # Vitest logic suites (Edge Function conflict rules, RC mapping, merge/deletion,
       # panchang cache key, retrieval confidence gate). Component/a11y tests (jest-expo)
       # run per-app and are release-blocking (ADR-029).
       - run: pnpm test
       - run: pnpm --filter @panchangpal/ui test
       - run: pnpm --filter @panchangpal/mobile test
+      - name: Summary
+        if: always()
+        run: |
+          echo "### Unit + Component + a11y: ${{ job.status }}" >> "$GITHUB_STEP_SUMMARY"
 
   api-contract:
     name: API / zod contract tests
@@ -64,12 +91,16 @@ jobs:
     steps:
       - uses: actions/checkout@v4
       - uses: pnpm/action-setup@v4
-        with: { version: '9.6.0' }
+        with: { version: '${{ env.PNPM_VERSION }}' }
       - uses: actions/setup-node@v4
         with:
-          node-version: '20.11.0'
+          node-version: '${{ env.NODE_VERSION }}'
           cache: pnpm
-      - run: pnpm install --frozen-lockfile
+      - name: Install (with retry)
+        run: |
+          n=0; until pnpm install --frozen-lockfile; do
+            n=$((n+1)); [ "$n" -ge 3 ] && exit 1; sleep $((n*5));
+          done
       # Validates packages/api zod contracts against docs/api/openapi.yaml (ADR-032).
       - run: pnpm exec vitest run packages/api --passWithNoTests
 
@@ -86,18 +117,28 @@ jobs:
         options: >-
           --health-cmd pg_isready --health-interval 10s
           --health-timeout 5s --health-retries 5
+    env:
+      DATABASE_URL: postgresql://postgres:postgres@localhost:5432/postgres
     steps:
       - uses: actions/checkout@v4
+      # Finding CI-1 fix: the runner needs a Postgres client (psql) + pgTAP's pg_prove.
+      - name: Install Postgres client + pgTAP (pg_prove)
+        run: |
+          sudo apt-get update
+          sudo apt-get install -y --no-install-recommends postgresql-client libtap-parser-sourcehandler-pgtap-perl
+      - name: Preflight (CI DB prerequisites)
+        run: bash scripts/preflight.sh ci || true # advisory in CI; does not gate the suite
       # Apply all migrations (incl. AI operational + retrieval RPC), then run both pgTAP
       # suites: RLS policies (cross-user/household denial, service-only, F-21) and DB
       # integration (idempotent upserts, household entitlement, merge, AI helpers).
       - name: Apply migrations
-        run: bash scripts/migrate.sh "postgresql://postgres:postgres@localhost:5432/postgres"
+        run: bash scripts/migrate.sh "$DATABASE_URL"
       - name: Run pgTAP suites
+        run: pg_prove -d "$DATABASE_URL" apps/backend/tests/rls/*.test.sql apps/backend/tests/integration/*.test.sql
+      - name: Summary
+        if: always()
         run: |
-          pg_prove -d "$DATABASE_URL" apps/backend/tests/rls/*.test.sql apps/backend/tests/integration/*.test.sql
-        env:
-          DATABASE_URL: postgresql://postgres:postgres@localhost:5432/postgres
+          echo "### DB / RLS suites: ${{ job.status }}" >> "$GITHUB_STEP_SUMMARY"
 
   ai-eval-subset:
     name: AI eval subset (refusal + golden, TDD Part 3 §9.4)
@@ -118,8 +159,17 @@ jobs:
         with: { fetch-depth: 0 }
       - name: Secret scan (gitleaks)
         uses: gitleaks/gitleaks-action@v2
-      - name: Dependency audit
+      # Finding CI-2 fix: set up Node + pnpm (with cache) instead of relying on ambient node.
+      - uses: pnpm/action-setup@v4
+        with: { version: '${{ env.PNPM_VERSION }}' }
+      - uses: actions/setup-node@v4
+        with:
+          node-version: '${{ env.NODE_VERSION }}'
+          cache: pnpm
+      - name: Install (with retry)
         run: |
-          corepack enable
-          pnpm install --frozen-lockfile
-          pnpm audit --audit-level=high || true
+          n=0; until pnpm install --frozen-lockfile; do
+            n=$((n+1)); [ "$n" -ge 3 ] && exit 1; sleep $((n*5));
+          done
+      - name: Dependency audit
+        run: pnpm audit --audit-level=high || true
