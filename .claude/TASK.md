@@ -121,8 +121,11 @@ If ambiguous/conflicting: stop, explain, request clarification.
 - [x] CI bundle gate proven to fail on a reintroduced defect, not merely to pass
 - [ ] CD promote-to-production gate end-to-end — blocked: the job chain depends on the placeholder
       `eas-build`, so the gate cannot be exercised for real until B3
-- [ ] Two hollow CI gates (AI eval subset = `echo`; api-contract = `--passWithNoTests` with no test
-      files) — implement or explicitly de-declare; a green gate that checks nothing is worse than none
+- [x] Two hollow CI gates **de-declared** (AI eval subset was an `echo`; api-contract ran
+      `--passWithNoTests` against a package with no tests). Removed rather than left green — a gate
+      that cannot fail reads as coverage. What is owed to restore them is recorded in ci.yml:
+      real contract tests under `packages/api` (no workflow change needed — root vitest already
+      globs `packages/**/*.test.ts`) and the Part 3 §9.4 refusal + golden-set harness.
 
 # Success Criteria
 A CD run with an unset required secret FAILS. Migrations apply cleanly to all three environments.
