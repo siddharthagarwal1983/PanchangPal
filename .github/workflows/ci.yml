@@ -128,6 +128,11 @@ jobs:
           sudo apt-get install -y --no-install-recommends postgresql-client libtap-parser-sourcehandler-pgtap-perl
       - name: Preflight (CI DB prerequisites)
         run: bash scripts/preflight.sh ci || true # advisory in CI; does not gate the suite
+      # The bare Postgres service lacks Supabase's managed auth schema + roles, which the
+      # migrations FK/GRANT against and the RLS suite relies on (auth.uid, SET ROLE). Stand up
+      # a CI-only equivalent before migrating. Never runs against a real Supabase project.
+      - name: Bootstrap Supabase-managed schema + roles (CI only)
+        run: psql "$DATABASE_URL" -v ON_ERROR_STOP=1 -f scripts/ci-db-bootstrap.sql
       # Apply all migrations (incl. AI operational + retrieval RPC), then run both pgTAP
       # suites: RLS policies (cross-user/household denial, service-only, F-21) and DB
       # integration (idempotent upserts, household entitlement, merge, AI helpers).
