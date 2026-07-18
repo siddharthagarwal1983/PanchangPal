@@ -66,3 +66,7 @@ export {
   type PermissionPrimingProps,
   type PermissionKind,
 } from './components/PermissionPriming';
+// Subscription (MOD_subscription) — Milestone 8
+export { ValueList, type ValueListProps, type ValueListItem } from './components/ValueList';
+export { PlanCard, type PlanCardProps } from './components/PlanCard';
+export { LegalFootnote, type LegalFootnoteProps, type LegalLink } from './components/LegalFootnote';

@@ -39,6 +39,7 @@ export default function TabsLayout() {
       <Tabs.Screen name="you/notifications" options={{ href: null }} />
       <Tabs.Screen name="you/settings" options={{ href: null }} />
       <Tabs.Screen name="you/household" options={{ href: null }} />
+      <Tabs.Screen name="you/subscription" options={{ href: null }} />
     </Tabs>
   );
 }
