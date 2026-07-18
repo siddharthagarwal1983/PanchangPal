@@ -71,13 +71,9 @@ jobs:
           SUPABASE_ACCESS_TOKEN: ${{ secrets.SUPABASE_ACCESS_TOKEN }}
           EXPO_ACCESS_TOKEN: ${{ secrets.EXPO_ACCESS_TOKEN }}
 
-      # Functions are declared in supabase/config.toml with explicit entrypoints
-      # (sources live under apps/backend/functions). Deploy them by name so the CLI
-      # uses those entrypoints + import maps rather than the empty default dir.
       - name: Deploy Edge Functions
         run: |
           supabase functions deploy \
-            account ask-guru content-ingest notify-scheduler panchang revenuecat-webhook sync \
             --project-ref "$SUPABASE_STAGING_REF"
         env:
           SUPABASE_STAGING_REF: ${{ secrets.SUPABASE_STAGING_REF }}
