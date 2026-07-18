@@ -68,7 +68,13 @@ CURRENT_MILESTONE.md
 **Mobile MVP Phase 1 (M1–M8) is complete and merged to main** (M8 Increment 3 = PR #7, 2026-07-18).
 
 Beta Readiness & Platform Hardening is now open, sliced B1–B8.
-Current: **B1 — Environments & secrets (fail-closed)**. Not started.
+Current: **B1 — Environments & secrets**. In progress on `feat/b1-bundle-gate`: CI bundle gate
+added (pulled forward from B2), preflight gained a `dev` target and two newly-required production
+secrets. Remaining B1 work is owner-performed provisioning of the dev + prod Supabase projects.
+
+⚠️ B1's written premise — "preflight.sh warns then exits 0" — was **false**; it already failed
+closed. See CURRENT_MILESTONE.md → Corrected Premise. Verify each remaining slice's premise against
+the code before implementing it.
 
 See:
 
@@ -78,17 +84,19 @@ TASK.md
 
 # Today's Objective
 
-Review and merge `chore/expo-sdk-54-upgrade` (6 commits, unmerged), then start B1.
+B1 code-side work, on `feat/b1-bundle-gate`.
 
 **The app had never been run.** A demo attempt on 2026-07-18 found six defects — three of them
 bundle-blocking, one a genuine product bug (SCR_YOU_001 crashed on a Realtime channel collision) —
 all accumulated across M1–M8 behind a fully green CI. `lint`, `typecheck`, and `jest` never invoke
-Metro, and the E2E job that would have is an `echo`. All six are fixed on that branch; the app now
-boots on a physical iPhone against a local Supabase stack.
+Metro, and the E2E job that would have is an `echo`. All six are fixed and merged to main (PR #9);
+the app now boots on a physical iPhone against a local Supabase stack.
 
-So the milestone's premise holds but is wider than scoped: CD's placeholders are one symptom of a
-pipeline that has never executed the application. B2 has gained a CI bundle gate for that reason.
-See the Execution Gap section in CURRENT_MILESTONE.md.
+A **CI bundle gate** is therefore pulled forward from B2 into B1, verified to fail on a
+reintroduced resolver defect rather than merely to pass. B1's own written premise then turned out
+to be false — preflight already failed closed — so the slice became the *actual* fail-open gaps:
+a missing `SUPABASE_PROD_REF`, production treating billing secrets as warnings, and no `dev`
+target. See the Execution Gap and Corrected Premise sections in CURRENT_MILESTONE.md.
 
 No new product scope in this milestone.
 
@@ -111,7 +119,7 @@ No new product scope in this milestone.
 | Mobile — Notifications | ✅ M7 |
 | Mobile — Subscription | ✅ M8 |
 | AI Platform | 🟡 adapters done; corpus + eval pending |
-| Testing | 🟡 unit/component/domain green in CI; **no CI gate bundles or runs the app** (B2); E2E is a CD placeholder (B2) |
+| Testing | 🟡 unit/component/domain green; **bundle gate added 2026-07-18** (B1); E2E still a CD placeholder (B2); AI-eval + api-contract gates are hollow |
 | Beta | 🚧 In progress (B1–B8) |
 | Production | ⏳ |
 
@@ -119,7 +127,7 @@ No new product scope in this milestone.
 
 # Current Priorities
 
-1. Beta Readiness B1 — environments & fail-closed preflight
+1. Beta Readiness B1 — environments & per-env secrets (preflight already fails closed; provisioning is owner-performed)
 2. Beta Readiness B2 — replace the Maestro placeholder with real FLOW_* specs
 3. ⛔ Canonical Panchang Engine decision (ADR-033) — unblocks Today panchang, Calendar markers, notifications
 3. AI corpus ingestion + eval readiness — unblocks live Ask Guru (GURU_LIVE)
@@ -131,7 +139,7 @@ No new product scope in this milestone.
 
 # Active Branch
 
-main
+feat/b1-bundle-gate (B1 code-side; main is at PR #9)
 
 ---
 
@@ -162,8 +170,8 @@ CURRENT_MILESTONE.md → Current Risks.
 
 # Next Deliverable
 
-Beta Readiness — Slice B1: Environments & secrets (dev + prod Supabase projects, per-env secrets,
-fail-closed preflight)
+Beta Readiness — Slice B1: Environments & secrets (dev + prod Supabase projects + per-env secrets —
+owner-performed; the code-side work is done)
 
 ---
 
@@ -222,6 +230,7 @@ Readiness & Platform Hardening** (TDD Part 5), sliced B1–B8: environments, E2E
 observability, DR, security/privacy, release mechanics, and go/no-go.
 
 The defining issue at the start of this milestone is that CD's green status overstates what is
-actually verified — the Maestro E2E and EAS build jobs are placeholders and preflight cannot fail a
-deploy on a missing secret. B1 and B2 address that directly. The only architectural blocker is the Canonical Panchang Engine
+actually verified — **four** gates check nothing (Maestro E2E, EAS build, AI eval subset, and the
+API/zod contract gate, which runs `--passWithNoTests` against a package with no tests). Preflight,
+contrary to the milestone's original claim, already fails closed. B1 and B2 address the rest. The only architectural blocker is the Canonical Panchang Engine
 decision (ADR-033); Ask Guru live answers are intentionally gated until corpus/eval readiness.
