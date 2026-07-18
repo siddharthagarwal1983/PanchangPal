@@ -75,19 +75,19 @@ export default function GuruChatScreen() {
           </View>
         ) : null}
 
+        {/* Contextual upsell: a quiet inline affordance that OPENS the paywall sheet (MOD_guru
+            never imports MOD_you — the sheet is reached by navigation intent, §2.2). Dismissible,
+            and Ask Guru itself always stays free (P4). */}
         {showGuruUpsell ? (
           <Card testID="guru-upsell">
             <View style={{ gap: theme.spacing.sm }}>
               <Text variant="titleSmall" color="primary">
                 {t('guru.upgradeTitle')}
               </Text>
-              <Text variant="bodyMedium" color="secondary">
-                {t('guru.upgradeBody')}
-              </Text>
               <View style={{ gap: theme.spacing.sm }}>
                 <PrimaryButton
                   label={t('guru.upgradeCta')}
-                  onPress={() => router.push('/(tabs)/you/subscription')}
+                  onPress={() => router.push('/modal/paywall?capability=extended_ask_guru')}
                   testID="guru-upsell-cta"
                 />
                 <SettingsRow

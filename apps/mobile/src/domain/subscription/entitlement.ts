@@ -70,3 +70,17 @@ export function isCapabilityUnlocked(
 ): boolean {
   return isEntitled(entitlements);
 }
+
+/**
+ * Offerings the user may see, given FF_FAMILY_PLAN (ADR-021). The Family plan is an OFFERING gate,
+ * not an in-app capability gate: while the flag is off the Family plan is simply not purchasable,
+ * and Individual stays the default. An already-granted family entitlement is unaffected — this
+ * filters what the store shows, never what an existing subscriber is entitled to.
+ */
+export function visibleOfferings<T extends { kind: EntitlementKind }>(
+  offerings: readonly T[] | null | undefined,
+  familyPlanEnabled: boolean,
+): T[] {
+  if (!Array.isArray(offerings)) return [];
+  return familyPlanEnabled ? [...offerings] : offerings.filter((o) => o.kind !== 'family');
+}

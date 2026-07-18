@@ -2,7 +2,7 @@
 
 # PanchangPal — Current Session
 
-Version: 1.6.0
+Version: 1.7.0
 Last Updated: 2026-07-18
 
 Date/Time: 2026-07-18.
@@ -11,81 +11,86 @@ Date/Time: 2026-07-18.
 
 # Session Objective
 
-M8 Increment 1 (entitlement read + gating) approved. Implement Mobile MVP Milestone 8 —
-Subscription, **Increment 2**: SCR_SUBSCRIPTION_001 (plans/purchase/restore via the PaymentAdapter
-seam) + the two gated-affordance wirings. No architecture change; reuse existing CMP_* + seams.
+M8 Increment 2 approved (already merged to main as PR #4 — no merge was pending). Implement Mobile
+MVP Milestone 8 — Subscription, **Increment 3**: contextual paywall sheet, `panchangpal://subscription`
+routing, and FF_FAMILY_PLAN. This closes the Subscription slice and the Mobile MVP milestone.
 
 ---
 
-# Work Completed (M8 Increment 2 — client-side, awaiting review)
+# Work Completed (M8 Increment 3 — awaiting review)
 
-- **UI components (`@panchangpal/ui`, 3 new CMP_*):**
-  - `ValueList` (CMP_VALUE_LIST) — benefit list; every row carries an SR text equivalent
-    (included/not-included), never color-only.
-  - `PlanCard` (CMP_PLAN_CARD) — accessible `radio`; name/price/period + ValueList; "best value" as
-    TEXT (not color); prices always passed in (never hardcoded); default/selected/loading states.
-  - `LegalFootnote` (CMP_LEGAL_FOOTNOTE) — renewal disclosure (text.tertiary = min AA) + labeled links.
-  - Exported all three from the ui barrel.
-- **Data hooks (`data/hooks/useSubscription.ts`):** `usePlans` (getOfferings), `usePurchase`
-  (forwards planId; invalidates entitlement on success — never grants on device), `useRestore`,
-  `useConfigurePayments`. All flow ONLY through the PaymentAdapter seam; no vendor import, no receipt
-  logic on device. Analytics EVT_049–052 are named anchors (Analytics Adapter deferred, per slices).
-- **Screen `app/(tabs)/you/subscription.tsx` (SCR_SUBSCRIPTION_001):** all documented states —
-  default / skeleton(loading) / empty(unavailable) / offline / error(ERR_PAYMENT_FAILED) / success &
-  already-premium warm confirmation. Restore always attemptable (disabled offline). Registered as a
-  `href:null` route in `(tabs)/_layout.tsx`; entry added to the You hub (shows "Premium active").
-- **Affordance wiring (usePremiumGate, contextual + dismissible, never blocks the loop):**
-  - Settings "Content depth → Deep" gated on `deep_dive_content` → dismissible upsell → subscription.
-  - Ask Guru chat: after an answer settles, `extended_ask_guru` upsell (dismissible) → subscription.
-- **i18n:** `subscription.*` block + `settings.deepLocked*` + `guru.upgrade*` + `you.subscription*`.
-- **Tests:** `subscription-components.test.tsx` (ValueList/PlanCard/LegalFootnote a11y + selection) ·
-  `useSubscription.test.tsx` (plans/purchase/restore delegate to a fake adapter; invalidate-on-success;
-  no invalidation on failed purchase).
-
-Entitlement stays READ-ONLY on device (webhook is sole writer, F-4); purchase success only invalidates
-the entitlement query so the server-authoritative grant (webhook + Realtime) shows through.
+- **CMP_BOTTOM_SHEET (`packages/ui/src/components/BottomSheet.tsx`, new):** the PDD §5.12 component
+  was specified but had never been implemented. Built to spec — grabber/title/content, `radius.lg`
+  top corners over `colors.scrim`, `height` = auto|half|full, `dismissible` = true|required-decision,
+  `accessibilityViewIsModal` (SR focus trap, returns to opener), and Reduced-Motion fade-in-place
+  instead of slide (PDD §4). Tokens-only; `reduceMotion` is a prop so the ui package stays a leaf.
+- **Contextual paywall (`apps/mobile/app/modal/paywall.tsx`, new):** a COMPOSITION of
+  CMP_BOTTOM_SHEET + CMP_PLAN_CARD (no new CMP_*). Built as a **route**, not a shared component:
+  MOD_guru and MOD_you both open it, and TDD §2.2 forbids cross-feature imports — contextual
+  cross-links go through navigation intents. TDD §3.1 already designates `modal/*` for
+  "bottom sheets, dialogs, paywall". Registered in `app/_layout.tsx` as `transparentModal`.
+  Capability-specific copy via `?capability=`; always dismissible (AC-SUB-01).
+- **Affordance rewiring:** Settings "Content depth → Deep" and the Ask Guru post-answer upsell now
+  open the sheet (`/modal/paywall?capability=…`), replacing both inline upsell Cards.
+- **Deep-link routing:** `panchangpal://subscription` → `/(tabs)/you/subscription` in
+  `navigation/linking.ts` AND in `domain/notifications` (`routeForDeepLink` + `routeForNotifType`) —
+  both previously fell back to the You hub because SCR_SUBSCRIPTION_001 didn't exist yet.
+- **FF_FAMILY_PLAN:** no client feature-flag read existed. Added `data/featureFlagRepository.ts`
+  (public-select read of `feature_flag` + Realtime invalidation, ADR-021) and
+  `data/hooks/useFeatureFlag.ts`. **Fails closed** — loading, error, or an absent key all read
+  `false`, so unreleased scope can never leak on. Gating applied through the pure
+  `visibleOfferings(offerings, familyPlanEnabled)` domain function, used by both the paywall and
+  SCR_SUBSCRIPTION_001. It is an OFFERING gate, not a capability gate.
+- **i18n:** `actions.notNow`, `subscription.seeAllPlans`.
+- **Tests:** `overlay-components.test.tsx` (sheet a11y modal, scrim dismiss, required-decision blocks
+  dismiss, Reduced-Motion fade) · `featureFlagRepository.test.ts` (fail-closed mapping) ·
+  `visibleOfferings` domain cases · subscription deep-link/tap-routing assertions.
 
 ---
 
 # Files Created (5)
-packages/ui/src/components/{ValueList,PlanCard,LegalFootnote}.tsx ·
-apps/mobile/app/(tabs)/you/subscription.tsx · apps/mobile/src/data/hooks/useSubscription.ts
-(+ tests: packages/ui/.../subscription-components.test.tsx · apps/mobile/.../useSubscription.test.tsx)
+packages/ui/src/components/BottomSheet.tsx · apps/mobile/app/modal/paywall.tsx ·
+apps/mobile/src/data/featureFlagRepository.ts · apps/mobile/src/data/hooks/useFeatureFlag.ts
+(+ tests: packages/ui/.../overlay-components.test.tsx · apps/mobile/.../featureFlagRepository.test.ts)
 
-# Files Modified (5)
-packages/ui/src/index.ts · apps/mobile/app/(tabs)/_layout.tsx · app/(tabs)/you/index.tsx ·
-app/(tabs)/you/settings.tsx · app/(tabs)/guru/chat.tsx · src/i18n/en-US.ts
+# Files Modified (11)
+packages/ui/src/index.ts · apps/mobile/app/_layout.tsx · app/(tabs)/you/settings.tsx ·
+app/(tabs)/you/subscription.tsx · app/(tabs)/guru/chat.tsx · src/navigation/linking.ts ·
+src/domain/notifications/notifications.ts · src/domain/subscription/{entitlement,index}.ts ·
+src/i18n/en-US.ts (+ 2 test files updated)
 
 ---
 
 # Important Observations
-- **`npx tsc --noEmit` is clean for all M8 Inc-2 files.** The only tsc error is pre-existing and
-  unrelated — `src/domain/notifications/notifications.ts(156,16)` (`m[1]` possibly undefined under
-  `noUncheckedIndexedAccess`, from M7). Flagged as a separate task; likely turns CI tsc red.
-- **jest cannot run in this sandbox** — every suite (incl. pre-existing ones) fails at
-  `@react-native/js-polyfills/error-guard.js` because pnpm's `.pnpm/...` path isn't covered by
-  `transformIgnorePatterns`. This is an environment issue, not the tests; suites run in CI.
-- `react-native-purchases` still deferred: NullPaymentAdapter returns no offerings + honest
-  `unavailable` purchase, so the screen shows the calm empty state today. Concrete
-  RevenueCatPaymentAdapter is a one-line swap in `data/paymentAdapter.ts` once dep + RC key land.
+- **Verification is green in this sandbox** — `tsc --noEmit` clean for both `apps/mobile` and
+  `packages/ui`; eslint reports 0 errors (14 pre-existing `no-non-null-assertion` warnings);
+  jest passes **21 suites / 120 tests** (mobile) and **5 suites / 33 tests** (ui).
+- **Two SESSION.md notes from the previous session are now stale and were corrected:** jest DOES run
+  here (the `transformIgnorePatterns` failure is gone), and the `notifications.ts:156` tsc error no
+  longer reproduces (the nullish guard is present).
+- Two documented gaps were closed rather than worked around: CMP_BOTTOM_SHEET had never been built
+  despite four components declaring it a dependency, and no client ever read the `feature_flag`
+  table even though it ships with RLS + seed data.
+- `react-native-purchases` still deferred: NullPaymentAdapter returns no offerings, so the paywall
+  shows its calm "unavailable" state today. The RevenueCat adapter is a one-line swap.
 
 ---
 
 # Blockers (unchanged)
 Canonical Panchang Engine (ADR-033). Ask Guru GURU_LIVE gate. Backend SVC_revenuecat_webhook +
-entitlement/subscription tables/RLS are the server contract this client targets. Pre-existing
-notifications.ts tsc error (separate task). Increment 2 committed/pushed from the Mac (this session
-cannot push).
+SVC_household + SVC_notify_scheduler remain pending server deliverables. Increment 3 is committed
+locally only if the owner pushes — this session did not push.
 
 ---
 
 # Pending Work
-M8 Increment 2 review. Then **Increment 3** — contextual paywall sheet (CMP_BOTTOM_SHEET +
-CMP_PLAN_CARD, per PDD — not a new component), `panchangpal://subscription` deep-link routing, and
-FF_FAMILY_PLAN gating of the Family offering.
+M8 Increment 3 review. Then the **Beta Readiness & Platform Hardening** milestone (TDD Part 5):
+provision Supabase envs + secrets, CD migrations, Sentry/analytics dashboards + alerts, DR restore
+drill, E2E (Maestro FLOW_*), OWASP Mobile review, phased store rollout.
 
 ---
 
 # Recommended Next Task
-Review M8 Increment 2. On approval, begin **M8 Increment 3** (paywall sheet + routing + FF_FAMILY_PLAN),
-which completes the Subscription slice and the Mobile MVP milestone.
+Review M8 Increment 3. On approval, open the Beta Readiness & Platform Hardening milestone —
+starting with provisioning a live Supabase project and applying migrations via CD, which also
+unblocks the first real integration run of the entitlement and feature-flag reads added here.

@@ -2,9 +2,9 @@
 
 # PanchangPal — Current Milestone
 
-Version: 2.3.0
+Version: 2.4.0
 
-Last Updated: 2026-07-18 (M8 Increment 2 complete)
+Last Updated: 2026-07-18 (M8 Increment 3 complete — all eight slices implemented)
 
 Purpose:
 This document defines the current milestone. Unlike SESSION.md (daily work) or TASK.md (current
@@ -19,11 +19,11 @@ broader implementation objective before beginning any work.
 
 Status
 
-🟡 In Progress
+🟢 Feature-complete (awaiting review of M8 Increment 3)
 
 Overall Progress
 
-~96% (7 of 8 slices complete; M8 Increment 2 of 3 done)
+100% (8 of 8 slices complete)
 
 Previous Milestones
 
@@ -58,7 +58,7 @@ the previous is reviewed.
 | M5 | Ask Guru Client | SCR_GURU_HOME/CHAT/HISTORY_001 | ✅ Complete |
 | M6 | Profile / Household | SCR_PROFILE_001, SCR_HOUSEHOLD_*, SCR_SETTINGS_001, SCR_DELETE_ACCOUNT_001 | ✅ Complete |
 | M7 | Notifications | opt-in, prefs, deep-link routing | ✅ Complete |
-| M8 | Subscription | SCR_SUBSCRIPTION_001 (RevenueCat) | 🟡 In Progress (Inc 2/3) |
+| M8 | Subscription | SCR_SUBSCRIPTION_001 (RevenueCat) | ✅ Complete |
 
 ---
 
@@ -75,7 +75,7 @@ the previous is reviewed.
 - [x] M7 Notifications — opt-in priming, per-channel prefs, token registration (NotificationAdapter seam),
       deep-link routing (incl. panchangpal://invite/{token}); sunrise/tithi gated (ADR-033).
 
-## Remaining slice (M8 — Subscription, in 3 increments)
+## Final slice (M8 — Subscription, in 3 increments) — complete
 
 - [x] M8 Increment 1 — Entitlement read + gating: household-grain (F-4) entitlement read (supabase-js
       RLS + realtime), PaymentAdapter port + NullPaymentAdapter, PremiumCapability registry
@@ -83,7 +83,12 @@ the previous is reviewed.
 - [x] M8 Increment 2 — SCR_SUBSCRIPTION_001 (CMP_PLAN_CARD/VALUE_LIST/LEGAL_FOOTNOTE), plans/purchase/
       restore via the PaymentAdapter (usePlans/usePurchase/useRestore), and affordance wiring —
       deep-dive content (Settings depth) + extended Ask Guru — via usePremiumGate (contextual, dismissible).
-- [ ] M8 Increment 3 — contextual paywall sheet, panchangpal://subscription routing, FF_FAMILY_PLAN.
+- [x] M8 Increment 3 — CMP_BOTTOM_SHEET (PDD §5.12, previously unimplemented) + the contextual
+      paywall composed from it and CMP_PLAN_CARD at the `app/modal/paywall` route (§3.1), reached by
+      navigation intent so MOD_guru never imports MOD_you (§2.2); `panchangpal://subscription` →
+      SCR_SUBSCRIPTION_001 in both the linking table and notification tap routing; FF_FAMILY_PLAN
+      offering gate via a new fail-closed feature-flag read seam (featureFlagRepository +
+      HOOK_useFeatureFlag, ADR-021).
 
 ---
 
@@ -147,6 +152,6 @@ inclusive launch.
 
 # Milestone Summary
 
-> **Current focus: build the mobile app as sequenced, production-quality feature slices — App
-> Shell, Today, Ritual, Calendar, Ask Guru, Profile/Household, and Notifications (M1–M7) done;
-> Subscription (M8) in progress (Increment 2 of 3 complete).**
+> **All eight slices are implemented — App Shell, Today, Ritual, Calendar, Ask Guru,
+> Profile/Household, Notifications, and Subscription. The Mobile MVP is feature-complete; next
+> milestone is Beta Readiness & Platform Hardening (TDD Part 5).**

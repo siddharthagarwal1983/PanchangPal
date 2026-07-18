@@ -18,6 +18,7 @@ export {
   isEntitled,
   rowToEntitlement,
   rowsToEntitlements,
+  visibleOfferings,
   type EntitlementRow,
 } from './entitlement';
 export {

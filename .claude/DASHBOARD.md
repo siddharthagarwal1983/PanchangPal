@@ -2,9 +2,9 @@
 
 # PanchangPal Dashboard
 
-Version: 1.4.2
+Version: 1.5.0
 
-Last Updated: 2026-07-18 (M8 Increment 2 complete)
+Last Updated: 2026-07-18 (M8 Increment 3 complete — Mobile MVP feature-complete)
 
 Purpose:
 This is the first file Claude should read at the beginning of every session.
@@ -41,9 +41,9 @@ PanchangPal
 
 Progress
 
-96%
+100%
 
-(Canonical progress metric — 7 of 8 slices complete + M8 Increment 2 of 3. PROJECT_STATUS.md and
+(Canonical progress metric — 8 of 8 slices complete. PROJECT_STATUS.md and
 CURRENT_MILESTONE.md must report this same number; DASHBOARD.md is authoritative if they diverge.)
 
 Prior phases ✅ complete: Documentation → Repository & Platform Foundation → Backend Foundation.
@@ -65,8 +65,11 @@ CURRENT_MILESTONE.md
 Milestone 7 — Notifications ✅ COMPLETE (reviewed/approved).
 Milestone 8 — Subscription: Increment 1 (entitlement read + gating) ✅ COMPLETE (approved).
 Milestone 8 — Subscription: Increment 2 (SCR_SUBSCRIPTION_001 + plans/purchase/restore + affordance
-wiring) ✅ COMPLETE (awaiting review).
-Next: M8 Increment 3 — contextual paywall sheet + panchangpal://subscription routing + FF_FAMILY_PLAN.
+wiring) ✅ COMPLETE (approved, merged as PR #4).
+Milestone 8 — Subscription: Increment 3 (contextual paywall sheet + panchangpal://subscription
+routing + FF_FAMILY_PLAN) ✅ COMPLETE (awaiting review).
+**Mobile MVP Phase 1 (M1–M8) is feature-complete.**
+Next: transition to Beta Readiness & Platform Hardening (TDD Part 5).
 
 See:
 
@@ -76,12 +79,12 @@ TASK.md
 
 # Today's Objective
 
-Mobile MVP feature slices M1–M7 are complete: App Shell, Today, Guided Ritual, Calendar Shell,
-Ask Guru, Profile/Household, and Notifications. M8 Subscription is underway — Increments 1
-(entitlement read + usePremiumGate) and 2 (SCR_SUBSCRIPTION_001 + plans/purchase/restore via the
-PaymentAdapter + deep-dive & extended-Ask-Guru affordance wiring) are done; only Increment 3
-(contextual paywall sheet + routing + FF_FAMILY_PLAN) remains. Panchang compute + Ask Guru live
-answers remain gated (ADR-033 / corpus+eval).
+All eight Mobile MVP feature slices are complete: App Shell, Today, Guided Ritual, Calendar Shell,
+Ask Guru, Profile/Household, Notifications, and Subscription. M8 closed with Increment 3 — the
+contextual paywall sheet (CMP_BOTTOM_SHEET + CMP_PLAN_CARD composed at `app/modal/paywall`),
+`panchangpal://subscription` routing to SCR_SUBSCRIPTION_001, and FF_FAMILY_PLAN gating the Family
+offering via a new fail-closed feature-flag read seam. Panchang compute + Ask Guru live answers
+remain gated (ADR-033 / corpus+eval).
 
 Do not introduce new architecture.
 
@@ -102,7 +105,7 @@ Do not introduce new architecture.
 | Mobile — App Shell / Today / Ritual / Calendar / Ask Guru | ✅ M1–M5 |
 | Mobile — Profile / Household | ✅ M6 |
 | Mobile — Notifications | ✅ M7 |
-| Mobile — Subscription | 🟡 M8 (Increments 1–2 of 3 done) |
+| Mobile — Subscription | ✅ M8 |
 | AI Platform | 🟡 adapters done; corpus + eval pending |
 | Testing | 🟡 unit/component/domain in place; E2E pending |
 | Beta | ⏳ |
@@ -112,7 +115,7 @@ Do not introduce new architecture.
 
 # Current Priorities
 
-1. Mobile feature slices — Subscription (M8: Increment 3)
+1. Beta Readiness & Platform Hardening (TDD Part 5) — the next milestone
 2. ⛔ Canonical Panchang Engine decision (ADR-033) — unblocks Today panchang, Calendar markers, notifications
 3. AI corpus ingestion + eval readiness — unblocks live Ask Guru (GURU_LIVE)
 4. Backend Edge Functions: SVC_household, SVC_notify_scheduler, SVC_revenuecat_webhook (client contracts coded)
@@ -144,13 +147,14 @@ concrete adapters are one-line swaps once the deps + keys land on the Mac.
 
 # Next Deliverable
 
-Milestone 8 — Subscription, Increment 3 (contextual paywall sheet + panchangpal://subscription routing + FF_FAMILY_PLAN)
+Beta Readiness & Platform Hardening (TDD Part 5) — provision Supabase envs, CD migrations, Sentry +
+dashboards, E2E (Maestro FLOW_*), OWASP Mobile review, phased store rollout.
 
 ---
 
 # After Current Deliverable
 
-Beta Readiness & Platform Hardening (TDD Part 5)
+Beta (TestFlight / Play Internal) → phased production release (US/AU/NZ)
 
 ---
 
@@ -197,9 +201,8 @@ Milestone Completion Checkpoint in CLAUDE.md):
 # Executive Summary
 
 Documentation and architecture are frozen. The repository, platform foundation, and backend
-SVC_* are complete. The mobile app is being built as sequenced feature slices — App Shell, Today,
-Guided Ritual, Calendar Shell, Ask Guru, Profile/Household, and Notifications are done (M1–M7).
-Subscription (M8) is underway: Increments 1 (entitlement read + gating) and 2 (SCR_SUBSCRIPTION_001 +
-plans/purchase/restore via the PaymentAdapter + affordance wiring) are complete; only the contextual
-paywall sheet (Increment 3) remains. The only architectural blocker is the Canonical Panchang Engine
+SVC_* are complete. **The Mobile MVP (Phase 1) is feature-complete**: all eight slices — App Shell,
+Today, Guided Ritual, Calendar Shell, Ask Guru, Profile/Household, Notifications, and Subscription —
+are implemented, tsc-clean, and green in test. The project now transitions to Beta Readiness &
+Platform Hardening (TDD Part 5). The only architectural blocker is the Canonical Panchang Engine
 decision (ADR-033); Ask Guru live answers are intentionally gated until corpus/eval readiness.

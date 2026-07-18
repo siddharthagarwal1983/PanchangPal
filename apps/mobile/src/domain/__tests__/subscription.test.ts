@@ -11,6 +11,7 @@ import {
   isEntitled,
   rowToEntitlement,
   rowsToEntitlements,
+  visibleOfferings,
 } from '../../domain/subscription/entitlement';
 import { PREMIUM_CAPABILITIES } from '../../domain/subscription';
 
@@ -70,5 +71,29 @@ describe('gating rules', () => {
   it('rowsToEntitlements is null-safe', () => {
     expect(rowsToEntitlements(null)).toEqual([]);
     expect(rowsToEntitlements([{ is_active: true }]).length).toBe(1);
+  });
+});
+
+describe('visibleOfferings (FF_FAMILY_PLAN offering gate)', () => {
+  const individual = { id: 'ind_m', kind: 'individual' as const };
+  const family = { id: 'fam_m', kind: 'family' as const };
+
+  it('hides the Family plan while the flag is off (fails closed)', () => {
+    expect(visibleOfferings([individual, family], false)).toEqual([individual]);
+  });
+
+  it('shows the Family plan when the flag is on', () => {
+    expect(visibleOfferings([individual, family], true)).toEqual([individual, family]);
+  });
+
+  it('never mutates the input', () => {
+    const offerings = [individual, family];
+    visibleOfferings(offerings, true);
+    expect(offerings).toEqual([individual, family]);
+  });
+
+  it('is null-safe', () => {
+    expect(visibleOfferings(null, true)).toEqual([]);
+    expect(visibleOfferings(undefined, false)).toEqual([]);
   });
 });
