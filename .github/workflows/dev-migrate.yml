@@ -53,35 +53,40 @@ jobs:
           SUPABASE_DEV_REF: ${{ secrets.SUPABASE_DEV_REF }}
           SUPABASE_ACCESS_TOKEN: ${{ secrets.SUPABASE_ACCESS_TOKEN }}
 
-      # First real use of SUPABASE_DEV_DB_URL. It was built as a DIRECT connection string
-      # (db.<ref>.supabase.co); Supabase has been moving new projects toward IPv6-only
-      # direct connections, in which case this step fails to connect and the secret should
-      # be replaced with the SESSION POOLER URI from Settings -> Database — the form
-      # staging already uses. The failure, if it comes, is a connection error here.
-      - name: Apply migrations
-        run: bash scripts/migrate.sh "$SUPABASE_DEV_DB_URL"
+      # The dev project's DIRECT endpoint (db.<ref>.supabase.co) is IPv6-ONLY and GitHub
+      # runners are IPv4-only, so the first run died with "Network is unreachable". The
+      # session pooler is IPv4-reachable, but its hostname prefix varies per project and no
+      # CLI exposes it — so the URL is derived and probed here.
+      #
+      # Done in CI rather than by hand-editing the secret so the password stays inside the
+      # secret: never fetched, never pasted. The derived URL is masked immediately, because
+      # Actions masks the secret's exact value and would NOT mask a string derived from it.
+      - name: Resolve a reachable database URL
+        run: |
+          URL="$(bash scripts/resolve-db-url.sh "$SUPABASE_DEV_DB_URL" ap-south-1)"
+          echo "::add-mask::$URL"
+          echo "DB_URL=$URL" >> "$GITHUB_ENV"
         env:
           SUPABASE_DEV_DB_URL: ${{ secrets.SUPABASE_DEV_DB_URL }}
+
+      - name: Apply migrations
+        run: bash scripts/migrate.sh "$DB_URL"
 
       # Same seed staging uses: `on conflict do nothing` throughout, so re-running is safe.
       # Structure only — reviewer-approved content arrives via SVC_content_ingest.
       - name: Seed dev data
         if: ${{ inputs.seed }}
-        run: psql "$SUPABASE_DEV_DB_URL" -v ON_ERROR_STOP=1 -f apps/backend/seed/seed.sql
-        env:
-          SUPABASE_DEV_DB_URL: ${{ secrets.SUPABASE_DEV_DB_URL }}
+        run: psql "$DB_URL" -v ON_ERROR_STOP=1 -f apps/backend/seed/seed.sql
 
       # Proves the schema actually landed, rather than trusting a zero exit code.
       - name: Verify schema
         run: |
-          COUNT=$(psql "$SUPABASE_DEV_DB_URL" -tAc "select count(*) from information_schema.tables where table_schema='public';")
+          COUNT=$(psql "$DB_URL" -tAc "select count(*) from information_schema.tables where table_schema='public';")
           echo "public tables: $COUNT"
           if [ "$COUNT" -lt 20 ]; then
             echo "::error::Only $COUNT tables in public schema — migrations did not apply as expected."
             exit 1
           fi
-        env:
-          SUPABASE_DEV_DB_URL: ${{ secrets.SUPABASE_DEV_DB_URL }}
 
       - name: Summary
         if: always()
