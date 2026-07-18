@@ -70,3 +70,5 @@ export {
 export { ValueList, type ValueListProps, type ValueListItem } from './components/ValueList';
 export { PlanCard, type PlanCardProps } from './components/PlanCard';
 export { LegalFootnote, type LegalFootnoteProps, type LegalLink } from './components/LegalFootnote';
+// Overlays (PDD §5.12) — CMP_BOTTOM_SHEET backs the contextual paywall sheet (M8 Increment 3)
+export { BottomSheet, type BottomSheetProps, type BottomSheetHeight } from './components/BottomSheet';

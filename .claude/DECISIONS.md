@@ -483,3 +483,32 @@ behavior is never gated. Gating is contextual and dismissible (`usePremiumGate` 
 so a paywall never flashes over cached content). The Family plan is an offering behind **FF_FAMILY_PLAN**
 (M8 Increment 3), not an in-app gate. Entitlement is trusted from server-set `is_active` only — the client
 never computes expiry (thin-client, server-authoritative).
+
+---
+
+## Overlays, cross-feature surfaces & client feature flags (M8 Increment 3, 2026-07-18)
+
+**A surface shared by two features is a ROUTE, not a shared component.** The contextual paywall is
+opened from both MOD_you (Settings → deep-dive) and MOD_guru (post-answer upsell). TDD §2.2 forbids
+cross-feature imports and prescribes navigation intents for contextual cross-links, and TDD §3.1
+designates `app/modal/*` for "bottom sheets, dialogs, paywall". The paywall therefore lives at
+**`app/modal/paywall`** (a `transparentModal` route taking `?capability=`), and callers reach it with
+`router.push`. Promoting such a surface into `packages/ui` would have created a new CMP_*, which the
+PDD §3 "no orphans / no duplicates" rule and the paywall composition note both forbid. Apply this
+pattern to any future surface two features must share.
+
+**The paywall is a composition, never a component:** CMP_BOTTOM_SHEET + CMP_PLAN_CARD. CMP_BOTTOM_SHEET
+itself (PDD §5.12) was implemented in this increment — it had been specified since the component library
+was written and declared as a dependency by four components, but never built. It is presentational and
+takes `reduceMotion` as a prop (fade-in-place instead of slide) so `packages/ui` stays a leaf that knows
+only tokens.
+
+**Client feature flags FAIL CLOSED.** `feature_flag` (public-select, ADR-021) is read once at launch
+through `featureFlagRepository` + `HOOK_useFeatureFlag`, cached, and invalidated via Realtime. A flag
+reads `false` while loading, on error, when the key is absent, and when `enabled` is any non-boolean —
+only a real boolean `true` enables. Post-v1 scope must never leak on through a failed read. Flags are
+read-only on the device; the app never writes one.
+
+**FF_FAMILY_PLAN is an OFFERING gate, not a capability gate.** It controls whether the Family plan is
+purchasable (applied through the pure `visibleOfferings`), with Individual as the default. It never
+affects what an already-granted family entitlement unlocks — entitlement remains server-authoritative.

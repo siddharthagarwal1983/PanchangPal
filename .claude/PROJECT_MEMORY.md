@@ -2,15 +2,15 @@
 
 # PanchangPal — Project Memory
 
-Version: 1.4.0
+Version: 1.5.0
 
-Last Updated: 2026-07-18 (M7 Notifications + M8 Increment 1 entitlement complete)
+Last Updated: 2026-07-18 (Mobile MVP Phase 1 feature-complete — M1–M8)
 
 Current Phase:
 Mobile MVP — Phase 1 (Feature Slices)
 
 Status:
-Foundation + Backend complete; mobile feature slices in progress (M1–M7 done; M8 Increment 1 of 3)
+Foundation + Backend complete; Mobile MVP Phase 1 feature-complete (M1–M8). Next: Beta Readiness & Platform Hardening (TDD Part 5)
 
 Purpose:
 This file is the permanent memory of the PanchangPal project.
@@ -337,21 +337,20 @@ Completed:
 2. Backend Foundation — all SVC_* Edge Functions, provider adapters, DB repositories
 3. Mobile slices: M1 App Shell · M2 Today · M3 Guided Ritual · M4 Calendar Shell · M5 Ask Guru ·
    M6 Profile/Household · M7 Notifications
-4. M8 Subscription — Increment 1 (household-grain entitlement read + gating) complete
+4. M8 Subscription — all 3 increments complete (entitlement read + gating; SCR_SUBSCRIPTION_001 +
+   plans/purchase/restore; contextual paywall sheet + routing + FF_FAMILY_PLAN)
 
-Remaining: M8 Subscription Increments 2–3 (subscription screen + affordance wiring; paywall + routing).
-Then: Beta Readiness & Platform Hardening (TDD Part 5).
+Remaining: Beta Readiness & Platform Hardening (TDD Part 5).
 
 ---
 
 # Major Pending Deliverables
 
 Done: ADR repository, OpenAPI spec, database schema + migrations, GitHub Actions CI/CD, shared
-packages, Expo project, backend SVC_* services, and mobile slices M1–M7 + M8 Increment 1.
+packages, Expo project, backend SVC_* services, and and all mobile slices M1–M8.
 
 Remaining:
 
-- Mobile — Subscription M8 Increments 2–3 (SCR_SUBSCRIPTION_001, plans/purchase/restore, paywall, FF_FAMILY_PLAN)
 - AI platform — reviewed content corpus + evaluation harness (unblocks live Ask Guru)
 - Testing — E2E (Maestro FLOW_*), first live CI run
 - Deployment — live Supabase project, TestFlight / Play Internal, production release
@@ -383,6 +382,14 @@ Stable, cross-cutting facts (permanent until an approved decision changes them):
   device** — the `entitlement` table denies all client writes; the RevenueCat webhook
   (SVC_revenuecat_webhook) is the sole writer. The daily loop is NEVER gated (P4). v1 gated
   capabilities: `deep_dive_content`, `extended_ask_guru`.
+- **Feature flags (client)** — `feature_flag` (public-select, ADR-021) is read through
+  `featureFlagRepository` + `HOOK_useFeatureFlag` (cached at launch, Realtime-invalidated) and is
+  READ-ONLY on device. Flags **fail closed**: loading, error, an absent key, or a non-boolean
+  `enabled` all read `false`, so post-v1 scope can never leak on. `FF_FAMILY_PLAN` gates the Family
+  OFFERING (via the pure `visibleOfferings`), never an in-app capability.
+- **Shared cross-feature surfaces are ROUTES** — a feature never imports another feature (TDD §2.2);
+  contextual cross-links use navigation intents. The contextual paywall lives at `app/modal/paywall`
+  (CMP_BOTTOM_SHEET + CMP_PLAN_CARD composed, never a new CMP_*), opened by both MOD_you and MOD_guru.
 - **MockPanchangProvider** is DEV/TEST ONLY and must never be imported by production code.
 - **Backend Edge Functions pending** — SVC_household (member/invite), SVC_notify_scheduler
   (notify/schedule), and SVC_revenuecat_webhook are pending backend deliverables; the corresponding

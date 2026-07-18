@@ -13,6 +13,7 @@ export const enUS = {
     back: 'Back',
     verify: 'Verify',
     sendCode: 'Send code',
+    notNow: 'Not now',
   },
   tabs: { today: 'Today', calendar: 'Calendar', guru: 'Ask Guru', you: 'You' },
   splash: { loading: 'Preparing your day…' },
@@ -150,6 +151,7 @@ export const enUS = {
     subscribe: 'Subscribe',
     restore: 'Restore purchases',
     restoreHint: 'Already subscribed? Restore on this device.',
+    seeAllPlans: 'See all plans',
     // States
     unavailable: 'Subscriptions are briefly unavailable — please try again.',
     offline: 'Connect to the internet to manage your subscription. You can still Restore once back online.',

@@ -21,6 +21,12 @@ export default function RootLayout() {
         <Stack.Screen name="index" />
         <Stack.Screen name="(onboarding)" />
         <Stack.Screen name="(tabs)" />
+        {/* Overlay routes (§3.1 modal/*): the contextual paywall sheet. Transparent so the
+            surface it was opened from stays visible behind the scrim; always dismissible. */}
+        <Stack.Screen
+          name="modal/paywall"
+          options={{ presentation: 'transparentModal', animation: 'fade' }}
+        />
       </Stack>
     </AppProviders>
   );
