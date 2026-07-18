@@ -5,8 +5,8 @@
 import { useCallback, useEffect, useRef, useState } from 'react';
 import { View } from 'react-native';
 import { router } from 'expo-router';
-import { CompletionMoment, PrimaryButton, RitualIntro, RitualStep, Screen, useTheme } from '@panchangpal/ui';
-import { RitualEngine, NullAudioAdapter, type RitualPlayerViewModel } from '../../../src/domain/ritual';
+import { CompletionMoment, PrimaryButton, RitualIntro, RitualStep, Screen, Text, useTheme } from '@panchangpal/ui';
+import { RitualEngine, NullAudioAdapter, resolveRitualScreenState, type RitualPlayerViewModel } from '../../../src/domain/ritual';
 import { getRitualSessionRepository } from '../../../src/data/ritualSessionRepository';
 import { useRitualToday } from '../../../src/data/hooks/useRitualToday';
 import { useCompleteRitual } from '../../../src/data/hooks/useCompleteRitual';
@@ -24,14 +24,28 @@ export default function RitualScreen() {
   const engine = useRef<RitualEngine | null>(null);
   const [view, setView] = useState<RitualPlayerViewModel | null>(null);
 
+  const [restoreFailed, setRestoreFailed] = useState(false);
+
   useEffect(() => {
     let active = true;
     if (!ritual.data) return undefined;
-    void RitualEngine.restore(ritual.data, TODAY, getRitualSessionRepository(), new NullAudioAdapter()).then((restored) => {
-      if (!active) return;
-      engine.current = restored;
-      setView(restored.view());
-    });
+    // Both outcomes are set from the async handlers, never synchronously in the effect
+    // body — a sync setState here triggers cascading renders (react-hooks/set-state-in-effect).
+    // The rejection path MUST be handled. Session restore reads local storage, and a
+    // storage failure previously left `view` null forever — the screen sat on its spinner
+    // with no error and no log, because the render guard below treats "no view" as
+    // "still loading". A visible error beats a silent hang.
+    void RitualEngine.restore(ritual.data, TODAY, getRitualSessionRepository(), new NullAudioAdapter())
+      .then((restored) => {
+        if (!active) return;
+        engine.current = restored;
+        setRestoreFailed(false);
+        setView(restored.view());
+      })
+      .catch(() => {
+        if (!active) return;
+        setRestoreFailed(true);
+      });
     return () => { active = false; };
   }, [ritual.data]);
 
@@ -47,8 +61,38 @@ export default function RitualScreen() {
     }
   }, [completion, ritual.data]);
 
-  if (ritual.isLoading || !view) return <Screen loading edges={['top']} testID="ritual-loading" />;
-  if (ritual.error) return <Screen error={{ message: t('errors.unknown') }} edges={['top']} testID="ritual-error" />;
+  // Ordering lives in resolveRitualScreenState so it can be unit-tested — the ORDER was the
+  // defect: `!view` was tested first and swallowed both the error and the empty case.
+  const screenState = resolveRitualScreenState({
+    isLoading: ritual.isLoading,
+    hasError: Boolean(ritual.error),
+    hasData: Boolean(ritual.data),
+    hasView: Boolean(view),
+    restoreFailed,
+  });
+
+  if (screenState === 'error') {
+    return <Screen error={{ message: t('errors.unknown') }} edges={['top']} testID="ritual-error" />;
+  }
+  if (screenState === 'loading') return <Screen loading edges={['top']} testID="ritual-loading" />;
+  if (screenState === 'empty') {
+    return (
+      <Screen edges={['top']} testID="ritual-empty">
+        <View accessibilityRole="alert" style={{ gap: theme.spacing.xs, paddingTop: theme.spacing.lg }}>
+          <Text variant="bodyMedium">{t('ritual.unavailable')}</Text>
+          <Text variant="bodySmall" color="secondary">{t('ritual.unavailableDetail')}</Text>
+        </View>
+        <View style={{ paddingTop: theme.spacing.lg }}>
+          <PrimaryButton label={t('ritual.returnToday')} onPress={() => router.back()} testID="ritual-empty-back" />
+        </View>
+      </Screen>
+    );
+  }
+
+  // Unreachable: 'ready' is only returned when hasView. Present so TypeScript can narrow
+  // `view`, and so a future change to the resolver degrades to the spinner rather than
+  // crashing on a null dereference.
+  if (!view) return <Screen loading edges={['top']} testID="ritual-loading" />;
 
   return (
     <Screen edges={['top', 'bottom']} testID="ritual-screen">
