@@ -9,6 +9,7 @@
  */
 import type { RealtimeChannel, SupabaseClient } from '@supabase/supabase-js';
 import { getSupabase } from './supabaseClient';
+import { nextChannelId } from './realtimeChannelId';
 import { rowsToEntitlements, type Entitlement, type EntitlementRow } from '../domain/subscription';
 
 const TABLE = 'entitlement';
@@ -31,8 +32,14 @@ export class SubscriptionRepository {
    * MUST invoke the returned unsubscribe on unmount/background to save battery.
    */
   subscribeEntitlements(onChange: () => void): () => void {
+    // The topic carries a per-subscription suffix. supabase-js returns an EXISTING channel
+    // when one with the same topic is still registered, and removeChannel() below is async
+    // and un-awaited — so a remount (React StrictMode double-invokes effects in dev) would
+    // otherwise get back the already-subscribed channel and throw "cannot add
+    // `postgres_changes` callbacks ... after `subscribe()`". A unique topic keeps each
+    // subscriber's lifecycle independent.
     const channel: RealtimeChannel = this.db
-      .channel('entitlement:self')
+      .channel(`entitlement:self:${nextChannelId()}`)
       .on('postgres_changes', { event: '*', schema: 'public', table: TABLE }, () => onChange())
       .subscribe();
     return () => {

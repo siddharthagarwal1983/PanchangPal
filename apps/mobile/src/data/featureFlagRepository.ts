@@ -10,6 +10,7 @@
 import type { RealtimeChannel, SupabaseClient } from '@supabase/supabase-js';
 import type { FeatureFlag } from '@panchangpal/shared';
 import { getSupabase } from './supabaseClient';
+import { nextChannelId } from './realtimeChannelId';
 
 const TABLE = 'feature_flag';
 const COLUMNS = 'key, enabled';
@@ -48,8 +49,10 @@ export class FeatureFlagRepository {
    * MUST invoke the returned unsubscribe on unmount to save battery.
    */
   subscribeFlags(onChange: () => void): () => void {
+    // Per-subscription topic suffix — see realtimeChannelId.ts for why reusing a fixed
+    // topic throws "cannot add `postgres_changes` callbacks ... after `subscribe()`".
     const channel: RealtimeChannel = this.db
-      .channel('feature_flag:all')
+      .channel(`feature_flag:all:${nextChannelId()}`)
       .on('postgres_changes', { event: '*', schema: 'public', table: TABLE }, () => onChange())
       .subscribe();
     return () => {

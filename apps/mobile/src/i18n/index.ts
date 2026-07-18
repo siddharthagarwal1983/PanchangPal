@@ -14,6 +14,11 @@ void i18n.use(initReactI18next).init({
   fallbackLng: 'en-US',
   interpolation: { escapeValue: false },
   returnNull: false,
+  // Hermes ships only a partial Intl and lacks Intl.PluralRules, so i18next's v4 plural
+  // resolver cannot initialize and logs a console error on every launch. v3 plural handling
+  // is self-contained and correct for en-US (`_plural` suffix keys). Revisit when adding a
+  // locale with more than two plural forms, which would need an Intl.PluralRules polyfill.
+  compatibilityJSON: 'v3',
 });
 
 /** Typed translate helper. Dot-path keys, e.g. t('auth.title'). */
