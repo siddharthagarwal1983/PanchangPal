@@ -35,7 +35,15 @@ export default function RitualScreen() {
     // storage failure previously left `view` null forever — the screen sat on its spinner
     // with no error and no log, because the render guard below treats "no view" as
     // "still loading". A visible error beats a silent hang.
-    void RitualEngine.restore(ritual.data, TODAY, getRitualSessionRepository(), new NullAudioAdapter())
+    // Starting from a resolved promise converts a SYNCHRONOUS throw into a rejection, so
+    // one .catch() covers both. Building the repository or the adapter can throw before any
+    // promise exists — exactly how the missing native storage module escaped the rejection
+    // handler and crashed the screen through the ErrorBoundary. A plain try/catch would
+    // work too, but its setState would run synchronously inside the effect
+    // (react-hooks/set-state-in-effect).
+    const definition = ritual.data;
+    void Promise.resolve()
+      .then(() => RitualEngine.restore(definition, TODAY, getRitualSessionRepository(), new NullAudioAdapter()))
       .then((restored) => {
         if (!active) return;
         engine.current = restored;
