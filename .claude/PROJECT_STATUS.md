@@ -100,6 +100,12 @@ Current Focus
 Completed slices: M1 App Shell · M2 Today · M3 Guided Ritual · M4 Calendar Shell · M5 Ask Guru ·
 M6 Profile/Household · M7 Notifications.
 
+- **First-run defect fixes (2026-07-18)** — ⏳ implemented, unreviewed, on `chore/expo-sdk-54-upgrade`.
+  The MVP had never been executed. Six defects fixed (three bundle-blocking, two local-backend, one
+  crashing product bug in `src/data/` Realtime); platform re-baselined to Expo SDK 54 / RN 0.81 /
+  React 19 because Expo Go supports only the newest SDK. The app now boots on a physical iPhone.
+  **Review before B1.** See CURRENT_MILESTONE.md → Execution Gap.
+
 See:
 
 .claude/CURRENT_MILESTONE.md

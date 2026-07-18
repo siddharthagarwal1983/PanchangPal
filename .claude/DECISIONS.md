@@ -512,3 +512,39 @@ read-only on the device; the app never writes one.
 **FF_FAMILY_PLAN is an OFFERING gate, not a capability gate.** It controls whether the Family plan is
 purchasable (applied through the pure `visibleOfferings`), with Individual as the default. It never
 affects what an already-granted family entitlement unlocks — entitlement remains server-authoritative.
+
+---
+
+## Mobile platform baseline & the execution gap (Demo session, 2026-07-18)
+
+**The mobile platform baseline is Expo SDK 54 / RN 0.81.5 / React 19.1, New Architecture default.**
+Forced, not chosen: Expo Go ships support only for the newest SDK, and an iOS development build
+requires a paid Apple Developer membership that is not held — so SDK 54 was the only way to run the
+app on a device at all. `expo install --fix` is the mechanism for SDK-managed deps; `packages/ui`
+must be aligned in the same change or its stale peers drag a second copy of react-native into the
+type graph.
+
+**Metro must keep hierarchical lookup ENABLED under pnpm.** `disableHierarchicalLookup = true` is a
+safe optimization only on npm/yarn's hoisted layout. pnpm nests each package's dependencies under
+`node_modules/.pnpm/<pkg>/node_modules/`, so Metro must walk up from a module's real path. Disabling
+it made expo-router's own dependencies unresolvable and the app unbuildable.
+
+**Workspace packages are consumed as TypeScript source, so every consumer needs a `.js` specifier
+remap.** `packages/*/package.json` point `exports` at `src/index.ts`, and that source uses NodeNext
+`.js` specifiers. tsc resolves them natively and jest via `moduleNameMapper`; Metro needs an explicit
+`resolveRequest` shim. Do not "fix" this by repointing `exports` at `dist/` — Edge Functions consume
+the same contract through the Deno import map.
+
+**Realtime channel topics must be unique per subscription.** supabase-js keys channels by topic and
+returns the existing instance when that topic is still registered; because `removeChannel()` is
+async and fired un-awaited from effect cleanup, a remount otherwise receives an already-subscribed
+channel and `.on()` throws. Any new repository opening a channel must suffix its topic via
+`nextChannelId()` (`src/data/realtimeChannelId.ts`).
+
+**Verification that does not execute the app does not count.** M1–M8 all shipped green on lint,
+typecheck, and jest — none of which invoke Metro — while three bundle-blocking defects, two
+local-backend faults, and one crashing product bug accumulated. A CI bundle gate (`expo export`) is
+the cheapest control that would have caught the build-breaking class at M1, and is now part of B2.
+Local `supabase start` is likewise part of the definition of a working repo: seeding must stay off
+while migrations live outside the CLI path, and `[auth] enable_anonymous_sign_ins` must stay true
+because the app bootstraps an anonymous session before any screen renders (UX-2 / ADR-009).

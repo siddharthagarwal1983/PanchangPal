@@ -45,13 +45,34 @@ applied through the pure `visibleOfferings`. tsc + eslint clean; 153 tests green
 
 ---
 
+# Interposed (2026-07-18): first-run defect fixes — `chore/expo-sdk-54-upgrade`
+
+Status: ✅ IMPLEMENTED, ⏳ UNREVIEWED / UNMERGED (6 commits)
+
+A demo attempt established that **the app had never been run**. Six defects were fixed to get it
+booting on a physical iPhone: three bundle-blockers (Metro/pnpm resolution, undeclared
+`@babel/runtime`, workspace `.js` specifiers), two local-backend faults (`supabase start` always
+rolled back; anonymous auth disabled), and one genuine product bug (three repositories reused a
+fixed Realtime channel topic, crashing SCR_YOU_001). The platform was re-baselined to Expo SDK 54
+along the way, because Expo Go supports only the newest SDK and an iOS dev build needs a paid Apple
+Developer membership.
+
+**Review this branch before B1** — it re-baselines the mobile platform (RN 0.81 / React 19 / New
+Architecture) and is verified only by bundling, 121 tests, and Expo Go; no native build has
+exercised it. Full narrative in SESSION.md and CURRENT_MILESTONE.md → Execution Gap.
+
+Two defects found and deliberately left open (see CURRENT_MILESTONE.md → Current Risks): repositories
+throwing on absent config, and `react-native-mmkv` being unavailable in Expo Go.
+
+---
+
 # Current Task
 
 ## Title
 Beta Readiness — Slice B1: Environments & secrets (fail-closed)
 
 Status
-⏳ NOT STARTED — begin once M8 Increment 3 review is closed out.
+⏳ NOT STARTED — begin once `chore/expo-sdk-54-upgrade` is reviewed and merged.
 
 Priority
 🔴 Critical (prerequisite for every later slice; also removes a false-green deploy path)
@@ -99,7 +120,11 @@ or handle credential values.
 
 # After Completion
 Update DASHBOARD/PROJECT_STATUS/CURRENT_MILESTONE/IMPLEMENTATION_ROADMAP/SESSION/TASK; proceed to
-**B2 — E2E verification** (replace the Maestro placeholder with real FLOW_* specs).
+**B2 — E2E verification** (CI bundle gate + replace the Maestro placeholder with real FLOW_* specs).
+
+Consider pulling B2's **bundle gate** forward into B1: it is a few lines of CI (`expo export` for
+ios+android) and is the control that would have caught three of the 2026-07-18 defects at M1. Every
+later slice builds on the assumption that the app compiles.
 
 ---
 

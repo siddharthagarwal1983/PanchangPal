@@ -78,11 +78,17 @@ TASK.md
 
 # Today's Objective
 
-Open the Beta Readiness milestone. The MVP is feature-complete, but **CD reports green while two of
-its jobs are placeholders** — Maestro E2E is an `echo` and the EAS build is a stub, and
-`preflight.sh` only warns on missing secrets before exiting 0. Staging migrations and Edge Function
-deploys are real. B1 (environments + fail-closed preflight) and B2 (real E2E) exist to close that
-gap before anything else is built on top of it.
+Review and merge `chore/expo-sdk-54-upgrade` (6 commits, unmerged), then start B1.
+
+**The app had never been run.** A demo attempt on 2026-07-18 found six defects — three of them
+bundle-blocking, one a genuine product bug (SCR_YOU_001 crashed on a Realtime channel collision) —
+all accumulated across M1–M8 behind a fully green CI. `lint`, `typecheck`, and `jest` never invoke
+Metro, and the E2E job that would have is an `echo`. All six are fixed on that branch; the app now
+boots on a physical iPhone against a local Supabase stack.
+
+So the milestone's premise holds but is wider than scoped: CD's placeholders are one symptom of a
+pipeline that has never executed the application. B2 has gained a CI bundle gate for that reason.
+See the Execution Gap section in CURRENT_MILESTONE.md.
 
 No new product scope in this milestone.
 
@@ -105,7 +111,7 @@ No new product scope in this milestone.
 | Mobile — Notifications | ✅ M7 |
 | Mobile — Subscription | ✅ M8 |
 | AI Platform | 🟡 adapters done; corpus + eval pending |
-| Testing | 🟡 unit/component/domain green in CI; E2E is a CD placeholder (B2) |
+| Testing | 🟡 unit/component/domain green in CI; **no CI gate bundles or runs the app** (B2); E2E is a CD placeholder (B2) |
 | Beta | 🚧 In progress (B1–B8) |
 | Production | ⏳ |
 
@@ -139,8 +145,18 @@ is ratified. Everything else is unblocked. See docs/architecture/canonical-panch
 (TDD Part 3 §9/§10B). The client is complete; flipping the flag goes live.
 
 ℹ️ Vendor deps deferred: `expo-notifications` (M7) and `react-native-purchases` (M8) are not yet
-installed (sandbox can't regenerate the lockfile). Their adapters ship as pure ports + Null impls;
-concrete adapters are one-line swaps once the deps + keys land on the Mac.
+installed. Their adapters ship as pure ports + Null impls; concrete adapters are one-line swaps once
+the deps + keys land on the Mac. (The lockfile *can* be regenerated here — proven 2026-07-18 by the
+SDK 54 upgrade — so this deferral is now a choice, not a constraint.)
+
+⚠️ Platform re-baselined to **Expo SDK 54 / RN 0.81 / React 19 / New Architecture** on
+`chore/expo-sdk-54-upgrade` (unmerged). Verified by bundling, 121 tests, and Expo Go on device;
+**not** verified against a native build — no Xcode here. B3 is the first real test.
+
+⚠️ Two open defects from the 2026-07-18 demo session: nine `src/data/` repositories throw on absent
+config (surfacing as "Page could not be found" rather than a calm error state), and
+`react-native-mmkv` is unavailable in Expo Go so the Ritual screen crashes there. Details in
+CURRENT_MILESTONE.md → Current Risks.
 
 ---
 
