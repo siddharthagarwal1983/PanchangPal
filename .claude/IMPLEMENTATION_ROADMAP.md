@@ -18,7 +18,7 @@ CI/CD, Backend Foundation, and the design system are complete. The Mobile MVP �
 slices are **complete (100%)**: M1 App Shell, M2 Today, M3 Guided Ritual, M4 Calendar Shell,
 M5 Ask Guru, M6 Profile/Household, M7 Notifications, and M8 Subscription. M8 closed with
 Increment 3 (contextual paywall sheet at app/modal/paywall, panchangpal://subscription routing,
-FF_FAMILY_PLAN offering gate) — awaiting review.
+FF_FAMILY_PLAN offering gate), merged to main as PR #7.
 
 The **Beta Readiness & Platform Hardening** milestone (TDD Part 5) is now open, sliced B1–B8:
 environments & secrets · E2E · build/distribution · observability · reliability & DR ·

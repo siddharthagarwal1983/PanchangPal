@@ -17,7 +17,7 @@ routing, and FF_FAMILY_PLAN. This closes the Subscription slice and the Mobile M
 
 ---
 
-# Work Completed (M8 Increment 3 — awaiting review)
+# Work Completed (M8 Increment 3 — merged to main as PR #7)
 
 - **CMP_BOTTOM_SHEET (`packages/ui/src/components/BottomSheet.tsx`, new):** the PDD §5.12 component
   was specified but had never been implemented. Built to spec — grabber/title/content, `radius.lg`
