@@ -1,1 +1,0 @@
-{"version":3,"file":"InfoBanner.d.ts","sourceRoot":"","sources":["../../src/components/InfoBanner.tsx"],"names":[],"mappings":"AAUA,MAAM,MAAM,cAAc,GAAG,MAAM,GAAG,SAAS,GAAG,SAAS,CAAC;AAE5D,MAAM,WAAW,eAAe;IAC9B,OAAO,EAAE,MAAM,CAAC;IAChB,IAAI,CAAC,EAAE,cAAc,CAAC;IACtB,MAAM,CAAC,EAAE,MAAM,CAAC;CACjB;AAQD,wBAAgB,UAAU,CAAC,EAAE,OAAO,EAAE,IAAa,EAAE,MAAM,EAAE,EAAE,eAAe,2CAgC7E"}
