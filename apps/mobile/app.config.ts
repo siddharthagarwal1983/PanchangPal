@@ -20,6 +20,11 @@ const config: ExpoConfig = {
   // dynamic (.ts) config, so they are maintained here by hand.
   plugins: ['expo-localization', 'expo-router', 'expo-secure-store'],
   extra: {
+    // EAS project linkage (TDD Part 5 §2.3). `eas init` cannot write to a dynamic .ts
+    // config, so it is recorded by hand — the same limitation that applies to `plugins`
+    // above. Not a secret: this ID identifies the project, it does not authorize anything
+    // (EXPO_ACCESS_TOKEN does that, and lives only in CI secrets).
+    eas: { projectId: 'cbe97143-a335-4b27-a144-006d5cbfca91' },
     // Populated from EXPO_PUBLIC_* env at build time (TDD Part 1 §7.2).
     supabaseUrl: process.env.EXPO_PUBLIC_SUPABASE_URL,
     supabaseAnonKey: process.env.EXPO_PUBLIC_SUPABASE_ANON_KEY,
