@@ -23,7 +23,7 @@ For day-to-day work see:
 - SESSION.md
 - TASK.md
 
-Canonical progress metric: the **Mobile MVP — Phase 1 (Feature Slices)** milestone percentage,
+Canonical progress metric: the **Beta Readiness & Platform Hardening** milestone percentage,
 shared verbatim with DASHBOARD.md and CURRENT_MILESTONE.md. If these three disagree, DASHBOARD.md
 is authoritative and the others must be reconciled to it.
 
@@ -33,11 +33,11 @@ is authoritative and the others must be reconciled to it.
 
 Current Phase
 
-🚧 Mobile MVP — Phase 1 (Feature Slices)
+🚧 Beta Readiness & Platform Hardening (TDD Part 5)
 
 Overall Progress
 
-██████████████████▏░
+░░░░░░░░░░░░░░░░░░░░
 
 **Mobile MVP — Phase 1: ✅ 100% (all 8 slices, merged)** · **Beta Readiness & Platform Hardening: 🚧 0% (0 of 8 slices)**
 
@@ -73,7 +73,7 @@ TBD
 | Backend Foundation (SVC_*) | ✅ Complete | 100% (panchang compute blocked by ADR-033) |
 | Mobile Development (feature slices) | ✅ Complete | 100% (M1–M8 done) |
 | AI Platform | 🟡 In Progress | Adapters + RAG pipeline done; corpus + eval pending |
-| Testing | 🟡 In Progress | Unit/component/domain in place; E2E pending |
+| Testing | 🟡 In Progress | Unit/component/domain green in CI; E2E is a CD placeholder (echo stub) — real FLOW_* specs are slice B2 |
 | Beta | ⏳ Pending | 0% |
 | Production Launch | ⏳ Pending | 0% |
 
@@ -81,12 +81,13 @@ TBD
 
 # Current Milestone
 
-Mobile MVP — Phase 1 (Feature Slices)
+Beta Readiness & Platform Hardening (TDD Part 5)
 
 Objective
 
-Build the mobile application as a sequence of vertical, production-quality feature slices
-(M1–M8) on top of the completed foundation and backend.
+Take the feature-complete Mobile MVP (M1–M8) to a shippable beta — environments, E2E,
+builds/distribution, observability, DR, security/privacy, release mechanics, go/no-go. No new
+product scope. Sliced B1–B8; see CURRENT_MILESTONE.md.
 
 Current Focus
 
@@ -319,15 +320,21 @@ Only major milestones belong here.
 
 Current Goal
 
-Complete the Mobile MVP Phase 1 feature slices (finish M8 Subscription) and reach Beta Readiness.
+Complete the Beta Readiness & Platform Hardening slices (B1–B8) and ship a real beta build.
 
-The project is considered ready for Beta Readiness & Platform Hardening when:
+Entry criteria for this milestone — status as of 2026-07-18:
 
-- All eight mobile slices (M1–M8) are implemented and reviewed.
-- Every screen composes approved CMP_* with tokens-only styling and localized strings.
-- Unit/component/domain tests pass in CI (first live CI run completed).
-- A live Supabase project is provisioned and migrations applied.
-- ADR-033 is ratified and Ask Guru corpus/eval readiness is met for a panchang-inclusive launch.
+- ✅ All eight mobile slices (M1–M8) implemented, reviewed, and merged.
+- ✅ Every screen composes approved CMP_* with tokens-only styling and localized strings.
+- ✅ Unit/component/domain tests pass in CI (153 tests; live CI runs green).
+- ✅ A live staging Supabase project is provisioned and migrations applied via CD.
+- ⛔ ADR-033 ratification and Ask Guru corpus/eval readiness remain outstanding — they gate a
+  panchang-inclusive *launch*, not the beta-readiness work itself.
+
+The project is considered ready for **Phased Production Release** when the §10.1 go/no-go
+checklist is satisfied: all CD jobs do real work (no placeholders), FLOW_* E2E green on staging,
+observability + alerting live, a DR restore drill performed, OWASP Mobile review clean, and store
+compliance complete.
 
 ---
 

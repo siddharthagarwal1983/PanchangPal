@@ -7,7 +7,7 @@ Version: 1.5.0
 Last Updated: 2026-07-18 (Mobile MVP Phase 1 feature-complete — M1–M8)
 
 Current Phase:
-Mobile MVP — Phase 1 (Feature Slices)
+Beta Readiness & Platform Hardening (TDD Part 5)
 
 Status:
 Foundation + Backend complete; Mobile MVP Phase 1 feature-complete (M1–M8). Next: Beta Readiness & Platform Hardening (TDD Part 5)
