@@ -25,7 +25,18 @@ function toAuthSession(session: Session | null): AuthSession | null {
 }
 
 export class AuthRepository {
-  constructor(private db: SupabaseClient = getSupabase()) {}
+  private _db?: SupabaseClient;
+  // Lazy client (matches getSubscriptionRepository/getPaymentAdapter): the module-level singleton
+  // below is constructed at import, so eagerly calling getSupabase() here would force client
+  // creation (and URL validation) on any import of the session store — breaking tests that never
+  // exercise auth. Resolve the client on first actual use instead.
+  constructor(db?: SupabaseClient) {
+    this._db = db;
+  }
+
+  private get db(): SupabaseClient {
+    return (this._db ??= getSupabase());
+  }
 
   /** Restore an existing session (API_GET_SESSION_VALIDATE, FLOW A2). */
   async restore(): Promise<AuthSession | null> {

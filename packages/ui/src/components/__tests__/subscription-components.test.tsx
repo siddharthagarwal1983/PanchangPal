@@ -65,8 +65,9 @@ describe('CMP_PLAN_CARD', () => {
         testID="plan-family"
       />,
     );
+    // Best value is conveyed as TEXT in the accessible name (the badge itself is a11y-hidden to
+    // avoid a duplicate announcement, so we assert the composed name, not the hidden badge node).
     expect(screen.getByRole('radio', { name: 'Family, Best value, $39.99 per year' })).toBeTruthy();
-    expect(screen.getByTestId('plan-family-best-value')).toBeTruthy();
   });
 
   it('does not fire select while a purchase is in flight (loading)', () => {

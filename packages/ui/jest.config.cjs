@@ -6,7 +6,10 @@ module.exports = {
     '^@panchangpal/(.*)$': '<rootDir>/../$1/src/index.ts',
     '^(\\.{1,2}/.*)\\.js$': '$1',
   },
+  // pnpm nests deps under node_modules/.pnpm/<name>@<ver>/node_modules/<name>, so the flat
+  // jest-expo pattern never transforms RN/Expo packages (Flow syntax then fails to parse). Match
+  // the .pnpm dir names (scope separator is '+') and transform the RN/Expo/workspace packages.
   transformIgnorePatterns: [
-    'node_modules/(?!((jest-)?react-native|@react-native(-community)?|expo(nent)?|@expo(nent)?/.*|@panchangpal/.*)/)',
+    'node_modules/.pnpm/(?!(jest-)?(react-native|@react-native|@react-native-community|expo|@expo|@expo-google-fonts|react-navigation|@react-navigation|@panchangpal)[@+-])',
   ],
 };
