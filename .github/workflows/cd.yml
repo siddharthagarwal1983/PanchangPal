@@ -44,10 +44,26 @@ jobs:
         env:
           SUPABASE_STAGING_DB_URL: ${{ secrets.SUPABASE_STAGING_DB_URL }}
 
+      # Staging carried schema but no data — every table returned zero rows, so the app
+      # showed empty states everywhere and the Ritual screen had no ritual to render.
+      # §1.1 specifies staging holds anonymized/synthetic data, so this was a gap.
+      #
+      # Safe to re-run on every deploy: seed.sql is `on conflict do nothing` throughout.
+      # It seeds structure only (traditions, feature-flag defaults, one representative
+      # ritual/festival/checklist); reviewer-approved content still arrives via
+      # SVC_content_ingest, never raw-seeded (TDD Part 2 §6.2).
+      #
+      # Staging ONLY. Production is promoted separately and must never be seeded with
+      # synthetic rows.
+      - name: Seed staging data
+        run: psql "$SUPABASE_STAGING_DB_URL" -v ON_ERROR_STOP=1 -f apps/backend/seed/seed.sql
+        env:
+          SUPABASE_STAGING_DB_URL: ${{ secrets.SUPABASE_STAGING_DB_URL }}
+
       - name: Summary
         if: always()
         run: |
-          echo "### Staging migrations: ${{ job.status }}" >> "$GITHUB_STEP_SUMMARY"
+          echo "### Staging migrations + seed: ${{ job.status }}" >> "$GITHUB_STEP_SUMMARY"
 
   deploy-functions:
     name: Deploy Edge Functions (SVC_*) → staging

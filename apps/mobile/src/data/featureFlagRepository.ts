@@ -34,7 +34,20 @@ export function rowsToFlagMap(rows: FeatureFlagRow[] | null | undefined): Featur
 }
 
 export class FeatureFlagRepository {
-  constructor(private readonly db: SupabaseClient = getSupabase()) {}
+  private _db?: SupabaseClient;
+
+  // Lazy client. `getSupabase()` as a default parameter is evaluated at CONSTRUCTION, which
+  // for a module-level singleton means at import — so an absent EXPO_PUBLIC_SUPABASE_URL threw
+  // "supabaseUrl is required." while a route module was still evaluating, and expo-router
+  // then reported "Page could not be found" instead of a calm error state. It also made these
+  // repositories untestable, since importing one detonated. Resolve on first real use.
+  constructor(db?: SupabaseClient) {
+    this._db = db;
+  }
+
+  private get db(): SupabaseClient {
+    return (this._db ??= getSupabase());
+  }
 
   /** Read all flags (public select). Throws on transport error; callers fail closed. */
   async getFlags(): Promise<FeatureFlagMap> {

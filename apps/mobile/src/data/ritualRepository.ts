@@ -7,9 +7,29 @@ interface RitualRow { id: string; title: string; intro: string | null; steps: un
 
 /** API_GET_RITUAL gateway. Data access remains below the domain/player layers. */
 export class RitualRepository {
-  constructor(private readonly db: SupabaseClient = getSupabase()) {}
+  private _db?: SupabaseClient;
 
-  async getToday(tradition: TraditionCode, depth: ContentDepth): Promise<RitualDefinition> {
+  // Lazy client, matching AuthRepository. `getSupabase()` as a DEFAULT PARAMETER runs when
+  // the module-level singleton below is constructed — i.e. at import — so importing this
+  // module anywhere without configuration threw "supabaseUrl is required." before a single
+  // line of test or screen code ran. Resolve on first actual use instead.
+  constructor(db?: SupabaseClient) {
+    this._db = db;
+  }
+
+  private get db(): SupabaseClient {
+    return (this._db ??= getSupabase());
+  }
+
+  /**
+   * Today's ritual, or `null` when none is published for this tradition/depth.
+   *
+   * Absence is NOT an error. This previously threw ERR_RITUAL_EMPTY for a missing row, so
+   * "no ritual exists yet" reached the UI as a failed query — the screen showed "Something
+   * went wrong" for the ordinary state of having no content, and its empty state could
+   * never render. Only a genuine query failure throws now.
+   */
+  async getToday(tradition: TraditionCode, depth: ContentDepth): Promise<RitualDefinition | null> {
     const { data, error } = await this.db
       .from('ritual')
       .select('id,title,intro,steps,depth')
@@ -18,14 +38,15 @@ export class RitualRepository {
       .limit(1)
       .maybeSingle();
     if (error) throw new Error('ERR_RITUAL_UNAVAILABLE');
-    if (!data) throw new Error('ERR_RITUAL_EMPTY');
+    if (!data) return null;
     return toRitualDefinition(data as RitualRow);
   }
 }
 
-export function toRitualDefinition(row: RitualRow): RitualDefinition {
+/** `null` when the row carries no usable steps — unplayable content is empty, not broken. */
+export function toRitualDefinition(row: RitualRow): RitualDefinition | null {
   const steps = parseSteps(row.steps);
-  if (steps.length === 0) throw new Error('ERR_RITUAL_EMPTY');
+  if (steps.length === 0) return null;
   return { id: row.id, title: row.title, intro: row.intro ?? undefined, depth: row.depth, steps };
 }
 

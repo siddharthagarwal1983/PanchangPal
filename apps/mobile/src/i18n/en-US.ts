@@ -69,6 +69,8 @@ export const enUS = {
     completeBody: 'Your ritual has been recorded. Come back tomorrow when you are ready.',
     returnToday: 'Return to Today',
     leave: 'Leave ritual',
+    unavailable: 'No ritual is available right now.',
+    unavailableDetail: 'Your practice will appear here once it is ready. Nothing has been lost.',
   },
   streak: {
     label: '{{count}} day streak',
