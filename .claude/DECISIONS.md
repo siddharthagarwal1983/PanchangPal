@@ -2,7 +2,7 @@
 
 # PanchangPal — AI Decision Summary
 
-Version: 1.0.0
+Version: 1.1.0
 
 Purpose:
 This file contains a condensed summary of permanent project decisions.
@@ -312,6 +312,12 @@ Respect module boundaries.
 Migrations & seed live under `apps/backend/` (TDD §4/§6.1), not `supabase/migrations/`.
 Supabase CLI config stays at `supabase/config.toml`. (DEC-022)
 
+> ⚠️ **Documentation conflict (migrations path) — DEC-022 is authoritative.** PLAYBOOK.md
+> Workflow 7 previously instructed "Save migrations to `supabase/migrations/`", which contradicts
+> this decision and the actual repo layout (`apps/backend/migrations/`). Resolved 2026-07-18 by
+> correcting PLAYBOOK.md Workflow 7 to point to `apps/backend/migrations/`. The authoritative
+> location is **`apps/backend/migrations/`**; `supabase/` holds only `config.toml`.
+
 Household members may read each other's ritual/streak COUNTS (F-21 = visible, DEC-022);
 personal dates remain owner-only private (T7). Never expose per-item shaming data.
 
@@ -416,6 +422,10 @@ Keep permanent decisions here concise.
 
 Do not turn this file into a session log.
 
+Note: status/tracking files are also refreshed at each **increment or milestone boundary** — not
+only at End Session — per the Increment & Milestone Completion Checkpoint in CLAUDE.md. Add a dated
+convention block here whenever an increment establishes a permanent client/product decision.
+
 ---
 
 # One-Line Reminder
@@ -440,3 +450,36 @@ calm, retryable states. Preferences remain the optimistic + offline-queued path.
 Deletion is a **reversible grace-window request** (returns `execute_after`), not an immediate wipe.
 The client mirrors the F-3 ownership-transfer gate for early UX, but the server re-checks and stays
 authoritative. Destructive confirms use a native focus-trapped Alert until CMP_DIALOG exists.
+
+---
+
+# Mobile Client Conventions (M7–M8, 2026-07-18)
+
+## Notifications (M7, MOD_notifications)
+Scheduling is **always server-side** (SVC_notify_scheduler); the client only registers a push token
+and per-channel preferences — it never schedules locally. Preferences are server-authoritative and
+stored in `user_profile.notif_prefs` (JSON). All permission / token / foreground / tap-routing work
+flows through the **NotificationAdapter** port; `expo-notifications` is a deferred dependency, so a
+**NullNotificationAdapter** is used until it is installed on the Mac (permission `undetermined`, no
+token, nothing fabricated). Notification-tap deep links route through the existing router (incl.
+`panchangpal://invite/{token}`). Sunrise/tithi-timed content stays gated by ADR-033.
+
+## Subscription & entitlement (M8, MOD_subscription)
+Entitlement is **server-authoritative, household-grain (F-4), and READ-ONLY on the device.** The
+`entitlement` table denies all client writes (migration 20260712000060); the RevenueCat webhook
+(SVC_revenuecat_webhook) is the sole writer. The client reads entitlements under household-member RLS
+and a Realtime seam propagates webhook grant/revoke (the Realtime callback is a refetch signal only —
+it carries no payload, so no cross-household data leaks even if the stream is broad).
+
+Subscriptions flow through the **PaymentAdapter** port (offerings / purchase / restore); there is **no
+receipt logic on the device** and entitlement is **never granted client-side**. `react-native-purchases`
+is a deferred dependency, so a **NullPaymentAdapter** is used until it lands (reports no offerings and an
+honest `unavailable` purchase outcome — never a fabricated success). Prices always come from the store,
+never hardcoded.
+
+v1 gated premium capabilities (product decision 2026-07-18): **`deep_dive_content`** and
+**`extended_ask_guru`**. The **daily practice loop is NEVER gated** (P4), and Ask Guru's honest-decline
+behavior is never gated. Gating is contextual and dismissible (`usePremiumGate` fails open while loading
+so a paywall never flashes over cached content). The Family plan is an offering behind **FF_FAMILY_PLAN**
+(M8 Increment 3), not an in-app gate. Entitlement is trusted from server-set `is_active` only — the client
+never computes expiry (thin-client, server-authoritative).

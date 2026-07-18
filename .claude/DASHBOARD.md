@@ -2,7 +2,7 @@
 
 # PanchangPal Dashboard
 
-Version: 1.4.0
+Version: 1.4.1
 
 Last Updated: 2026-07-18
 
@@ -41,7 +41,10 @@ PanchangPal
 
 Progress
 
-96%
+92%
+
+(Canonical progress metric — 7 of 8 slices complete + M8 Increment 1 of 3. PROJECT_STATUS.md and
+CURRENT_MILESTONE.md must report this same number; DASHBOARD.md is authoritative if they diverge.)
 
 Prior phases ✅ complete: Documentation → Repository & Platform Foundation → Backend Foundation.
 
@@ -171,6 +174,16 @@ Before coding: read PROJECT_MEMORY.md · CURRENT_MILESTONE.md · SESSION.md · T
 Only retrieve additional documentation if required.
 
 ---
+
+# Increment / Milestone Completion Checklist
+
+Run this at EVERY increment or milestone boundary — not only at End Session (see the Increment &
+Milestone Completion Checkpoint in CLAUDE.md):
+
+□ Update DASHBOARD.md (progress %, current task/objective) · □ Update PROJECT_STATUS.md ·
+□ Update CURRENT_MILESTONE.md (slice/increment status) · □ Update IMPLEMENTATION_ROADMAP.md ("where we are")
+□ Update SESSION.md · □ Update TASK.md · □ Keep the progress % identical across DASHBOARD / PROJECT_STATUS / CURRENT_MILESTONE
+□ Update DECISIONS.md (only if a permanent decision was made) · □ Update PROJECT_MEMORY.md (only if permanent knowledge changed)
 
 # End Session Checklist
 

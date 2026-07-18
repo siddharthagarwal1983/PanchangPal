@@ -2,35 +2,51 @@
 
 # PanchangPal — Implementation Roadmap
 
-Version: 1.1.0
-Last Updated: 2026-07-12 (DevOps platform audit + hardening)
+Version: 1.2.0
+Last Updated: 2026-07-18 (M7 Notifications + M8 Subscription Increment 1 complete)
 
 Purpose: the forward plan from the current state. Complements PROJECT_STATUS.md (snapshot) and
-CURRENT_MILESTONE.md (active milestone). Updated when scope or sequencing changes.
+CURRENT_MILESTONE.md (active milestone). Updated when scope or sequencing changes — and at every
+increment/milestone boundary per the Increment & Milestone Completion Checkpoint in CLAUDE.md.
 
 ---
 
-## Where we are (2026-07-12)
+## Where we are (2026-07-18)
 
 Documentation, ADRs (33), OpenAPI, DB schema + migrations, monorepo scaffold, Expo app shell,
-CI/CD, and Backend Foundation independent work are complete. Overall ~76%.
+CI/CD, Backend Foundation, and the design system are complete. The Mobile MVP — Phase 1 feature
+slices are ~92% done: M1 App Shell, M2 Today, M3 Guided Ritual, M4 Calendar Shell, M5 Ask Guru,
+M6 Profile/Household, and M7 Notifications are complete; M8 Subscription is in progress with
+Increment 1 (household-grain entitlement read + gating) complete and awaiting review.
+
+Next up: **M8 Subscription Increment 2** (SCR_SUBSCRIPTION_001 + plans/purchase/restore via the
+PaymentAdapter + affordance wiring), then Increment 3 (paywall sheet + routing + FF_FAMILY_PLAN).
 
 One blocker: the Canonical Panchang Engine (ADR-033, Proposed) — astronomical algorithm
-undocumented; the whole backend depends only on the abstract PanchangEngine interface, so this
-blocks ONLY panchang compute + sunrise/tithi notifications, with zero rework when it lands.
+undocumented; the whole system depends only on the abstract PanchangEngine/PanchangProvider
+interfaces, so this blocks ONLY panchang compute + sunrise/tithi notifications, with zero rework
+when it lands.
 
 ---
 
 ## Track A — Product build (unblocked, proceed now)
 
-1. Design System & Component Library — tokens (PDD Part 3 §6) + CMP_* (a11y-first). <- next
-2. Mobile feature slices (MOD_*) — today, calendar, ask-guru, you, onboarding/auth; offline
-   queue + sync client; AI streaming client; notifications + IAP clients (TDD Part 4).
-   - Note: the Today panchang view renders "temporarily unavailable" until the engine lands;
-     ritual completion / streak / checklist / Ask Guru / household all work now.
-3. AI corpus ingestion + eval harness — run SVC_content_ingest on the reviewed corpus; calibrate
+1. ✅ Design System & Component Library — tokens (PDD Part 3 §6) + CMP_* (a11y-first).
+2. Mobile feature slices (MOD_*) — 🚧 nearly done.
+   - ✅ M1 App Shell · M2 Today · M3 Guided Ritual · M4 Calendar Shell · M5 Ask Guru ·
+     M6 Profile/Household · M7 Notifications.
+   - 🚧 M8 Subscription — Increment 1 done (entitlement read + gating); **Increment 2 next**
+     (SCR_SUBSCRIPTION_001, CMP_PLAN_CARD/VALUE_LIST/LEGAL_FOOTNOTE, plans/purchase/restore via the
+     PaymentAdapter, deep-dive + extended-Ask-Guru affordance wiring); Increment 3 after
+     (contextual paywall sheet, panchangpal://subscription routing, FF_FAMILY_PLAN).
+   - Note: the Today panchang view and Calendar markers render "temporarily unavailable" until the
+     engine lands; ritual completion / streak / checklist / Ask Guru / household / notifications
+     prefs all work now. Live Ask Guru answers stay gated (GURU_LIVE=false).
+3. Backend Edge Functions (client contracts already coded) — SVC_household (member/invite),
+   SVC_notify_scheduler (notify/schedule), SVC_revenuecat_webhook (entitlement grant/revoke).
+4. AI corpus ingestion + eval harness — run SVC_content_ingest on the reviewed corpus; calibrate
    F-6/F-16 on the eval sets; refusal test set in CI (needs the corpus, PDD §9.8).
-4. Backend DB wiring hardening — flesh repository upserts vs a live Supabase test project; green
+5. Backend DB wiring hardening — flesh repository upserts vs a live Supabase test project; green
    the pgTAP integration suite; add per-endpoint contract tests.
 
 ## Track B — Canonical Panchang Engine (owner-driven, unblocks the rest)
@@ -48,8 +64,11 @@ blocks ONLY panchang compute + sunrise/tithi notifications, with zero rework whe
 - ✅ DevOps platform audit + hardening (2026-07-12): canonical env inventory, secrets matrix,
   6 `.env.*.example` templates, `scripts/preflight.sh` (fail-fast) + `scripts/bootstrap.sh`,
   workflow hardening (least-privilege, retries, `db-tests`/`security-scan` toolchain, preflight
-  gates, summaries), `docs/SETUP.md`, `docs/devops/*`, `DEVOPS_AUDIT_REPORT.md`, and the canonical `docs/devops/CONFIGURATION_REGISTRY.md`. No deploy
-  behavior changed. See DEVOPS_AUDIT_REPORT.md.
+  gates, summaries), `docs/SETUP.md`, `docs/devops/*`, `DEVOPS_AUDIT_REPORT.md`, and the canonical
+  `docs/devops/CONFIGURATION_REGISTRY.md`. No deploy behavior changed. See DEVOPS_AUDIT_REPORT.md.
+- ⏳ Install deferred vendor deps on the Mac (`expo-notifications`, `react-native-purchases`) + keys;
+  swap NullNotificationAdapter / NullPaymentAdapter for the concrete adapters (one-line composition-root
+  changes).
 - ⏳ Provision dev/staging/prod Supabase projects + secrets; apply migrations via CD. (Pipeline +
   preflight ready; infra/credentials not yet configured — see DEPLOYMENT_READINESS.md.)
 - ⏳ Add `eas.json` + EAS credentials; flip CD deploy scaffolds to real.
@@ -60,10 +79,13 @@ blocks ONLY panchang compute + sunrise/tithi notifications, with zero rework whe
 
 ## Milestone sequence
 
-Repository & Platform Foundation (~done) -> Backend Foundation (independent done; engine blocked)
--> Design System -> Mobile Features -> AI corpus + eval -> Beta (§10.1 go/no-go) -> Launch
-(US/AU/NZ phased). Track B runs alongside and must complete before a launch that includes panchang.
+Repository & Platform Foundation (done) -> Backend Foundation (independent done; engine blocked)
+-> Design System (done) -> Mobile Features (M1–M7 done; M8 in progress) -> AI corpus + eval ->
+Beta (§10.1 go/no-go) -> Launch (US/AU/NZ phased). Track B runs alongside and must complete before
+a launch that includes panchang.
 
 ## Remaining blockers (single source: PROJECT_STATUS.md "Known Blockers")
 
-Canonical Panchang Engine (ADR-033). Nothing else is blocking; all other tracks proceed.
+Canonical Panchang Engine (ADR-033). Ask Guru live answers gated (GURU_LIVE) until corpus/eval.
+Deferred vendor deps (expo-notifications, react-native-purchases) shipped as Null seams. Nothing
+else is blocking; all other tracks proceed.

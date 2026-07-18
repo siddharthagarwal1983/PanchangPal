@@ -2,7 +2,7 @@
 
 # PanchangPal Engineering Playbook
 
-Version: 1.0.0
+Version: 1.1.0
 
 Purpose:
 This playbook defines the standard operating procedures for working on the PanchangPal project.
@@ -72,18 +72,26 @@ Do not scan the repository.
 
 ---
 
-# Workflow 2 — End Session
+# Workflow 2 — End Session / Increment Completion
 
 Objective
 
-Prepare the project for the next working session.
+Prepare the project for the next working session, and keep the tracking docs from drifting.
+
+IMPORTANT: These updates are NOT only for "End Session." They are also mandatory at every increment
+or milestone completion — see the **Increment & Milestone Completion Checkpoint** in CLAUDE.md, which
+is the authoritative list. Run that checkpoint the moment a slice/increment/milestone is finished.
 
 Procedure
 
 Update:
 
-- SESSION.md
+- DASHBOARD.md (progress %, current task/objective)
 - PROJECT_STATUS.md
+- CURRENT_MILESTONE.md (slice/increment status)
+- IMPLEMENTATION_ROADMAP.md ("where we are")
+- SESSION.md
+- TASK.md
 
 Update only if permanent information changed:
 
@@ -95,6 +103,8 @@ Then:
 - Recommend the next task.
 - Record blockers.
 - Record modified files.
+- Keep the progress % identical across DASHBOARD.md / PROJECT_STATUS.md / CURRENT_MILESTONE.md
+  (DASHBOARD.md is authoritative if they diverge).
 
 Keep SESSION.md concise.
 
@@ -194,7 +204,11 @@ docs/database/
 
 Save migrations to:
 
-supabase/migrations/
+apps/backend/migrations/
+
+(Corrected 2026-07-18 — migrations live under `apps/backend/`, per DEC-022 in DECISIONS.md and the
+actual repo layout. `supabase/` holds only `config.toml`. The earlier `supabase/migrations/` value
+was wrong.)
 
 ---
 
