@@ -84,13 +84,30 @@ locally only if the owner pushes — this session did not push.
 ---
 
 # Pending Work
-M8 Increment 3 review. Then the **Beta Readiness & Platform Hardening** milestone (TDD Part 5):
-provision Supabase envs + secrets, CD migrations, Sentry/analytics dashboards + alerts, DR restore
-drill, E2E (Maestro FLOW_*), OWASP Mobile review, phased store rollout.
+M8 Increment 3 shipped (PR #7, CI + CD green on main). The **Beta Readiness & Platform Hardening**
+milestone is now open and sliced B1–B8 in CURRENT_MILESTONE.md. TASK.md is set to **B1 —
+Environments & secrets (fail-closed)**.
+
+---
+
+# Milestone transition note (2026-07-18)
+
+Before slicing, the CD pipeline was inspected rather than trusted. Findings that shaped the slicing:
+
+- `scripts/migrate.sh` hard-fails on an empty DB URL (`${1:?}`) and ran 1m22s → the **staging
+  Supabase project is real** and migrations genuinely applied. Edge Function deploys are real too.
+- The **Maestro E2E job is a placeholder** (`echo "maestro test tests/flows"`); there is no
+  `.maestro/` directory and no FLOW_* specs. It "passed" in 5s.
+- The **EAS build job is a placeholder**; there is no `eas.json`. It "passed" in 19s.
+- `scripts/preflight.sh` **warns** on unset secrets and then `exit 0` — it cannot fail a deploy.
+
+So CD's green status currently overstates what is verified. B1 (environments + fail-closed
+preflight) and B2 (real E2E) are sequenced first for that reason.
 
 ---
 
 # Recommended Next Task
-Review M8 Increment 3. On approval, open the Beta Readiness & Platform Hardening milestone —
-starting with provisioning a live Supabase project and applying migrations via CD, which also
-unblocks the first real integration run of the entitlement and feature-flag reads added here.
+**B1 — Environments & secrets.** Provision dev + prod Supabase projects alongside staging, place
+per-environment secrets per §4.1, and make `preflight.sh` fail closed so a missing required secret
+blocks the job. Note the provisioning and credential placement are owner-performed — this session
+can prepare scripts, config, and instructions but must not handle credential values.

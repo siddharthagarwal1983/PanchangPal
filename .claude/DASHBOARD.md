@@ -2,9 +2,9 @@
 
 # PanchangPal Dashboard
 
-Version: 1.5.0
+Version: 1.6.0
 
-Last Updated: 2026-07-18 (M8 Increment 3 complete — Mobile MVP feature-complete)
+Last Updated: 2026-07-18 (Beta Readiness milestone opened)
 
 Purpose:
 This is the first file Claude should read at the beginning of every session.
@@ -37,22 +37,25 @@ PanchangPal
 
 # Current Phase
 
-🚧 Mobile MVP — Phase 1 (Feature Slices)
+🚧 Beta Readiness & Platform Hardening (TDD Part 5)
 
 Progress
 
-100%
+0%
 
-(Canonical progress metric — 8 of 8 slices complete. PROJECT_STATUS.md and
+(Canonical progress metric — 0 of 8 Beta Readiness slices complete. PROJECT_STATUS.md and
 CURRENT_MILESTONE.md must report this same number; DASHBOARD.md is authoritative if they diverge.)
 
-Prior phases ✅ complete: Documentation → Repository & Platform Foundation → Backend Foundation.
+Mobile MVP Phase 1: ✅ 100% (M1–M8, merged 2026-07-18).
+
+Prior phases ✅ complete: Documentation → Repository & Platform Foundation → Backend Foundation →
+Mobile MVP Phase 1 (M1–M8).
 
 ---
 
 # Current Milestone
 
-Mobile MVP — Phase 1
+Beta Readiness & Platform Hardening
 
 See:
 
@@ -62,14 +65,10 @@ CURRENT_MILESTONE.md
 
 # Current Task
 
-Milestone 7 — Notifications ✅ COMPLETE (reviewed/approved).
-Milestone 8 — Subscription: Increment 1 (entitlement read + gating) ✅ COMPLETE (approved).
-Milestone 8 — Subscription: Increment 2 (SCR_SUBSCRIPTION_001 + plans/purchase/restore + affordance
-wiring) ✅ COMPLETE (approved, merged as PR #4).
-Milestone 8 — Subscription: Increment 3 (contextual paywall sheet + panchangpal://subscription
-routing + FF_FAMILY_PLAN) ✅ COMPLETE (awaiting review).
-**Mobile MVP Phase 1 (M1–M8) is feature-complete.**
-Next: transition to Beta Readiness & Platform Hardening (TDD Part 5).
+**Mobile MVP Phase 1 (M1–M8) is complete and merged to main** (M8 Increment 3 = PR #7, 2026-07-18).
+
+Beta Readiness & Platform Hardening is now open, sliced B1–B8.
+Current: **B1 — Environments & secrets (fail-closed)**. Not started.
 
 See:
 
@@ -79,14 +78,13 @@ TASK.md
 
 # Today's Objective
 
-All eight Mobile MVP feature slices are complete: App Shell, Today, Guided Ritual, Calendar Shell,
-Ask Guru, Profile/Household, Notifications, and Subscription. M8 closed with Increment 3 — the
-contextual paywall sheet (CMP_BOTTOM_SHEET + CMP_PLAN_CARD composed at `app/modal/paywall`),
-`panchangpal://subscription` routing to SCR_SUBSCRIPTION_001, and FF_FAMILY_PLAN gating the Family
-offering via a new fail-closed feature-flag read seam. Panchang compute + Ask Guru live answers
-remain gated (ADR-033 / corpus+eval).
+Open the Beta Readiness milestone. The MVP is feature-complete, but **CD reports green while two of
+its jobs are placeholders** — Maestro E2E is an `echo` and the EAS build is a stub, and
+`preflight.sh` only warns on missing secrets before exiting 0. Staging migrations and Edge Function
+deploys are real. B1 (environments + fail-closed preflight) and B2 (real E2E) exist to close that
+gap before anything else is built on top of it.
 
-Do not introduce new architecture.
+No new product scope in this milestone.
 
 ---
 
@@ -107,16 +105,17 @@ Do not introduce new architecture.
 | Mobile — Notifications | ✅ M7 |
 | Mobile — Subscription | ✅ M8 |
 | AI Platform | 🟡 adapters done; corpus + eval pending |
-| Testing | 🟡 unit/component/domain in place; E2E pending |
-| Beta | ⏳ |
+| Testing | 🟡 unit/component/domain green in CI; E2E is a CD placeholder (B2) |
+| Beta | 🚧 In progress (B1–B8) |
 | Production | ⏳ |
 
 ---
 
 # Current Priorities
 
-1. Beta Readiness & Platform Hardening (TDD Part 5) — the next milestone
-2. ⛔ Canonical Panchang Engine decision (ADR-033) — unblocks Today panchang, Calendar markers, notifications
+1. Beta Readiness B1 — environments & fail-closed preflight
+2. Beta Readiness B2 — replace the Maestro placeholder with real FLOW_* specs
+3. ⛔ Canonical Panchang Engine decision (ADR-033) — unblocks Today panchang, Calendar markers, notifications
 3. AI corpus ingestion + eval readiness — unblocks live Ask Guru (GURU_LIVE)
 4. Backend Edge Functions: SVC_household, SVC_notify_scheduler, SVC_revenuecat_webhook (client contracts coded)
 5. Apply migrations to a live Supabase project + integration run
@@ -147,14 +146,15 @@ concrete adapters are one-line swaps once the deps + keys land on the Mac.
 
 # Next Deliverable
 
-Beta Readiness & Platform Hardening (TDD Part 5) — provision Supabase envs, CD migrations, Sentry +
-dashboards, E2E (Maestro FLOW_*), OWASP Mobile review, phased store rollout.
+Beta Readiness — Slice B1: Environments & secrets (dev + prod Supabase projects, per-env secrets,
+fail-closed preflight)
 
 ---
 
 # After Current Deliverable
 
-Beta (TestFlight / Play Internal) → phased production release (US/AU/NZ)
+B2 E2E → B3 builds/distribution → B4 observability → B5 DR → B6 security/privacy → B7 release
+mechanics → B8 go/no-go → phased production release (US/AU/NZ)
 
 ---
 
@@ -200,9 +200,12 @@ Milestone Completion Checkpoint in CLAUDE.md):
 
 # Executive Summary
 
-Documentation and architecture are frozen. The repository, platform foundation, and backend
-SVC_* are complete. **The Mobile MVP (Phase 1) is feature-complete**: all eight slices — App Shell,
-Today, Guided Ritual, Calendar Shell, Ask Guru, Profile/Household, Notifications, and Subscription —
-are implemented, tsc-clean, and green in test. The project now transitions to Beta Readiness &
-Platform Hardening (TDD Part 5). The only architectural blocker is the Canonical Panchang Engine
+Documentation and architecture are frozen. The repository, platform foundation, backend SVC_*, and
+**the full Mobile MVP (M1–M8)** are complete and merged to main. The project is now in **Beta
+Readiness & Platform Hardening** (TDD Part 5), sliced B1–B8: environments, E2E, builds,
+observability, DR, security/privacy, release mechanics, and go/no-go.
+
+The defining issue at the start of this milestone is that CD's green status overstates what is
+actually verified — the Maestro E2E and EAS build jobs are placeholders and preflight cannot fail a
+deploy on a missing secret. B1 and B2 address that directly. The only architectural blocker is the Canonical Panchang Engine
 decision (ADR-033); Ask Guru live answers are intentionally gated until corpus/eval readiness.
