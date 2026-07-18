@@ -135,6 +135,24 @@ Used By · Environment(s) · Source · Owner · Validation Rule · Related Docs 
 - **Used By:** `.github/workflows/cd.yml` (promote-production), `scripts/preflight.sh` · **Environment(s):** CI → Production · **Source:** GitHub Environment Secret (`production`) · **Owner:** Platform
 - **Validation:** `^postgres(ql)?://` · **Related Docs:** SECRETS_MATRIX.md · **Related ADR:** ADR-018 · **Notes:** never exposed to staging jobs; behind manual approval.
 
+#### `SUPABASE_PROD_REF`
+- **Category:** Supabase / Deployment · **Description:** Production project ref for function deploy.
+- **Required:** Yes (production promotion) · **Sensitive:** No (identifier) · **Default:** — · **Example:** `abcdprodref`
+- **Used By:** `scripts/preflight.sh` · **Environment(s):** CI → Production · **Source:** GitHub Environment Secret (`production`) (or Variable) · **Owner:** Platform
+- **Validation:** `^[a-z0-9]{20}$`-ish project ref · **Related Docs:** SECRETS_MATRIX.md · **Related ADR:** ADR-024 · **Notes:** added 2026-07-18 (B1). The production counterpart of `SUPABASE_STAGING_REF` was missing entirely, so `supabase functions deploy --project-ref` had no ref on the prod path and preflight could pass with no way to deploy Edge Functions. **Not yet provisioned** — owner must create the secret before the first real promotion.
+
+#### `SUPABASE_DEV_DB_URL`
+- **Category:** Supabase / Deployment / Security · **Description:** Dev-project Postgres connection string for migrations.
+- **Required:** Yes (dev target) · **Sensitive:** **Yes (critical)** · **Default:** — · **Example:** `postgresql://USER:PASSWORD@HOST:5432/postgres`
+- **Used By:** `scripts/preflight.sh` · **Environment(s):** Dev · **Source:** GitHub Environment Secret (`dev`) · **Owner:** Platform
+- **Validation:** `^postgres(ql)?://` · **Related Docs:** SECRETS_MATRIX.md · **Related ADR:** ADR-018 · **Notes:** added 2026-07-18 (B1) for the `dev` environment of TDD Part 5 §1.1. **Not yet provisioned.** Distinct from the fully-local stack, which uses `supabase start` and needs no secret.
+
+#### `SUPABASE_DEV_REF`
+- **Category:** Supabase / Deployment · **Description:** Dev project ref for function deploy.
+- **Required:** Yes (dev target) · **Sensitive:** No (identifier) · **Default:** — · **Example:** `abcddevref`
+- **Used By:** `scripts/preflight.sh` · **Environment(s):** Dev · **Source:** GitHub Environment Secret (`dev`) (or Variable) · **Owner:** Platform
+- **Validation:** `^[a-z0-9]{20}$`-ish project ref · **Related Docs:** SECRETS_MATRIX.md · **Related ADR:** ADR-024 · **Notes:** added 2026-07-18 (B1). **Not yet provisioned.**
+
 #### `EXPO_ACCESS_TOKEN`
 - **Category:** Expo / EAS / Deployment · **Description:** Expo/EAS auth for build, submit, OTA.
 - **Required:** Yes (CD eas-build/prod, OTA) · **Sensitive:** **Yes** · **Default:** — · **Example:** `<expo token>`

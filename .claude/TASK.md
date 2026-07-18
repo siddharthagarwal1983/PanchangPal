@@ -47,7 +47,7 @@ applied through the pure `visibleOfferings`. tsc + eslint clean; 153 tests green
 
 # Interposed (2026-07-18): first-run defect fixes — `chore/expo-sdk-54-upgrade`
 
-Status: ✅ IMPLEMENTED, ⏳ UNREVIEWED / UNMERGED (6 commits)
+Status: ✅ COMPLETE — merged to main as PR #9 (squashed, `9d22f42`). All CI gates green.
 
 A demo attempt established that **the app had never been run**. Six defects were fixed to get it
 booting on a physical iPhone: three bundle-blockers (Metro/pnpm resolution, undeclared
@@ -57,9 +57,9 @@ fixed Realtime channel topic, crashing SCR_YOU_001). The platform was re-baselin
 along the way, because Expo Go supports only the newest SDK and an iOS dev build needs a paid Apple
 Developer membership.
 
-**Review this branch before B1** — it re-baselines the mobile platform (RN 0.81 / React 19 / New
-Architecture) and is verified only by bundling, 121 tests, and Expo Go; no native build has
-exercised it. Full narrative in SESSION.md and CURRENT_MILESTONE.md → Execution Gap.
+It re-baselines the mobile platform (RN 0.81 / React 19 / New Architecture) and is verified only by
+bundling, 121 tests, and Expo Go — **no native build has exercised it**; B3 is the first real test.
+Full narrative in SESSION.md and CURRENT_MILESTONE.md → Execution Gap.
 
 Two defects found and deliberately left open (see CURRENT_MILESTONE.md → Current Risks): repositories
 throwing on absent config, and `react-native-mmkv` being unavailable in Expo Go.
@@ -69,10 +69,12 @@ throwing on absent config, and `react-native-mmkv` being unavailable in Expo Go.
 # Current Task
 
 ## Title
-Beta Readiness — Slice B1: Environments & secrets (fail-closed)
+Beta Readiness — Slice B1: Environments & secrets
 
 Status
-⏳ NOT STARTED — begin once `chore/expo-sdk-54-upgrade` is reviewed and merged.
+🟡 IN PROGRESS on `feat/b1-bundle-gate`. Code-side work done (bundle gate; preflight `dev` target;
+`SUPABASE_PROD_REF` + `REVENUECAT_WEBHOOK_SECRET` required). Remaining work is **owner-performed**:
+provision the dev + prod Supabase projects and place the per-environment secrets.
 
 Priority
 🔴 Critical (prerequisite for every later slice; also removes a false-green deploy path)
@@ -89,9 +91,17 @@ configuration is missing.
   isolated projects, no shared databases, migrations promote dev→staging→prod).
 - **Place per-environment secrets** per §4.1; RevenueCat sandbox for dev/staging, production
   entitlements for prod.
-- **Make `scripts/preflight.sh` fail-closed.** It currently `warn`s on an unset secret and exits 0,
-  so a deploy can report green with nothing configured. Required secrets must fail the job for the
-  target environment; genuinely optional ones stay warnings.
+- ~~**Make `scripts/preflight.sh` fail-closed.**~~ **PREMISE WAS FALSE (verified 2026-07-18).** The
+  script already exits 1 on a missing required secret, and `cd.yml` calls it without `|| true` in
+  all four jobs. Proven by running it with the secrets unset: exit 1, "Stopping deployment." The
+  actual fail-open gaps were different and are fixed on `feat/b1-bundle-gate`:
+  - `SUPABASE_PROD_REF` did not exist — production required only a DB URL, so a promotion could pass
+    preflight with no project ref for `supabase functions deploy`. Now required + registered.
+  - `REVENUECAT_WEBHOOK_SECRET` was a warning at the production tier; a live release could ship with
+    webhook signatures unverifiable. Now required for production only.
+  - No `dev` target existed despite §1.1 mandating three isolated environments. Added.
+- **Add a CI bundle gate** (pulled forward from B2): `expo export --platform all`. Verified in both
+  directions — passes on main, fails on a reintroduced `disableHierarchicalLookup` defect.
 - **Confirm the prod promotion path** — the CD `Promote to production` job is a manual go/no-go gate
   (§10.1) and must fail closed too.
 
@@ -104,9 +114,15 @@ If ambiguous/conflicting: stop, explain, request clarification.
 # Deliverables
 - [ ] dev + prod Supabase projects provisioned; migrations applied dev→staging→prod
 - [ ] Per-environment secrets placed and documented against the registry (no secret in the repo)
-- [ ] preflight.sh fails closed on required secrets, per environment; warnings reserved for optional
-- [ ] CD promote-to-production gate verified as fail-closed
-- [ ] A deliberately-missing-secret run proves the job now fails (evidence, not assertion)
+- [x] preflight fails closed per environment — **already did**; premise corrected. Tightened instead:
+      `dev` target added, `SUPABASE_PROD_REF` and `REVENUECAT_WEBHOOK_SECRET` now required for prod
+- [x] A deliberately-missing-secret run proves it fails (evidence, not assertion): `production` with
+      nothing set → exit 1, 5 required items missing; all-set → exit 0; bad target → exit 2
+- [x] CI bundle gate proven to fail on a reintroduced defect, not merely to pass
+- [ ] CD promote-to-production gate end-to-end — blocked: the job chain depends on the placeholder
+      `eas-build`, so the gate cannot be exercised for real until B3
+- [ ] Two hollow CI gates (AI eval subset = `echo`; api-contract = `--passWithNoTests` with no test
+      files) — implement or explicitly de-declare; a green gate that checks nothing is worse than none
 
 # Success Criteria
 A CD run with an unset required secret FAILS. Migrations apply cleanly to all three environments.
