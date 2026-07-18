@@ -2,7 +2,8 @@
 // source and strips ESM `.js` extension imports so TS sources load under babel-jest.
 module.exports = {
   preset: 'jest-expo',
-  setupFilesAfterEnv: ['@testing-library/react-native/extend-expect'],
+  // @testing-library/react-native v13 removed the separate `extend-expect` entry point;
+  // its jest matchers are now registered automatically by the main import.
   moduleNameMapper: {
     '^@panchangpal/(.*)$': '<rootDir>/../../packages/$1/src/index.ts',
     '^(\\.{1,2}/.*)\\.js$': '$1',

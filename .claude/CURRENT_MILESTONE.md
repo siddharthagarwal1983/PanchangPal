@@ -59,6 +59,9 @@ the through-line of this milestone.
 | Staging Supabase project | ✅ Real — `migrate.sh` hard-fails on an empty URL and applied migrations in 1m22s |
 | Edge Functions → staging | ✅ Real — `supabase functions deploy` against `SUPABASE_STAGING_REF` |
 | CI gates (§2.2) | ✅ Real — lint/typecheck, unit+a11y, secret scan, RLS suite, zod contracts, AI eval subset |
+| **App bundles at all** | ⚠️ **Was broken until 2026-07-18** — no CI gate invokes Metro (see Execution Gap below) |
+| **App runs on a device** | ⚠️ **First ever run 2026-07-18**, Expo Go + local Supabase |
+| **Local backend bring-up** | ⚠️ **Was impossible until 2026-07-18** — `supabase start` always rolled back |
 | Maestro E2E (FLOW_*) | ❌ Placeholder — `echo`, no flow specs, no `.maestro/` |
 | EAS build / distribution | ❌ Placeholder — no `eas.json`, no build profiles, no signing |
 | Preflight secret checks | ⚠️ Warns then `exit 0` — cannot fail a deploy on a missing secret |
@@ -69,12 +72,49 @@ the through-line of this milestone.
 
 ---
 
+# The Execution Gap (discovered 2026-07-18)
+
+The milestone opened on the premise that CD's green status overstates what is verified because two
+jobs are placeholders. Attempting a developer demo of the finished MVP found that the gap is
+**wider than placeholder jobs**: no verification in this project — CI or local — has ever executed
+the application. `lint`, `typecheck`, and `jest` all pass without invoking Metro, and the E2E job
+that would have is the `echo` stub.
+
+Six defects had accumulated undetected across M1–M8. All were found in a single session, in the
+order they blocked progress:
+
+| # | Defect | Impact before fix | Commit |
+|---|---|---|---|
+| 1 | `metro.config.js` set `disableHierarchicalLookup = true`, which breaks pnpm's nested layout | **No platform could bundle** — expo-router's own deps unresolvable | `00aa7f8` |
+| 2 | `@babel/runtime` undeclared, though Babel injects it into every transpiled file | Bundle failure | `c822cbf` |
+| 3 | Workspace `.js` NodeNext specifiers unresolvable by Metro (tsc/jest remap them; Metro does not) | Bundle failure | `00aa7f8` |
+| 4 | `supabase/config.toml` seeds on init while migrations sit outside the CLI path | **`supabase start` always rolled back** | `fc10528` |
+| 5 | No `[auth]` section, so `enable_anonymous_sign_ins` defaulted false | Anonymous-first app unusable locally (UX-2 / ADR-009) | `fc10528` |
+| 6 | Three repositories reused a fixed Realtime channel topic | **SCR_YOU_001 crashed on render**; Household would have too | `3d1bb7d` |
+
+Defect 6 is the significant one: a genuine product bug in `src/data/`, invisible to every existing
+test, and reachable only by running the app against a live backend. Defects 1–5 are build and
+environment faults that gated the ability to find it.
+
+A separate consequence surfaced while diagnosing: nine repositories in `src/data/` default-construct
+with `getSupabase()` as a default parameter, so absent configuration throws during **module
+evaluation** of a route. expo-router then sees no default export and renders "Page could not be
+found" instead of a calm error state. `authRepository.ts:30` already carries a lazy `??=` fix and a
+comment describing this exact hazard — diagnosed once, never generalized. Not yet fixed; tracked
+below.
+
+**Implication for the milestone:** B1 and B2 were scoped to make CD honest. They must also make CI
+*execute the app*, or this class of defect keeps accumulating. A bundle gate is the cheapest
+possible fix and would have caught defects 1–3 at M1.
+
+---
+
 # Scope — the eight slices
 
 | # | Slice | Covers | Status |
 |---|---|---|---|
 | B1 | Environments & secrets | dev/staging/prod projects, per-env secrets, fail-closed preflight (§1, §4) | ⏳ |
-| B2 | E2E verification | real Maestro FLOW_* replacing the stub; green on staging (§2.2, §10.1) | ⏳ |
+| B2 | E2E verification | **bundle/build gate in CI** + real Maestro FLOW_* replacing the stub; green on staging (§2.2, §10.1) | ⏳ |
 | B3 | Build & distribution | eas.json profiles, Hermes, signing, source maps, TestFlight / Play Internal (§2.3) | ⏳ |
 | B4 | Observability | Sentry, telemetry, SLO dashboards + alerts (§7) | ⏳ |
 | B5 | Reliability & DR | backups, restore drill, runbooks, graceful degradation (§8) | ⏳ |
@@ -91,7 +131,9 @@ One slice per session, same cadence as M1–M8: implemented, self-verified, revi
 - [ ] **B1** — dev + prod Supabase projects provisioned alongside staging; per-environment secrets
       placed per §4.1; `preflight.sh` made fail-closed so a missing secret blocks a deploy instead
       of warning; RevenueCat sandbox wired for dev/staging.
-- [ ] **B2** — Maestro installed in CD; `FLOW_*` specs authored for the daily loop, ritual, Ask Guru,
+- [ ] **B2** — a **bundle gate** (`expo export` for ios+android) added to CI so a change that cannot
+      build fails the PR — this alone would have caught three of the six defects above at M1;
+      Maestro installed in CD; `FLOW_*` specs authored for the daily loop, ritual, Ask Guru,
       household invite, and subscription paths; the placeholder step deleted; green on staging.
 - [ ] **B3** — `eas.json` with dev/staging/prod profiles; Hermes on; EAS Build + Submit wired;
       Sentry source maps uploaded per build; a real build distributed to TestFlight / Play Internal.
@@ -128,8 +170,23 @@ testers' hands.
 
 # Current Risks
 
-- **False-green CI/CD** — the top risk. Placeholder jobs report success, so a regression could ride
-  through unnoticed. B1 and B2 exist to close this first.
+- **False-green CI/CD** — the top risk, and confirmed materially worse than first scoped. Beyond the
+  placeholder jobs, **CI has never executed the app at all**: six defects (three of them
+  bundle-blocking) accumulated across M1–M8 behind a fully green pipeline. See the Execution Gap
+  section. B1 and B2 close this first; B2 now carries a bundle gate.
+- **Untriaged defects found while demoing (2026-07-18)** — two remain open:
+  - **Repositories throw on absent config.** Nine `src/data/` repositories default-construct with
+    `getSupabase()`, so a misconfigured build fails during route module evaluation and shows
+    "Page could not be found" rather than a calm error state — poor against the trust-first and
+    offline-first principles, and a fail-*obscure* rather than fail-closed behaviour that B1 cares
+    about. Fix is to generalize the lazy `??=` already present in `authRepository.ts:30`.
+  - **`react-native-mmkv` is unavailable in Expo Go**, so the Ritual screen crashes there at any SDK
+    version. It sits behind the `KeyValueStore` port in `ritualSessionRepository.ts:7`, so an
+    Expo Go-compatible fallback is contained — but a development build (B3) removes the constraint
+    entirely and is the better answer if EAS lands first.
+- **SDK 54 native runtime unverified** — the platform was re-baselined to Expo 54 / RN 0.81 /
+  React 19 with the New Architecture default, verified only through bundling, tests, and Expo Go.
+  No simulator or native build has exercised it. B3 is the first real test.
 - **Deferred vendor deps** — `react-native-purchases` and `expo-notifications` are still uninstalled;
   purchase and push flows cannot be verified end-to-end until they land on the Mac with keys. Their
   Null adapters keep the app honest but leave those paths E2E-untested.

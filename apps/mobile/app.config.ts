@@ -11,6 +11,10 @@ const config: ExpoConfig = {
   version: '0.1.0',
   orientation: 'portrait',
   platforms: ['ios', 'android'],
+  // Config plugins required from SDK 54 — these packages now ship native config that must
+  // be declared explicitly (previously autolinked). `expo install` cannot write to a
+  // dynamic (.ts) config, so they are maintained here by hand.
+  plugins: ['expo-localization', 'expo-router', 'expo-secure-store'],
   extra: {
     // Populated from EXPO_PUBLIC_* env at build time (TDD Part 1 §7.2).
     supabaseUrl: process.env.EXPO_PUBLIC_SUPABASE_URL,

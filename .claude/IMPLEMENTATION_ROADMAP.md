@@ -23,7 +23,14 @@ FF_FAMILY_PLAN offering gate), merged to main as PR #7.
 The **Beta Readiness & Platform Hardening** milestone (TDD Part 5) is now open, sliced B1–B8:
 environments & secrets · E2E · build/distribution · observability · reliability & DR ·
 security & privacy · release management · go/no-go. Current slice: **B1 — Environments & secrets
-(fail-closed)**.
+(fail-closed)**, gated on reviewing `chore/expo-sdk-54-upgrade` first.
+
+**Correction to "complete" (2026-07-18):** M1–M8 are feature-complete as written, but none of that
+code had ever been executed — the first attempt to run the app found three bundle-blocking defects,
+two local-backend faults, and one crashing product bug. They are fixed on
+`chore/expo-sdk-54-upgrade` (unmerged), which also re-baselines the platform to Expo SDK 54 /
+RN 0.81 / React 19. The app now boots on a physical iPhone against a local Supabase stack. Read
+"feature-complete" as "written and unit-tested", not "known to run", for anything predating this.
 
 Verified starting position: staging migrations and Edge Function deploys are real, but the Maestro
 E2E and EAS build CD jobs are placeholders and `preflight.sh` warns-then-exits-0 on missing secrets,
