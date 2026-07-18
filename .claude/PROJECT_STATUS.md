@@ -4,7 +4,7 @@
 
 Version: 1.3.0
 
-Last Updated: 2026-07-18 (M8 Subscription Increment 3 complete — Mobile MVP feature-complete)
+Last Updated: 2026-07-18 (Mobile MVP merged to main; Beta Readiness milestone opened)
 
 Purpose:
 This document provides a high-level snapshot of the overall project.
@@ -39,7 +39,7 @@ Overall Progress
 
 ██████████████████▏░
 
-**100% Complete** (Mobile MVP — Phase 1: all 8 slices done)
+**Mobile MVP — Phase 1: ✅ 100% (all 8 slices, merged)** · **Beta Readiness & Platform Hardening: 🚧 0% (0 of 8 slices)**
 
 Project Health
 
@@ -94,7 +94,7 @@ Current Focus
 - M8 Subscription — ✅ complete (3 increments):
   - Increment 1 (household-grain entitlement read + gating) — ✅ complete, approved.
   - Increment 2 (SCR_SUBSCRIPTION_001 + plans/purchase/restore + affordance wiring) — ✅ complete, merged as PR #4.
-  - Increment 3 (contextual paywall sheet + panchangpal://subscription routing + FF_FAMILY_PLAN) — ✅ complete, awaiting review.
+  - Increment 3 (contextual paywall sheet + panchangpal://subscription routing + FF_FAMILY_PLAN) — ✅ complete, merged as PR #7.
 
 Completed slices: M1 App Shell · M2 Today · M3 Guided Ritual · M4 Calendar Shell · M5 Ask Guru ·
 M6 Profile/Household · M7 Notifications.
@@ -229,7 +229,7 @@ Implementation: Mobile MVP Phase 1 is feature-complete (M1–M8).
 
 Priority 1
 
-Beta Readiness & Platform Hardening (TDD Part 5) — environments, observability, E2E, security review, phased rollout
+Beta Readiness — Slice B1: Environments & secrets (dev + prod Supabase projects, per-env secrets, fail-closed preflight)
 
 Priority 2
 
@@ -274,7 +274,7 @@ prefs work today, so gating and prefs are real before the SDKs are wired.
 
 # Next Major Deliverables
 
-- Beta Readiness & Platform Hardening (TDD Part 5) — provision Supabase envs, CD migrations, Sentry + dashboards, Maestro E2E, OWASP review
+- Beta Readiness B1 (environments + fail-closed preflight), then B2 (replace the Maestro E2E placeholder with real FLOW_* specs)
 - Reviewed AI content corpus + evaluation harness (unblocks live Ask Guru)
 - Backend Edge Functions — SVC_household, SVC_notify_scheduler, SVC_revenuecat_webhook
 - Initial Supabase Project (apply migrations) + integration run
@@ -305,7 +305,7 @@ prefs work today, so gating and prefs are real before the SDKs are wired.
 - Mobile Milestone 6 (Profile/Household / MOD_you): server-authoritative preferences (owner-RLS, optimistic + offline queue); SCR_SETTINGS_001 / SCR_PROFILE_001; household domain + householdRepository (RLS read + SVC_household writes + Realtime member seam); useHousehold/useInvite; CMP_MEMBER_ROW/ROLE_PICKER/SHARE_BUTTON/INVITE_*; SCR_HOUSEHOLD_001 + SCR_HOUSEHOLD_INVITE_001; account deletion (F-3 gate + grace window, SCR_DELETE_ACCOUNT_001); domain/repository tests
 - DevOps Platform Audit & Hardening (interlude, 2026-07-12): canonical env inventory (14 vars), secrets matrix, 6 .env.*.example templates, scripts/preflight.sh + bootstrap.sh, behavior-preserving workflow hardening (ci/cd/ota), docs/SETUP.md + docs/devops/*, DEVOPS_AUDIT_REPORT.md. No product/architecture/deploy-behavior changes
 - **Mobile Milestone 7 (Notifications / MOD_notifications, 2026-07-18):** opt-in priming, per-channel server-authoritative prefs (user_profile.notif_prefs JSON), push-token registration behind the NotificationAdapter seam (NullNotificationAdapter until expo-notifications lands), notification-tap deep-link routing (incl. panchangpal://invite/{token}). Scheduling is always server-side (SVC_notify_scheduler); the client only registers token + prefs. Sunrise/tithi content gated by ADR-033. Reviewed/approved
-- **Mobile Milestone 8 — Increment 3 (contextual paywall + routing + FF_FAMILY_PLAN, 2026-07-18):** CMP_BOTTOM_SHEET implemented to PDD §5.12 (specified since the component library but never built; four components already declared it a dependency) — SR-modal with focus trap, required-decision variant, Reduced-Motion fade-in-place. Contextual paywall composed of CMP_BOTTOM_SHEET + CMP_PLAN_CARD (no new CMP_*) as the `app/modal/paywall` route per TDD §3.1, reached by navigation intent so MOD_guru never imports MOD_you (§2.2 forbids cross-feature imports); Settings deep-dive + Ask Guru upsells now open it, replacing both inline cards. `panchangpal://subscription` → SCR_SUBSCRIPTION_001 in the linking table and in notification tap routing (both previously fell back to the You hub). FF_FAMILY_PLAN offering gate via a NEW fail-closed feature-flag read seam (featureFlagRepository + HOOK_useFeatureFlag, ADR-021 — nothing had ever read the `feature_flag` table), applied through the pure `visibleOfferings`. tsc + eslint clean; 153 tests green (mobile 120 / ui 33). Awaiting review
+- **Mobile Milestone 8 — Increment 3 (contextual paywall + routing + FF_FAMILY_PLAN, 2026-07-18):** CMP_BOTTOM_SHEET implemented to PDD §5.12 (specified since the component library but never built; four components already declared it a dependency) — SR-modal with focus trap, required-decision variant, Reduced-Motion fade-in-place. Contextual paywall composed of CMP_BOTTOM_SHEET + CMP_PLAN_CARD (no new CMP_*) as the `app/modal/paywall` route per TDD §3.1, reached by navigation intent so MOD_guru never imports MOD_you (§2.2 forbids cross-feature imports); Settings deep-dive + Ask Guru upsells now open it, replacing both inline cards. `panchangpal://subscription` → SCR_SUBSCRIPTION_001 in the linking table and in notification tap routing (both previously fell back to the You hub). FF_FAMILY_PLAN offering gate via a NEW fail-closed feature-flag read seam (featureFlagRepository + HOOK_useFeatureFlag, ADR-021 — nothing had ever read the `feature_flag` table), applied through the pure `visibleOfferings`. tsc + eslint clean; 153 tests green (mobile 120 / ui 33). Merged to main as PR #7
 - **Mobile Milestone 8 — Increment 2 (SCR_SUBSCRIPTION_001 + affordance wiring, 2026-07-18):** 3 new CMP_* (PLAN_CARD as accessible radio with text-not-color best-value; VALUE_LIST with SR text equivalents; LEGAL_FOOTNOTE at min-AA); SCR_SUBSCRIPTION_001 with all states (default/skeleton/empty/offline/error/success + already-premium) + You-hub entry + route registration; usePlans/usePurchase/useRestore via the PaymentAdapter seam (no device receipt logic; entitlement never granted client-side — success only invalidates the entitlement query); usePremiumGate wired at deep-dive (Settings depth) + extended Ask Guru (contextual, dismissible). Component + hook tests; tsc-clean. Approved; merged as PR #4
 - **Mobile Milestone 8 — Increment 1 (Subscription entitlement read + gating, 2026-07-18):** household-grain (F-4) entitlement READ via supabase-js RLS + realtime seam; pure mapping/rules (strict is_active; isEntitled/hasFamily/activeKind); PremiumCapability registry (deep_dive_content, extended_ask_guru) + usePremiumGate (fails open while loading; daily loop never gated); PaymentAdapter port + NullPaymentAdapter (never fabricates a purchase). Entitlement is READ-ONLY on device — the entitlement table denies all client writes (migration 20260712000060); the RevenueCat webhook is the sole writer. Domain + repository tests. Approved
 
@@ -357,7 +357,7 @@ Those belong in SESSION.md.
 ✅ Documentation → ✅ Repository Foundation → ✅ Backend Foundation → ✅ Design System →
 ✅ Authentication → ✅ Today's Panchang (shell; compute blocked by ADR-033) → ✅ Ritual Experience →
 ✅ Calendar Shell → ✅ Ask Guru AI (client; live answers gated) → ✅ Profile / Household →
-✅ Notifications → ✅ Payments (M8 complete) → 🚧 Testing → Beta → Production
+✅ Notifications → ✅ Payments (M8 complete) → 🚧 Beta Readiness (B1–B8) → Beta → Production
 
 ---
 
@@ -366,10 +366,14 @@ Those belong in SESSION.md.
 The PanchangPal project has completed the product definition and architecture phases, the
 repository and platform foundation, and the backend SVC_* services.
 
-The Mobile MVP Phase 1 feature-slice milestone is **complete (100%)**. All eight slices — App Shell,
-Today, Guided Ritual, Calendar Shell, Ask Guru Client, Profile/Household, Notifications, and
-Subscription (M1–M8) — are implemented, tsc/eslint clean, and green in test. The project now
-transitions to Beta Readiness & Platform Hardening (TDD Part 5).
+The Mobile MVP Phase 1 feature-slice milestone is **complete (100%)** and merged to main. All eight
+slices — App Shell, Today, Guided Ritual, Calendar Shell, Ask Guru Client, Profile/Household,
+Notifications, and Subscription (M1–M8) — are implemented, tsc/eslint clean, and green in CI.
+
+The project is now in **Beta Readiness & Platform Hardening** (TDD Part 5), sliced B1–B8. The
+milestone opens on a known gap: CD reports green while its Maestro E2E and EAS build jobs are
+placeholders, and `preflight.sh` cannot fail a deploy on a missing secret. Staging migrations and
+Edge Function deploys are real. B1 and B2 close that gap first.
 The only architectural blocker is the Canonical Panchang Engine decision (ADR-033); Ask Guru live
 answers are intentionally gated until corpus/eval readiness.
 
