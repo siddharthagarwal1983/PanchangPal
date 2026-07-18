@@ -1,4 +1,4 @@
-import { moveMonth, ProductionCalendarProvider, toCalendarMonthView } from '../calendar';
+import { moveMonth, ProductionCalendarProvider, toCalendarMonthView, toMonthGridDays } from '../calendar';
 import { normalizeCalendarMonth } from '../../data/calendarRepository';
 
 describe('Calendar month shell domain', () => {
@@ -21,5 +21,30 @@ describe('Calendar month shell domain', () => {
     const result = normalizeCalendarMonth({ days: [{ date: '2026-07-12', markers: ['festival', 1] }] });
     expect(result.status).toBe('available');
     if (result.status === 'available') expect(result.markers.get('2026-07-12')).toEqual(['festival']);
+  });
+});
+
+describe('toMonthGridDays', () => {
+  const labelFor = (date: string) => `label:${date}`;
+
+  it("marks today using the grid's own prop name", () => {
+    // Regression: the screen spread the domain day straight into CMP_MONTH_GRID, so the
+    // domain's `isToday` never became the component's `today`. The prop is optional, so it
+    // typechecked and silently defaulted to false — today was unmarked in every month.
+    const view = toCalendarMonthView(new Date(2026, 6, 1), new Date(2026, 6, 19));
+    const days = toMonthGridDays(view.days, labelFor);
+    expect(days.filter((d) => d.today).map((d) => d.day)).toEqual([19]);
+  });
+
+  it('carries one entry per day, with keys and labels intact', () => {
+    const view = toCalendarMonthView(new Date(2026, 6, 1), new Date(2026, 6, 19));
+    const days = toMonthGridDays(view.days, labelFor);
+    expect(days).toHaveLength(31);
+    expect(days[0]).toMatchObject({ day: 1, key: '2026-07-01', label: 'label:2026-07-01', today: false });
+  });
+
+  it('marks nothing when today falls outside the month', () => {
+    const view = toCalendarMonthView(new Date(2026, 6, 1), new Date(2026, 7, 3));
+    expect(toMonthGridDays(view.days, labelFor).some((d) => d.today)).toBe(false);
   });
 });
