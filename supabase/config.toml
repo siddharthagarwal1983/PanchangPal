@@ -22,7 +22,15 @@ project_id = "panchangpal"
 major_version = 15
 
 [db.seed]
-enabled = true
+# MUST stay false while migrations live outside the CLI's path (schema_paths = [] below).
+# `supabase start` seeds immediately after initialising an EMPTY schema, so with the
+# migrations unapplied the seed hits a missing table ("relation \"tradition\" does not
+# exist") and the whole stack rolls back. The CLI cannot order them correctly here.
+# Local bring-up order is therefore explicit:
+#   1. supabase start
+#   2. scripts/migrate.sh "postgresql://postgres:postgres@127.0.0.1:54322/postgres"
+#   3. psql "<same url>" -f apps/backend/seed/seed.sql
+enabled = false
 # Seed path is relative to this supabase/ directory.
 sql_paths = ["../apps/backend/seed/seed.sql"]
 
@@ -31,6 +39,13 @@ sql_paths = ["../apps/backend/seed/seed.sql"]
 # see scripts/ and .github/ (CI/CD task). Kept out of the CLI default supabase/migrations
 # intentionally to honor the TDD repository layout.
 schema_paths = []
+
+[auth]
+enabled = true
+# Deferred + anonymous-first auth (UX-2 / ADR-009): app/index.tsx bootstraps by restoring
+# or creating an ANONYMOUS session before any screen renders, so local dev is unusable
+# without this enabled — the CLI defaults it to false.
+enable_anonymous_sign_ins = true
 
 # =============================================================================
 # Edge Functions (SVC_*). Sources live under apps/backend/functions per the repo
