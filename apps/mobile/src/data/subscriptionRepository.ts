@@ -16,7 +16,20 @@ const TABLE = 'entitlement';
 const COLUMNS = 'kind, is_active, granted_at, expires_at, source';
 
 export class SubscriptionRepository {
-  constructor(private readonly db: SupabaseClient = getSupabase()) {}
+  private _db?: SupabaseClient;
+
+  // Lazy client. `getSupabase()` as a default parameter is evaluated at CONSTRUCTION, which
+  // for a module-level singleton means at import — so an absent EXPO_PUBLIC_SUPABASE_URL threw
+  // "supabaseUrl is required." while a route module was still evaluating, and expo-router
+  // then reported "Page could not be found" instead of a calm error state. It also made these
+  // repositories untestable, since importing one detonated. Resolve on first real use.
+  constructor(db?: SupabaseClient) {
+    this._db = db;
+  }
+
+  private get db(): SupabaseClient {
+    return (this._db ??= getSupabase());
+  }
 
   /** Household-member read of active + inactive entitlements (RLS-scoped); [] when none exist. */
   async getEntitlements(): Promise<Entitlement[]> {
