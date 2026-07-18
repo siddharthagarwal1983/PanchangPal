@@ -135,6 +135,10 @@ jobs:
           if [ -z "$CID" ]; then echo "::error::could not find the postgres service container"; docker ps; exit 1; fi
           echo "postgres service container: $CID"
           docker exec -u root "$CID" bash -lc "apt-get update && apt-get install -y postgresql-15-pgtap"
+      # Create the extension up front: the suites call plan() before their own CREATE EXTENSION,
+      # so pgTAP must already exist in the DB when pg_prove loads each file.
+      - name: Enable pgTAP extension
+        run: psql "$DATABASE_URL" -v ON_ERROR_STOP=1 -c "CREATE EXTENSION IF NOT EXISTS pgtap;"
       - name: Preflight (CI DB prerequisites)
         run: bash scripts/preflight.sh ci || true # advisory in CI; does not gate the suite
       # The bare Postgres service lacks Supabase's managed auth schema + roles, which the
