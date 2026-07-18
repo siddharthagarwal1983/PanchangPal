@@ -18,10 +18,11 @@ export function ErrorState({ message, onRetry, retryLabel = 'Try again', testID 
   return (
     <View
       style={{ flex: 1, alignItems: 'center', justifyContent: 'center', paddingVertical: theme.spacing.xxl, gap: theme.spacing.md }}
-      accessibilityRole="alert"
       testID={testID}
     >
-      <Text variant="titleMedium" color="primary" style={{ textAlign: 'center' }}>
+      {/* Role on the message Text (an a11y element) so it announces as an alert while the retry
+          button stays an independently focusable sibling (no accessible-container collapse). */}
+      <Text accessibilityRole="alert" variant="titleMedium" color="primary" style={{ textAlign: 'center' }}>
         {message}
       </Text>
       {onRetry ? (

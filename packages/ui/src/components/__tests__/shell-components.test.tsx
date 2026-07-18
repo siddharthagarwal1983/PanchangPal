@@ -4,6 +4,7 @@
  */
 import { type ReactElement } from 'react';
 import { render, screen, fireEvent } from '@testing-library/react-native';
+import { SafeAreaProvider, type Metrics } from 'react-native-safe-area-context';
 import { ThemeProvider } from '../../theme';
 import { Screen } from '../Screen';
 import { AuthButton } from '../AuthButton';
@@ -12,6 +13,18 @@ import { OfflineBanner } from '../OfflineBanner';
 import { ErrorState } from '../ErrorState';
 
 const wrap = (ui: ReactElement) => render(<ThemeProvider>{ui}</ThemeProvider>);
+
+// BottomTabBar reads useSafeAreaInsets(), which needs a SafeAreaProvider with known metrics.
+const SAFE_AREA_METRICS: Metrics = {
+  frame: { x: 0, y: 0, width: 390, height: 844 },
+  insets: { top: 47, left: 0, right: 0, bottom: 34 },
+};
+const wrapSafeArea = (ui: ReactElement) =>
+  render(
+    <SafeAreaProvider initialMetrics={SAFE_AREA_METRICS}>
+      <ThemeProvider>{ui}</ThemeProvider>
+    </SafeAreaProvider>,
+  );
 
 describe('Application Shell components (a11y + states)', () => {
   it('Screen renders loading, error, empty, and offline states', () => {
@@ -63,9 +76,11 @@ describe('Application Shell components (a11y + states)', () => {
       onPress: jest.fn(),
       testID: `tab-${i}`,
     }));
-    wrap(<BottomTabBar items={items} />);
-    expect(screen.getByRole('tablist')).toBeTruthy();
+    wrapSafeArea(<BottomTabBar items={items} />);
+    // The tablist container is intentionally not an accessibility element (its tabs are the focus
+    // stops), so it isn't role-queryable; asserting the 4 tabs covers "a tablist with 4 tabs".
     expect(screen.getAllByRole('tab')).toHaveLength(4);
+    expect(screen.getByRole('tab', { name: /Today/ })).toBeTruthy();
   });
 
   it('OfflineBanner is a polite alert', () => {

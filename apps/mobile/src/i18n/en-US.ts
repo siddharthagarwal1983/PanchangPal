@@ -106,6 +106,11 @@ export const enUS = {
     outcomeDeclined: 'No verified answer',
     outcomeRefused: 'Outside Guru’s scope',
     outcomeError: 'Could not answer',
+    // Extended answers are a Premium capability (extended_ask_guru). Contextual, dismissible.
+    upgradeTitle: 'Want to go deeper?',
+    upgradeBody: 'Premium unlocks extended answers from Ask Guru. Your questions here always stay free.',
+    upgradeCta: 'See Premium',
+    upgradeDismiss: 'Not now',
   },
   you: {
     title: 'You',
@@ -120,7 +125,44 @@ export const enUS = {
     notificationsEntryHint: 'Reminders for your practice, festivals, and family',
     householdEntry: 'Household',
     householdEntryHint: 'Practice together with your family',
+    subscriptionEntry: 'PanchangPal Premium',
+    subscriptionEntryHint: 'Deeper guidance and richer answers',
+    subscriptionEntryActive: 'Premium active',
     aboutEntry: 'About PanchangPal',
+  },
+  subscription: {
+    title: 'PanchangPal Premium',
+    subtitle: 'Go a little deeper — richer guidance and more from Ask Guru. Your daily practice always stays free.',
+    // Plan names + cadence
+    planIndividual: 'Individual',
+    planFamily: 'Family',
+    perMonth: 'per month',
+    perYear: 'per year',
+    bestValue: 'Best value',
+    // Value list (a11y text equivalents)
+    included: 'included',
+    notIncluded: 'not included',
+    benefitDeepDive: 'Deep-dive content and richer explanations',
+    benefitExtendedGuru: 'Extended answers from Ask Guru',
+    benefitFamilyShare: 'Share Premium with your whole household',
+    // CTA
+    selectHint: 'Choose a plan to continue',
+    subscribe: 'Subscribe',
+    restore: 'Restore purchases',
+    restoreHint: 'Already subscribed? Restore on this device.',
+    // States
+    unavailable: 'Subscriptions are briefly unavailable — please try again.',
+    offline: 'Connect to the internet to manage your subscription. You can still Restore once back online.',
+    paymentFailed: "That payment didn't go through — no charge was made. You can try again or change your payment method.",
+    invalid: "We couldn't verify that purchase yet — we'll restore it automatically. You can also tap Restore.",
+    successTitle: 'Welcome to Premium',
+    successBody: 'Your Premium benefits are live. Thank you for supporting PanchangPal.',
+    activeTitle: "You're on Premium",
+    activeBody: 'Premium is active for your household. Manage or restore your subscription anytime.',
+    // Legal (renewal terms)
+    legal: 'Subscriptions renew automatically until cancelled. Manage or cancel in your app store account settings. Prices shown are set by the store.',
+    legalTerms: 'Terms of Service',
+    legalPrivacy: 'Privacy Policy',
   },
   settings: {
     title: 'Settings',
@@ -141,6 +183,11 @@ export const enUS = {
     depthHint: 'How much detail you prefer',
     depthQuick: 'Quick',
     depthDeep: 'Deep',
+    // Deep-dive is a Premium capability (deep_dive_content). Contextual, dismissible upgrade.
+    deepLockedTitle: 'Deep-dive is part of Premium',
+    deepLockedBody: 'Unlock richer, deep-dive explanations with PanchangPal Premium. Quick guidance always stays free.',
+    deepLockedCta: 'See Premium',
+    deepLockedDismiss: 'Not now',
     accountSection: 'Account',
     signOut: 'Sign out',
     signOutHint: 'Return to using the app without an account',

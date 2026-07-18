@@ -126,8 +126,26 @@ jobs:
         run: |
           sudo apt-get update
           sudo apt-get install -y --no-install-recommends postgresql-client libtap-parser-sourcehandler-pgtap-perl
+      # The pgvector service image ships pgvector but not the pgTAP server extension, so the suites'
+      # `CREATE EXTENSION pgtap` fails. Install postgresql-15-pgtap into the running service
+      # container (Debian/PGDG-based) so the extension's control files are available server-side.
+      - name: Install pgTAP into the Postgres service container
+        run: |
+          CID=$(docker ps --format '{{.ID}} {{.Image}}' | grep -i 'pgvector' | awk '{print $1}' | head -n1)
+          if [ -z "$CID" ]; then echo "::error::could not find the postgres service container"; docker ps; exit 1; fi
+          echo "postgres service container: $CID"
+          docker exec -u root "$CID" bash -lc "apt-get update && apt-get install -y postgresql-15-pgtap"
+      # Create the extension up front: the suites call plan() before their own CREATE EXTENSION,
+      # so pgTAP must already exist in the DB when pg_prove loads each file.
+      - name: Enable pgTAP extension
+        run: psql "$DATABASE_URL" -v ON_ERROR_STOP=1 -c "CREATE EXTENSION IF NOT EXISTS pgtap;"
       - name: Preflight (CI DB prerequisites)
         run: bash scripts/preflight.sh ci || true # advisory in CI; does not gate the suite
+      # The bare Postgres service lacks Supabase's managed auth schema + roles, which the
+      # migrations FK/GRANT against and the RLS suite relies on (auth.uid, SET ROLE). Stand up
+      # a CI-only equivalent before migrating. Never runs against a real Supabase project.
+      - name: Bootstrap Supabase-managed schema + roles (CI only)
+        run: psql "$DATABASE_URL" -v ON_ERROR_STOP=1 -f scripts/ci-db-bootstrap.sql
       # Apply all migrations (incl. AI operational + retrieval RPC), then run both pgTAP
       # suites: RLS policies (cross-user/household denial, service-only, F-21) and DB
       # integration (idempotent upserts, household entitlement, merge, AI helpers).
@@ -159,6 +177,9 @@ jobs:
         with: { fetch-depth: 0 }
       - name: Secret scan (gitleaks)
         uses: gitleaks/gitleaks-action@v2
+        env:
+          # gitleaks-action@v2 now requires a token to scan PRs (breaking change).
+          GITHUB_TOKEN: ${{ secrets.GITHUB_TOKEN }}
       # Finding CI-2 fix: set up Node + pnpm (with cache) instead of relying on ambient node.
       - uses: pnpm/action-setup@v4
         with: { version: '${{ env.PNPM_VERSION }}' }

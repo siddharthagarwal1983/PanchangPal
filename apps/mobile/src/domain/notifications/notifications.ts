@@ -153,7 +153,7 @@ export function routeForNotifType(type: NotifType, data?: Record<string, unknown
 export function routeForDeepLink(url: string): string | null {
   const m = /^panchangpal:\/\/([^?#]+)(?:[?#].*)?$/.exec(url.trim());
   if (!m) return null;
-  const path = m[1].replace(/\/+$/, '');
+  const path = (m[1] ?? '').replace(/\/+$/, '');
   const [head, param] = path.split('/');
   switch (head) {
     case 'today':

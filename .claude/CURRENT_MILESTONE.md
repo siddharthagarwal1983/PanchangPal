@@ -2,9 +2,9 @@
 
 # PanchangPal — Current Milestone
 
-Version: 2.2.0
+Version: 2.3.0
 
-Last Updated: 2026-07-18
+Last Updated: 2026-07-18 (M8 Increment 2 complete)
 
 Purpose:
 This document defines the current milestone. Unlike SESSION.md (daily work) or TASK.md (current
@@ -23,7 +23,7 @@ Status
 
 Overall Progress
 
-~92% (7 of 8 slices complete; M8 Increment 1 of 3 done)
+~96% (7 of 8 slices complete; M8 Increment 2 of 3 done)
 
 Previous Milestones
 
@@ -58,7 +58,7 @@ the previous is reviewed.
 | M5 | Ask Guru Client | SCR_GURU_HOME/CHAT/HISTORY_001 | ✅ Complete |
 | M6 | Profile / Household | SCR_PROFILE_001, SCR_HOUSEHOLD_*, SCR_SETTINGS_001, SCR_DELETE_ACCOUNT_001 | ✅ Complete |
 | M7 | Notifications | opt-in, prefs, deep-link routing | ✅ Complete |
-| M8 | Subscription | SCR_SUBSCRIPTION_001 (RevenueCat) | 🟡 In Progress (Inc 1/3) |
+| M8 | Subscription | SCR_SUBSCRIPTION_001 (RevenueCat) | 🟡 In Progress (Inc 2/3) |
 
 ---
 
@@ -80,8 +80,9 @@ the previous is reviewed.
 - [x] M8 Increment 1 — Entitlement read + gating: household-grain (F-4) entitlement read (supabase-js
       RLS + realtime), PaymentAdapter port + NullPaymentAdapter, PremiumCapability registry
       (deep_dive_content, extended_ask_guru), HOOK_useEntitlement + usePremiumGate.
-- [ ] M8 Increment 2 — SCR_SUBSCRIPTION_001 (CMP_PLAN_CARD/VALUE_LIST/LEGAL_FOOTNOTE), plans/purchase/
-      restore via the PaymentAdapter, and affordance wiring (deep-dive content; extended Ask Guru).
+- [x] M8 Increment 2 — SCR_SUBSCRIPTION_001 (CMP_PLAN_CARD/VALUE_LIST/LEGAL_FOOTNOTE), plans/purchase/
+      restore via the PaymentAdapter (usePlans/usePurchase/useRestore), and affordance wiring —
+      deep-dive content (Settings depth) + extended Ask Guru — via usePremiumGate (contextual, dismissible).
 - [ ] M8 Increment 3 — contextual paywall sheet, panchangpal://subscription routing, FF_FAMILY_PLAN.
 
 ---
@@ -148,4 +149,4 @@ inclusive launch.
 
 > **Current focus: build the mobile app as sequenced, production-quality feature slices — App
 > Shell, Today, Ritual, Calendar, Ask Guru, Profile/Household, and Notifications (M1–M7) done;
-> Subscription (M8) in progress (Increment 1 of 3 complete).**
+> Subscription (M8) in progress (Increment 2 of 3 complete).**

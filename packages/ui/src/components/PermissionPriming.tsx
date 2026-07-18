@@ -26,7 +26,7 @@ export interface PermissionPrimingProps {
 }
 
 export function PermissionPriming({
-  kind = 'notification',
+  // `kind` is a presentational variant kept on the public props for callers; not read in render yet.
   title,
   body,
   allowLabel,
