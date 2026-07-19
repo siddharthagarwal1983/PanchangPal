@@ -2,9 +2,9 @@
 
 # PanchangPal — Current Milestone
 
-Version: 3.0.0
+Version: 3.1.0
 
-Last Updated: 2026-07-18 (milestone opened)
+Last Updated: 2026-07-19 (B1/B2/B3 substantially built and verified)
 
 Purpose:
 This document defines the current milestone. Unlike SESSION.md (daily work) or TASK.md (current
@@ -23,7 +23,11 @@ Status
 
 Overall Progress
 
-0% (0 of 8 slices complete)
+0% (0 of 8 slices COMPLETE — B1 ~85%, B2 ~85%, B3 ~80%)
+
+A slice counts only when done. Three are most of the way there, and every remaining item in them
+is gated on money, a store account, or a later slice — not on engineering. The number stayed at 0
+through a very productive day, which is the honest reading.
 
 Previous Milestones
 
@@ -44,8 +48,13 @@ Take the feature-complete Mobile MVP to a shippable beta. **No new product scope
 is environments, verification, observability, security, and release mechanics — everything in the
 TDD Part 5 §10.1 pre-launch go/no-go checklist that engineering owns.
 
-The organizing risk: **CD reports green while much of it verifies nothing.** Staging migrations and
-Edge Function deploys are genuinely real; four gates are not.
+The organizing risk was that **CD reported green while much of it verified nothing** — six
+placeholder jobs, of which the milestone had recorded two.
+
+**That risk is now closed (2026-07-19).** Every gate in CI, CD, and E2E does real work and can
+fail: four placeholders were removed, two manual deploy jobs were made to fail loudly, and a
+bundle gate plus real E2E flows were added. The app itself — which had never been executed
+anywhere when this milestone opened — now runs on hardware, in an emulator, and in CI.
 
 ---
 
@@ -86,6 +95,37 @@ Removing them makes CI's true coverage legible. What is now owed, tracked in the
   fail once the harness exists. AI regressions must block merge (ADR-029).
 
 Standing rule recorded in `ci.yml`: **a gate is added when it can fail**, never as a placeholder.
+
+## Where each slice actually stands (2026-07-19)
+
+### B1 — Environments & secrets · ~85%
+Done: preflight fails closed on all three targets (proven by running it with secrets unset);
+`dev` target added; `SUPABASE_PROD_REF` and `REVENUECAT_WEBHOOK_SECRET` made required for prod;
+CI bundle gate; two hollow CI gates removed. **dev Supabase project provisioned**
+(`msbfcirvtzrsbhqduflr`), migrated to 32 tables, seeded, anonymous sign-in verified. Staging
+likewise, and its DB password was rotated after an exposure.
+Remaining: **the prod project needs a paid plan** — the free tier allows two projects per org and
+both are used. `promote-production` cannot be exercised end-to-end until B7/B8 implement it.
+
+### B2 — E2E verification · ~85%
+Done: Maestro 2.6.1; `tests/flows/FLOW_RETURNING.yaml` (23 steps) and
+`tests/flows/FLOW_MORNING_RITUAL.yaml` (14 steps), both green locally on arm64 and in CI on
+x86_64; `e2e.yml` builds the APK in CI and runs the flows on an emulator — **2/2 passed in 46s on
+its first run**.
+Remaining, and NOT achievable within B2: `FLOW_ONBOARDING` is unreachable because
+`app/index.tsx` hardcodes `ONBOARDED = true`; `FLOW_HOUSEHOLD_INVITE` needs the unimplemented
+`SVC_household`; the subscription path can only assert "unavailable" while
+`react-native-purchases` is deferred; `FLOW_ASK_GURU` can only exercise the gated path.
+
+### B3 — Build & distribution · ~80%
+Done: `eas.json` with three profiles and an explicit environment each; store identifiers
+(`com.panchangpal.app`, changeable until first submission); Hermes pinned; **three Android APKs
+built**; `release-build.yml` produces one unattended from a `v*` tag or dispatch; a credential
+probe that reports an unauthorized token in seconds rather than after a dependency install.
+Remaining: iOS needs an Apple Developer membership ($99/yr); the Play Internal track needs a
+Google Play account ($25); Sentry source-map upload depends on B4.
+
+---
 
 ## Placeholder audit (2026-07-18, completed during B3)
 
@@ -133,17 +173,17 @@ from the code. Verify each slice's premise against the repository before impleme
 | Staging Supabase project | ✅ Real — `migrate.sh` hard-fails on an empty URL and applied migrations in 1m22s |
 | Edge Functions → staging | ✅ Real — `supabase functions deploy` against `SUPABASE_STAGING_REF` |
 | CI gates (§2.2) | ✅ Real — lint/typecheck, unit+a11y, secret scan, RLS suite, zod contracts, AI eval subset |
-| **App bundles at all** | ⚠️ **Was broken until 2026-07-18** — no CI gate invokes Metro (see Execution Gap below) |
-| **App runs on a device** | ⚠️ **First ever run 2026-07-18**, Expo Go + local Supabase |
-| **Local backend bring-up** | ⚠️ **Was impossible until 2026-07-18** — `supabase start` always rolled back |
-| Maestro E2E (FLOW_*) | 🚫 **De-declared** 2026-07-18 — was an `echo`; still no specs, no `.maestro/`. B2 restores it |
-| EAS build / distribution | 🟡 `eas.json` + 3 profiles + Hermes landed (B3); CD job de-declared pending credentials |
+| **App bundles at all** | ✅ Fixed 2026-07-18; a CI bundle gate now proves it on every PR |
+| **App runs on a device** | ✅ iPhone (Expo Go), Android emulator, and three native APKs |
+| **Local backend bring-up** | ✅ Fixed — `supabase start` + migrate + seed documented and working |
+| Maestro E2E (FLOW_*) | ✅ **Two real flows, green in CI** (e2e.yml) — FLOW_RETURNING, FLOW_MORNING_RITUAL |
+| EAS build / distribution | ✅ Automated: `v*` tag or dispatch produces a signed APK unattended (release-build.yml) |
 | Production promotion / OTA | 🔴 **Now fail loudly** — both previously reported success while deploying nothing |
 | Preflight secret checks | ✅ **Already fail-closed** (exits 1) — the earlier "warns then exit 0" claim was wrong; see Corrected Premise below |
 | **AI eval subset gate** | 🚫 **De-declared** 2026-07-18 — was an `echo`. Restore when the Part 3 §9.4 harness lands |
 | **API / zod contract gate** | 🚫 **De-declared** 2026-07-18 — was `--passWithNoTests` against a package with no tests. Owed: real contract tests under `packages/api` |
 | **CI bundle gate** | ✅ Added 2026-07-18 (B1) — `expo export` ios+android, 55s; proven to fail on a reintroduced defect |
-| dev / prod environments | ❔ Unconfirmed — only staging is proven by a green run |
+| dev / prod environments | 🟡 **dev provisioned, migrated, seeded, anon-auth verified**; prod needs a paid plan (free tier 2/2) |
 | Sentry / dashboards / alerts | ❌ Not wired |
 | DR restore drill | ❌ Not performed |
 | OWASP Mobile review | ❌ Not performed |
@@ -174,6 +214,33 @@ Defect 6 is the significant one: a genuine product bug in `src/data/`, invisible
 test, and reachable only by running the app against a live backend. Defects 1–5 are build and
 environment faults that gated the ability to find it.
 
+Six more were found on 2026-07-19, once the app could actually be run and a backend actually
+held data. Every one of them needed *execution* — none would have been caught by typecheck, lint,
+unit tests, or the bundle gate:
+
+| # | Defect | How it presented | Commit |
+|---|---|---|---|
+| 7 | Tab bar mapped `state.routes` directly, ignoring `href: null` | all twelve routes in the tab bar, raw names as labels | `74a0586` |
+| 8 | Tab focus compared array positions, not route keys | nothing highlighted inside any nested stack | `74a0586` |
+| 9 | Calendar spread `isToday` into a prop named `today` | today never marked — **and it typechecked**, since the prop is optional and spread supplies extras | `74a0586` |
+| 10 | `new MMKV()` as a default parameter, throwing synchronously | ritual screen crashed via the ErrorBoundary; a `.catch()` could not see it | `0769dc2` |
+| 11 | Bare `on conflict do nothing` with no supporting constraint | seven duplicate checklist rows per seeded item; "Light the lamp" five times | `252c381` |
+| 12 | `babel-preset-expo` undeclared | `./gradlew assembleRelease` could not bundle; `expo run:android` broken for everyone | `c52c7c8` |
+
+**#9 is the instructive one.** `today?: boolean` is optional and object spread freely supplies
+extra properties, so `isToday` was accepted as excess and `today` as absent — simultaneously. It
+typechecked perfectly while doing nothing.
+
+**#12 hid behind a passing gate.** `expo export` resolves the preset through Expo's own dependency
+tree, so the bundle gate stayed green; Gradle invokes the React Native CLI, which resolves from the
+project directory, where pnpm had not linked it. Same source, two build paths, one broken.
+
+**A recurring shape, four times now:** an eager side effect in a default parameter —
+`getSupabase()` across nine repositories, `new MMKV()` in the session store — plus two undeclared
+transitive dependencies (`@babel/runtime`, `babel-preset-expo`) that pnpm's strict layout will not
+resolve. Both classes fail far from where they are written. A lint rule for the first and a
+dependency-declaration check for the second would pay for themselves.
+
 A separate consequence surfaced while diagnosing: nine repositories in `src/data/` default-construct
 with `getSupabase()` as a default parameter, so absent configuration throws during **module
 evaluation** of a route. expo-router then sees no default export and renders "Page could not be
@@ -191,9 +258,9 @@ possible fix and would have caught defects 1–3 at M1.
 
 | # | Slice | Covers | Status |
 |---|---|---|---|
-| B1 | Environments & secrets | dev/staging/prod projects, per-env secrets, fail-closed preflight (§1, §4) | ⏳ |
-| B2 | E2E verification | **bundle/build gate in CI** + real Maestro FLOW_* replacing the stub; green on staging (§2.2, §10.1) | ⏳ |
-| B3 | Build & distribution | eas.json profiles, Hermes, signing, source maps, TestFlight / Play Internal (§2.3) | 🟡 config done; blocked on accounts |
+| B1 | Environments & secrets | dev/staging/prod projects, per-env secrets, fail-closed preflight (§1, §4) | 🟡 ~85% — prod blocked on a paid plan |
+| B2 | E2E verification | bundle gate (done in B1) + Maestro FLOW_*; green in CI (§2.2, §10.1) | 🟡 ~85% — 2 flows green; 3 blocked by backend/vendor gaps |
+| B3 | Build & distribution | eas.json profiles, Hermes, signing, source maps, TestFlight / Play Internal (§2.3) | 🟡 ~80% — automated builds work; store accounts + Sentry (B4) remain |
 | B4 | Observability | Sentry, telemetry, SLO dashboards + alerts (§7) | ⏳ |
 | B5 | Reliability & DR | backups, restore drill, runbooks, graceful degradation (§8) | ⏳ |
 | B6 | Security & privacy | OWASP Mobile review, CCPA export/delete verification, store privacy labels (§5, §6) | ⏳ |
@@ -252,10 +319,11 @@ testers' hands.
 
 # Current Risks
 
-- **False-green CI/CD** — the top risk, and confirmed materially worse than first scoped. Beyond the
-  placeholder jobs, **CI has never executed the app at all**: six defects (three of them
-  bundle-blocking) accumulated across M1–M8 behind a fully green pipeline. See the Execution Gap
-  section. B1 and B2 close this first; B2 now carries a bundle gate.
+- ~~**False-green CI/CD**~~ — **CLOSED 2026-07-19.** Was the top risk and proved worse than scoped:
+  twelve defects accumulated behind a fully green pipeline, and the app had never been executed
+  anywhere. Now every gate does real work — bundle gate per PR, E2E flows green in CI, four
+  placeholders removed, two manual deploy jobs made to fail loudly. See the Execution Gap section
+  for the full ledger.
 - **Untriaged defects found while demoing (2026-07-18)** — two remain open:
   - **Repositories throw on absent config.** Nine `src/data/` repositories default-construct with
     `getSupabase()`, so a misconfigured build fails during route module evaluation and shows
@@ -266,9 +334,21 @@ testers' hands.
     version. It sits behind the `KeyValueStore` port in `ritualSessionRepository.ts:7`, so an
     Expo Go-compatible fallback is contained — but a development build (B3) removes the constraint
     entirely and is the better answer if EAS lands first.
-- **SDK 54 native runtime unverified** — the platform was re-baselined to Expo 54 / RN 0.81 /
-  React 19 with the New Architecture default, verified only through bundling, tests, and Expo Go.
-  No simulator or native build has exercised it. B3 is the first real test.
+- ~~**SDK 54 native runtime unverified**~~ — **CLOSED 2026-07-19.** Three Android APKs built and
+  run; the New Architecture works natively. iOS remains unbuilt (no Apple membership), so that
+  half of the baseline is still unproven.
+- **Session persistence is unverified, and deliberately unobservable.** Completing a ritual,
+  force-stopping, and reopening shows the intro again. Two causes are indistinguishable from
+  outside: either MMKV is not persisting, or `RitualSessionRepository`'s in-memory fallback
+  engaged. That fallback is SILENT by design (a screen crash was judged worse), and this is the
+  cost of that choice. Worth making it observable before beta.
+- **Seven `src/data` repositories still throw on absent config.** Two were fixed;
+  `repository-construction.test.ts` guards all ten from regressing, but the underlying
+  default-parameter pattern remains in the rest.
+- **Postgres version drift** — CI validates migrations against pg15 while both dev and staging run
+  pg17. Nothing has broken, but the gate is not testing what production will run.
+- **Onboarding is unreachable and therefore untested** — `app/index.tsx` hardcodes
+  `ONBOARDED = true`, so SCR_ONBOARDING_* never renders from launch.
 - **Deferred vendor deps** — `react-native-purchases` and `expo-notifications` are still uninstalled;
   purchase and push flows cannot be verified end-to-end until they land on the Mac with keys. Their
   Null adapters keep the app honest but leave those paths E2E-untested.

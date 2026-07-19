@@ -2,9 +2,9 @@
 
 # PanchangPal Dashboard
 
-Version: 1.6.0
+Version: 1.7.0
 
-Last Updated: 2026-07-18 (Beta Readiness milestone opened)
+Last Updated: 2026-07-19 (B1/B2/B3 built and verified; pipeline no longer overstates itself)
 
 Purpose:
 This is the first file Claude should read at the beginning of every session.
@@ -43,8 +43,10 @@ Progress
 
 0%
 
-(Canonical progress metric — 0 of 8 Beta Readiness slices complete. PROJECT_STATUS.md and
-CURRENT_MILESTONE.md must report this same number; DASHBOARD.md is authoritative if they diverge.)
+(Canonical progress metric — 0 of 8 Beta Readiness slices COMPLETE. B1 ~85%, B2 ~85%, B3 ~80%;
+a slice counts only when done, and every remaining item in those three is gated on money, a store
+account, or a later slice. PROJECT_STATUS.md and CURRENT_MILESTONE.md must report this same
+number; DASHBOARD.md is authoritative if they diverge.)
 
 Mobile MVP Phase 1: ✅ 100% (M1–M8, merged 2026-07-18).
 
@@ -65,16 +67,12 @@ CURRENT_MILESTONE.md
 
 # Current Task
 
-**Mobile MVP Phase 1 (M1–M8) is complete and merged to main** (M8 Increment 3 = PR #7, 2026-07-18).
+**No engineering task is currently blocked on engineering.** B1/B2/B3 are 80–85% each; the
+remainders need a payment, a store account, or a later slice.
 
-Beta Readiness & Platform Hardening is now open, sliced B1–B8.
-Current: **B3 — Build & distribution**, reordered ahead of B2 (B2 needs a built app binary, which
-did not exist). eas.json + 3 profiles + Hermes landed; blocked on accounts. B1's code-side work is
-done; its remainder is owner-performed Supabase provisioning.
-
-⚠️ B1's written premise — "preflight.sh warns then exits 0" — was **false**; it already failed
-closed. See CURRENT_MILESTONE.md → Corrected Premise. Verify each remaining slice's premise against
-the code before implementing it.
+Cheapest useful next steps, all free: back up the Android keystore (`eas credentials` — EAS holds
+the only copy of the signing identity), install `expo-updates` so B7 can begin, and make the
+ritual storage fallback observable so session persistence stops being unverifiable.
 
 See:
 
@@ -84,19 +82,15 @@ TASK.md
 
 # Today's Objective
 
-B1 code-side work, on `feat/b1-bundle-gate`.
+Session of 2026-07-18/19 is complete: **14 PRs merged, 12 defects fixed.**
 
-**The app had never been run.** A demo attempt on 2026-07-18 found six defects — three of them
-bundle-blocking, one a genuine product bug (SCR_YOU_001 crashed on a Realtime channel collision) —
-all accumulated across M1–M8 behind a fully green CI. `lint`, `typecheck`, and `jest` never invoke
-Metro, and the E2E job that would have is an `echo`. All six are fixed and merged to main (PR #9);
-the app now boots on a physical iPhone against a local Supabase stack.
+The app had never been executed anywhere when this milestone opened. It now runs on an iPhone, an
+Android emulator, and as three native APKs; CI compiles it on every PR; CD migrates, seeds, and
+deploys for real; two environments are provisioned and seeded; releases build unattended from a
+tag; and two Maestro E2E flows are green in CI.
 
-A **CI bundle gate** is therefore pulled forward from B2 into B1, verified to fail on a
-reintroduced resolver defect rather than merely to pass. B1's own written premise then turned out
-to be false — preflight already failed closed — so the slice became the *actual* fail-open gaps:
-a missing `SUPABASE_PROD_REF`, production treating billing secrets as warnings, and no `dev`
-target. See the Execution Gap and Corrected Premise sections in CURRENT_MILESTONE.md.
+Six of the twelve defects were found only by looking at a running app — including one that
+typechecked perfectly while doing nothing (`isToday` spread into a prop named `today`).
 
 No new product scope in this milestone.
 
@@ -119,7 +113,7 @@ No new product scope in this milestone.
 | Mobile — Notifications | ✅ M7 |
 | Mobile — Subscription | ✅ M8 |
 | AI Platform | 🟡 adapters done; corpus + eval pending |
-| Testing | 🟡 unit/component/domain green; **bundle gate added** (B1); AI-eval + api-contract gates **de-declared** (were hollow) — owed: API contract tests + Part 3 §9.4 harness; E2E still a CD placeholder (B2) |
+| Testing | 🟢 161 unit/component/domain · bundle gate per PR · **E2E 2 flows green in CI** · AI-eval + api-contract de-declared (owed: contract tests + §9.4 harness) |
 | Beta | 🚧 In progress (B1–B8) |
 | Production | ⏳ |
 
@@ -127,8 +121,8 @@ No new product scope in this milestone.
 
 # Current Priorities
 
-1. Beta Readiness B3 — a real EAS build (needs Expo account; Android-only is the cheapest path)
-2. Beta Readiness B1 remainder + B2 (3 realistic flows; B2 depends on B3)
+1. Free + useful: back up the Android keystore; install expo-updates (unblocks B7); make the ritual storage fallback observable
+2. Owner decisions: prod Supabase (~$25/mo, closes B1) · Apple $99 (iOS) · Google Play $25 (internal track)
 3. ⛔ Canonical Panchang Engine decision (ADR-033) — unblocks Today panchang, Calendar markers, notifications
 3. AI corpus ingestion + eval readiness — unblocks live Ask Guru (GURU_LIVE)
 4. Backend Edge Functions: SVC_household, SVC_notify_scheduler, SVC_revenuecat_webhook (client contracts coded)
@@ -139,7 +133,7 @@ No new product scope in this milestone.
 
 # Active Branch
 
-feat/b3-eas-build-config
+main
 
 ---
 
@@ -170,8 +164,8 @@ CURRENT_MILESTONE.md → Current Risks.
 
 # Next Deliverable
 
-Beta Readiness — B3: a real EAS build. Needs an Expo account token; Apple ($99) for iOS, Google
-Play ($25) for the internal track. Android-only unblocks B2 as well.
+Owner-gated: prod Supabase project (~$25/mo) closes B1. Apple ($99) and Google Play ($25) close
+most of B3. Everything achievable without spending has been done.
 
 ---
 
