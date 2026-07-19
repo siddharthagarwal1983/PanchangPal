@@ -41,8 +41,12 @@ from ritual r where r.slug = 'daily-generic'
 on conflict (slug) do nothing;
 
 -- ---- Representative checklist items (curated 3–5/day) ------------------------
+-- Names its conflict target, like every other insert here. A BARE `on conflict do
+-- nothing` suppresses nothing unless a constraint exists to conflict with: this table
+-- had only a uuid primary key, so seven CD runs produced seven copies of every row.
+-- The supporting unique index is added by 20260719000100_checklist_item_unique.sql.
 insert into checklist_item (tradition_code, label, "order", type) values
   ('generic', 'Light the lamp', 1, 'ritual'),
   ('generic', 'Offer water',    2, 'ritual'),
   ('generic', 'Moment of stillness', 3, 'reflection')
-on conflict do nothing;
+on conflict (tradition_code, label) do nothing;
