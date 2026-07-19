@@ -548,3 +548,56 @@ the cheapest control that would have caught the build-breaking class at M1, and 
 Local `supabase start` is likewise part of the definition of a working repo: seeding must stay off
 while migrations live outside the CLI path, and `[auth] enable_anonymous_sign_ins` must stay true
 because the app bootstraps an anonymous session before any screen renders (UX-2 / ADR-009).
+
+---
+
+## Verification, environments, and the pnpm/native build seams (2026-07-19)
+
+**A gate is added when it can fail.** Recorded in ci.yml and applied throughout: four placeholder
+jobs were removed rather than left green, because a job that cannot fail reads as coverage. The
+asymmetry that goes with it — automatic gates are REMOVED, manual deploy jobs are KEPT AND MADE TO
+FAIL. A missing job hides a capability; a silently-succeeding deploy job tells an operator that
+production was promoted when nothing happened.
+
+**Verification that does not execute the app does not count.** M1–M8 shipped green on lint,
+typecheck, and jest, none of which invoke Metro, while the app could not be built at all. CI now
+runs `expo export` per PR and Maestro flows on an emulator; both were proven to FAIL on
+reintroduced defects, not merely to pass.
+
+**E2E asserts against a CI-built APK, never the latest EAS artifact.** An E2E gate answers "does
+THIS change behave correctly", which requires the binary to contain the change. The shippable EAS
+artifact is verified separately by release-build.yml. Two questions, two mechanisms.
+
+**Maestro selects by testID for anything tapped.** `tapOn: 'Begin'` matches the enclosing card
+rather than the button and reports COMPLETED while navigating nowhere — a green step testing
+nothing. Text assertions are fine; text taps are not.
+
+**Native builds happen in the cloud, not on the dev machine.** A local Gradle build OOM-killed an
+8 GB laptop mid-run and destroyed the build tree. EAS builds what ships; CI builds what E2E tests;
+the local emulator only installs and runs an APK (tuned to ~1.5 GB, headless).
+
+**A database password never leaves its CI secret.** scripts/resolve-db-url.sh derives and probes
+the session-pooler URL inside the workflow rather than having a human fetch, paste, and re-set it —
+the exact sequence that leaked a staging password on 2026-07-18 and forced a rotation. Anything
+derived from a secret must be `::add-mask::`ed, because Actions masks the secret's exact value and
+nothing else.
+
+**Supabase gives new projects an IPv6-only direct endpoint.** GitHub runners are IPv4-only, so
+`db.<ref>.supabase.co` is unreachable from CI; the session pooler is not. Its hostname prefix
+varies per project (staging is aws-1, dev is aws-0) and no CLI exposes it, so it is probed.
+
+**Two pnpm seams that fail far from where they are written.** First, an eager side effect in a
+DEFAULT PARAMETER runs at construction — `getSupabase()` across nine repositories and `new MMKV()`
+in the session store both detonated at import or first use, one of them synchronously past a
+`.catch()`. Second, a package used at build time but never DECLARED is not linked: `@babel/runtime`,
+`@expo/metro-runtime`, and `babel-preset-expo` each broke a different build path while the others
+kept working. `expo export` and Gradle resolve differently — a green bundle gate does not imply a
+working native build.
+
+**`pnpm exec`, not `pnpm dlx`, for project tooling.** dlx fetches the latest CLI; Expo 57's config
+loader cannot parse this project's TypeScript app.config.ts.
+
+**Seed inserts must name their conflict target.** A bare `on conflict do nothing` suppresses nothing
+without a matching constraint, so CD duplicated checklist rows on every deploy until a unique index
+existed. Verified by reproducing the exact row state in a throwaway Postgres container before
+shipping the DELETE.
