@@ -324,12 +324,11 @@ testers' hands.
   anywhere. Now every gate does real work — bundle gate per PR, E2E flows green in CI, four
   placeholders removed, two manual deploy jobs made to fail loudly. See the Execution Gap section
   for the full ledger.
-- **Untriaged defects found while demoing (2026-07-18)** — two remain open:
-  - **Repositories throw on absent config.** Nine `src/data/` repositories default-construct with
-    `getSupabase()`, so a misconfigured build fails during route module evaluation and shows
-    "Page could not be found" rather than a calm error state — poor against the trust-first and
-    offline-first principles, and a fail-*obscure* rather than fail-closed behaviour that B1 cares
-    about. Fix is to generalize the lazy `??=` already present in `authRepository.ts:30`.
+- **Untriaged defects found while demoing (2026-07-18)** — one remains open:
+  - ~~**Repositories throw on absent config.**~~ **Resolved** (PR #14). The lazy `??=` that existed
+    only in `authRepository.ts` was generalized: all ten `src/data` repositories now resolve their
+    client through `(this._db ??= getSupabase())`, so construction no longer requires configuration
+    and a misconfigured build cannot fail during route module evaluation.
   - **`react-native-mmkv` is unavailable in Expo Go**, so the Ritual screen crashes there at any SDK
     version. It sits behind the `KeyValueStore` port in `ritualSessionRepository.ts:7`, so an
     Expo Go-compatible fallback is contained — but a development build (B3) removes the constraint
@@ -337,16 +336,19 @@ testers' hands.
 - ~~**SDK 54 native runtime unverified**~~ — **CLOSED 2026-07-19.** Three Android APKs built and
   run; the New Architecture works natively. iOS remains unbuilt (no Apple membership), so that
   half of the baseline is still unproven.
-- **Session persistence is unverified, and deliberately unobservable.** Completing a ritual,
-  force-stopping, and reopening shows the intro again. Two causes are indistinguishable from
-  outside: either MMKV is not persisting, or `RitualSessionRepository`'s in-memory fallback
-  engaged. That fallback is SILENT by design (a screen crash was judged worse), and this is the
-  cost of that choice. Worth making it observable before beta.
-- **Seven `src/data` repositories still throw on absent config.** Two were fixed;
-  `repository-construction.test.ts` guards all ten from regressing, but the underlying
-  default-parameter pattern remains in the rest.
-- **Postgres version drift** — CI validates migrations against pg15 while both dev and staging run
-  pg17. Nothing has broken, but the gate is not testing what production will run.
+- **Session persistence is unverified — but no longer unobservable.** Completing a ritual,
+  force-stopping, and reopening shows the intro again. The two causes used to be indistinguishable
+  from outside: either MMKV is not persisting, or `RitualSessionRepository`'s in-memory fallback
+  engaged silently. PR #24 closed the observability half — the app logs when it degrades and
+  `getStorageBackend()` (`src/data/ritualSessionRepository.ts:38`) reports the active backend, so
+  the two causes are now distinguishable. What remains is the verification itself: nobody has
+  confirmed a session survives a restart. **This is the last free engineering item.**
+- ~~**Seven `src/data` repositories still throw on absent config.**~~ **Resolved** (PR #14). All ten
+  use the lazy `(this._db ??= getSupabase())` getter; the default-parameter pattern is gone, and
+  `repository-construction.test.ts` guards against its return.
+- ~~**Postgres version drift.**~~ **Resolved** (PR #28). CI runs `pgvector/pgvector:pg17` with
+  `postgresql-17-pgtap`, matching dev (17.6.1.147) and staging (17.6.1.141) — both confirmed engine
+  17 against the Supabase Management API. The gate now tests what the environments actually run.
 - **Onboarding is unreachable and therefore untested** — `app/index.tsx` hardcodes
   `ONBOARDED = true`, so SCR_ONBOARDING_* never renders from launch.
 - **Deferred vendor deps** — `react-native-purchases` and `expo-notifications` are still uninstalled;

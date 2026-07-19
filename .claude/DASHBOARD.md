@@ -167,10 +167,11 @@ SDK 54 upgrade — so this deferral is now a choice, not a constraint.)
 `chore/expo-sdk-54-upgrade` (unmerged). Verified by bundling, 121 tests, and Expo Go on device;
 **not** verified against a native build — no Xcode here. B3 is the first real test.
 
-⚠️ Two open defects from the 2026-07-18 demo session: nine `src/data/` repositories throw on absent
-config (surfacing as "Page could not be found" rather than a calm error state), and
-`react-native-mmkv` is unavailable in Expo Go so the Ritual screen crashes there. Details in
-CURRENT_MILESTONE.md → Current Risks.
+⚠️ One open defect from the 2026-07-18 demo session: `react-native-mmkv` is unavailable in Expo Go,
+so the Ritual screen crashes there. It sits behind the `KeyValueStore` port, and a development build
+(B3) removes the constraint entirely. The repositories-throw-on-absent-config defect that stood
+alongside it is resolved (PR #14 — all ten now construct lazily). Details in CURRENT_MILESTONE.md →
+Current Risks.
 
 ---
 
