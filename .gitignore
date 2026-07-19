@@ -69,6 +69,16 @@ apps/mobile/ios/
 # JetBrains IDE
 .idea/
 
+# SIGNING MATERIAL — never commit. A keystore is the app's signing identity: anyone holding
+# it can produce a build the OS accepts as a genuine update. EAS stores these; a local copy
+# belongs in a password manager or encrypted backup, never in version control.
+*.jks
+*.keystore
+*.p12
+*.p8
+*.mobileprovision
+*.cer
+
 # Temporary / OS
 .tmp/
 temp/
