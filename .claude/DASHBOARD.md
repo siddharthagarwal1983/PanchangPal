@@ -67,14 +67,15 @@ CURRENT_MILESTONE.md
 
 # Current Task
 
-**Two free engineering items remain.** B1/B2/B3 are 80–85% each; everything else needs a payment, a
+**One free engineering item remains.** B1/B2/B3 are 80–85% each; everything else needs a payment, a
 store account, or a later slice.
 
-1. **pg15/pg17 drift** — `ci.yml:151` runs `pgvector/pgvector:pg15` and `supabase/config.toml` pins
-   `major_version = 15`, while dev and staging run pg17. Migrations are validated on a major version
-   neither environment uses.
-2. **Session persistence is unverified.** It is observable since PR #24 (`getStorageBackend()`), but
-   nobody has confirmed a session survives a restart.
+1. **Session persistence is unverified.** It is observable since PR #24 (`getStorageBackend()`,
+   `src/data/ritualSessionRepository.ts:38`), but nobody has confirmed a session survives a restart.
+
+The pg15/pg17 drift is closed (PR #28): CI runs `pgvector/pgvector:pg17` with `postgresql-17-pgtap`,
+matching dev (17.6.1.147) and staging (17.6.1.141). A local stack needs `supabase stop --no-backup`
+before its next `supabase start` — the CLI will not cross major versions on an existing cluster.
 
 The 2026-07-19 signing-key incident is closed: key rotated, credential list down to one entry, backup
 stored off-machine, local copies deleted. `refs/pull/24/head` still serves the retired key
@@ -132,7 +133,7 @@ No new product scope in this milestone.
 
 # Current Priorities
 
-1. Free + useful: resolve the pg15/pg17 drift; verify session persistence survives a restart. The 2026-07-19 key incident is fully closed (issue #25)
+1. Free + useful: verify session persistence survives a restart. The pg15/pg17 drift (PR #28) and the 2026-07-19 key incident (issue #25) are both closed
 2. Owner decisions: prod Supabase (~$25/mo, closes B1) · Apple $99 (iOS) · Google Play $25 (internal track)
 3. ⛔ Canonical Panchang Engine decision (ADR-033) — unblocks Today panchang, Calendar markers, notifications
 3. AI corpus ingestion + eval readiness — unblocks live Ask Guru (GURU_LIVE)
@@ -166,10 +167,11 @@ SDK 54 upgrade — so this deferral is now a choice, not a constraint.)
 `chore/expo-sdk-54-upgrade` (unmerged). Verified by bundling, 121 tests, and Expo Go on device;
 **not** verified against a native build — no Xcode here. B3 is the first real test.
 
-⚠️ Two open defects from the 2026-07-18 demo session: nine `src/data/` repositories throw on absent
-config (surfacing as "Page could not be found" rather than a calm error state), and
-`react-native-mmkv` is unavailable in Expo Go so the Ritual screen crashes there. Details in
-CURRENT_MILESTONE.md → Current Risks.
+⚠️ One open defect from the 2026-07-18 demo session: `react-native-mmkv` is unavailable in Expo Go,
+so the Ritual screen crashes there. It sits behind the `KeyValueStore` port, and a development build
+(B3) removes the constraint entirely. The repositories-throw-on-absent-config defect that stood
+alongside it is resolved (PR #14 — all ten now construct lazily). Details in CURRENT_MILESTONE.md →
+Current Risks.
 
 ---
 

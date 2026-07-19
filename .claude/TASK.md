@@ -73,8 +73,8 @@ Beta Readiness — B1/B2/B3 remainders (mostly gated on money, accounts, or late
 
 Status
 🟡 **Two free engineering items remain; everything else needs a payment, a store account, or a later
-slice.** B1 ~85%, B2 ~85%, B3 ~80%, none complete. The free items are the pg15/pg17 drift and
-verifying session persistence end-to-end.
+slice.** B1 ~85%, B2 ~85%, B3 ~80%, none complete. The pg15/pg17 drift is closed (PR #28), leaving
+one free item: verifying session persistence end-to-end.
 
 This list was reconciled against the code on 2026-07-19 after four separate entries turned out to
 describe work that had already shipped. Claims here are verified, with a file:line where one exists.
@@ -99,10 +99,11 @@ marked as such rather than asserted.
       legacy backend and exposes `getStorageBackend()` for programmatic inspection.
 - [x] Generalize the lazy-client fix to the remaining `src/data` repositories — done in PR #14.
       All ten use the lazy `(this._db ??= getSupabase())` getter; none construct eagerly.
-- [ ] **Resolve the pg15 (CI) vs pg17 (dev + staging) drift.** `ci.yml:151` runs
-      `pgvector/pgvector:pg15` and `supabase/config.toml` pins `major_version = 15`, so migrations
-      are validated on a major version neither hosted environment runs. **The only verified-open
-      free engineering item left.**
+- [x] **Resolve the pg15 (CI) vs pg17 drift** — done in PR #28. CI runs `pgvector/pgvector:pg17`
+      with `postgresql-17-pgtap`, and `supabase/config.toml` pins `major_version = 17`. Hosted
+      versions were confirmed against the Supabase Management API first: dev 17.6.1.147, staging
+      17.6.1.141, both engine 17. The db-tests job passed on 17 with pgTAP 1.3.4 from PGDG.
+      Anyone with a local stack needs `supabase stop --no-backup` before the next `supabase start`.
 - [ ] Verify session persistence actually survives a restart. It is observable now
       (`getStorageBackend()`) but has never been confirmed end-to-end.
 
