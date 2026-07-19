@@ -80,13 +80,17 @@ complete, and every remaining item needs a payment, a store account, or a later 
 # What is actually left, by cost
 
 ## Free, and worth doing next
-- [ ] **Back up the Android keystore** — `eas credentials`. EAS holds the only copy of the signing
-      identity for `com.panchangpal.app`; losing it means never updating a published app.
-- [ ] **`expo install expo-updates`** + `eas update:configure`. The `staging`/`production` channels
-      declared in eas.json and dispatched by ota.yml currently reference nothing, so B7 cannot start.
-- [ ] **Make the storage fallback observable.** `RitualSessionRepository` degrades to an in-memory
-      store silently, so "session did not persist" is indistinguishable from "MMKV is broken".
-      Until that is visible, ritual persistence cannot be verified at all.
+- [x] **Tidy the EAS credential list** (issue #25) — done 2026-07-19. The rotation left two orphan
+      keystores (`4c414b1b…`, `e6220a41…`) and an empty credential entry alongside the live default;
+      all three deleted via the EAS GraphQL API by explicit UUID rather than the TUI, which names
+      credentials generically and gives no signal of which is default. One entry remains.
+- [ ] **Back up the Android keystore** — the last unverified item, and now about the *rotated* key.
+      EAS holds the only copy of the signing identity for `com.panchangpal.app`; losing it means
+      never updating a published app. The backup goes in a password manager, never in the repo.
+- [x] **`expo install expo-updates`** + runtimeVersion policy — done in PR #24 (`fingerprint` policy,
+      expo-updates@~29.0.19). The eas.json/ota.yml channels now reference something real; B7 unblocked.
+- [x] **Make the storage fallback observable** — done in PR #24. The app logs when it degrades to the
+      legacy backend and exposes `getStorageBackend()` for programmatic inspection.
 - [ ] Generalize the lazy-client fix to the seven remaining `src/data` repositories.
 - [ ] Resolve the pg15 (CI) vs pg17 (dev + staging) drift.
 

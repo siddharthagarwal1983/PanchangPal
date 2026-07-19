@@ -2,7 +2,7 @@
 
 # PanchangPal — Current Session
 
-Version: 1.9.0
+Version: 1.10.0
 Last Updated: 2026-07-19
 
 ---
@@ -68,6 +68,32 @@ dev + staging both 32 tables and seeded.
 
 ---
 
+# Android signing key leaked and rotated (issue #25)
+
+**B7 shipped (PR #24) and leaked the Android keystore doing it.** `git add -A` swept
+`@siddharth2008__panchangpal.jks` — the signing identity for `com.panchangpal.app` — into commit
+`3357884` on a public repository.
+
+**Rotated the same day, which closed it.** The leaked keystore (alias `6767934f…`) was deleted from
+EAS and replaced; the build default is now alias `42f01e40…`, created `2026-07-19T16:02:54Z`. Nothing
+had shipped to Play, so no Play App Signing rotation was needed. The published copy signs nothing.
+
+**The history rewrite was a mistake and is not repeatable.** `git filter-repo` + force-push changed 30
+SHAs on `main` and permanently stripped GPG Verified badges from merged PR commits — and did not
+remove the key: `refs/pull/24/head` still serves it, and GitHub PR refs cannot be deleted. Rotation
+was the fix; the rewrite bought nothing. Recorded in DECISIONS.md so it is not retried.
+
+**The credential list is now clean.** The rotation left two orphan keystores (`4c414b1b…`,
+`e6220a41…`) and an empty credential entry; all three were deleted via the EAS GraphQL API by
+explicit UUID rather than the interactive TUI, which labels credentials with generated names and
+gives no on-screen signal of which one is the live default. `com.panchangpal.app` now has exactly one
+entry — alias `42f01e40…`, default, fingerprint unchanged across the deletions.
+
+Any test device holding an old-key build must uninstall before installing a new one — signature
+mismatch blocks the update.
+
+---
+
 # Blockers (unchanged)
 
 Canonical Panchang Engine (ADR-033). Ask Guru `GURU_LIVE` gate. SVC_household,
@@ -78,8 +104,8 @@ SVC_notify_scheduler, SVC_revenuecat_webhook remain pending server deliverables.
 - **prod Supabase** (~$25/mo) — free tier is 2/2; the last engineering-independent item in B1
 - **Apple Developer** ($99/yr) — iOS builds and TestFlight
 - **Google Play** ($25) — Play Internal track
-- **Android keystore backup** — free, and currently a single point of unrecoverable failure
-- **`expo-updates` not installed** — the OTA channels in eas.json and ota.yml reference nothing
+- **Android keystore backup** — free, still unresolved. The key was rotated on 2026-07-19; EAS holds
+  the only copy, and a local backup belongs in a password manager, never in the repo (issue #25)
 
 # Open defects, documented not fixed
 
@@ -91,9 +117,13 @@ CI validates migrations on pg15 while both environments run pg17.
 
 # Recommended Next Task
 
-**B1's remainder is a payment decision, not engineering.** The cheapest genuinely useful next
-steps: back up the Android keystore (free), install `expo-updates` so B7 can begin (free), and
-make the storage fallback observable so session persistence stops being a coin flip.
+**Confirm the production keystore is in a password manager.** Issue #25 is otherwise closed — key
+rotated, credential list down to one entry — but EAS is now the sole holder of the only key that can
+sign updates to `com.panchangpal.app`, and the orphan copies that were an accidental fallback are
+gone. This is the last unverified item and the only one that is unrecoverable if wrong.
+
+**Then B1's remainder is a payment decision, not engineering.** `expo-updates` is installed and the
+storage fallback is observable (PR #24), so the free items are spent.
 
 If money is available: the prod Supabase project closes B1, and ~$124 of store accounts closes
 most of B3.

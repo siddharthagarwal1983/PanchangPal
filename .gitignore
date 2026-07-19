@@ -79,6 +79,12 @@ apps/mobile/ios/
 *.mobileprovision
 *.cer
 
+# `eas credentials` writes credentials.json next to the keystore it downloads, holding the
+# store and key passwords in PLAINTEXT. The keystore itself is covered above; this file was
+# not, and a password file is worth as much as the key once both are in the same history.
+credentials.json
+credentials/
+
 # Temporary / OS
 .tmp/
 temp/
