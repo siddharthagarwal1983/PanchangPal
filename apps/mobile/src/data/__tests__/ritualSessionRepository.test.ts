@@ -1,4 +1,4 @@
-import { RitualSessionRepository } from '../ritualSessionRepository';
+import { RitualSessionRepository , getStorageBackend, resetStorageBackendForTests } from '../ritualSessionRepository';
 import type { RitualSession } from '../../domain/ritual';
 
 class MemoryStorage {
@@ -48,5 +48,41 @@ describe('storage resolution', () => {
     expect(await repository.load('r2', '2026-07-19')).toMatchObject({ stepIndex: 1 });
     await repository.clear('r2', '2026-07-19');
     expect(await repository.load('r2', '2026-07-19')).toBeNull();
+  });
+});
+
+describe('storage backend observability', () => {
+  it('reports nothing before storage is resolved', () => {
+    // Resolution is lazy: constructing must not touch the native module.
+    resetStorageBackendForTests();
+    new RitualSessionRepository();
+    expect(getStorageBackend()).toBeNull();
+  });
+
+  it('reports which backend served a write, and warns when it degraded', async () => {
+    // The point of this test: "the session did not persist" and "MMKV was unavailable, so
+    // memory was used and lost on restart" used to be indistinguishable from outside. They
+    // are now distinguishable, and the degradation is announced.
+    resetStorageBackendForTests();
+    const warn = jest.spyOn(console, 'warn').mockImplementation(() => {});
+    const repository = new RitualSessionRepository();
+    await repository.save({ ritualId: 'r9', localDate: '2026-07-19', stepIndex: 0, status: 'in_progress', completionRecorded: false });
+
+    const backend = getStorageBackend();
+    expect(backend).not.toBeNull();
+    if (backend === 'memory') {
+      expect(warn).toHaveBeenCalledWith(expect.stringContaining('will NOT'), expect.anything());
+    } else {
+      expect(warn).not.toHaveBeenCalled();
+    }
+    warn.mockRestore();
+  });
+
+  it('does not report a backend when an explicit store is injected', async () => {
+    // An injected store bypasses device resolution entirely — nothing to report.
+    resetStorageBackendForTests();
+    const repository = new RitualSessionRepository(new MemoryStorage());
+    await repository.save({ ritualId: 'r10', localDate: '2026-07-19', stepIndex: 0, status: 'in_progress', completionRecorded: false });
+    expect(getStorageBackend()).toBeNull();
   });
 });

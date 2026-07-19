@@ -28,6 +28,18 @@ const config: ExpoConfig = {
   // be declared explicitly (previously autolinked). `expo install` cannot write to a
   // dynamic (.ts) config, so they are maintained here by hand.
   plugins: ['expo-localization', 'expo-router', 'expo-secure-store'],
+  // OTA (TDD Part 5 §2.4 [MANDATORY]). `eas update:configure` cannot write to a dynamic
+  // .ts config, so this is maintained by hand — as with `plugins` and the EAS project id.
+  updates: {
+    url: 'https://u.expo.dev/cbe97143-a335-4b27-a144-006d5cbfca91',
+  },
+  // §2.4 forbids shipping native-module or config-plugin changes over OTA, and requires every
+  // update to be tied to a runtime version. The `fingerprint` policy ENFORCES that rather than
+  // relying on discipline: the runtime version is derived from the native project, so an update
+  // built against different native dependencies gets a different fingerprint and is simply not
+  // delivered to existing builds. `appVersion` would permit exactly the mismatch §2.4 forbids.
+  // The TDD does not name a policy; this is the choice that makes its rule mechanical.
+  runtimeVersion: { policy: 'fingerprint' },
   extra: {
     // EAS project linkage (TDD Part 5 §2.3). `eas init` cannot write to a dynamic .ts
     // config, so it is recorded by hand — the same limitation that applies to `plugins`

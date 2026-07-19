@@ -20,17 +20,51 @@ function createMemoryStore(): KeyValueStore {
   };
 }
 
+/** Which backend actually serves ritual sessions. */
+export type StorageBackend = 'mmkv' | 'memory';
+
+let activeBackend: StorageBackend | null = null;
+
+/**
+ * The backend in use, or null before any storage has been resolved (it is lazy).
+ *
+ * This exists because the fallback below is SILENT, and silence made a real question
+ * unanswerable: after completing a ritual, force-stopping the app and reopening it showed the
+ * intro again. "The session was never persisted" and "MMKV is unavailable, so memory was used
+ * and lost" produce identical behaviour, and nothing distinguished them from outside. Degrading
+ * quietly is still the right call for the user — a screen crash is worse — but the degradation
+ * must be observable to whoever is debugging it.
+ */
+export function getStorageBackend(): StorageBackend | null {
+  return activeBackend;
+}
+
 /**
  * MMKV is a native module: it does not exist in Expo Go, and construction throws there
  * ("react-native-mmkv is not supported in Expo Go"). It can also fail on a real device.
- * Degrade to memory rather than taking the screen down.
+ * Degrade to memory rather than taking the screen down — but say so.
  */
 function createDeviceStore(): KeyValueStore {
   try {
-    return new MMKV();
-  } catch {
+    const store = new MMKV();
+    activeBackend = 'mmkv';
+    return store;
+  } catch (error) {
+    activeBackend = 'memory';
+    // Warn, not throw: the ritual still works, it just will not survive a restart. Visible in
+    // Metro and in `adb logcat`, which is where this question gets asked.
+    console.warn(
+      '[ritual] Persistent storage unavailable — falling back to memory. Ritual sessions will NOT ' +
+        'survive an app restart. Expected in Expo Go (no native modules); investigate on a native build.',
+      error,
+    );
     return createMemoryStore();
   }
+}
+
+/** Test seam: forget the resolved backend so a fresh resolution can be observed. */
+export function resetStorageBackendForTests(): void {
+  activeBackend = null;
 }
 
 /** Durable local repository for ritual sessions; independent of network/server state. */
