@@ -148,7 +148,10 @@ jobs:
     needs: lint-typecheck
     services:
       postgres:
-        image: pgvector/pgvector:pg15 # pgvector + pgtap-capable base for the migrations
+        # Must track the MAJOR VERSION the hosted projects run, not merely "a Postgres". dev
+        # (17.6.1.147) and staging (17.6.1.141) are both engine 17; validating migrations on 15
+        # proves them against a version nothing runs. pgvector + pgtap-capable base.
+        image: pgvector/pgvector:pg17
         env:
           POSTGRES_PASSWORD: postgres
         ports: ['5432:5432']
@@ -165,14 +168,15 @@ jobs:
           sudo apt-get update
           sudo apt-get install -y --no-install-recommends postgresql-client libtap-parser-sourcehandler-pgtap-perl
       # The pgvector service image ships pgvector but not the pgTAP server extension, so the suites'
-      # `CREATE EXTENSION pgtap` fails. Install postgresql-15-pgtap into the running service
+      # `CREATE EXTENSION pgtap` fails. Install postgresql-17-pgtap into the running service
       # container (Debian/PGDG-based) so the extension's control files are available server-side.
+      # The package name is major-version-pinned, so it moves with the image tag above.
       - name: Install pgTAP into the Postgres service container
         run: |
           CID=$(docker ps --format '{{.ID}} {{.Image}}' | grep -i 'pgvector' | awk '{print $1}' | head -n1)
           if [ -z "$CID" ]; then echo "::error::could not find the postgres service container"; docker ps; exit 1; fi
           echo "postgres service container: $CID"
-          docker exec -u root "$CID" bash -lc "apt-get update && apt-get install -y postgresql-15-pgtap"
+          docker exec -u root "$CID" bash -lc "apt-get update && apt-get install -y postgresql-17-pgtap"
       # Create the extension up front: the suites call plan() before their own CREATE EXTENSION,
       # so pgTAP must already exist in the DB when pg_prove loads each file.
       - name: Enable pgTAP extension

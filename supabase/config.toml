@@ -19,7 +19,11 @@ project_id = "panchangpal"
 
 [db]
 # Single US region for launch (ADR-012). Local shadow DB for migration diffing.
-major_version = 15
+# Tracks the hosted projects: dev and staging both run Postgres engine 17. A local shadow DB on a
+# different major version diffs migrations against a schema no environment actually has.
+# Changing this requires `supabase stop --no-backup` before the next `supabase start` — the CLI
+# will not migrate an existing local cluster across major versions.
+major_version = 17
 
 [db.seed]
 # MUST stay false while migrations live outside the CLI's path (schema_paths = [] below).
