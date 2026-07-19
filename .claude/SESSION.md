@@ -83,8 +83,11 @@ SHAs on `main` and permanently stripped GPG Verified badges from merged PR commi
 remove the key: `refs/pull/24/head` still serves it, and GitHub PR refs cannot be deleted. Rotation
 was the fix; the rewrite bought nothing. Recorded in DECISIONS.md so it is not retried.
 
-Two orphan keystores (`4c414b1b…`, `e6220a41…`) and an empty credential entry remain on EAS from the
-rotation and still need deleting via interactive `eas credentials -p android`.
+**The credential list is now clean.** The rotation left two orphan keystores (`4c414b1b…`,
+`e6220a41…`) and an empty credential entry; all three were deleted via the EAS GraphQL API by
+explicit UUID rather than the interactive TUI, which labels credentials with generated names and
+gives no on-screen signal of which one is the live default. `com.panchangpal.app` now has exactly one
+entry — alias `42f01e40…`, default, fingerprint unchanged across the deletions.
 
 Any test device holding an old-key build must uninstall before installing a new one — signature
 mismatch blocks the update.
@@ -114,10 +117,10 @@ CI validates migrations on pg15 while both environments run pg17.
 
 # Recommended Next Task
 
-**Close out issue #25 first — it is minutes of work.** Delete the two orphan EAS keystores and the
-empty credential entry via interactive `eas credentials -p android`, then put a backup of the new
-keystore in a password manager. The rotation is done but the credential list is untidy, and an
-untidy credential list is how a build binds to the wrong key.
+**Confirm the production keystore is in a password manager.** Issue #25 is otherwise closed — key
+rotated, credential list down to one entry — but EAS is now the sole holder of the only key that can
+sign updates to `com.panchangpal.app`, and the orphan copies that were an accidental fallback are
+gone. This is the last unverified item and the only one that is unrecoverable if wrong.
 
 **Then B1's remainder is a payment decision, not engineering.** `expo-updates` is installed and the
 storage fallback is observable (PR #24), so the free items are spent.

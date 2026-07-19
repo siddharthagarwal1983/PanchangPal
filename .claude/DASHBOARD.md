@@ -71,8 +71,9 @@ CURRENT_MILESTONE.md
 remainders need a payment, a store account, or a later slice.
 
 `expo-updates` is installed and the storage fallback is observable (PR #24), so two of the three free
-items are spent. What is left, free: tidy the EAS credential list and back up the rotated Android
-keystore — both issue #25, both minutes of work.
+items are spent. The EAS credential list is tidied (one entry, the live default). What is left, free:
+confirm the rotated Android keystore is backed up in a password manager — issue #25, and the only
+remaining item that is unrecoverable if it is wrong.
 
 The Android signing key leaked to this public repo on 2026-07-19 and was rotated the same day. It is
 closed, but `refs/pull/24/head` still serves the retired key permanently; see DECISIONS.md.
@@ -124,7 +125,7 @@ No new product scope in this milestone.
 
 # Current Priorities
 
-1. Free + useful: tidy the EAS credential list and back up the rotated Android keystore (issue #25). expo-updates and the observable storage fallback landed in PR #24
+1. Free + useful: confirm the rotated Android keystore is backed up in a password manager (issue #25). Credential list tidied; expo-updates and the observable storage fallback landed in PR #24
 2. Owner decisions: prod Supabase (~$25/mo, closes B1) · Apple $99 (iOS) · Google Play $25 (internal track)
 3. ⛔ Canonical Panchang Engine decision (ADR-033) — unblocks Today panchang, Calendar markers, notifications
 3. AI corpus ingestion + eval readiness — unblocks live Ask Guru (GURU_LIVE)
