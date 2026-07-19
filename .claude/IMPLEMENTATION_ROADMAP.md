@@ -25,12 +25,15 @@ environments & secrets · E2E · build/distribution · observability · reliabil
 security & privacy · release management · go/no-go. Current slice: **B1 — Environments & secrets
 (fail-closed)**, gated on reviewing `chore/expo-sdk-54-upgrade` first.
 
-**Correction to "complete" (2026-07-18):** M1–M8 are feature-complete as written, but none of that
-code had ever been executed — the first attempt to run the app found three bundle-blocking defects,
-two local-backend faults, and one crashing product bug. They are fixed on
-`chore/expo-sdk-54-upgrade` (unmerged), which also re-baselines the platform to Expo SDK 54 /
-RN 0.81 / React 19. The app now boots on a physical iPhone against a local Supabase stack. Read
-"feature-complete" as "written and unit-tested", not "known to run", for anything predating this.
+**Correction to "complete" (2026-07-18/19):** M1–M8 were feature-complete as written, but none of
+that code had ever been executed. Running it found 12 defects — three bundle-blocking, two
+local-backend, and seven only visible in a running app (one of which typechecked perfectly while
+doing nothing). All are fixed and merged, and the platform is re-baselined to Expo SDK 54 /
+RN 0.81 / React 19, verified natively.
+
+Read "feature-complete" as "written and unit-tested" for anything predating this. The pipeline now
+distinguishes the two: a bundle gate per PR, E2E flows green in CI, and no placeholder jobs
+anywhere.
 
 Verified starting position: staging migrations and Edge Function deploys are real, but the Maestro
 E2E and EAS build CD jobs are placeholders and `preflight.sh` warns-then-exits-0 on missing secrets,
