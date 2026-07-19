@@ -1,0 +1,144 @@
+# =============================================================================
+# E2E — Maestro FLOW_* against a real Android build (TDD Part 5 §2.2, B2).
+#
+# Replaces the `e2e-staging` placeholder removed from cd.yml, which ran
+# `echo "maestro test tests/flows"` and reported success on every push while
+# tests/flows/ held nothing but .gitkeep.
+#
+# THE APK IS BUILT HERE, NOT PULLED FROM EAS. An E2E gate answers "does THIS change
+# behave correctly", and that only means something if the binary contains the change.
+# Installing the latest EAS artifact would test whichever commit was last built — green
+# would mean "some earlier commit worked", which is the exact class of comfortable-but-
+# false signal this milestone exists to remove. The shippable EAS artifact is verified
+# separately by release-build.yml; these are two different questions.
+#
+# The trade-off is honest: a CI build is signed with a throwaway debug keystore and is
+# not byte-identical to the release artifact, so release-only faults (minification,
+# signing-dependent integrations) are out of scope here and covered by release-build.yml.
+#
+# Runs on push to main and on demand rather than per-PR: emulator boot plus a native
+# build is ~15-20 minutes. ci.yml's bundle gate already catches build breakage on every
+# PR in about a minute. If per-PR E2E becomes worth the wall-clock, widen the trigger —
+# but do not make the job stop waiting for the flows.
+# =============================================================================
+
+name: E2E (Maestro)
+
+on:
+  push:
+    branches: [main]
+  workflow_dispatch:
+
+permissions:
+  contents: read
+
+concurrency:
+  group: e2e-${{ github.ref }}
+  cancel-in-progress: true
+
+env:
+  NODE_VERSION: '20.11.0'
+  PNPM_VERSION: '9.6.0'
+  JAVA_VERSION: '17'
+
+jobs:
+  android-e2e:
+    name: FLOW_* on Android
+    runs-on: ubuntu-latest
+    timeout-minutes: 45
+
+    steps:
+      - uses: actions/checkout@v4
+
+      - uses: pnpm/action-setup@v4
+        with: { version: '${{ env.PNPM_VERSION }}' }
+
+      - uses: actions/setup-node@v4
+        with:
+          node-version: '${{ env.NODE_VERSION }}'
+          cache: pnpm
+
+      # Gradle needs a JDK; Expo SDK 54 / RN 0.81 build against 17.
+      - uses: actions/setup-java@v4
+        with:
+          distribution: temurin
+          java-version: '${{ env.JAVA_VERSION }}'
+
+      - name: Install dependencies
+        run: pnpm install --frozen-lockfile
+
+      # EXPO_PUBLIC_* are baked into the JS bundle at build time and must match what the
+      # flows expect — they assert seeded staging content. EAS's "preview" environment is
+      # the single source of truth (apps/mobile/eas.json binds it to the staging profile),
+      # so pull from there rather than duplicating the values into GitHub secrets.
+      - name: Pull staging config from EAS
+        working-directory: apps/mobile
+        run: pnpm dlx eas-cli@latest env:pull --environment preview --path .env --non-interactive
+        env:
+          EXPO_TOKEN: ${{ secrets.EXPO_ACCESS_TOKEN }}
+
+      # Generates the native android/ project. Not committed — the app is a managed
+      # Expo project, so this is regenerated per run and stays disposable.
+      # `pnpm exec`, NOT `pnpm dlx`. dlx fetches the LATEST expo CLI (57.x), whose config
+      # loader cannot parse this project's TypeScript app.config.ts:
+      #   SyntaxError: Error reading Expo config at app.config.ts: Unexpected token '{'
+      # exec uses the project's own Expo 54. Found by running this locally first.
+      - name: Prebuild native project
+        working-directory: apps/mobile
+        run: pnpm exec expo prebuild --platform android --no-install
+
+      # assembleRelease, not assembleDebug: a debug APK expects a Metro server at runtime,
+      # whereas release bundles the JS into the APK. The React Native template signs the
+      # release variant with the debug keystore when no release signing config is present,
+      # which is fine for an emulator and deliberately NOT how the shipped artifact is
+      # signed (that is EAS, with the real keystore).
+      - name: Build APK
+        working-directory: apps/mobile/android
+        run: ./gradlew assembleRelease --no-daemon
+
+      - name: Install Maestro
+        run: |
+          curl -Ls "https://get.maestro.mobile.dev" | bash
+          echo "$HOME/.maestro/bin" >> "$GITHUB_PATH"
+
+      # KVM is required for a usable emulator; GitHub's Linux runners provide it but the
+      # device is not world-accessible by default.
+      - name: Enable KVM
+        run: |
+          echo 'KERNEL=="kvm", GROUP="kvm", MODE="0666", OPTIONS+="static_node=kvm"' \
+            | sudo tee /etc/udev/rules.d/99-kvm4all.rules
+          sudo udevadm control --reload-rules
+          sudo udevadm trigger --name-match=kvm
+
+      # x86_64, because the runner is x86_64 — the arm64 image used on an Apple Silicon
+      # workstation would be emulated here and unusably slow.
+      - name: Run FLOW_* on an emulator
+        uses: reactivecircus/android-emulator-runner@v2
+        with:
+          api-level: 34
+          target: google_apis
+          arch: x86_64
+          profile: pixel_6
+          ram-size: 4096M
+          disable-animations: true
+          emulator-options: -no-window -gpu swiftshader_indirect -no-snapshot -noaudio -no-boot-anim
+          script: |
+            adb install -r apps/mobile/android/app/build/outputs/apk/release/app-release.apk
+            maestro test tests/flows/
+
+      # Maestro writes screenshots and a view hierarchy per failed step. Without these a
+      # remote failure is nearly undiagnosable — the whole point of these flows is that
+      # they catch things which only look wrong.
+      - name: Upload Maestro debug output
+        if: failure()
+        uses: actions/upload-artifact@v4
+        with:
+          name: maestro-debug
+          path: ~/.maestro/tests
+          retention-days: 7
+
+      - name: Summary
+        if: always()
+        run: |
+          echo "### E2E (Maestro): ${{ job.status }}" >> "$GITHUB_STEP_SUMMARY"
+          echo "Flows: FLOW_RETURNING, FLOW_MORNING_RITUAL" >> "$GITHUB_STEP_SUMMARY"
