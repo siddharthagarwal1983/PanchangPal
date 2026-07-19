@@ -109,9 +109,11 @@ local copies deleted. See issue #25.)
 
 # Open defects, documented not fixed
 
-Onboarding unreachable — `ONBOARDED = true` is hardcoded at `app/index.tsx:16`. CI validates
-migrations on pg15 (`ci.yml:151`, and `supabase/config.toml` pins `major_version = 15`) while dev and
-staging run pg17, so migrations are proven on a major version neither environment uses.
+Onboarding unreachable — `ONBOARDED = true` is hardcoded at `app/index.tsx:16`.
+
+The pg15/pg17 drift that stood here is **fixed** (PR #28): CI now runs `pgvector/pgvector:pg17` with
+`postgresql-17-pgtap`, matching dev (17.6.1.147) and staging (17.6.1.141), both confirmed engine 17
+against the Supabase Management API rather than taken from these docs.
 
 Session persistence is now **observable** but still **unverified**: `getStorageBackend()`
 (`src/data/ritualSessionRepository.ts:38`) exposes the backend and the app logs when it degrades, so a
