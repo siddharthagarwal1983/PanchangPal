@@ -104,14 +104,22 @@ SVC_notify_scheduler, SVC_revenuecat_webhook remain pending server deliverables.
 - **prod Supabase** (~$25/mo) — free tier is 2/2; the last engineering-independent item in B1
 - **Apple Developer** ($99/yr) — iOS builds and TestFlight
 - **Google Play** ($25) — Play Internal track
-- **Android keystore backup** — free, still unresolved. The key was rotated on 2026-07-19; EAS holds
-  the only copy, and a local backup belongs in a password manager, never in the repo (issue #25)
+(The Android keystore backup was here. Resolved 2026-07-19: key rotated, backup stored off-machine,
+local copies deleted. See issue #25.)
 
 # Open defects, documented not fixed
 
-Session persistence unverified and deliberately unobservable (silent memory fallback); seven
-`src/data` repositories still construct eagerly; onboarding unreachable (`ONBOARDED = true`);
-CI validates migrations on pg15 while both environments run pg17.
+Onboarding unreachable — `ONBOARDED = true` is hardcoded at `app/index.tsx:16`. CI validates
+migrations on pg15 (`ci.yml:151`, and `supabase/config.toml` pins `major_version = 15`) while dev and
+staging run pg17, so migrations are proven on a major version neither environment uses.
+
+Session persistence is now **observable** but still **unverified**: `getStorageBackend()`
+(`src/data/ritualSessionRepository.ts:38`) exposes the backend and the app logs when it degrades, so a
+failure is no longer silent — but nobody has confirmed a session actually survives a restart.
+
+Two entries that stood here were already fixed and are removed: the silent memory fallback (PR #24)
+and the seven eagerly-constructing repositories (all ten `src/data` repositories use the lazy
+`(this._db ??= getSupabase())` getter).
 
 ---
 

@@ -69,11 +69,17 @@ throwing on absent config, and `react-native-mmkv` being unavailable in Expo Go.
 # Current Task
 
 ## Title
-Beta Readiness — B1/B2/B3 remainders (all gated on money, accounts, or later slices)
+Beta Readiness — B1/B2/B3 remainders (mostly gated on money, accounts, or later slices)
 
 Status
-🟡 **No engineering task is currently blocked on engineering.** B1 ~85%, B2 ~85%, B3 ~80%; none
-complete, and every remaining item needs a payment, a store account, or a later slice.
+🟡 **Two free engineering items remain; everything else needs a payment, a store account, or a later
+slice.** B1 ~85%, B2 ~85%, B3 ~80%, none complete. The free items are the pg15/pg17 drift and
+verifying session persistence end-to-end.
+
+This list was reconciled against the code on 2026-07-19 after four separate entries turned out to
+describe work that had already shipped. Claims here are verified, with a file:line where one exists.
+Anything that cannot be checked against the repo (hosted environment state, owner purchases) is
+marked as such rather than asserted.
 
 ---
 
@@ -84,15 +90,21 @@ complete, and every remaining item needs a payment, a store account, or a later 
       keystores (`4c414b1b…`, `e6220a41…`) and an empty credential entry alongside the live default;
       all three deleted via the EAS GraphQL API by explicit UUID rather than the TUI, which names
       credentials generically and gives no signal of which is default. One entry remains.
-- [ ] **Back up the Android keystore** — the last unverified item, and now about the *rotated* key.
-      EAS holds the only copy of the signing identity for `com.panchangpal.app`; losing it means
-      never updating a published app. The backup goes in a password manager, never in the repo.
+- [x] **Back up the Android keystore** — done 2026-07-19. The rotated key is stored off-machine;
+      the downloaded copy and its plaintext `credentials.json` were deleted from the working tree,
+      and both are now gitignored. EAS remains the second copy. Issue #25.
 - [x] **`expo install expo-updates`** + runtimeVersion policy — done in PR #24 (`fingerprint` policy,
       expo-updates@~29.0.19). The eas.json/ota.yml channels now reference something real; B7 unblocked.
 - [x] **Make the storage fallback observable** — done in PR #24. The app logs when it degrades to the
       legacy backend and exposes `getStorageBackend()` for programmatic inspection.
-- [ ] Generalize the lazy-client fix to the seven remaining `src/data` repositories.
-- [ ] Resolve the pg15 (CI) vs pg17 (dev + staging) drift.
+- [x] Generalize the lazy-client fix to the remaining `src/data` repositories — done in PR #14.
+      All ten use the lazy `(this._db ??= getSupabase())` getter; none construct eagerly.
+- [ ] **Resolve the pg15 (CI) vs pg17 (dev + staging) drift.** `ci.yml:151` runs
+      `pgvector/pgvector:pg15` and `supabase/config.toml` pins `major_version = 15`, so migrations
+      are validated on a major version neither hosted environment runs. **The only verified-open
+      free engineering item left.**
+- [ ] Verify session persistence actually survives a restart. It is observable now
+      (`getStorageBackend()`) but has never been confirmed end-to-end.
 
 ## Costs money — owner decision
 - [ ] **prod Supabase project** (~$25/mo; free tier is 2/2) — the last item in B1
