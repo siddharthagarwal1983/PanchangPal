@@ -1,0 +1,63 @@
+# FLOW_MORNING_RITUAL — the guided ritual, start to completion.
+#
+# SCR_HOME_001 -> SCR_RITUAL_001 -> completion. This is the flow Expo Go cannot run at
+# all: the session store is react-native-mmkv, a native module absent there, so until a
+# native build existed this path had never been executed anywhere.
+#
+# SELECTORS ARE testIDs, NOT TEXT. `tapOn: 'Begin'` matches the enclosing today-ritual
+# card rather than the button inside it, and reports COMPLETED while navigating nowhere —
+# a false pass. The app already exposes testIDs throughout; use them for anything tapped.
+appId: com.panchangpal.app
+---
+- launchApp:
+    clearState: false
+
+# Wait explicitly rather than assert immediately: launchApp returns before the JS bundle
+# has rendered, so a bare assertion here fails on a cold start and passes on a warm one —
+# the kind of flake that gets a suite disbelieved.
+- extendedWaitUntil:
+    visible: "Today's ritual"
+    timeout: 30000
+
+# Today -> ritual intro (SCR_RITUAL_001).
+- tapOn:
+    id: 'ritual-action'
+- assertVisible: 'Daily Practice'
+- assertVisible: 'A calm daily observance.'
+
+# Intro -> guided steps. Content comes from the seeded `daily-generic` ritual, so this
+# also proves the app is reading real data from staging rather than a fixture.
+- tapOn:
+    id: 'ritual-begin'
+- assertVisible: 'Step 1 of 1'
+- assertVisible: 'Light a lamp'
+
+# Audio narration is behind a port with a Null implementation (no production audio
+# adapter is approved yet), so the written guidance must stand alone. Its absence here
+# is by design, not a gap.
+
+# Final step -> completion moment.
+- tapOn:
+    id: 'ritual-next'
+- assertVisible: 'Done for today'
+- assertVisible: 'Your ritual has been recorded. Come back tomorrow when you are ready.'
+
+# Completion returns to the daily loop rather than stranding the user.
+- tapOn:
+    id: 'ritual-completion-continue'
+- assertVisible: "Today's ritual"
+- assertVisible: 'Panchang is temporarily unavailable.'
+
+# NOT ASSERTED — session persistence across a process restart.
+#
+# Completing a ritual, force-stopping the app, and reopening the ritual shows the INTRO
+# again rather than a completed state. Two candidate causes were not separated here, and
+# asserting either would be guessing:
+#   1. the completed session is not written to (or read back from) MMKV, or
+#   2. RitualSessionRepository fell back to its in-memory store, which loses everything
+#      on restart. That fallback is deliberately silent, which is exactly what makes the
+#      two indistinguishable from the outside.
+# Separately, SCR_HOME_001 cannot reflect completion regardless: today/index.tsx passes
+# `completedToday: false` as a literal, so the card always reads "Begin".
+# Tracked rather than encoded — a flow should assert what the product intends, and that
+# intent is not yet settled here.

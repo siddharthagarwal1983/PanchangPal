@@ -1,0 +1,63 @@
+# FLOW_RETURNING — returning user launches the app and reaches the daily loop.
+#
+# Covers SCR_SPLASH_001 -> SCR_HOME_001 and the 4-tab shell (UX-1). Deliberately
+# assertion-heavy about things that LOOK fine while being wrong: every defect this
+# flow guards was found by a human looking at a screenshot, not by a test.
+#
+#   - the tab bar rendered all twelve routes instead of four
+#   - nothing stayed focused once inside a nested stack
+#   - the checklist showed one item seven times
+#
+# None of those crash, fail a typecheck, or break a bundle. Only looking catches them,
+# which is exactly what a flow is for.
+appId: com.panchangpal.app
+---
+- launchApp:
+    clearState: false # returning user: an existing anonymous session is the point
+
+# Splash resolves to Today. Anonymous sign-in happens before any screen renders
+# (UX-2 / ADR-009), so reaching this at all proves the session bootstrapped.
+# Wait explicitly: launchApp returns before the JS bundle has rendered. A bare assertion
+# passes on a warm start and fails on a cold one.
+- extendedWaitUntil:
+    visible: 'Today'
+    timeout: 30000
+
+# Panchang is intentionally unavailable until ADR-033 Part B is ratified. Asserting the
+# calm state — rather than a value — keeps the flow honest: if a tithi ever appears here
+# without that decision, something is fabricating data and this SHOULD fail.
+- assertVisible: 'Panchang is temporarily unavailable.'
+
+- assertVisible: "Today's ritual"
+- assertVisible: 'Begin'
+
+# Exactly the four UX-1 tabs. Regression: the custom tabBar mapped state.routes
+# directly, so `href: null` was ignored and every registered screen appeared.
+- assertVisible: 'Calendar'
+- assertVisible: 'Ask Guru'
+- assertVisible: 'You'
+- assertNotVisible: 'today/ritual'
+- assertNotVisible: 'you/settings'
+- assertNotVisible: 'guru/chat'
+
+# Checklist items are distinct. Regression: a bare `on conflict do nothing` with no
+# supporting constraint let CD insert a fresh copy on every deploy, so the list filled
+# with seven duplicates of the first item and hid the rest.
+- assertVisible: 'Light the lamp'
+- assertVisible: 'Offer water'
+- assertVisible: 'Moment of stillness'
+
+# Cross-tab navigation. Calendar is the other screen whose data is ADR-033 gated.
+- tapOn: 'Calendar'
+- assertVisible: 'Tradition'
+- assertVisible: 'Festival and vrat markers are temporarily unavailable.'
+
+- tapOn: 'You'
+- assertVisible: 'Household'
+- assertVisible: 'Settings'
+# Anonymous by default — the account prompt is the deferred-auth affordance (UX-2),
+# not an error.
+- assertVisible: 'Sign in'
+
+- tapOn: 'Today'
+- assertVisible: "Today's ritual"
