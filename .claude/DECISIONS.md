@@ -620,3 +620,13 @@ loader cannot parse this project's TypeScript app.config.ts.
 without a matching constraint, so CD duplicated checklist rows on every deploy until a unique index
 existed. Verified by reproducing the exact row state in a throwaway Postgres container before
 shipping the DELETE.
+
+**The tracking docs are a claim, not a source of truth — verify before acting on them (2026-07-19).**
+Four entries across DASHBOARD/TASK/SESSION described work that had already shipped: `expo-updates`,
+the orphan EAS credentials, the lazy-client generalization, and a "5 unpushed commits" branch that
+was fully squash-merged. Acting on that last one would have reverted the OTA config, because a
+squash merge leaves the source commits looking unmerged — `git merge-base --is-ancestor` proves
+nothing about squashed work; compare content or subjects instead. Since CLAUDE.md makes these files
+the session bootstrap, a stale entry does not merely misreport, it aims the next session at work that
+does not exist. Open items carry a file:line where one exists, and anything unverifiable from the
+repo is marked as unverified rather than asserted.
