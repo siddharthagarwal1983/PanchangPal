@@ -259,6 +259,25 @@ Never:
 - Log tokens
 - Log sensitive user data
 
+## Staging and signing material (2026-07-19)
+
+**Stage files by explicit path. Never `git add -A`.** A `git add -A` swept an Android keystore that
+`eas credentials` had just downloaded into `apps/mobile/` into commit `3357884`, pushing the signing
+identity for `com.panchangpal.app` to a public repository. Every other commit that session named its
+paths; the one that did not is the one that leaked. This is the second secret exposure in two days —
+a staging DB password went the same way on 2026-07-18 — and both were mechanical, not conceptual.
+
+**A leaked credential is rotated, not merely removed.** Deleting the file and gitignoring the family
+(`*.jks`, `*.keystore`, `*.p12`, `*.p8`, `*.mobileprovision`, `*.cer`) does nothing about the copy
+already published. The key was rotated on EAS the same day; nothing had shipped to Play, which is the
+only reason it was cheap.
+
+**Rewriting history does not un-publish a secret on GitHub.** `git filter-repo` plus a force-push
+cleaned `main` at the cost of 30 changed SHAs and the permanent loss of GPG Verified badges — and did
+not remove the key, because `refs/pull/24/head` still serves it and PR refs are server-side and
+undeletable. Assume anything pushed to a public repo is public forever. Rotate; do not rewrite.
+See issue #25.
+
 ---
 
 # Accessibility Decisions
