@@ -14,6 +14,7 @@ import { useEffect, useRef } from 'react';
 import { usePreferences, useUpdatePreferences } from './usePreferences';
 import { getDeviceTimeZone } from '../deviceTimeZone';
 import { decideTimeZoneSync } from '../../domain/profile/timezoneSync';
+import { usePrefsStore } from '../../store/prefs';
 
 export function useTimeZoneSync(): string | null {
   const preferences = usePreferences();
@@ -28,6 +29,18 @@ export function useTimeZoneSync(): string | null {
 
   const profileTimeZone = preferences.data?.timezone ?? null;
   const decision = decideTimeZoneSync(profileTimeZone, getDeviceTimeZone());
+
+  // Publish the resolved zone to STORE_prefs, which is where screens read it synchronously
+  // during render (see useLocalDate). This hook is the SINGLE WRITER of that field and is
+  // mounted once, at AppProviders.
+  //
+  // It must happen here rather than in usePreferences' mirror, because that mirror only runs
+  // on a MUTATION. A returning user whose profile already carries a zone never mutates
+  // anything on launch, so the store would sit at null forever and every screen would wait
+  // for a day it could not name.
+  useEffect(() => {
+    usePrefsStore.getState().setPrefs({ timezone: decision.timeZone });
+  }, [decision.timeZone]);
 
   useEffect(() => {
     // Wait for the profile to load before deciding. Acting on `undefined` data would read as

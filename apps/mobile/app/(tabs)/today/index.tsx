@@ -19,9 +19,8 @@ import { useChecklist, useToggleChecklistItem } from '../../../src/data/hooks/us
 import { toRitualProgress } from '../../../src/domain/ritualProgressService';
 import { toStreakView } from '../../../src/domain/streakService';
 import { useUiStore } from '../../../src/store/ui';
+import { useLocalDate } from '../../../src/data/hooks/useLocalDate';
 import { t } from '../../../src/i18n';
-
-const TODAY = new Date().toISOString().slice(0, 10);
 
 export default function TodayScreen() {
   const online = useOnline();
@@ -32,8 +31,11 @@ export default function TodayScreen() {
   // Panchang stays behind the provider abstraction; blocked → unavailable (ADR-033).
   const panchangUnavailable = { message: t('today.panchangUnavailable'), onRetry: undefined };
 
-  const checklist = useChecklist(TODAY);
-  const toggle = useToggleChecklistItem(TODAY);
+  // The day in the USER's zone, not UTC (ADR-026, issue #30). Null until the zone resolves;
+  // the hooks below stay disabled rather than fetching another day's data.
+  const today = useLocalDate();
+  const checklist = useChecklist(today);
+  const toggle = useToggleChecklistItem(today);
 
   const resume = useUiStore((s) => s.ritualResume);
   const ritual = toRitualProgress({ completedToday: false, resumeStep: resume?.step ?? null });

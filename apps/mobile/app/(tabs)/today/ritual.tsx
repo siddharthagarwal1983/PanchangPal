@@ -11,16 +11,19 @@ import { getRitualSessionRepository } from '../../../src/data/ritualSessionRepos
 import { useRitualToday } from '../../../src/data/hooks/useRitualToday';
 import { useCompleteRitual } from '../../../src/data/hooks/useCompleteRitual';
 import { usePrefsStore } from '../../../src/store/prefs';
+import { useLocalDate } from '../../../src/data/hooks/useLocalDate';
 import { t } from '../../../src/i18n';
-
-const TODAY = new Date().toISOString().slice(0, 10);
 
 export default function RitualScreen() {
   const { theme } = useTheme();
   const tradition = usePrefsStore((state) => state.tradition);
   const depth = usePrefsStore((state) => state.depth);
   const ritual = useRitualToday(tradition, depth);
-  const completion = useCompleteRitual(TODAY);
+  // The day in the USER's zone (ADR-026, issue #30). It keys the stored session, so a UTC
+  // value did not merely mislabel the day — after a rollover it pointed at a different
+  // session entirely.
+  const today = useLocalDate();
+  const completion = useCompleteRitual(today);
   const engine = useRef<RitualEngine | null>(null);
   const [view, setView] = useState<RitualPlayerViewModel | null>(null);
 
@@ -28,7 +31,9 @@ export default function RitualScreen() {
 
   useEffect(() => {
     let active = true;
-    if (!ritual.data) return undefined;
+    // Wait for BOTH the ritual definition and the local date. Restoring against a guessed day
+    // would load the wrong session — or none — and then save progress under that wrong key.
+    if (!ritual.data || !today) return undefined;
     // Both outcomes are set from the async handlers, never synchronously in the effect
     // body — a sync setState here triggers cascading renders (react-hooks/set-state-in-effect).
     // The rejection path MUST be handled. Session restore reads local storage, and a
@@ -43,7 +48,7 @@ export default function RitualScreen() {
     // (react-hooks/set-state-in-effect).
     const definition = ritual.data;
     void Promise.resolve()
-      .then(() => RitualEngine.restore(definition, TODAY, getRitualSessionRepository(), new NullAudioAdapter()))
+      .then(() => RitualEngine.restore(definition, today, getRitualSessionRepository(), new NullAudioAdapter()))
       .then((restored) => {
         if (!active) return;
         engine.current = restored;
@@ -55,7 +60,10 @@ export default function RitualScreen() {
         setRestoreFailed(true);
       });
     return () => { active = false; };
-  }, [ritual.data]);
+    // `today` is a dependency on purpose: when the day rolls over while the app is open, the
+    // session key changes and the engine must re-restore against the NEW day rather than keep
+    // writing progress into yesterday's session.
+  }, [ritual.data, today]);
 
   const dispatch = useCallback(async (intent: (value: RitualEngine) => Promise<void>) => {
     if (!engine.current) return;
@@ -72,7 +80,9 @@ export default function RitualScreen() {
   // Ordering lives in resolveRitualScreenState so it can be unit-tested — the ORDER was the
   // defect: `!view` was tested first and swallowed both the error and the empty case.
   const screenState = resolveRitualScreenState({
-    isLoading: ritual.isLoading,
+    // An unresolved time zone is a loading state, not an error and not an empty ritual: the
+    // screen simply does not yet know which day's session to show (ADR-026).
+    isLoading: ritual.isLoading || !today,
     hasError: Boolean(ritual.error),
     hasData: Boolean(ritual.data),
     hasView: Boolean(view),
