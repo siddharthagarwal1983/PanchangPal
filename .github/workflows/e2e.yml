@@ -118,9 +118,17 @@ jobs:
       # release variant with the debug keystore when no release signing config is present,
       # which is fine for an emulator and deliberately NOT how the shipped artifact is
       # signed (that is EAS, with the real keystore).
+      # ONE ABI, not four. gradle.properties ships armeabi-v7a + arm64-v8a + x86 + x86_64
+      # because a shipped build needs them all; the emulator below is x86_64 and can only ever
+      # run one, so the other three are compiled and discarded. That waste is what pushed this
+      # job past its timeout once expo-updates added Kotlin/KSP work on top.
+      #
+      # Safe precisely because this APK is not the shippable one — it is signed with a throwaway
+      # debug keystore and exists to answer "does this change behave correctly" (see the header).
+      # release-build.yml builds the real artifact, with every ABI.
       - name: Build APK
         working-directory: apps/mobile/android
-        run: ./gradlew assembleRelease --no-daemon
+        run: ./gradlew assembleRelease --no-daemon -PreactNativeArchitectures=x86_64
 
       - name: Install Maestro
         run: |
