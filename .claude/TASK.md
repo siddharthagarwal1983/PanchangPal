@@ -2,8 +2,8 @@
 
 # PanchangPal — Current Task
 
-Version: 3.0.0
-Last Updated: 2026-07-19
+Version: 3.1.0
+Last Updated: 2026-07-22
 
 Purpose: the current implementation task. Stay focused; avoid unrelated work unless instructed.
 
@@ -66,10 +66,41 @@ throwing on absent config, and `react-native-mmkv` being unavailable in Expo Go.
 
 ---
 
+# Previous Task — completed 2026-07-22
+
+## Issue #30 — dates computed in UTC rather than the user's time zone
+Status: ✅ COMPLETE (PR #31, all CI gates green). Four increments: the tz-aware utility ADR-026
+mandated but nobody wrote (`packages/shared/src/time.ts`); adoption of the device zone into
+`user_profile.timezone`, which nothing had ever written; `useLocalDate` consumed by Today and
+Ritual, with null propagated rather than defaulted; and an ESLint guard **proven to fail** by
+reintroducing the exact expression. 190 tests green.
+
+## E2E gate restored
+Status: ✅ COMPLETE (PR #32, all CI gates green). The gate had produced no signal since
+2026-07-19: `expo-updates` pushed the Android build past its 45-minute timeout, and six runs were
+cancelled by `cancel-in-progress` before any could report it. Fixed: no cancel-on-push, 90-minute
+budget, Gradle cache, one ABI instead of four.
+
+---
+
 # Current Task
 
 ## Title
-Beta Readiness — B1/B2/B3 remainders (mostly gated on money, accounts, or later slices)
+Answer the persistence question, then resume B1/B2/B3 remainders
+
+Status
+🔴 **Session persistence is still unverified.** `FLOW_SESSION_PERSISTENCE` is written and asserts
+the intended post-restart state, but **no E2E run has reached the emulator**. It cannot be answered
+in Expo Go either — MMKV is absent there and the store degrades to memory by design.
+
+Next steps, in order:
+1. Re-run E2E on main once #31 and #32 are merged (the single-ABI build is the one to watch).
+2. Read the verdict from the flow, and from `maestro-logcat.txt` if red — the presence of
+   `[ritual] Persistent storage unavailable` distinguishes "MMKV fell back to memory" from
+   "MMKV was active and the session was never persisted". The two produce identical screenshots.
+3. If red, fix; if green, B2 gains a real persistence assertion.
+
+Everything else in B1/B2/B3 remains gated on money, a store account, or a later slice.
 
 Status
 🟡 **Two free engineering items remain; everything else needs a payment, a store account, or a later
@@ -104,8 +135,13 @@ marked as such rather than asserted.
       versions were confirmed against the Supabase Management API first: dev 17.6.1.147, staging
       17.6.1.141, both engine 17. The db-tests job passed on 17 with pgTAP 1.3.4 from PGDG.
       Anyone with a local stack needs `supabase stop --no-backup` before the next `supabase start`.
-- [ ] Verify session persistence actually survives a restart. It is observable now
-      (`getStorageBackend()`) but has never been confirmed end-to-end.
+- [ ] Verify session persistence actually survives a restart. Observable since PR #24
+      (`getStorageBackend()`) and now ENCODED as `FLOW_SESSION_PERSISTENCE` (PR #32) — but the flow
+      has never executed, because the E2E gate was dark. Still the last free engineering item.
+- [x] **Fix issue #30 — UTC dates** (PR #31, 2026-07-22). Not on the original list; found while
+      reading the ritual code. The daily loop stored UTC days as the user's local date, which in
+      AU/NZ meant the morning ritual was recorded against yesterday all morning.
+- [x] **Restore the E2E gate** (PR #32, 2026-07-22). It had reported nothing for three days.
 
 ## Costs money — owner decision
 - [ ] **prod Supabase project** (~$25/mo; free tier is 2/2) — the last item in B1

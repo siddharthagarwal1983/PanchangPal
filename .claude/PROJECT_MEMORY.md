@@ -2,9 +2,9 @@
 
 # PanchangPal — Project Memory
 
-Version: 1.5.0
+Version: 1.6.0
 
-Last Updated: 2026-07-18 (Mobile MVP Phase 1 feature-complete — M1–M8)
+Last Updated: 2026-07-22 (tz-aware date seam added — ADR-026 conformance)
 
 Current Phase:
 Beta Readiness & Platform Hardening (TDD Part 5)
@@ -390,6 +390,16 @@ Stable, cross-cutting facts (permanent until an approved decision changes them):
 - **Shared cross-feature surfaces are ROUTES** — a feature never imports another feature (TDD §2.2);
   contextual cross-links use navigation intents. The contextual paywall lives at `app/modal/paywall`
   (CMP_BOTTOM_SHEET + CMP_PLAN_CARD composed, never a new CMP_*), opened by both MOD_you and MOD_guru.
+- **Local dates go through ONE seam** — `localDateIn(instant, timeZone)` in
+  `packages/shared/src/time.ts` is the only sanctioned way to produce a `local_date`/`localDate`
+  value (ADR-026). It lives in `shared` because the client writes that column and Edge Functions
+  read it. The zone comes from `user_profile.timezone` (location-derived, user-correctable) with
+  the device zone as a fill-when-absent fallback that NEVER overwrites; when neither is usable the
+  code throws or returns null rather than defaulting — never India time. Screens read the day from
+  `useLocalDate`, which refreshes at the real local midnight and on foreground. An ESLint rule
+  fails the build on `toISOString().slice/substring/substr/split`, exempting only the shared test
+  that must demonstrate the wrong pattern. Established by issue #30, where UTC dates recorded the
+  AU/NZ morning ritual against yesterday.
 - **MockPanchangProvider** is DEV/TEST ONLY and must never be imported by production code.
 - **Backend Edge Functions pending** — SVC_household (member/invite), SVC_notify_scheduler
   (notify/schedule), and SVC_revenuecat_webhook are pending backend deliverables; the corresponding
