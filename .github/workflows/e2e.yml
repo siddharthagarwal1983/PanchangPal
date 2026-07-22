@@ -32,9 +32,16 @@ on:
 permissions:
   contents: read
 
+# cancel-in-progress is FALSE, deliberately. This job takes ~20-40 minutes, so on a branch
+# receiving several merges in an afternoon, cancelling the in-flight run means the gate reports
+# nothing at all — and a cancelled run is not a red run, so nobody is told. That is exactly what
+# happened between 2026-07-19 and 2026-07-22: six consecutive runs were cancelled by this
+# setting, hiding that the Android build had outgrown its timeout when expo-updates landed. The
+# gate looked untouched rather than broken. Queueing costs runner minutes; cancelling costs the
+# signal the job exists to produce.
 concurrency:
   group: e2e-${{ github.ref }}
-  cancel-in-progress: true
+  cancel-in-progress: false
 
 env:
   NODE_VERSION: '20.11.0'
@@ -45,7 +52,12 @@ jobs:
   android-e2e:
     name: FLOW_* on Android
     runs-on: ubuntu-latest
-    timeout-minutes: 45
+    # 90, raised from 45. The 45 was calibrated against a 19-minute Android build on
+    # 2026-07-19; adding expo-updates (PR #24) brought Kotlin/KSP compilation into the graph and
+    # pushed it past 41 minutes, so the job was killed mid-build and reported `cancelled`. The
+    # Gradle cache below should bring it back down — the headroom is so a slow cold build fails
+    # on its merits rather than on the clock.
+    timeout-minutes: 90
 
     steps:
       - uses: actions/checkout@v4
@@ -63,6 +75,20 @@ jobs:
         with:
           distribution: temurin
           java-version: '${{ env.JAVA_VERSION }}'
+
+      # The Android build was uncached: every run re-resolved and recompiled the whole native
+      # dependency graph. That was tolerable at 19 minutes and is not at 40+. Keyed on the
+      # lockfile and the mobile manifest, since those are what change the native graph; the
+      # restore-key means an unrelated dependency bump still starts from a warm cache.
+      - name: Cache Gradle
+        uses: actions/cache@v4
+        with:
+          path: |
+            ~/.gradle/caches
+            ~/.gradle/wrapper
+          key: gradle-${{ runner.os }}-${{ hashFiles('pnpm-lock.yaml', 'apps/mobile/package.json') }}
+          restore-keys: |
+            gradle-${{ runner.os }}-
 
       - name: Install dependencies
         run: pnpm install --frozen-lockfile
@@ -92,9 +118,17 @@ jobs:
       # release variant with the debug keystore when no release signing config is present,
       # which is fine for an emulator and deliberately NOT how the shipped artifact is
       # signed (that is EAS, with the real keystore).
+      # ONE ABI, not four. gradle.properties ships armeabi-v7a + arm64-v8a + x86 + x86_64
+      # because a shipped build needs them all; the emulator below is x86_64 and can only ever
+      # run one, so the other three are compiled and discarded. That waste is what pushed this
+      # job past its timeout once expo-updates added Kotlin/KSP work on top.
+      #
+      # Safe precisely because this APK is not the shippable one — it is signed with a throwaway
+      # debug keystore and exists to answer "does this change behave correctly" (see the header).
+      # release-build.yml builds the real artifact, with every ABI.
       - name: Build APK
         working-directory: apps/mobile/android
-        run: ./gradlew assembleRelease --no-daemon
+        run: ./gradlew assembleRelease --no-daemon -PreactNativeArchitectures=x86_64
 
       - name: Install Maestro
         run: |
@@ -122,23 +156,41 @@ jobs:
           ram-size: 4096M
           disable-animations: true
           emulator-options: -no-window -gpu swiftshader_indirect -no-snapshot -noaudio -no-boot-anim
+          # logcat is captured unconditionally and the flows' exit status is preserved.
+          # Screenshots show that a flow failed; only the device log says WHY when the cause is
+          # a silent runtime degradation. FLOW_SESSION_PERSISTENCE depends on this directly: the
+          # '[ritual] Persistent storage unavailable' warning is what distinguishes "MMKV fell
+          # back to memory" from "MMKV was active and the session was never persisted", and those
+          # two produce an identical screenshot.
           script: |
             adb install -r apps/mobile/android/app/build/outputs/apk/release/app-release.apk
+            adb logcat -c
+            set +e
             maestro test tests/flows/
+            flows_status=$?
+            set -e
+            adb logcat -d > maestro-logcat.txt
+            exit $flows_status
 
       # Maestro writes screenshots and a view hierarchy per failed step. Without these a
       # remote failure is nearly undiagnosable — the whole point of these flows is that
       # they catch things which only look wrong.
+      # always(), not failure(): a PASSING persistence run is itself the evidence that the
+      # session survived, and the screenshots are what make that claim checkable by a human
+      # later rather than trusted because a job was green.
       - name: Upload Maestro debug output
-        if: failure()
+        if: always()
         uses: actions/upload-artifact@v4
         with:
           name: maestro-debug
-          path: ~/.maestro/tests
+          path: |
+            ~/.maestro/tests
+            maestro-logcat.txt
           retention-days: 7
+          if-no-files-found: warn
 
       - name: Summary
         if: always()
         run: |
           echo "### E2E (Maestro): ${{ job.status }}" >> "$GITHUB_STEP_SUMMARY"
-          echo "Flows: FLOW_RETURNING, FLOW_MORNING_RITUAL" >> "$GITHUB_STEP_SUMMARY"
+          echo "Flows: FLOW_RETURNING, FLOW_MORNING_RITUAL, FLOW_SESSION_PERSISTENCE" >> "$GITHUB_STEP_SUMMARY"
