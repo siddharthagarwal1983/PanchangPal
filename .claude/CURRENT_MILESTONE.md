@@ -2,9 +2,9 @@
 
 # PanchangPal — Current Milestone
 
-Version: 3.1.0
+Version: 3.2.0
 
-Last Updated: 2026-07-19 (B1/B2/B3 substantially built and verified)
+Last Updated: 2026-07-22 (E2E found dark since 07-19; ADR-026 date defect fixed)
 
 Purpose:
 This document defines the current milestone. Unlike SESSION.md (daily work) or TASK.md (current
@@ -23,7 +23,12 @@ Status
 
 Overall Progress
 
-0% (0 of 8 slices COMPLETE — B1 ~85%, B2 ~85%, B3 ~80%)
+0% (0 of 8 slices COMPLETE — B1 ~85%, B2 ~75%, B3 ~80%)
+
+B2 is revised DOWN from ~85%. That figure rested on a run from 2026-07-19 11:59 UTC that has not
+held since: the Android build outgrew its timeout when expo-updates landed, and every run
+afterwards was cancelled or killed. The flows themselves were not shown to be broken — but a gate
+whose last word is three days old is not 85% done.
 
 A slice counts only when done. Three are most of the way there, and every remaining item in them
 is gated on money, a store account, or a later slice — not on engineering. The number stayed at 0
@@ -107,11 +112,23 @@ likewise, and its DB password was rotated after an exposure.
 Remaining: **the prod project needs a paid plan** — the free tier allows two projects per org and
 both are used. `promote-production` cannot be exercised end-to-end until B7/B8 implement it.
 
-### B2 — E2E verification · ~85%
+### B2 — E2E verification · ~75%
 Done: Maestro 2.6.1; `tests/flows/FLOW_RETURNING.yaml` (23 steps) and
 `tests/flows/FLOW_MORNING_RITUAL.yaml` (14 steps), both green locally on arm64 and in CI on
 x86_64; `e2e.yml` builds the APK in CI and runs the flows on an emulator — **2/2 passed in 46s on
 its first run**.
+**The gate then went dark for three days (found 2026-07-22).** `expo-updates` (PR #24, `bbb7ac4`,
+2026-07-19 15:48 UTC) brought Kotlin/KSP compilation into the Android graph and the build outgrew
+`timeout-minutes: 45`. Six subsequent runs were cancelled by `cancel-in-progress` when pushes
+raced; the first uncontended run, on 2026-07-22, was killed by the timeout still building. **A
+cancelled run is not a red run** — nothing was reported broken, so the tracking docs kept citing
+the 2026-07-19 result. PR #32 fixes all of it: no cancel-on-push for a 20-40 minute job, a
+90-minute budget, a Gradle cache, and building one ABI rather than four (the emulator is x86_64;
+three quarters of the native build was compiled and discarded every run).
+
+`FLOW_SESSION_PERSISTENCE` is written and asserts the intended post-restart state, but **no run has
+reached the emulator**, so it has never executed.
+
 Remaining, and NOT achievable within B2: `FLOW_ONBOARDING` is unreachable because
 `app/index.tsx` hardcodes `ONBOARDED = true`; `FLOW_HOUSEHOLD_INVITE` needs the unimplemented
 `SVC_household`; the subscription path can only assert "unavailable" while
@@ -329,20 +346,27 @@ testers' hands.
     only in `authRepository.ts` was generalized: all ten `src/data` repositories now resolve their
     client through `(this._db ??= getSupabase())`, so construction no longer requires configuration
     and a misconfigured build cannot fail during route module evaluation.
-  - **`react-native-mmkv` is unavailable in Expo Go**, so the Ritual screen crashes there at any SDK
-    version. It sits behind the `KeyValueStore` port in `ritualSessionRepository.ts:7`, so an
-    Expo Go-compatible fallback is contained — but a development build (B3) removes the constraint
-    entirely and is the better answer if EAS lands first.
+  - **`react-native-mmkv` is unavailable in Expo Go.** The "Ritual screen crashes there" half of
+    this entry is **likely stale**: PR #24 wrapped `new MMKV()` in try/catch and made construction
+    lazy (`ritualSessionRepository.ts:47`), so it degrades to memory with a warning instead of
+    crashing. Marked likely-stale rather than fixed — the code path was read, not observed on a
+    device. The consequence that remains is real: ritual sessions cannot persist in Expo Go, so
+    persistence must be verified on a native build.
 - ~~**SDK 54 native runtime unverified**~~ — **CLOSED 2026-07-19.** Three Android APKs built and
   run; the New Architecture works natively. iOS remains unbuilt (no Apple membership), so that
   half of the baseline is still unproven.
-- **Session persistence is unverified — but no longer unobservable.** Completing a ritual,
-  force-stopping, and reopening shows the intro again. The two causes used to be indistinguishable
-  from outside: either MMKV is not persisting, or `RitualSessionRepository`'s in-memory fallback
-  engaged silently. PR #24 closed the observability half — the app logs when it degrades and
-  `getStorageBackend()` (`src/data/ritualSessionRepository.ts:38`) reports the active backend, so
-  the two causes are now distinguishable. What remains is the verification itself: nobody has
-  confirmed a session survives a restart. **This is the last free engineering item.**
+- **Session persistence is STILL unverified (2026-07-22).** PR #24 made the degradation
+  observable (`getStorageBackend()`, `src/data/ritualSessionRepository.ts:38`), and
+  `FLOW_SESSION_PERSISTENCE` (PR #32) now encodes the check — complete the ritual, `stopApp`,
+  relaunch, assert `Done for today`, with `adb logcat` captured so the two candidate causes are
+  separable. **It has never executed**: no E2E run has reached the emulator since the gate went
+  dark. It also cannot be answered in Expo Go, where MMKV is absent and the store degrades to
+  memory by design. The domain logic is not the suspect — `advanceSession` leaves `stepIndex` on
+  the last step, so `isSessionForRitual` holds and a completed session restores as completed.
+- **⚠️ The E2E gate reported nothing between 2026-07-19 and 2026-07-22.** See B2 above. The
+  mechanism matters more than the outage: `cancel-in-progress: true` on a 20-40 minute job means a
+  busy afternoon produces no signal at all, and a cancelled run reads as "not run" rather than
+  "broken". Fixed in PR #32.
 - ~~**Seven `src/data` repositories still throw on absent config.**~~ **Resolved** (PR #14). All ten
   use the lazy `(this._db ??= getSupabase())` getter; the default-parameter pattern is gone, and
   `repository-construction.test.ts` guards against its return.

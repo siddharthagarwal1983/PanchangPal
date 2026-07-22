@@ -11,7 +11,7 @@ increment/milestone boundary per the Increment & Milestone Completion Checkpoint
 
 ---
 
-## Where we are (2026-07-18)
+## Where we are (2026-07-22)
 
 Documentation, ADRs (33), OpenAPI, DB schema + migrations, monorepo scaffold, Expo app shell,
 CI/CD, Backend Foundation, and the design system are complete. The Mobile MVP — Phase 1 feature
@@ -39,6 +39,22 @@ Verified starting position: staging migrations and Edge Function deploys are rea
 E2E and EAS build CD jobs are placeholders and `preflight.sh` warns-then-exits-0 on missing secrets,
 so CD's green status currently overstates what is verified. B1/B2 address that before anything is
 layered on top.
+
+**Update (2026-07-22).** Two findings moved the position, neither of them forward:
+
+- **The E2E gate produced no signal between 2026-07-19 and 2026-07-22.** `expo-updates` (PR #24)
+  brought Kotlin/KSP into the Android build, which then outgrew `timeout-minutes: 45`; six runs
+  were cancelled by `cancel-in-progress` before any could report it. A cancelled run is not a red
+  run, so the docs went on citing a three-day-old result. Fixed in PR #32; B2 revised to ~75%.
+- **Issue #30 — the daily loop computed dates in UTC.** `local_date` is the user's day by contract,
+  and both Today and Ritual derived it with `toISOString().slice(0, 10)`. In Australia and New
+  Zealand that recorded the morning ritual against yesterday, all morning. Fixed in PR #31, guarded
+  by lint. ADR-026 had mandated a single tz-aware utility since before implementation began; none
+  existed.
+
+Both are the same lesson the Execution Gap taught, in a new place: a claim in CI, or in an ADR, is
+not a verified behaviour. Session persistence — the item this session set out to close — is still
+unverified, because no E2E run has reached the emulator.
 
 One blocker: the Canonical Panchang Engine (ADR-033, Proposed) — astronomical algorithm
 undocumented; the whole system depends only on the abstract PanchangEngine/PanchangProvider

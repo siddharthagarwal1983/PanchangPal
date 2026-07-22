@@ -2,9 +2,9 @@
 
 # PanchangPal — Project Status Dashboard
 
-Version: 1.3.0
+Version: 1.4.0
 
-Last Updated: 2026-07-18 (Mobile MVP merged to main; Beta Readiness milestone opened)
+Last Updated: 2026-07-22 (ADR-026 date defect fixed; E2E gate found dark since 2026-07-19)
 
 Purpose:
 This document provides a high-level snapshot of the overall project.
@@ -73,7 +73,7 @@ TBD
 | Backend Foundation (SVC_*) | ✅ Complete | 100% (panchang compute blocked by ADR-033) |
 | Mobile Development (feature slices) | ✅ Complete | 100% (M1–M8 done) |
 | AI Platform | 🟡 In Progress | Adapters + RAG pipeline done; corpus + eval pending |
-| Testing | 🟡 In Progress | Unit/component/domain green in CI; E2E is a CD placeholder (echo stub) — real FLOW_* specs are slice B2 |
+| Testing | 🟡 In Progress | 190 unit/component/domain green in CI (176 mobile + 14 shared); 3 Maestro FLOW_* authored, but the E2E gate produced no signal 2026-07-19 → 2026-07-22 (build outgrew its timeout; cancelled runs hid it — PR #32) |
 | Beta | ⏳ Pending | 0% |
 | Production Launch | ⏳ Pending | 0% |
 
@@ -100,12 +100,21 @@ Current Focus
 Completed slices: M1 App Shell · M2 Today · M3 Guided Ritual · M4 Calendar Shell · M5 Ask Guru ·
 M6 Profile/Household · M7 Notifications.
 
+- **Session of 2026-07-22** — issue #30: every date in the daily loop was computed in **UTC** and
+  stored as the user's local date. In New Zealand and Australia that recorded the morning ritual
+  against **yesterday for the entire local morning** — two of the three primary launch markets.
+  Fixed across four increments (PR #31): the tz-aware utility ADR-026 always mandated, adoption of
+  the device zone into `user_profile.timezone` (which nothing had ever written), `useLocalDate` in
+  the screens, and an ESLint guard proven to fail on the reintroduced expression. Separately, the
+  E2E gate was found to have produced **no signal since 2026-07-19** — `expo-updates` pushed the
+  Android build past its timeout and cancelled runs hid it (PR #32). iOS verified running in Expo
+  Go. **Session persistence remains unverified.**
 - **Beta Readiness build-out (2026-07-18/19)** — ✅ merged, 14 PRs. The MVP had never been
   executed anywhere; 12 defects fixed. Platform re-baselined to Expo SDK 54 / RN 0.81 / React 19
   and verified natively (3 Android APKs). CI now compiles the app every PR; CD migrates, seeds and
   deploys for real; dev + staging both provisioned and seeded; releases build unattended from a
-  `v*` tag; two Maestro E2E flows green in CI. B1 ~85%, B2 ~85%, B3 ~80% — none complete, every
-  remainder gated on money, a store account, or a later slice. See CURRENT_MILESTONE.md.
+  `v*` tag; two Maestro E2E flows green in CI. B1 ~85%, B2 ~75% (revised down 2026-07-22), B3 ~80% — none
+  complete, every remainder gated on money, a store account, or a later slice. See CURRENT_MILESTONE.md.
 
 See:
 
@@ -229,7 +238,7 @@ Implementation: Mobile MVP Phase 1 is feature-complete (M1–M8).
 | Component Tests | 🟢 In place for delivered slices |
 | Accessibility Tests | 🟢 a11y assertions in slice tests |
 | AI Evaluation | ⏳ Pending |
-| E2E Tests | ⏳ Pending (Maestro FLOW_*) |
+| E2E Tests | 🟡 3 FLOW_* authored (RETURNING, MORNING_RITUAL, SESSION_PERSISTENCE); gate dark 07-19 → 07-22, fixes in PR #32; SESSION_PERSISTENCE has never executed |
 
 ---
 
@@ -237,7 +246,8 @@ Implementation: Mobile MVP Phase 1 is feature-complete (M1–M8).
 
 Priority 1
 
-Beta Readiness — Slice B1: Environments & secrets (dev + prod Supabase projects, per-env secrets, fail-closed preflight)
+Land PR #31 (issue #30 — dates computed in UTC rather than the user's zone) and PR #32 (E2E gate
+fixes), then re-run E2E and finally answer whether a ritual session survives a restart
 
 Priority 2
 

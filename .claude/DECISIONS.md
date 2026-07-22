@@ -630,3 +630,44 @@ nothing about squashed work; compare content or subjects instead. Since CLAUDE.m
 the session bootstrap, a stale entry does not merely misreport, it aims the next session at work that
 does not exist. Open items carry a file:line where one exists, and anything unverifiable from the
 repo is marked as unverified rather than asserted.
+
+---
+
+# 2026-07-22 — Time-zone correctness, and what a cancelled gate means
+
+**`localDateIn(instant, timeZone)` from `@panchangpal/shared` is the ONLY sanctioned way to produce
+a `local_date`.** ADR-026 mandated "a single tz-aware utility — no ad-hoc `Date` arithmetic
+anywhere" before implementation began, and no such utility was ever written; two screens derived
+the day with `new Date().toISOString().slice(0, 10)` instead. That is UTC by definition, while
+`local_date` is the user's day by contract (`unique (user_id, local_date)`), so in New Zealand and
+Australia the morning ritual was recorded against yesterday for the entire local morning. The
+utility lives in `shared` because the value is written by the client and read by Edge Functions —
+one definition is the only way "a single utility" survives that boundary.
+
+**The zone is location-derived and user-correctable; the device is a fallback that fills, never
+overwrites.** Per PDD `01_FOUNDATIONS.md:672-674`/`:799-800`. A traveller keeps their home
+observance rather than having their day — and their streak — shift because they boarded a plane.
+When no zone is usable the code throws or returns null; it never defaults. ADR-026: never India
+time. A plausible wrong zone mis-dates every completion silently.
+
+**A convention enforced only by review is the one that fails.** The defect type-checked perfectly —
+a valid date string with the wrong value — and passed lint, tsc, unit tests, and a UTC CI runner.
+The ADR had been correct and ignored for months. It is now an ESLint rule, added only after being
+proven to fail on the reintroduced expression, per the standing `ci.yml` rule.
+
+**No E2E flow can catch a time-zone defect.** CI runners are UTC, where the wrong answer and the
+right one agree. Such things need unit tests over fixed instants and fixed zones; a test that reads
+the ambient clock or zone reproduces the bug rather than catching it.
+
+**A cancelled CI run is not a red run, and that is how a gate goes dark.** `cancel-in-progress: true`
+on the 20-40 minute E2E job meant that between 2026-07-19 and 2026-07-22 — while the Android build
+silently outgrew its timeout after `expo-updates` landed — six consecutive runs were cancelled and
+none reported anything. The gate looked untouched rather than broken, and the tracking docs kept
+citing a three-day-old success. **Cancellation is only acceptable for jobs short enough that the
+next run arrives promptly**; for anything long, queue instead. Queueing costs runner minutes;
+cancelling costs the signal the job exists to produce.
+
+**Build only the ABI under test in CI.** The E2E emulator is x86_64 and can run exactly one; the
+four-ABI default compiled three that were discarded, and that waste is what made the timeout
+reachable. Safe only because the CI APK is explicitly not the shippable artifact — `release-build.yml`
+builds that one, with every ABI.
