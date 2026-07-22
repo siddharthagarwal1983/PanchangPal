@@ -25,9 +25,20 @@ export function usePreferences() {
   });
 }
 
-/** Mirror the display subset (tradition/depth/appearance) into STORE_prefs. */
-function mirror(p: Pick<Preferences, 'tradition' | 'depth' | 'appearance'>) {
-  usePrefsStore.getState().setPrefs({ tradition: p.tradition, depth: p.depth, appearance: p.appearance });
+/**
+ * Mirror the display subset (tradition/depth/appearance) plus the time zone into STORE_prefs.
+ *
+ * The zone is not a display value, but it is needed SYNCHRONOUSLY during render to derive which
+ * day a screen is showing (ADR-026, issue #30), and a screen cannot await a query to decide
+ * that. It is mirrored on the same path as the rest so it reverts with them on error.
+ */
+function mirror(p: Pick<Preferences, 'tradition' | 'depth' | 'appearance' | 'timezone'>) {
+  usePrefsStore.getState().setPrefs({
+    tradition: p.tradition,
+    depth: p.depth,
+    appearance: p.appearance,
+    timezone: p.timezone,
+  });
 }
 
 export function useUpdatePreferences() {
@@ -54,7 +65,12 @@ export function useUpdatePreferences() {
       const prev = qc.getQueryData<Preferences>(key) ?? { ...DEFAULT_PREFERENCES };
       const next: Preferences = { ...prev, ...patch };
       qc.setQueryData<Preferences>(key, next);
-      const prevMirror = { tradition: prev.tradition, depth: prev.depth, appearance: prev.appearance };
+      const prevMirror = {
+        tradition: prev.tradition,
+        depth: prev.depth,
+        appearance: prev.appearance,
+        timezone: prev.timezone,
+      };
       mirror(next);
       return { prev, prevMirror };
     },

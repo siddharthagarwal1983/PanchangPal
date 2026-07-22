@@ -6,4 +6,5 @@
 export * from './errors.js';
 export * from './events.js';
 export * from './enums.js';
+export * from './time.js';
 export * from './types.js';
