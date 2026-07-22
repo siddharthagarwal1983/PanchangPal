@@ -1,0 +1,74 @@
+# FLOW_SESSION_PERSISTENCE — does a ritual session survive a process restart?
+#
+# This is the question FLOW_MORNING_RITUAL deliberately declined to answer. Its closing
+# comment recorded the symptom (complete a ritual, force-stop, reopen, see the INTRO again)
+# and two indistinguishable causes:
+#   1. the completed session is never written to / read back from MMKV, or
+#   2. RitualSessionRepository fell back to its in-memory store, which loses everything on
+#      restart — and that fallback is deliberately silent.
+# PR #24 made the fallback observable (`getStorageBackend()`, and a console.warn that reaches
+# logcat), so the two are now separable from outside. This flow supplies the other half: the
+# verification itself, encoded so it stays verified rather than being confirmed once by hand.
+#
+# WHAT "CORRECT" MEANS HERE. RitualEngine.restore() loads the saved session and keeps it when
+# isSessionForRitual() holds. A completed session keeps stepIndex at the last step (advanceSession
+# sets status without incrementing past it), so it satisfies that guard and restores as
+# 'completed' — which renders CompletionMoment, not RitualIntro. So the intended post-restart
+# state is 'Done for today'. That is asserted below; a failure here is a real defect, not a
+# missing feature.
+#
+# The Today card is NOT the evidence. app/(tabs)/today/index.tsx passes `completedToday: false`
+# as a literal and reads resumeStep from useUiStore (Zustand, in-memory, wiped on restart), so
+# the card reads "Begin" regardless of what storage did. Only the ritual screen can answer this.
+#
+# clearState at BOTH ends: at the start so the run does not inherit a session from
+# FLOW_MORNING_RITUAL, and at the end so this flow does not leave a completed session behind for
+# whatever runs next. Alphabetical ordering puts this flow last today; the guards mean it does
+# not have to stay last.
+#
+# SELECTORS ARE testIDs, NOT TEXT — see FLOW_MORNING_RITUAL for why text matching silently
+# passes while navigating nowhere.
+appId: com.panchangpal.app
+---
+- launchApp:
+    clearState: true
+
+- extendedWaitUntil:
+    visible: "Today's ritual"
+    timeout: 60000
+
+# Drive the ritual to completion. Same path as FLOW_MORNING_RITUAL; duplicated rather than
+# shared because this flow needs a KNOWN-completed state as its precondition, and a flow that
+# depends on another having run first is a flow that fails for the wrong reason.
+- tapOn:
+    id: 'ritual-action'
+- assertVisible: 'Daily Practice'
+- tapOn:
+    id: 'ritual-begin'
+- assertVisible: 'Step 1 of 1'
+- tapOn:
+    id: 'ritual-next'
+- assertVisible: 'Done for today'
+- takeScreenshot: session-persistence-01-completed
+
+# The whole question. stopApp kills the process, so anything held only in memory — the
+# in-memory KeyValueStore fallback, useUiStore — is gone. Only what MMKV wrote survives.
+- stopApp
+
+- launchApp:
+    clearState: false
+- extendedWaitUntil:
+    visible: "Today's ritual"
+    timeout: 60000
+
+- tapOn:
+    id: 'ritual-action'
+- takeScreenshot: session-persistence-02-after-restart
+
+# If this fails showing the intro, the session did not survive. `adb logcat` from the same run
+# (captured by e2e.yml) then says WHICH cause: the '[ritual] Persistent storage unavailable'
+# warning means the memory fallback engaged; its absence means MMKV was active and the
+# write/read-back path itself is at fault.
+- assertVisible: 'Done for today'
+
+- clearState

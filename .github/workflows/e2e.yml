@@ -122,23 +122,41 @@ jobs:
           ram-size: 4096M
           disable-animations: true
           emulator-options: -no-window -gpu swiftshader_indirect -no-snapshot -noaudio -no-boot-anim
+          # logcat is captured unconditionally and the flows' exit status is preserved.
+          # Screenshots show that a flow failed; only the device log says WHY when the cause is
+          # a silent runtime degradation. FLOW_SESSION_PERSISTENCE depends on this directly: the
+          # '[ritual] Persistent storage unavailable' warning is what distinguishes "MMKV fell
+          # back to memory" from "MMKV was active and the session was never persisted", and those
+          # two produce an identical screenshot.
           script: |
             adb install -r apps/mobile/android/app/build/outputs/apk/release/app-release.apk
+            adb logcat -c
+            set +e
             maestro test tests/flows/
+            flows_status=$?
+            set -e
+            adb logcat -d > maestro-logcat.txt
+            exit $flows_status
 
       # Maestro writes screenshots and a view hierarchy per failed step. Without these a
       # remote failure is nearly undiagnosable — the whole point of these flows is that
       # they catch things which only look wrong.
+      # always(), not failure(): a PASSING persistence run is itself the evidence that the
+      # session survived, and the screenshots are what make that claim checkable by a human
+      # later rather than trusted because a job was green.
       - name: Upload Maestro debug output
-        if: failure()
+        if: always()
         uses: actions/upload-artifact@v4
         with:
           name: maestro-debug
-          path: ~/.maestro/tests
+          path: |
+            ~/.maestro/tests
+            maestro-logcat.txt
           retention-days: 7
+          if-no-files-found: warn
 
       - name: Summary
         if: always()
         run: |
           echo "### E2E (Maestro): ${{ job.status }}" >> "$GITHUB_STEP_SUMMARY"
-          echo "Flows: FLOW_RETURNING, FLOW_MORNING_RITUAL" >> "$GITHUB_STEP_SUMMARY"
+          echo "Flows: FLOW_RETURNING, FLOW_MORNING_RITUAL, FLOW_SESSION_PERSISTENCE" >> "$GITHUB_STEP_SUMMARY"
