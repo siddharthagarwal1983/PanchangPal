@@ -2,8 +2,8 @@
 
 # PanchangPal — Current Session
 
-Version: 1.16.0
-Last Updated: 2026-07-25 (B4.1–B4.3 in; B4 now blocked on a Sentry org)
+Version: 1.17.0
+Last Updated: 2026-07-25 (B5 opened; NFR-15 found unmet — no PITR on the free tier)
 
 ---
 
@@ -239,8 +239,43 @@ corpus.
 
 ---
 
+# 11. B5 — Reliability & DR, and the gap it exposed
+
+Runbooks for §8.3's five scenarios (`docs/devops/DR_RUNBOOKS.md`): DB restore, region incident, Edge
+Function outage, secret compromise, store outage — literal commands from this repo, written for one
+person under pressure at a bad hour.
+
+The drill is mechanised (`.github/workflows/dr-drill.yml`): build from repo → verify invariants on
+the source → `pg_dump --format=custom` → `pg_restore --exit-on-error` into a fresh database → re-run
+**the same invariants file** → compare seeded row counts. Monthly, and on any PR touching migrations
+or seed, so an un-restorable schema fails review rather than an incident. The PR trigger also meant
+this drill was proven on its own PR rather than merged unexercised. First run: **restore in 1s**,
+invariants OK on both sides, all five seeded tables equal.
+
+The invariants target what comes back subtly wrong while looking healthy: missing tables, **RLS
+silently DISABLED** (a perfectly working app that exposes every household's data), policies absent,
+post-v1 `FF_*` restored ON, `pgvector` gone, enum types missing.
+
+## ⛔ NFR-15 is unmet, and it is a launch blocker
+
+**There is no point-in-time backup to restore from.** PITR is a paid-plan feature and both hosted
+projects are free-tier. Schema and seed rebuild from the repo in minutes; **user data — profiles,
+households, ritual completions, streaks, personal dates, conversations — is not recoverable at all.**
+
+This reframes a purchase already on the list: the ~$25/month Supabase plan was tracked as B1's last
+environments item, and it is actually the difference between "one incident costs an afternoon" and
+"one incident is permanent data loss". The runbook states it in its opening section rather than a
+footnote, and says plainly: do not launch to real users on the free tier.
+
+Also recorded in the runbook's §6 — what is written but **never walked**: PITR (impossible today),
+region response, Edge Function rollback. A runbook nobody has exercised is a plan, not a capability.
+
+---
+
 # Verification
 
+- **B5 DR drill: green on its own PR** (run 30168068264) — `pg_dump` 108K, restore 1s, `DR
+  invariants: OK` on source AND restored, seeded row counts equal (4/4, 4/4, 1/1, 1/1, 3/3).
 - **API contract gate: 16 vitest tests (77 total) · tsc clean · eslint 0 errors.** Proven to fail by
   three perturbations, not merely observed to pass.
 - **Analytics RLS gate: 17 pgTAP assertions in the RLS suite (+5).** Not runnable locally (no
@@ -313,8 +348,13 @@ merely configured, and this milestone's whole premise is that the difference mat
 remaining work is small — install `@sentry/react-native` + its config plugin, then swap one line in
 `src/data/telemetryAdapter.ts` and one in `_shared/http.ts`.
 
+**Owner purchases now gate reliability, not just convenience.** A Sentry org + DSN (free) closes B4;
+a paid Supabase plan (~$25/mo) closes B1 **and** is the only way NFR-15 becomes achievable.
+
 Credential-free options, in rough order of value:
 
+0. **B5's remaining increments** — §8.2 graceful degradation verified end to end (every `ERR_*` has a
+   defined calm behaviour in PDD §12; nothing has checked the app actually does it), and §8.4.
 1. **`FLOW_ONBOARDING` is still unreachable** — `app/index.tsx:16` hardcodes `ONBOARDED = true`, so
    SCR_ONBOARDING_* has never rendered from launch and one of B2's six flows cannot be written. The
    onboarding screens exist and have never been executed, which is the same shape of gap that hid

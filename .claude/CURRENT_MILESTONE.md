@@ -2,9 +2,9 @@
 
 # PanchangPal — Current Milestone
 
-Version: 3.5.0
+Version: 3.6.0
 
-Last Updated: 2026-07-25 (B4.1–B4.3 in; B4's remainder is owner-gated on a Sentry org)
+Last Updated: 2026-07-25 (B5 opened — runbooks + drill; the PITR gap is now explicit)
 
 Purpose:
 This document defines the current milestone. Unlike SESSION.md (daily work) or TASK.md (current
@@ -23,7 +23,7 @@ Status
 
 Overall Progress
 
-22% (1 of 8 slices COMPLETE — **B2 ✅** — plus 3 of B4's 4 increments; B1 ~85%, B3 ~80%)
+25% (1 of 8 slices COMPLETE — **B2 ✅** — plus 3 of B4's 4 and 1 of B5's 3; B1 ~85%, B3 ~80%)
 
 **B4 is three-quarters through, and now owner-gated (2026-07-25).** It is sliced into four increments so the number above
 is auditable: **B4.1 telemetry seam ✅** (TelemetryAdapter port + the two error call sites) ·
@@ -318,7 +318,7 @@ possible fix and would have caught defects 1–3 at M1.
 | B2 | E2E verification | bundle gate (done in B1) + Maestro FLOW_*; green in CI (§2.2, §10.1) | ✅ COMPLETE (2026-07-25) — bundle gate + 3 in-scope flows GREEN in CI on a native build (incl. FLOW_SESSION_PERSISTENCE); other 3 flows blocked on other slices/backends/gated feature |
 | B3 | Build & distribution | eas.json profiles, Hermes, signing, source maps, TestFlight / Play Internal (§2.3) | 🟡 ~80% — automated builds work; store accounts + Sentry (B4) remain |
 | B4 | Observability | Sentry, telemetry, SLO dashboards + alerts (§7) | 🟡 ~75% — B4.1 seam ✅ · B4.2 sink ✅ · B4.3 server seam + prod release gate ✅ · EVT_* daily-habit funnel now emitting (§11.4, incl. the North Star input EVT_017); **upload + B4.4 owner-gated on a Sentry org (free tier)** |
-| B5 | Reliability & DR | backups, restore drill, runbooks, graceful degradation (§8) | ⏳ |
+| B5 | Reliability & DR | backups, restore drill, runbooks, graceful degradation (§8) | 🟡 ~33% — runbooks (§8.3) + a mechanised restore drill ✅; **PITR undrillable on the free tier, so NFR-15 is UNMET for user data**; §8.2 degradation verification pending |
 | B6 | Security & privacy | OWASP Mobile review, CCPA export/delete verification, store privacy labels (§5, §6) | ⏳ |
 | B7 | Release management | versioning/trains, OTA policy + channels, staged rollout, rollback verification (§3) | ⏳ |
 | B8 | Go/no-go & launch | §10.1 checklist execution, internal → beta cohort, sign-off | ⏳ |
@@ -344,6 +344,13 @@ One slice per session, same cadence as M1–M8: implemented, self-verified, revi
       Sentry source maps uploaded per build; a real build distributed to TestFlight / Play Internal.
 - [ ] **B4** — Sentry (crash-free tracking) + the §7.1 telemetry set; SLO dashboards and alerts live.
 - [ ] **B5** — backup policy confirmed; a real DR restore drill executed and documented (§8.1/§8.3).
+      - [x] **Runbooks** for all five §8.3 scenarios, with literal repo commands and named owner.
+      - [x] **Restore drill mechanised** (`dr-drill.yml`): build-from-repo → `pg_dump` →
+            `pg_restore --exit-on-error` → the same invariants file re-run on the restored database →
+            seeded row-count equality. Monthly, plus on any PR touching migrations or seed. First
+            run: restore 1s, invariants OK both sides.
+      - [ ] **Backup policy cannot be confirmed** — there is no PITR to confirm (see the risk below).
+      - [ ] §8.2 graceful degradation verified end to end; §8.4 single-founder mitigations recorded.
 - [ ] **B6** — OWASP Mobile review completed; CCPA export/delete verified end-to-end (F-3/F-10);
       privacy policy + store privacy labels accurate.
 - [ ] **B7** — version trains, OTA channels (`staging`/`prod`) with runtime-version binding and
@@ -445,7 +452,16 @@ testers' hands.
   Null adapters keep the app honest but leave those paths E2E-untested.
 - **ADR-033 unratified** — constrains what a beta can demonstrate (no panchang, no sunrise/tithi
   notifications).
+- **⛔ NFR-15 IS UNMET: there is no point-in-time backup to restore from (found 2026-07-25, B5).**
+  Supabase PITR is a paid-plan feature and both hosted projects are on the free tier, so RPO ≤ 24 h /
+  RTO ≤ 4 h holds for schema and seed (minutes, from the repo) and **not at all for user data** —
+  profiles, households, completions, streaks, personal dates, conversations. This is a launch
+  blocker, not a nice-to-have: shipping to real users in this state means a single incident is
+  unrecoverable data loss. Closed by the same ~$25/month purchase that closes B1.
 - **Single-founder resilience (TRISK-11)** — runbooks and DR are the mitigation; B5 is not optional.
+  Runbooks now exist (`docs/devops/DR_RUNBOOKS.md`) and the restore drill is mechanised, but §6 of
+  that document lists what is written and **never walked**: PITR (impossible), region response, Edge
+  Function rollback. A runbook nobody has exercised is a plan, not a capability.
 - **Store review latency** — submission is a long pole; B8 should start the compliance work early.
 
 ---
