@@ -2,9 +2,9 @@
 
 # PanchangPal — Project Memory
 
-Version: 1.6.0
+Version: 1.7.0
 
-Last Updated: 2026-07-25 (ritual-session storage seam recorded — mmkv v4 / New Arch; persistence verified)
+Last Updated: 2026-07-25 (TelemetryAdapter seam recorded alongside the ritual-session storage seam)
 
 Current Phase:
 Beta Readiness & Platform Hardening (TDD Part 5)
@@ -409,6 +409,16 @@ Stable, cross-cutting facts (permanent until an approved decision changes them):
   When the native module is unavailable (Expo Go, or off-device), the port degrades to an in-memory
   store with a visible warning and `getStorageBackend()` reports `'memory'` — the ritual still works,
   it just will not survive a restart. Persistence is verified end-to-end in CI, not assumed.
+- **TelemetryAdapter** (client, B4.1) — errors and crashes leave the app through this port and
+  nowhere else (TDD Part 5 §7.1); no feature, screen, or repository imports a crash-reporting SDK.
+  Two call sites feed it: `ErrorBoundary.componentDidCatch` and a global `ErrorUtils` handler. The
+  concrete Sentry adapter is DEFERRED, like NotificationAdapter's: `@sentry/react-native` is not
+  installed and no DSN is provisioned, so `NullTelemetryAdapter` drops every report and the §7.2
+  crash-free SLO cannot be measured. That state is inspectable, not silent —
+  `getTelemetryBackend()` reports `'none'` and a DSN configured with no adapter warns at startup.
+  **No PII is structural** (§7.1 `[MANDATORY]`): unrecognised errors map to `ERR_UNKNOWN` rather than
+  echoing a message, EVT_054's props are a closed four-key shape, and `componentStack` is never
+  forwarded. Every ERR_* maps to EVT_054; its sink is the analytics adapter (ADR-013).
 - **MockPanchangProvider** is DEV/TEST ONLY and must never be imported by production code.
 - **Backend Edge Functions pending** — SVC_household (member/invite), SVC_notify_scheduler
   (notify/schedule), and SVC_revenuecat_webhook are pending backend deliverables; the corresponding

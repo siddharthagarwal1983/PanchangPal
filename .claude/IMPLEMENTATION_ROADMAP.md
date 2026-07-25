@@ -2,8 +2,8 @@
 
 # PanchangPal — Implementation Roadmap
 
-Version: 1.4.0
-Last Updated: 2026-07-25 (B2 E2E verification complete — session persistence verified; MMKV v4)
+Version: 1.5.0
+Last Updated: 2026-07-25 (B4 opened — B4.1 telemetry seam landed, reporting nothing until a real adapter)
 
 Purpose: the forward plan from the current state. Complements PROJECT_STATUS.md (snapshot) and
 CURRENT_MILESTONE.md (active milestone). Updated when scope or sequencing changes — and at every
@@ -63,6 +63,22 @@ runtime, so MMKV silently degraded to memory and ritual sessions never persisted
 native build ran the flow. Fixed by MMKV v2→v4 (PR #36). All three in-scope Maestro flows are now
 GREEN in CI on a real native build (run 30155737941). Canonical progress 0% → 13% (1 of 8). Next
 unblocked engineering slice: **B4 — Observability**.
+
+**Update (2026-07-25, later). B4 is open; B4.1 landed.** B4 is sliced into four increments — B4.1
+telemetry seam · B4.2 EVT_* analytics sink → `analytics_event` (ADR-013) · B4.3 source-map upload +
+Edge Function Sentry · B4.4 SLO dashboards + alerts — taking progress to **16%** ((1 + ¼)/8).
+
+B4.1 gives errors a single exit: a `TelemetryAdapter` port wired at `ErrorBoundary.componentDidCatch`
+and at a global `ErrorUtils` handler, with §7.1's ERR_* → EVT_054 mapping settled and no PII possible
+by construction (unrecognised errors become `ERR_UNKNOWN` rather than their message; EVT_054's props
+are a closed four-key shape).
+
+It is also, deliberately, the same distinction this roadmap keeps re-learning: **a seam is not the
+behaviour.** The concrete Sentry adapter is deferred and no DSN is provisioned, so every report is
+built correctly and then dropped — crash-free sessions (NFR-06, §7.2) remain unmeasurable, and a beta
+shipped in this state would fly blind on the metric §10.1 gates on. The difference from the MMKV case
+is that the degradation is not silent: `getTelemetryBackend()` reports `'none'`, and a DSN configured
+with no adapter warns at startup.
 
 One blocker: the Canonical Panchang Engine (ADR-033, Proposed) — astronomical algorithm
 undocumented; the whole system depends only on the abstract PanchangEngine/PanchangProvider

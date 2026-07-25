@@ -2,8 +2,8 @@
 
 # PanchangPal — Current Task
 
-Version: 3.2.1
-Last Updated: 2026-07-25 (PR #36 merged; current task is now B4 — Observability)
+Version: 3.3.0
+Last Updated: 2026-07-25 (B4.1 telemetry seam done; current task is B4.2 — the EVT_* analytics sink)
 
 Purpose: the current implementation task. Stay focused; avoid unrelated work unless instructed.
 
@@ -110,19 +110,35 @@ green in CI on a real native build. Canonical progress 0% → 13% (1 of 8 Beta s
 # Current Task
 
 ## Title
-B4 — Observability
+B4 — Observability · increment 2: the EVT_* analytics sink
 
 Status
-🟢 **B2 closed out and merged.** PR #36 landed as `e1e10d4` and the docs checkpoint as PR #37
-(`45f1b0d`); main's E2E is green again (run 30156615768), after going honestly red when #35 exposed
-the MMKV bug. Next is **B4 — Observability** (Sentry wiring, source-map upload, dashboards/alerts,
-§2.3/§7) — the slice with unblocked engineering. B1/B3 remainders stay owner-gated (prod Supabase
-~$25/mo closes B1; Apple $99 + Google Play $25 close most of B3).
+🟡 **B4.1 ✅ (branch `feat/b4-telemetry-seam`, unreviewed). B4.2 is next.**
 
-B4's starting position, verified against the repo: nothing is wired. `apps/mobile/app.config.ts:53`
-exposes `sentryDsn` from `EXPO_PUBLIC_SENTRY_DSN` with no reader; `apps/mobile/src/navigation/
-ErrorBoundary.tsx:30` holds a `// TODO: Replace with Sentry`; `@sentry/react-native` is not a
-dependency. The source-map upload B3 deferred belongs to this slice.
+B4 is sliced into four increments: **B4.1 telemetry seam ✅** · **B4.2 EVT_* analytics sink** ·
+B4.3 source-map upload + Edge Function Sentry · B4.4 SLO dashboards + alerts. Canonical progress
+13% → 16%.
+
+### B4.1 — done
+`TelemetryAdapter` port + `NullTelemetryAdapter` (`src/domain/telemetry/`), composed in
+`src/data/telemetryAdapter.ts`; pure `toErrorCode()` / `toClientErrorEvent()` mapping every ERR_* to
+EVT_054 (§7.1); both call sites wired — `ErrorBoundary.componentDidCatch` (replacing its TODO) and a
+global `ErrorUtils` handler. No PII by construction. 205 tests (+29), tsc clean, eslint 0 errors.
+
+**It reports nothing.** Sentry is deferred (`@sentry/react-native` uninstalled, no DSN), so the Null
+adapter drops every report and crash-free sessions (NFR-06, §7.2) stay unmeasurable — B4 cannot close
+on the seam. `getTelemetryBackend()` returns `'none'` and a DSN without an adapter warns, so the gap
+is visible rather than silent. Turning it on: install the SDK, provision a Sentry org + DSN (free
+tier suffices), swap one line in the composition root.
+
+### B4.2 — next
+The analytics adapter writing pseudonymous `AnalyticsEventEnvelope`s to `analytics_event`
+(ADR-013, §7.1) — the sink `toClientErrorEvent`'s EVT_054 output currently has nowhere to send to,
+and the basis for the PDD §11 dashboards. `apps/mobile/src/analytics/` is an empty directory; the
+table already exists (`apps/backend/migrations/20260712000080_platform.sql`). No PII (ADR-013/031).
+
+B1/B3 remainders stay owner-gated (prod Supabase ~$25/mo closes B1; Apple $99 + Google Play $25 close
+most of B3).
 
 The remaining Maestro flows are still out of B2/engineering reach: `FLOW_ONBOARDING` unreachable while
 `ONBOARDED = true` (`app/index.tsx:16`); `FLOW_HOUSEHOLD_INVITE` needs SVC_household; `FLOW_ASK_GURU`
@@ -130,10 +146,11 @@ only exercises the gated path (GURU_LIVE=false).
 
 Everything else in B1/B2/B3 remains gated on money, a store account, or a later slice.
 
-Status
-🟡 **Two free engineering items remain; everything else needs a payment, a store account, or a later
-slice.** B1 ~85%, B2 ~85%, B3 ~80%, none complete. The pg15/pg17 drift is closed (PR #28), leaving
-one free item: verifying session persistence end-to-end.
+## Standing inventory — what is left in B1/B2/B3, by cost
+
+*(Historical as of 2026-07-19, superseded where it conflicts with the Current Task above: B2 is
+COMPLETE and its free engineering item — session persistence — is closed. B1 ~85% and B3 ~80% stand,
+with every remainder gated on money, a store account, or a later slice.)*
 
 This list was reconciled against the code on 2026-07-19 after four separate entries turned out to
 describe work that had already shipped. Claims here are verified, with a file:line where one exists.

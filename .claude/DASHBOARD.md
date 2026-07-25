@@ -2,9 +2,9 @@
 
 # PanchangPal Dashboard
 
-Version: 1.9.1
+Version: 1.10.0
 
-Last Updated: 2026-07-25 (PR #36 + #37 merged; main E2E green; next slice is B4 — Observability)
+Last Updated: 2026-07-25 (B4 opened — B4.1 telemetry seam landed; reports nothing until a real adapter)
 
 Purpose:
 This is the first file Claude should read at the beginning of every session.
@@ -41,9 +41,10 @@ PanchangPal
 
 Progress
 
-13%
+16%
 
-(Canonical progress metric — 1 of 8 Beta Readiness slices COMPLETE: **B2 (E2E verification)**.
+(Canonical progress metric — 1 of 8 Beta Readiness slices COMPLETE: **B2 (E2E verification)**, plus
+**1 of B4's 4 increments** — B4.1, the telemetry seam — giving (1 + ¼)/8 ≈ 16%.
 B1 ~85%, B3 ~80%. B2 is now DONE: the bundle gate plus all three in-scope Maestro flows
 (FLOW_RETURNING, FLOW_MORNING_RITUAL, FLOW_SESSION_PERSISTENCE) are GREEN in CI on a real native
 Android build (run 30155737941, 2026-07-25). The three flows still not present — onboarding,
@@ -71,10 +72,26 @@ CURRENT_MILESTONE.md
 
 # Current Task
 
-**Session persistence: ANSWERED, FIXED, and MERGED. Next: B4 — Observability.**
+**B4 — Observability, increment 1 of 4 done: the telemetry seam exists and reports nothing.**
 
-The question that stood open for a week — does a ritual session survive a process restart — is
-answered: **yes, now.** The path there, this session:
+`TelemetryAdapter` port + `NullTelemetryAdapter` (deferred Sentry, mirroring NotificationAdapter and
+PaymentAdapter); pure `toErrorCode()` / `toClientErrorEvent()` mapping every ERR_* to EVT_054 per
+§7.1; both call sites wired — `ErrorBoundary.componentDidCatch` (replacing its TODO) and a global
+`ErrorUtils` handler for throws no React tree is on the stack for. No PII by construction: an
+unrecognised error yields `ERR_UNKNOWN` rather than its message, EVT_054's props are a closed
+four-key shape, and `componentStack` is not forwarded. 205 tests (+29), tsc clean, eslint 0 errors.
+
+**What it does not buy:** nothing is reported anywhere. `@sentry/react-native` is uninstalled and no
+DSN is provisioned, so crash-free sessions (NFR-06) still cannot be measured and B4 cannot close on
+the seam. `getTelemetryBackend()` returns `'none'`, and a DSN configured with no adapter warns —
+because an app that reports nothing otherwise looks exactly like an app with no errors.
+
+Next: **B4.2** — the EVT_* analytics sink to `analytics_event` (ADR-013).
+
+---
+
+Earlier the same session — the question that stood open for a week, does a ritual session survive a
+process restart, was answered: **yes, now.** The path there:
 
 1. **PR #35 — the E2E build was failing, disguised as a timeout.** The single-ABI run had failed in
    `assembleRelease` at ~11 min, then Gradle hung ~80 min until the 90-min job timeout killed it and
@@ -99,12 +116,11 @@ Verified end-to-end. **PR #36 merged to main as `e1e10d4`**; the docs checkpoint
 
 # Today's Objective
 
-Session of 2026-07-25. The question — does a ritual session survive a restart — is **answered:
-yes, now.** Three steps got there: fix the E2E build (which was failing disguised as a timeout);
-read the verdict the working gate produced (persistence failed — MMKV v2 is incompatible with the
-New Architecture, so storage silently ran on memory); ship the fix (MMKV v2→v4, the bridgeless-
-compatible Nitro line). A native E2E build now runs all three flows green, `FLOW_SESSION_PERSISTENCE`
-included. B2 (E2E verification) is complete.
+Session of 2026-07-25. Two things closed. First, the week-old question — does a ritual session
+survive a restart — is **answered: yes, now** (fix the E2E build, read the verdict it produced, ship
+the MMKV v2→v4 fix); **B2 is complete**. Second, **B4 opened** with its telemetry seam: errors now
+leave the app through one port, at both call sites, with the EVT_054 mapping settled and no PII
+possible by construction — while reporting nothing at all until a real adapter and a DSN land.
 
 No new product scope.
 
@@ -126,14 +142,14 @@ No new product scope.
 | Mobile — Subscription | ✅ M8 |
 | AI Platform | 🟡 adapters done; corpus + eval pending |
 | Testing | 🟢 190 unit/component/domain (176 mobile + 14 shared) · bundle gate per PR · 🟢 **E2E green in CI** — 3/3 Maestro flows on a real native Android build incl. FLOW_SESSION_PERSISTENCE (run 30155737941, 2026-07-25); gate now fails fast (PR #35) · AI-eval + api-contract de-declared (owed: contract tests + §9.4 harness) |
-| Beta | 🚧 In progress — **B2 ✅ complete**; B1/B3 owner-gated; B4–B8 pending |
+| Beta | 🚧 In progress — **B2 ✅ complete**; **B4 🟡 ~25%** (B4.1 telemetry seam in, reporting nothing yet); B1/B3 owner-gated; B5–B8 pending |
 | Production | ⏳ |
 
 ---
 
 # Current Priorities
 
-1. **B4 — Observability** (Sentry wiring, source-map upload, dashboards/alerts): the next Beta slice with unblocked engineering. B1/B3 remainders are owner-gated.
+1. **B4 — Observability**, continuing: B4.1 (telemetry seam) ✅ · B4.2 EVT_* analytics sink → `analytics_event` · B4.3 source-map upload + Edge Function Sentry · B4.4 SLO dashboards + alerts. A real reporter (a Sentry org + DSN) is what turns the seam into observability.
 2. Owner decisions: prod Supabase (~$25/mo, closes B1) · Apple $99 (iOS) · Google Play $25 (internal track)
 3. ⛔ Canonical Panchang Engine decision (ADR-033) — unblocks Today panchang, Calendar markers, notifications
 3. AI corpus ingestion + eval readiness — unblocks live Ask Guru (GURU_LIVE)
@@ -179,9 +195,9 @@ resolved (PR #14).
 
 # Next Deliverable
 
-B4 — Observability (Sentry wiring, source-map upload, dashboards/alerts) — the next slice with
-unblocked engineering. B1/B3 remainders are owner-gated: prod Supabase (~$25/mo) closes B1;
-Apple ($99) + Google Play ($25) close most of B3.
+**B4.2 — the EVT_* analytics sink** (analytics adapter → `analytics_event`, ADR-013), then B4.3
+source maps and B4.4 dashboards/alerts. B1/B3 remainders stay owner-gated: prod Supabase (~$25/mo)
+closes B1; Apple ($99) + Google Play ($25) close most of B3.
 
 ---
 
