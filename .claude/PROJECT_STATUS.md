@@ -39,7 +39,7 @@ Overall Progress
 
 ░░░░░░░░░░░░░░░░░░░░
 
-**Mobile MVP — Phase 1: ✅ 100% (all 8 slices, merged)** · **Beta Readiness & Platform Hardening: 🚧 19% (1 of 8 slices — B2 E2E verification — plus B4.1 + B4.2 of B4)**
+**Mobile MVP — Phase 1: ✅ 100% (all 8 slices, merged)** · **Beta Readiness & Platform Hardening: 🚧 22% (1 of 8 slices — B2 E2E verification — plus B4.1–B4.3 of B4)**
 
 Project Health
 
@@ -74,7 +74,7 @@ TBD
 | Mobile Development (feature slices) | ✅ Complete | 100% (M1–M8 done) |
 | AI Platform | 🟡 In Progress | Adapters + RAG pipeline done; corpus + eval pending |
 | Testing | 🟡 In Progress | 190 unit/component/domain green in CI (176 mobile + 14 shared); 3 Maestro FLOW_* authored, but the E2E gate produced no signal 2026-07-19 → 2026-07-22 (build outgrew its timeout; cancelled runs hid it — PR #32) |
-| Beta | 🚧 In progress | 19% (B2 ✅ complete; B4 🟡 ~50% — B4.1 telemetry seam + B4.2 analytics sink in; crash reporting still deferred; B1/B3 owner-gated; B5–B8 pending) |
+| Beta | 🚧 In progress | 22% (B2 ✅ complete; B4 🟡 ~75% — B4.1–B4.3 in, remainder owner-gated on a Sentry org; B1/B3 owner-gated; B5–B8 pending) |
 | Production Launch | ⏳ Pending | 0% |
 
 ---
@@ -252,11 +252,15 @@ Implementation: Mobile MVP Phase 1 is feature-complete (M1–M8).
 
 Priority 1
 
-**B4 — Observability, increments 3–4.** B4.1 (telemetry seam) and B4.2 (EVT_* analytics sink) are
-in: every ERR_* now lands as EVT_054 in `analytics_event`, so error rates are measurable. Crash
-reporting still is not — no Sentry org or DSN exists, so crash-free sessions (NFR-06) cannot be
-measured and B4 cannot close. Next: B4.3 source-map upload + Edge Function Sentry, then B4.4
-dashboards/alerts. Both need a Sentry org (free tier suffices).
+**Owner action: create a Sentry org + DSN (free tier).** B4.1–B4.3 are in — client and server
+telemetry seams, the EVT_* sink, `SENTRY_*` required at preflight's production tier, and a release
+gate that blocks a production build with Sentry unconfigured. What remains (the source-map upload and
+the §7.2 dashboards/alerts) needs a real Sentry project to be verifiable rather than configured, so
+**B4 is now owner-gated like B1 and B3** — at no cost.
+
+Engineering available meanwhile, credential-free: **emit the documented EVT_* at their call sites.**
+`analytics_event` receives only EVT_054 today, so the North Star (Weekly Household Ritual
+Completions) cannot be computed until EVT_017 is emitted.
 
 Priority 2
 
@@ -311,6 +315,12 @@ prefs work today, so gating and prefs are real before the SDKs are wired.
 
 # Recently Completed
 
+- **B4.3 — server telemetry seam + release gate (2026-07-25):** Edge Function errors report through
+  a ServerTelemetry port at `errorResponse()` (no message, no PII); `SENTRY_*` required at the
+  production preflight tier; `release-build.yml` blocks a production build with Sentry unconfigured.
+  The source-map upload is deliberately not wired — it must come from inside the EAS build.
+- **E2E false reds fixed (2026-07-25, PR #41):** emulator ANR dialogs were failing flows against a
+  healthy app; `hide_error_dialogs` restored 3/3 green in 1m18s.
 - **B4.2 — EVT_* analytics sink (2026-07-25):** AnalyticsService port + batching implementation over
   the `analytics_event` table (ADR-013), a device-minted pseudonymous id, primitives-only props, and
   EVT_* validation against the PDD §11 taxonomy. Gives EVT_054 a working destination.
@@ -414,22 +424,28 @@ The Mobile MVP Phase 1 feature-slice milestone is **complete (100%)** and merged
 slices — App Shell, Today, Guided Ritual, Calendar Shell, Ask Guru Client, Profile/Household,
 Notifications, and Subscription (M1–M8) — are implemented, tsc/eslint clean, and green in CI.
 
-The project is now in **Beta Readiness & Platform Hardening** (TDD Part 5), sliced B1–B8, at **19%
-(1 of 8 — B2 complete — plus B4.1 and B4.2)**. The milestone opened on a known gap: CD reported green while
+The project is now in **Beta Readiness & Platform Hardening** (TDD Part 5), sliced B1–B8, at **22%
+(1 of 8 — B2 complete — plus B4.1–B4.3)**. The milestone opened on a known gap: CD reported green while
 its Maestro E2E and EAS build jobs were placeholders. **B2 (E2E verification) is now complete** — the
 Maestro placeholder is replaced by three real FLOW_* specs GREEN in CI on a native Android build,
 including FLOW_SESSION_PERSISTENCE, which along the way exposed and fixed a real persistence bug
 (MMKV v2 vs New Architecture → v4 upgrade, PR #36). Staging migrations and Edge Function deploys are
 real. B1 (prod environment) and B3 (store distribution) remainders are owner-gated.
 
-**B4 (observability) is at ~50%.** B4.1 gives errors a single exit — the TelemetryAdapter port,
+**B4 (observability) is at ~75%, and its remainder is owner-gated.** B4.1 gives errors a single exit — the TelemetryAdapter port,
 wired at the ErrorBoundary and at a global handler, with the ERR_* → EVT_054 mapping settled and no
 PII possible by construction — and B4.2 gives that mapping a destination: the AnalyticsService port
 over the `analytics_event` sink (ADR-013), with a device-minted pseudonymous id and primitives-only
 props. Error rates are therefore measurable today.
 
-Crash reporting is not. The concrete Sentry adapter is deferred and no DSN exists, so the §7.2
-crash-free SLO remains unmeasurable and B4 cannot close. That state is deliberately inspectable
+B4.3 added the server half — Edge Function errors report through a ServerTelemetry port at the one
+exit every ERR_* shares — plus the guardrails around a release: `SENTRY_*` required at preflight's
+production tier, and a `release-build.yml` gate that blocks a production build when Sentry is
+unconfigured, because a release with no crash reporting cannot be measured against NFR-06.
+
+Crash reporting itself is still not happening. No Sentry org or DSN exists, so the §7.2 crash-free
+SLO remains unmeasurable and B4 cannot close; the source-map upload was deliberately left unwritten
+rather than faked, since Hermes maps must come from inside the EAS build that produced the bundle. That state is deliberately inspectable
 (`getTelemetryBackend() === 'none'`) rather than silent, because an app that reports nothing is
 otherwise indistinguishable from an app with no errors.
 The only architectural blocker is the Canonical Panchang Engine decision (ADR-033); Ask Guru live

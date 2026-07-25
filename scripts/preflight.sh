@@ -108,6 +108,10 @@ case "$TARGET" in
     require_var SUPABASE_ACCESS_TOKEN   "$GH_SECRETS → Repository secrets"
     require_var EXPO_ACCESS_TOKEN       "$GH_SECRETS → Repository secrets"
 
+    hdr "Observability (warn-only until production — §7.1)"
+    optional_var SENTRY_DSN        "crashes and Edge Function errors go unreported on staging"
+    optional_var SENTRY_AUTH_TOKEN "source maps will not upload; staging crashes stay unsymbolicated"
+
     hdr "Edge Function runtime secrets (set on the staging Supabase project)"
     optional_var SUPABASE_SERVICE_ROLE_KEY "set via 'supabase secrets set' on the staging project"
     optional_var OPENAI_API_KEY            "ask-guru / content-ingest disabled without it"
@@ -135,6 +139,15 @@ case "$TARGET" in
     # signatures) or Ask Guru dark. Fail the go/no-go instead.
     hdr "Production guardrails (required at this tier)"
     require_var REVENUECAT_WEBHOOK_SECRET "$GH_SECRETS → Environment: production"
+    # Observability (§7.1/§7.2). A production release without these ships blind: crash-free
+    # sessions is the NFR-06 SLO and the §10.1 go/no-go checks it, and without an auth token
+    # the source maps never upload, so every crash that does arrive is unreadable Hermes
+    # bytecode. Required here for the same reason as the webhook secret — at dev/staging the
+    # absence costs visibility, in production it costs the release's only health signal.
+    require_var SENTRY_DSN         "$GH_SECRETS → Environment: production"
+    require_var SENTRY_ORG         "$GH_SECRETS → Repository secrets"
+    require_var SENTRY_PROJECT     "$GH_SECRETS → Repository secrets"
+    require_var SENTRY_AUTH_TOKEN  "$GH_SECRETS → Repository secrets (source-map upload)"
     optional_var SUPABASE_SERVICE_ROLE_KEY "set on the PROD Supabase project"
     optional_var OPENAI_API_KEY            "live Ask Guru stays dark without it (GURU_LIVE gate)"
     printf "  %sReminder: production requires manual approval on the 'production' Environment.%s\n" "$DIM" "$RST"

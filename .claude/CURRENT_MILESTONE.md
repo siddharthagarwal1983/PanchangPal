@@ -2,9 +2,9 @@
 
 # PanchangPal — Current Milestone
 
-Version: 3.4.0
+Version: 3.5.0
 
-Last Updated: 2026-07-25 (B4 at halfway — B4.1 telemetry seam + B4.2 EVT_* analytics sink)
+Last Updated: 2026-07-25 (B4.1–B4.3 in; B4's remainder is owner-gated on a Sentry org)
 
 Purpose:
 This document defines the current milestone. Unlike SESSION.md (daily work) or TASK.md (current
@@ -23,13 +23,22 @@ Status
 
 Overall Progress
 
-19% (1 of 8 slices COMPLETE — **B2 ✅** — plus 2 of B4's 4 increments; B1 ~85%, B3 ~80%)
+22% (1 of 8 slices COMPLETE — **B2 ✅** — plus 3 of B4's 4 increments; B1 ~85%, B3 ~80%)
 
-**B4 is at its halfway point (2026-07-25).** It is sliced into four increments so the number above
+**B4 is three-quarters through, and now owner-gated (2026-07-25).** It is sliced into four increments so the number above
 is auditable: **B4.1 telemetry seam ✅** (TelemetryAdapter port + the two error call sites) ·
 **B4.2 EVT_* analytics sink ✅** (AnalyticsService port → `analytics_event`, ADR-013) · B4.3
-source-map upload + Edge Function Sentry · B4.4 SLO dashboards + alerts. Counting both gives
-(1 + ½)/8 ≈ 19%.
+**B4.3 server seam + release gate ✅** · B4.4 SLO dashboards + alerts. Counting the three gives
+(1 + ¾)/8 ≈ 22%.
+
+**B4 cannot progress further on engineering alone.** The source-map upload and the §7.2
+dashboards/alerts both need a Sentry org + DSN to be *verifiable* rather than merely configured —
+free tier, so an owner action rather than a cost. B4.3 delivered what could be made real without it:
+the Edge Function telemetry seam at `errorResponse()`, `SENTRY_*` required at preflight's production
+tier (proven by running it), and a release-build gate that BLOCKS a production build with Sentry
+unconfigured. The upload itself was deliberately not written: Hermes maps must come from inside the
+EAS build that produced the bundle, so maps from a separate `expo export` would symbolicate
+confidently wrong — the gate says so instead of pretending.
 
 **What is now measurable, and what is not.** B4.2 gives EVT_054 a working destination, so error
 *rates* land in `analytics_event` today — that half of §7.1 is real. Crash *reporting* is not: the
@@ -303,7 +312,7 @@ possible fix and would have caught defects 1–3 at M1.
 | B1 | Environments & secrets | dev/staging/prod projects, per-env secrets, fail-closed preflight (§1, §4) | 🟡 ~85% — prod blocked on a paid plan |
 | B2 | E2E verification | bundle gate (done in B1) + Maestro FLOW_*; green in CI (§2.2, §10.1) | ✅ COMPLETE (2026-07-25) — bundle gate + 3 in-scope flows GREEN in CI on a native build (incl. FLOW_SESSION_PERSISTENCE); other 3 flows blocked on other slices/backends/gated feature |
 | B3 | Build & distribution | eas.json profiles, Hermes, signing, source maps, TestFlight / Play Internal (§2.3) | 🟡 ~80% — automated builds work; store accounts + Sentry (B4) remain |
-| B4 | Observability | Sentry, telemetry, SLO dashboards + alerts (§7) | 🟡 ~50% — B4.1 telemetry seam ✅ · B4.2 EVT_* analytics sink ✅ (EVT_054 lands in `analytics_event`); crash reporting still deferred; B4.3–B4.4 pending |
+| B4 | Observability | Sentry, telemetry, SLO dashboards + alerts (§7) | 🟡 ~75% — B4.1 seam ✅ · B4.2 sink ✅ · B4.3 server seam + prod release gate ✅; **upload + B4.4 owner-gated on a Sentry org (free tier)** |
 | B5 | Reliability & DR | backups, restore drill, runbooks, graceful degradation (§8) | ⏳ |
 | B6 | Security & privacy | OWASP Mobile review, CCPA export/delete verification, store privacy labels (§5, §6) | ⏳ |
 | B7 | Release management | versioning/trains, OTA policy + channels, staged rollout, rollback verification (§3) | ⏳ |
@@ -389,6 +398,14 @@ testers' hands.
   PASSES with no fallback (run 30155737941). Sessions now survive a restart. The domain logic was
   never the suspect — `advanceSession` leaves `stepIndex` on the last step, so a completed session
   restores as completed; the store was the problem.
+- **⚠️ The E2E gate produced two FALSE REDS on 2026-07-25 (fixed, PR #41).** After B4.1 merged it
+  reported 3/3 flows failed, and the re-run failed identically — a `"Pixel Launcher isn't responding"`
+  dialog from the emulator's own Google apps covered the app while Maestro asserted, with logcat
+  showing the app healthy throughout. Fixed with `hide_error_dialogs`; verified 3/3 green in 1m18s
+  (run 30165186141). The mechanism is the mirror of the outage below: **a false red costs what a
+  false green costs** — the first occurrence was dismissed as a flake, so the second had to be
+  diagnosed from scratch before it could be dismissed, and the next would have been blamed on
+  whatever had just merged.
 - **⚠️ The E2E gate reported nothing between 2026-07-19 and 2026-07-22.** See B2 above. The
   mechanism matters more than the outage: `cancel-in-progress: true` on a 20-40 minute job means a
   busy afternoon produces no signal at all, and a cancelled run reads as "not run" rather than

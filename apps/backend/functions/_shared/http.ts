@@ -3,6 +3,21 @@
  * The error envelope is applied at the handler boundary (see withHandler in auth.ts).
  */
 import { toEnvelope, httpStatusFor } from './errors.ts';
+import {
+  NullServerTelemetry,
+  toServerErrorReport,
+  type ServerTelemetry,
+} from './telemetry.ts';
+
+// Deferred Sentry client (TDD Part 5 §7.1); swapping this line is the whole change once a DSN
+// exists. Kept module-level rather than threaded through every handler: `errorResponse` is the one
+// place every ERR_* passes through, which is exactly why the report belongs here.
+let telemetry: ServerTelemetry = new NullServerTelemetry();
+
+/** Test/DI seam — inject a spy, or the real client at composition time. */
+export function setServerTelemetry(next: ServerTelemetry): void {
+  telemetry = next;
+}
 
 export const corsHeaders: Record<string, string> = {
   'Access-Control-Allow-Origin': '*',
@@ -18,7 +33,19 @@ export function json(body: unknown, status = 200, extra: Record<string, string> 
   });
 }
 
-export function errorResponse(err: unknown, correlationId: string): Response {
+/**
+ * The single exit for a failed request: the wire envelope, the correlation-id header, and — since
+ * B4.3 — the telemetry report (§7.1). `fn` names the Edge Function; it defaults rather than being
+ * required so existing call sites keep working, but passing it makes a report attributable.
+ *
+ * Reporting is wrapped: a telemetry fault must never turn a handled 400 into an unhandled 500.
+ */
+export function errorResponse(err: unknown, correlationId: string, fn = 'unknown'): Response {
+  try {
+    telemetry.captureError(toServerErrorReport(err, { fn, correlationId }), err);
+  } catch {
+    // Deliberately silent — the response below, and the structured error log, still happen.
+  }
   return json(toEnvelope(err, correlationId), httpStatusFor(err), {
     'x-correlation-id': correlationId,
   });

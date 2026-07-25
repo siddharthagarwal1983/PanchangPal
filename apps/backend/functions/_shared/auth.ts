@@ -40,7 +40,9 @@ export function withHandler(
       return await handler(req, { correlationId, log, jwt });
     } catch (err) {
       log.error('handler_error', { error_code: err instanceof AppError ? err.code : 'ERR_UNKNOWN' });
-      return errorResponse(err, correlationId);
+      // `fn` is passed so the telemetry report inside errorResponse names the failing function,
+      // matching the `fn` field the log line above already carries (§7.1 correlation).
+      return errorResponse(err, correlationId, fn);
     }
   };
 }
