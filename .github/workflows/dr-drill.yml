@@ -1,0 +1,169 @@
+# =============================================================================
+# DR restore drill (TDD Part 5 §8.1 [MANDATORY] / §8.3).
+#
+# §8.1 asks for a periodic restore drill to VALIDATE THE RUNBOOK. The point is not
+# that Postgres can restore a dump — it can — but that OUR dump of OUR schema
+# restores into a working database, with RLS still enabled, policies present,
+# extensions installed, enums intact and seed content readable. Those are the
+# things that come back subtly wrong, and every one of them looks like a healthy
+# database from the outside.
+#
+# WHAT THIS DRILL DOES AND DOES NOT COVER.
+#   Covers: the rebuild-from-repo recovery path (migrations + seed), a full
+#     pg_dump/pg_restore round trip, and the post-restore invariants, timed
+#     against the RTO ≤ 4 h target (NFR-15).
+#   Does NOT cover: Supabase PITR itself. PITR is a paid-plan feature and the
+#     hosted projects are on the free tier, so there is no point-in-time backup to
+#     restore FROM. That gap is stated in docs/devops/DR_RUNBOOKS.md rather than
+#     papered over here — a drill that skipped quietly would be worse than none.
+#
+# Monthly, because a runbook rots faster than the code it describes, and the
+# failure it protects against is discovered at the worst possible moment.
+# =============================================================================
+
+name: DR restore drill
+
+on:
+  schedule:
+    # 03:00 UTC on the 1st. Off-hours, and far from the release cadence.
+    - cron: '0 3 1 * *'
+  workflow_dispatch:
+  # Also on any PR that touches the recovery path itself. Two reasons: the drill
+  # is proven on the PR that introduces it rather than merged unexercised, and a
+  # migration that makes the schema un-restorable then fails review instead of
+  # being discovered by the monthly run — or by an incident.
+  pull_request:
+    paths:
+      - '.github/workflows/dr-drill.yml'
+      - 'apps/backend/tests/dr/**'
+      - 'apps/backend/migrations/**'
+      - 'apps/backend/seed/**'
+      - 'scripts/migrate.sh'
+      - 'scripts/ci-db-bootstrap.sql'
+
+permissions:
+  contents: read
+
+concurrency:
+  group: dr-drill
+  cancel-in-progress: false
+
+jobs:
+  restore-drill:
+    name: Backup → restore → verify invariants
+    runs-on: ubuntu-latest
+    timeout-minutes: 20
+    services:
+      postgres:
+        # Must match what the hosted projects run (dev 17.6.1.147, staging
+        # 17.6.1.141) — a drill against a different major version proves a restore
+        # nobody will ever perform. pgvector is required by the schema itself.
+        image: pgvector/pgvector:pg17
+        env:
+          POSTGRES_PASSWORD: postgres
+        ports: ['5432:5432']
+        options: >-
+          --health-cmd pg_isready --health-interval 10s
+          --health-timeout 5s --health-retries 5
+    env:
+      SOURCE_URL: postgresql://postgres:postgres@localhost:5432/postgres
+      RESTORE_DB: dr_restore_target
+      RESTORE_URL: postgresql://postgres:postgres@localhost:5432/dr_restore_target
+
+    steps:
+      - uses: actions/checkout@v4
+
+      # pg_dump/pg_restore must match the SERVER major version. Ubuntu's default
+      # client is older than 17, and a v16 pg_dump refuses a v17 server outright —
+      # which would fail the drill for a reason that has nothing to do with our
+      # backups.
+      - name: Install Postgres 17 client (PGDG)
+        run: |
+          sudo apt-get update
+          sudo apt-get install -y --no-install-recommends curl ca-certificates gnupg
+          curl -fsSL https://www.postgresql.org/media/keys/ACCC4CF8.asc \
+            | sudo gpg --dearmor -o /usr/share/keyrings/pgdg.gpg
+          echo "deb [signed-by=/usr/share/keyrings/pgdg.gpg] http://apt.postgresql.org/pub/repos/apt $(lsb_release -cs)-pgdg main" \
+            | sudo tee /etc/apt/sources.list.d/pgdg.list >/dev/null
+          sudo apt-get update
+          sudo apt-get install -y --no-install-recommends postgresql-client-17
+          echo "/usr/lib/postgresql/17/bin" >> "$GITHUB_PATH"
+
+      - name: Verify client/server versions match
+        run: |
+          set -euo pipefail
+          pg_dump --version
+          psql "$SOURCE_URL" -tAc "show server_version"
+
+      # ---- Build the source of truth: the repo IS the recovery artifact -------
+      # §8.1: "content corpus + seed reproducible from the repo". This step is
+      # that claim, executed.
+      - name: Bootstrap Supabase-managed schema + roles (CI only)
+        run: psql "$SOURCE_URL" -v ON_ERROR_STOP=1 -f scripts/ci-db-bootstrap.sql
+
+      - name: Apply migrations
+        run: bash scripts/migrate.sh "$SOURCE_URL"
+
+      - name: Load seed
+        run: psql "$SOURCE_URL" -v ON_ERROR_STOP=1 -f apps/backend/seed/seed.sql
+
+      # Establishes that the invariants are satisfiable BEFORE any restore. If
+      # this fails, the drill is reporting a broken build, not a broken restore —
+      # a distinction the runbook needs when someone is reading it at 3am.
+      - name: Verify invariants on the source database
+        run: psql "$SOURCE_URL" -v ON_ERROR_STOP=1 -f apps/backend/tests/dr/restore_invariants.sql
+
+      # ---- The drill proper ---------------------------------------------------
+      - name: Back up, restore into a fresh database, and time it
+        run: |
+          set -euo pipefail
+          start=$(date +%s)
+
+          # Custom format: what a real restore uses, and what exercises
+          # pg_restore's ordering rather than psql replaying a text file.
+          pg_dump --format=custom --no-owner --no-privileges \
+            --file=/tmp/panchangpal.dump "$SOURCE_URL"
+          echo "dump size: $(du -h /tmp/panchangpal.dump | cut -f1)"
+
+          psql "$SOURCE_URL" -v ON_ERROR_STOP=1 -c "create database ${RESTORE_DB}"
+
+          # pg_restore exits non-zero on any error. No `|| true`, and no
+          # --exit-on-error omission: a restore that "mostly worked" is the exact
+          # outcome this drill exists to catch.
+          pg_restore --dbname="$RESTORE_URL" --no-owner --no-privileges \
+            --exit-on-error /tmp/panchangpal.dump
+
+          end=$(date +%s)
+          elapsed=$(( end - start ))
+          echo "RESTORE_SECONDS=${elapsed}" >> "$GITHUB_ENV"
+          echo "restore completed in ${elapsed}s"
+
+      # The same file that passed on the source. A lossy restore fails here.
+      - name: Verify invariants on the RESTORED database
+        run: psql "$RESTORE_URL" -v ON_ERROR_STOP=1 -f apps/backend/tests/dr/restore_invariants.sql
+
+      # Row-level equality on the seeded tables: the invariants prove structure,
+      # this proves the data actually came across.
+      - name: Compare seeded row counts between source and restore
+        run: |
+          set -euo pipefail
+          for table in tradition feature_flag ritual festival checklist_item; do
+            src=$(psql "$SOURCE_URL" -tAc "select count(*) from ${table}")
+            dst=$(psql "$RESTORE_URL" -tAc "select count(*) from ${table}")
+            echo "${table}: source=${src} restored=${dst}"
+            if [ "$src" != "$dst" ]; then
+              echo "::error::DR drill: ${table} row count differs after restore (source ${src}, restored ${dst})"
+              exit 1
+            fi
+          done
+
+      - name: Summary
+        if: always()
+        run: |
+          {
+            echo "### DR restore drill: ${{ job.status }}"
+            echo ""
+            echo "- Restore duration: ${RESTORE_SECONDS:-n/a}s (RTO target ≤ 4 h, NFR-15)"
+            echo "- Covered: rebuild-from-repo, pg_dump/pg_restore round trip, post-restore invariants (tables, RLS enabled, policies, seed, pgvector, enums), seeded row counts."
+            echo "- NOT covered: Supabase PITR — a paid-plan feature the hosted projects do not have. See docs/devops/DR_RUNBOOKS.md."
+          } >> "$GITHUB_STEP_SUMMARY"
