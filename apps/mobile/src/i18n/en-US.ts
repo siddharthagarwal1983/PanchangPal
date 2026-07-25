@@ -34,8 +34,21 @@ export const enUS = {
   offline: { banner: "You're offline — showing saved content." },
   empty: { generic: 'Nothing here yet' },
   errors: {
-    unknown: 'Something went wrong. Please try again.',
-    offline: 'Connect to the internet to use this.',
+    // Copy below is PDD §13.5, VERBATIM. It is approved product copy, not developer prose — if a
+    // string here needs to change, §13.5 changes first. Codes §13.5 has not yet approved copy for
+    // fall back to `unknown`; they are listed in domain/errors/degradation.ts so the gap is
+    // visible rather than filled with plausible-sounding invention.
+    unknown: 'Something went wrong on our end. Please try again.',
+    offline: "You're offline. Today's panchang and ritual still work — we'll sync when you're back.",
+    locationDenied: 'No problem — search for your city so your panchang is accurate.',
+    gpsDisabled: "Location's off on your device. Enter your city instead.",
+    aiTrouble: "I'm having trouble right now — please try again.",
+    ragLowConfidence:
+      "I don't have verified information on this one. I'd rather not guess on something this important.",
+    paymentFailed: "That payment didn't go through. Try again or use another method.",
+    inviteExpired: 'This invite has expired — ask {inviter} for a new one.',
+    tithiAmbiguous:
+      'This tithi falls on two possible dates next year. Which would you like to observe?',
     session: 'Your session expired. Please sign in again.',
   },
   today: {
