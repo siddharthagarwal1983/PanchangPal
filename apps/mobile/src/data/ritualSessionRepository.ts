@@ -1,4 +1,4 @@
-import { MMKV } from 'react-native-mmkv';
+import { createMMKV } from 'react-native-mmkv';
 import type {
   RitualSession,
   RitualSessionStore,
@@ -40,15 +40,25 @@ export function getStorageBackend(): StorageBackend | null {
 }
 
 /**
- * MMKV is a native module: it does not exist in Expo Go, and construction throws there
- * ("react-native-mmkv is not supported in Expo Go"). It can also fail on a real device.
- * Degrade to memory rather than taking the screen down — but say so.
+ * MMKV is a native module: it does not exist in Expo Go, and resolving it throws there. It can
+ * also fail on a real device. Degrade to memory rather than taking the screen down — but say so.
+ *
+ * MMKV v4 (Nitro) creates instances through the `createMMKV()` factory rather than `new MMKV()`,
+ * and this factory line is what supports the New Architecture's bridgeless runtime — v2's JSI
+ * install failed under bridgeless, so every instance threw and ritual sessions silently ran on
+ * memory and never survived a restart (caught by FLOW_SESSION_PERSISTENCE on a native build).
  */
 function createDeviceStore(): KeyValueStore {
   try {
-    const store = new MMKV();
+    const mmkv = createMMKV();
     activeBackend = 'mmkv';
-    return store;
+    // v4 renamed delete() → remove(); adapt to the KeyValueStore port so the rest of the
+    // repository never sees the vendor API.
+    return {
+      getString: (key) => mmkv.getString(key),
+      set: (key, value) => mmkv.set(key, value),
+      delete: (key) => void mmkv.remove(key),
+    };
   } catch (error) {
     activeBackend = 'memory';
     // Warn, not throw: the ritual still works, it just will not survive a restart. Visible in
@@ -72,7 +82,7 @@ export class RitualSessionRepository implements RitualSessionStore {
   private _storage?: KeyValueStore;
   private readonly prefix: string;
 
-  // Storage resolves on FIRST USE, never at construction. `new MMKV()` as a default
+  // Storage resolves on FIRST USE, never at construction. Constructing MMKV as a default
   // parameter ran the moment the repository was built — synchronously, inside the ritual
   // screen's effect — so it threw past the promise's .catch() and reached the app-level
   // ErrorBoundary as a render error. Same shape as the getSupabase() default-parameter
