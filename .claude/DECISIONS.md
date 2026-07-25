@@ -906,3 +906,32 @@ assertion: an absent schema must fail, not skip.
 required parameter, an ERR_* present in the spec but not in `packages/shared`, and a renamed
 response property — each failing exactly one test. Same discipline as the ADR-026 ESLint guard,
 which was proven by reintroducing the exact expression it forbids.
+
+---
+
+# 2026-07-25 — What a DR drill has to prove, and what it must admit
+
+**A restore drill proves the restore, not the database engine.** Postgres can obviously restore a
+dump. What is worth drilling is that OUR schema comes back *correctly*: the same invariants file runs
+against the source and then against the restored database, so a lossy restore fails where a
+"did pg_restore exit 0?" check would pass. The invariants target what returns subtly wrong and looks
+healthy from outside — missing tables, **RLS silently disabled**, policies absent, post-v1 `FF_*`
+restored as ON, `pgvector` missing, enum types gone. RLS is the dangerous one: the app works
+perfectly and exposes every household's data.
+
+**The drill runs on PRs that touch the recovery path, not only on a schedule.** Migrations, seed, and
+the drill itself are the inputs that can make a schema un-restorable, so a change to them fails
+review rather than the monthly run — or an incident. It also means the drill was proven on the PR
+that introduced it, instead of merged unexercised.
+
+**A runbook must state the capability it does NOT have, in its opening section.** Supabase PITR is a
+paid-plan feature and the hosted projects are free-tier, so there is no point-in-time backup to
+restore from and **NFR-15 (RPO ≤ 24 h / RTO ≤ 4 h) is unmet for user data** — schema and seed rebuild
+in minutes, everything a user created does not. Documenting confident recovery steps around that
+absence would be the same false assurance as a gate that cannot fail. The runbook therefore says
+plainly: do not launch to real users on the free tier. This makes the ~$25/month Supabase plan a
+reliability decision, not an environments line item.
+
+**Label the runbooks nobody has walked.** PITR restore, region incident response, and Edge Function
+rollback are documented and unexercised; §6 of the runbook says so. A runbook nobody has exercised is
+a plan, not a capability, and the difference matters only at the moment it is needed.

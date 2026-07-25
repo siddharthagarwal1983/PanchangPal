@@ -2,8 +2,8 @@
 
 # PanchangPal — Current Task
 
-Version: 3.8.0
-Last Updated: 2026-07-25 (API contract gate restored; both B1 de-declarations now settled or owed only on AI eval)
+Version: 3.9.0
+Last Updated: 2026-07-25 (B5 opened — runbooks + drill; NFR-15 found unmet without PITR)
 
 Purpose: the current implementation task. Stay focused; avoid unrelated work unless instructed.
 
@@ -110,7 +110,7 @@ green in CI on a real native build. Canonical progress 0% → 13% (1 of 8 Beta s
 # Current Task
 
 ## Title
-B4 — Observability · OWNER ACTION NEEDED: a Sentry org + DSN
+B5 — Reliability & DR · increment 1 done · TWO OWNER PURCHASES NOW GATE RELIABILITY
 
 Status
 🟡 **B4.1 ✅ (PR #39, `25275ff`) · B4.2 ✅ (PR #40, `c099263`) · B4.3 ✅ to its credential-free limit
@@ -196,13 +196,27 @@ would restate the schema and pass forever.
 Of B1's two de-declared gates, only the **AI eval harness** (refusal + golden-set subset, TDD Part 3
 §9.4) remains owed; it needs the corpus, which is a separate blocker.
 
+### B5 increment 1 — DONE (branch merged, PR #46)
+`docs/devops/DR_RUNBOOKS.md` covers §8.3's five scenarios with literal repo commands.
+`.github/workflows/dr-drill.yml` builds from repo, `pg_dump` → `pg_restore --exit-on-error`, re-runs
+the SAME invariants on the restored database, and compares seeded row counts — monthly, and on any PR
+touching migrations or seed. First run: restore 1s, invariants OK both sides.
+
+### ⛔ Found while doing it: NFR-15 is UNMET, and it is a launch blocker
+There is **no point-in-time backup to restore from**. PITR is a paid-plan feature; both hosted
+projects are free-tier. Schema and seed rebuild in minutes from the repo; **user data — profiles,
+households, completions, streaks, personal dates, conversations — is simply not recoverable.**
+Shipping to real users in this state means one incident is permanent data loss. Closed by the same
+~$25/month purchase that closes B1, which makes that purchase a reliability decision rather than an
+environments one.
+
 ### Next
 Credential-free options, in rough order of value:
-1. **AI eval harness** (§9.4) — blocked on reviewed corpus, so probably not now.
+1. **B5 remaining increments** — §8.2 graceful-degradation verification (each `ERR_*` has a defined
+   calm behaviour per PDD §12; nothing has checked that the app actually does it) and §8.4.
 2. **`FLOW_ONBOARDING`** is still unreachable: `app/index.tsx:16` hardcodes `ONBOARDED = true`, so
    SCR_ONBOARDING_* has never rendered from launch and one of B2's six flows cannot be written.
-3. **B5 — Reliability & DR** (backups, a real restore drill, runbooks): the next unstarted slice,
-   and TRISK-11 says it is not optional for a single-founder project.
+3. **AI eval harness** (§9.4) — the last de-declared gate, blocked on the reviewed corpus.
 
 Still owner-gated: a **Sentry org + DSN** (free tier) closes B4.3's source-map upload and unblocks
 B4.4; prod Supabase (~$25/mo) closes B1; Apple $99 + Google Play $25 close most of B3.

@@ -2,9 +2,9 @@
 
 # PanchangPal Dashboard
 
-Version: 1.15.0
+Version: 1.16.0
 
-Last Updated: 2026-07-25 (API contract gate restored as a real, proven-to-fail gate)
+Last Updated: 2026-07-25 (B5 opened — DR runbooks + a mechanised restore drill; PITR gap stated)
 
 Purpose:
 This is the first file Claude should read at the beginning of every session.
@@ -41,13 +41,14 @@ PanchangPal
 
 Progress
 
-22%
+25%
 
 (Canonical progress metric — 1 of 8 Beta Readiness slices COMPLETE: **B2 (E2E verification)**, plus
 **3 of B4's 4 increments** — B4.1 telemetry seam, B4.2 EVT_* analytics sink, B4.3 server seam +
-release gate — giving (1 + ¾)/8 ≈ 22%. **B4 cannot go further without a Sentry org + DSN.**
-The EVT_* instrumentation that followed B4.3 does not move this number: it completes work B4.2
-began rather than finishing B4.4, and the percentage counts increments, not commits.)
+release gate — plus **1 of B5's 3** (runbooks + restore drill), giving (1 + ¾ + ⅓)/8 ≈ 25%.
+**B4 cannot go further without a Sentry org + DSN.** The EVT_* instrumentation, the analytics RLS
+gate and the API contract gate do not move this number: they complete or restore work other slices
+began, and the percentage counts increments, not commits.)
 B1 ~85%, B3 ~80%. B2 is now DONE: the bundle gate plus all three in-scope Maestro flows
 (FLOW_RETURNING, FLOW_MORNING_RITUAL, FLOW_SESSION_PERSISTENCE) are GREEN in CI on a real native
 Android build (run 30155737941, 2026-07-25). The three flows still not present — onboarding,
@@ -75,7 +76,25 @@ CURRENT_MILESTONE.md
 
 # Current Task
 
-**B4 — the sink now receives more than errors. The North Star input fires.**
+**B5 — Reliability & DR opened: runbooks exist, and the drill is mechanised.**
+
+`docs/devops/DR_RUNBOOKS.md` covers §8.3's five scenarios (DB restore, region incident, Edge Function
+outage, secret compromise, store outage) with literal commands from this repo. A monthly
+`dr-drill.yml` builds from migrations + seed, does a `pg_dump` → `pg_restore --exit-on-error` round
+trip, and re-runs the **same** invariants file against the restored database — catching what comes
+back subtly wrong and looks healthy: missing tables, **RLS silently disabled**, absent policies,
+post-v1 `FF_*` restored ON, `pgvector` gone, enums missing. It also runs on any PR touching
+migrations or seed, so an un-restorable schema fails review rather than an incident. First run:
+restore in **1s**, invariants OK both sides, seeded row counts equal.
+
+⛔ **Stated, not buried: there is no PITR to restore from.** Both hosted projects are free-tier, so
+**NFR-15's RPO ≤ 24 h / RTO ≤ 4 h is UNMET for user data** — schema and seed rebuild in minutes,
+everything a user created does not. The runbook says plainly not to launch to real users in that
+state. It is the same ~$25/month that closes B1.
+
+---
+
+**B4 — the sink receives more than errors. The North Star input fires.**
 
 **B4.5 — EVT_* instrumentation (the daily habit funnel, PDD §11.4).** EVT_012 Today Viewed ·
 EVT_015 Ritual Started · EVT_016 Step Advanced · **EVT_017 Ritual Completed** · EVT_018 Abandoned ·
@@ -218,7 +237,7 @@ No new product scope.
 | Mobile — Subscription | ✅ M8 |
 | AI Platform | 🟡 adapters done; corpus + eval pending |
 | Testing | 🟢 321 unit/component/domain (244 mobile + 77 vitest) + 17 pgTAP · bundle gate per PR · 🟢 **E2E green in CI** — 3/3 Maestro flows on a real native Android build incl. FLOW_SESSION_PERSISTENCE (run 30165186141, 2026-07-25); gate fails fast (PR #35) and no longer fails against emulator ANR dialogs (PR #41) · AI-eval + api-contract de-declared (owed: contract tests + §9.4 harness) |
-| Beta | 🚧 In progress — **B2 ✅ complete**; **B4 🟡 ~75%** (B4.1–B4.3 in; the upload + dashboards need a Sentry org — owner-gated); B1/B3 owner-gated; B5–B8 pending |
+| Beta | 🚧 In progress — **B2 ✅ complete**; **B4 🟡 ~75%** (owner-gated on a Sentry org); **B5 🟡 ~33%** (runbooks + drill in; PITR undrillable on the free tier); B1/B3 owner-gated; B6–B8 pending |
 | Production | ⏳ |
 
 ---
@@ -226,7 +245,7 @@ No new product scope.
 # Current Priorities
 
 1. **Owner: create a Sentry org + DSN (free tier)** — B4's remaining work (source-map upload, §7.2 dashboards/alerts) needs a real project to be verifiable. B4.1 ✅ · B4.2 ✅ · B4.3 ✅ to its credential-free limit · B4.4 blocked.
-2. **Credential-free engineering:** `FLOW_ONBOARDING` is still unreachable (`app/index.tsx:16` hardcodes `ONBOARDED = true`), or start **B5 — Reliability & DR**. (The API contract gate and analytics' insert-only contract are both now real, proven gates.)
+2. **Credential-free engineering:** `FLOW_ONBOARDING` is still unreachable (`app/index.tsx:16` hardcodes `ONBOARDED = true`), or continue **B5** (graceful-degradation verification, §8.2).
 3. Owner decisions: prod Supabase (~$25/mo, closes B1) · Apple $99 (iOS) · Google Play $25 (internal track)
 3. ⛔ Canonical Panchang Engine decision (ADR-033) — unblocks Today panchang, Calendar markers, notifications
 3. AI corpus ingestion + eval readiness — unblocks live Ask Guru (GURU_LIVE)
@@ -272,9 +291,10 @@ resolved (PR #14).
 
 # Next Deliverable
 
-**A Sentry org + DSN (free tier, owner action)** — it closes B4.3's upload and unblocks B4.4. Until
-then the credential-free options are making onboarding reachable (`ONBOARDED = true` at
-`app/index.tsx:16` blocks a whole E2E flow) or starting **B5 — Reliability & DR**. B1/B3 remainders stay owner-gated: prod Supabase (~$25/mo) closes B1; Apple
+Two owner purchases now gate reliability itself, not just convenience: **a Sentry org + DSN** (free
+tier) closes B4, and **a paid Supabase plan** (~$25/mo) closes B1 *and* makes NFR-15 achievable — no
+PITR means no recovery of user data. Credential-free meanwhile: B5's remaining increments (§8.2
+graceful degradation, §8.4) or making onboarding reachable. B1/B3 remainders stay owner-gated: prod Supabase (~$25/mo) closes B1; Apple
 ($99) + Google Play ($25) close most of B3.
 
 ---

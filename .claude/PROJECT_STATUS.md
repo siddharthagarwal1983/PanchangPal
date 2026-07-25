@@ -39,7 +39,7 @@ Overall Progress
 
 ░░░░░░░░░░░░░░░░░░░░
 
-**Mobile MVP — Phase 1: ✅ 100% (all 8 slices, merged)** · **Beta Readiness & Platform Hardening: 🚧 22% (1 of 8 slices — B2 E2E verification — plus B4.1–B4.3 of B4)**
+**Mobile MVP — Phase 1: ✅ 100% (all 8 slices, merged)** · **Beta Readiness & Platform Hardening: 🚧 25% (1 of 8 slices — B2 — plus B4.1–B4.3 and B5's runbooks + drill)**
 
 Project Health
 
@@ -74,7 +74,7 @@ TBD
 | Mobile Development (feature slices) | ✅ Complete | 100% (M1–M8 done) |
 | AI Platform | 🟡 In Progress | Adapters + RAG pipeline done; corpus + eval pending |
 | Testing | 🟢 Healthy | 321 green (244 mobile jest + 77 vitest) + 17 pgTAP RLS/DB assertions; bundle gate per PR; 3 Maestro FLOW_* green on main (E2E false reds from emulator ANR dialogs fixed, PR #41); API contract gate restored and proven to fail; AI eval harness still owed |
-| Beta | 🚧 In progress | 22% (B2 ✅ complete; B4 🟡 ~75% — B4.1–B4.3 in, remainder owner-gated on a Sentry org; B1/B3 owner-gated; B5–B8 pending) |
+| Beta | 🚧 In progress | 25% (B2 ✅; B4 🟡 ~75% owner-gated on a Sentry org; B5 🟡 ~33% — runbooks + drill in, PITR undrillable on the free tier; B1/B3 owner-gated; B6–B8 pending) |
 | Production Launch | ⏳ Pending | 0% |
 
 ---
@@ -316,6 +316,12 @@ prefs work today, so gating and prefs are real before the SDKs are wired.
 
 # Recently Completed
 
+- **B5 opened — DR runbooks + mechanised restore drill (2026-07-25):** the five §8.3 scenarios
+  documented with literal repo commands, and a monthly `dr-drill.yml` that builds from repo,
+  round-trips through `pg_dump`/`pg_restore --exit-on-error`, and re-runs the same invariants file
+  against the restored database (tables, RLS still enabled, policies, seed, pgvector, enums). First
+  run: restore in 1s, invariants OK both sides. **Found and recorded: there is no PITR on the free
+  tier, so NFR-15 is unmet for user data — a launch blocker.**
 - **API contract gate restored (2026-07-25):** `openapi-conformance.test.ts` compares the zod
   contracts with `docs/api/openapi.yaml` — eight shared enums, ErrorEnvelope, and API_GET_TODAY's
   parameters/response — and was proven to fail by dropping a param, inventing an ERR_*, and renaming
@@ -437,8 +443,8 @@ The Mobile MVP Phase 1 feature-slice milestone is **complete (100%)** and merged
 slices — App Shell, Today, Guided Ritual, Calendar Shell, Ask Guru Client, Profile/Household,
 Notifications, and Subscription (M1–M8) — are implemented, tsc/eslint clean, and green in CI.
 
-The project is now in **Beta Readiness & Platform Hardening** (TDD Part 5), sliced B1–B8, at **22%
-(1 of 8 — B2 complete — plus B4.1–B4.3)**. The milestone opened on a known gap: CD reported green while
+The project is now in **Beta Readiness & Platform Hardening** (TDD Part 5), sliced B1–B8, at **25%
+(1 of 8 — B2 complete — plus B4.1–B4.3 and B5's first increment)**. The milestone opened on a known gap: CD reported green while
 its Maestro E2E and EAS build jobs were placeholders. **B2 (E2E verification) is now complete** — the
 Maestro placeholder is replaced by three real FLOW_* specs GREEN in CI on a native Android build,
 including FLOW_SESSION_PERSISTENCE, which along the way exposed and fixed a real persistence bug

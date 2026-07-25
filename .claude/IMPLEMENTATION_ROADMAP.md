@@ -2,8 +2,8 @@
 
 # PanchangPal — Implementation Roadmap
 
-Version: 1.7.0
-Last Updated: 2026-07-25 (B4.1–B4.3 in; B4's remainder owner-gated on a Sentry org)
+Version: 1.8.0
+Last Updated: 2026-07-25 (B5 opened; NFR-15 found unmet — no PITR on the free tier)
 
 Purpose: the forward plan from the current state. Complements PROJECT_STATUS.md (snapshot) and
 CURRENT_MILESTONE.md (active milestone). Updated when scope or sequencing changes — and at every
@@ -99,6 +99,20 @@ this milestone spent B1 and B3 removing, so the gate states the gap instead.
 
 Progress is **22%** ((1 + ¾)/8), and **B4 now waits on the owner** for a Sentry org + DSN (free
 tier) — the same shape of gate as B1's prod Supabase and B3's store accounts, at no cost.
+
+**Update (2026-07-25, later still). B5 opened, and found the milestone's most consequential gap.**
+Runbooks for all five §8.3 scenarios now exist, and the restore drill is mechanised: build from repo,
+`pg_dump` → `pg_restore --exit-on-error`, then the SAME invariants file re-run against the restored
+database (tables, RLS still enabled, policies, seed, pgvector, enums) plus seeded row-count equality.
+It runs monthly and on any PR touching migrations or seed, so an un-restorable schema fails review
+rather than an incident. First run restored in 1s.
+
+**But NFR-15 is unmet.** Supabase PITR is a paid-plan feature and both hosted projects are free-tier,
+so there is nothing to restore user data FROM. Schema and seed come back in minutes; profiles,
+households, completions, streaks, personal dates and conversations do not come back at all. That
+makes the ~$25/month Supabase plan a **reliability** decision rather than an environments one, and it
+is now a launch blocker rather than a B1 line item: shipping to real users without it means a single
+incident is permanent data loss. Progress **25%**.
 
 **The engineering that is NOT blocked** is the instrumentation B4.2's sink was built for: the
 documented EVT_* are still not emitted at their call sites, so `analytics_event` would receive only
