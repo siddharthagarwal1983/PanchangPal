@@ -2,8 +2,8 @@
 
 # PanchangPal — Current Session
 
-Version: 2.0.0
-Last Updated: 2026-07-26 (End Session — B2 and B5 complete; B4 owner-gated)
+Version: 2.0.1
+Last Updated: 2026-07-26 (End Session — B2 and B5 complete; E2E regression from #50 fixed in #53)
 
 ---
 
@@ -38,6 +38,15 @@ which blocked FLOW_ONBOARDING and hid an unbuilt screen set for two milestones.
 
 # Open
 
+- **I broke main's E2E with PR #50, and fixed it in #53.** Making the onboarding gate real changed
+  what a FRESH device does on first launch — a CI emulator has no stored state, so the app correctly
+  opened on SCR_AUTH_001 while all three pre-existing flows launched and asserted Today. 4/4 red,
+  with the app behaving correctly and the flows asserting the old behaviour. The three flows now skip
+  the gate conditionally; FLOW_ONBOARDING's own assertion was also wrong (Maestro regex-matches the
+  WHOLE element text, and the deferred-auth sentence is part of one subtitle string). **The lesson is
+  mine, not the gate's:** changing first-launch behaviour necessarily changes what every flow sees on
+  a fresh emulator, and I should have worked that through before merging rather than learning it from
+  a red main. Unit tests, typecheck, lint and the bundle gate all passed it straight through.
 - **A pending E2E run was cancelled by a later merge.** With `cancel-in-progress: false`, a
   concurrency group keeps only the most recent *pending* run, so three rapid merges (#49/#50/#51)
   displaced #50's queued run before it started — the same "a cancelled run reads as no signal"
