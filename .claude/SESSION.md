@@ -2,8 +2,8 @@
 
 # PanchangPal — Current Session
 
-Version: 1.11.0
-Last Updated: 2026-07-22
+Version: 1.12.0
+Last Updated: 2026-07-25
 
 ---
 
@@ -65,14 +65,44 @@ PR #31 CI: lint/typecheck, unit/component/a11y, secret scan all pass.
 
 ---
 
+# The persistence run came back — as a masked build failure (2026-07-25)
+
+PRs #31, #32, #33 all merged. The single-ABI E2E run on the main tip (29949921351) is the one to
+read — and it did **not** slow-build to the timeout. It **failed fast, then hung**:
+
+- 19:16 build starts (cold Gradle cache).
+- **19:27:33 — assembleRelease FAILS**: `:app:mergeReleaseNativeDebugMetadata`,
+  `:react-native-screens:lintVitalAnalyzeRelease`, `:expo:verifyReleaseResources`.
+- 19:27 → 20:46 — Gradle **hangs ~80 min** (4 orphan java workers alive at cleanup), never prints
+  the failure summary.
+- 20:46 — `timeout-minutes: 90` kills it → surfaced as `cancelled`, not `failure`.
+
+So the emulator never booted, no flow ran, and **session persistence is still unverified**. The
+failure wore a timeout's clothes — the same "gate goes dark" pathology PR #32 fought, one layer down:
+a genuine `assembleRelease` break masked because Gradle didn't fail-fast and the job had no
+step-level cap.
+
+Two distinct problems, neither yet fixed:
+1. **Release build genuinely fails** (native-debug-metadata + release lintVital + verifyRelease
+   resources). The real error summary was never emitted (killed first), so root cause is uncaptured.
+   Plausibly exposed by the single-ABI flag `-PreactNativeArchitectures=x86_64` (PR #32), or
+   release-only lint/resource checks the emulator APK doesn't need.
+2. **Failure masquerades as a timeout** — no step-level `timeout`, no `--stacktrace`, Gradle waiting
+   on stuck workers = 80 wasted min and a mislabeled `cancelled`.
+
+Fix path (not yet started, owner deferred): cap the Build APK step with coreutils `timeout` +
+`--stacktrace`; drop work the emulator doesn't need (disable release lint + native-debug-metadata);
+re-run; read the real error; iterate to green; only then read the persistence verdict.
+
 # Open
 
-- **Session persistence: still unverified.** No run has reached the emulator.
-- PRs #31, #32 open; docs checkpoint is this branch.
-- Local Android build needs `JAVA_HOME` + `ANDROID_HOME` (not in the shell profile); machine is at
+- **Session persistence: still unverified** — no run has reached the emulator; the one that should
+  have failed in `assembleRelease` (above).
+- Local Android build needs `JAVA_HOME` + `ANDROID_HOME` (not in the shell profile); machine was at
   **99% disk**, which killed a local build at `mergeReleaseNativeLibs`.
 - Onboarding still unreachable — `ONBOARDED = true`, `app/index.tsx:16`.
 
 # Recommended Next Task
 
-Land #31 and #32, then re-run E2E and read the persistence verdict from the flow plus its logcat.
+Fix the E2E `assembleRelease` failure (fail-fast + trim to what the emulator needs), re-run E2E, then
+read the persistence verdict from the flow plus its logcat.

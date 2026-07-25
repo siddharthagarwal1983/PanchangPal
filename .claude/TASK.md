@@ -2,8 +2,8 @@
 
 # PanchangPal — Current Task
 
-Version: 3.1.0
-Last Updated: 2026-07-22
+Version: 3.2.0
+Last Updated: 2026-07-25
 
 Purpose: the current implementation task. Stay focused; avoid unrelated work unless instructed.
 
@@ -89,16 +89,24 @@ budget, Gradle cache, one ABI instead of four.
 Answer the persistence question, then resume B1/B2/B3 remainders
 
 Status
-🔴 **Session persistence is still unverified.** `FLOW_SESSION_PERSISTENCE` is written and asserts
-the intended post-restart state, but **no E2E run has reached the emulator**. It cannot be answered
-in Expo Go either — MMKV is absent there and the store degrades to memory by design.
+🔴 **Session persistence is still unverified — and the E2E gate is red under its timeout costume.**
+#31/#32/#33 merged. The single-ABI run on the main tip (29949921351) did NOT slow-build to the
+timeout: `assembleRelease` **failed fast at ~11 min** (`:app:mergeReleaseNativeDebugMetadata`,
+`:react-native-screens:lintVitalAnalyzeRelease`, `:expo:verifyReleaseResources`), then Gradle hung
+~80 min and the 90-min `timeout-minutes` killed it as `cancelled`. Emulator never booted; no flow
+ran. The real error summary was never emitted, so root cause is uncaptured. (Full autopsy in
+SESSION.md.) `FLOW_SESSION_PERSISTENCE` still asserts the right post-restart state; it just never
+executed. Cannot be answered in Expo Go either — MMKV absent, store degrades to memory by design.
 
 Next steps, in order:
-1. Re-run E2E on main once #31 and #32 are merged (the single-ABI build is the one to watch).
-2. Read the verdict from the flow, and from `maestro-logcat.txt` if red — the presence of
-   `[ritual] Persistent storage unavailable` distinguishes "MMKV fell back to memory" from
-   "MMKV was active and the session was never persisted". The two produce identical screenshots.
-3. If red, fix; if green, B2 gains a real persistence assertion.
+1. **Make the build fail-fast and loud, not slow-and-silent.** Cap the Build APK step with coreutils
+   `timeout` + `--stacktrace`; drop release-only work the emulator APK doesn't need (release
+   `lintVital`, native-debug-metadata) — likely removes both the failing tasks and the 80-min hang.
+2. Re-run E2E, read the **real** `assembleRelease` error, iterate to a green build.
+3. Only then read the persistence verdict from the flow, and from `maestro-logcat.txt` if red — the
+   presence of `[ritual] Persistent storage unavailable` distinguishes "MMKV fell back to memory"
+   from "MMKV was active and the session was never persisted". The two produce identical screenshots.
+4. If red, fix; if green, B2 gains a real persistence assertion.
 
 Everything else in B1/B2/B3 remains gated on money, a store account, or a later slice.
 
@@ -136,8 +144,11 @@ marked as such rather than asserted.
       17.6.1.141, both engine 17. The db-tests job passed on 17 with pgTAP 1.3.4 from PGDG.
       Anyone with a local stack needs `supabase stop --no-backup` before the next `supabase start`.
 - [ ] Verify session persistence actually survives a restart. Observable since PR #24
-      (`getStorageBackend()`) and now ENCODED as `FLOW_SESSION_PERSISTENCE` (PR #32) — but the flow
-      has never executed, because the E2E gate was dark. Still the last free engineering item.
+      (`getStorageBackend()`) and ENCODED as `FLOW_SESSION_PERSISTENCE` (PR #32) — but the flow has
+      STILL never executed. The gate is no longer dark from cancellation; now the single-ABI
+      `assembleRelease` fails at ~11 min and Gradle hangs to the 90-min timeout, so it reports
+      `cancelled`. Blocked on fixing that build (fail-fast + trim to what the emulator needs) before
+      the flow can run. Still the last free engineering item.
 - [x] **Fix issue #30 — UTC dates** (PR #31, 2026-07-22). Not on the original list; found while
       reading the ritual code. The daily loop stored UTC days as the user's local date, which in
       AU/NZ meant the morning ritual was recorded against yesterday all morning.
