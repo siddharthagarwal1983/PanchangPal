@@ -827,3 +827,32 @@ only: if our own app hangs, the flows still fail on their own assertions.
 `[ -z "$X" ] && missing=...` under `set -e`, where a test that evaluates FALSE returns non-zero and
 kills the script — so the all-secrets-present case would have failed the step. A workflow is
 otherwise only ever tested where being wrong is expensive.
+
+---
+
+# 2026-07-25 — Instrumenting the funnel the North Star sums
+
+**Ritual analytics derive from view-model transitions, not from inline `track()` calls.** A screen
+that tracks at six call sites double-fires the moment a re-render repeats a state. For most events
+that is noise; for **EVT_017 it is the product's headline metric** — Weekly Household Ritual
+Completions is EVT_017 grouped by `household_id` per ISO week (§11.3) — so an inflated count is worse
+than no count. A pure `ritualTransitionEvents(prev, next, ctx)` also makes "fires exactly once"
+testable without mounting anything, the same reasoning that put `resolveRitualScreenState` in this
+screen after its check ORDER turned out to be the bug.
+
+**Restoring is not starting, and resuming is not starting.** The first view after a session restore
+emits nothing (reopening the app mid-ritual would otherwise inflate the top of the funnel every
+time), and `paused → active` is not EVT_015. Both are asserted.
+
+**EVT_020/021 come from the server's streak response.** The streak is server-derived and reconciled
+in `HOOK_useCompleteRitual`; an analytics event built from a client guess could disagree with the
+number the user is looking at, which would corrupt the retention analysis it exists to feed.
+
+**Property names come from the taxonomy, not from us.** EVT_054 shipped in B4.1 with `code` and
+`surface`; PDD §11.2 specifies `error_code` and `screen_id`. Nothing in the stack would have caught
+that — `event_id` is a `text` column and `props` is `jsonb` — so a divergent name fails at the
+dashboard months later, as a query that quietly returns nothing. When wiring an event, read §11.2
+first and match it exactly.
+
+**Only registry events fire (§11.0).** `buildEnvelope` rejects any id outside `EVENT_IDS`, so an
+invented event is a dropped event and a warning rather than a row nobody can interpret.

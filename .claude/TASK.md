@@ -2,8 +2,8 @@
 
 # PanchangPal — Current Task
 
-Version: 3.5.0
-Last Updated: 2026-07-25 (B4.3 done to its credential-free limit; B4 blocked on a Sentry org)
+Version: 3.6.0
+Last Updated: 2026-07-25 (daily habit funnel emitting; next free work is a live analytics insert)
 
 Purpose: the current implementation task. Stay focused; avoid unrelated work unless instructed.
 
@@ -165,11 +165,23 @@ With it: install `@sentry/react-native` + its config plugin, swap one line in
 `src/data/telemetryAdapter.ts` and one in `_shared/http.ts`, and B4.3's upload plus B4.4's
 dashboards/alerts become verifiable. Without it, B4 stops here.
 
-### Also outstanding, and NOT credential-blocked
-The documented EVT_* are still not emitted at their call sites. B4.2 built the sink; EVT_012 (today
-rendered), EVT_017 (ritual complete — the North Star input) and the rest need wiring where they
-happen. This is real, verifiable work available now — the best next increment if the Sentry org is
-not imminent.
+### EVT_* instrumentation — DONE (branch `feat/b4-evt-instrumentation`, unreviewed)
+The daily habit funnel (PDD §11.4) emits: EVT_012 Today Viewed · EVT_015 Ritual Started · EVT_016
+Step Advanced · **EVT_017 Ritual Completed** (the North Star input) · EVT_018 Abandoned · EVT_019
+Checklist Item Completed · EVT_020/021 Streak Advanced / Grace Used. Registry events only, §11.2
+property schemas. Ritual events derive from view-model transitions via a pure mapper, so a
+re-render cannot double-count; EVT_020/021 come from the server's streak, never a client guess.
+Also fixed EVT_054's props — B4.1 shipped `code`/`surface` where §11.2 specifies
+`error_code`/`screen_id`. 244 tests (+15).
+
+### Next, and still not credential-blocked
+**Exercise the analytics insert against the dev Supabase project.** The client assumes the
+`analytics_ins_own` policy (insert-only, no select); nothing has ever written a row. Now that real
+events are emitted, this is the leading untested claim in the milestone — and the alternative is
+that production is the first real check.
+
+Alternative if that is deferred: **API contract tests** under `packages/api/src/contracts/*`, owed
+since B1 de-declared the hollow gate (the root vitest config already picks them up).
 
 B1/B3 remainders stay owner-gated (prod Supabase ~$25/mo closes B1; Apple $99 + Google Play $25 close
 most of B3).

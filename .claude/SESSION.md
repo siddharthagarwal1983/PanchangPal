@@ -154,8 +154,32 @@ workflow otherwise only gets tested where being wrong is expensive.
 
 ---
 
+# 8. EVT_* instrumentation — the sink stops receiving only errors
+
+B4.2 built the analytics sink; nothing emitted into it but EVT_054. The daily habit funnel (PDD
+§11.4) now fires: **EVT_012** Today Viewed · **EVT_015** Ritual Started · **EVT_016** Step Advanced ·
+**EVT_017 Ritual Completed** · **EVT_018** Abandoned · **EVT_019** Checklist Item Completed ·
+**EVT_020/021** Streak Advanced / Grace Used. Registry events only (§11.0 is explicit: only §3.0.1
+events fire), with §11.2's property schemas.
+
+**Ritual events derive from view-model transitions**, via a pure mapper, rather than being tracked at
+six call sites. A screen that calls `track()` inline double-fires the moment a re-render repeats a
+state — and EVT_017 is the North Star's input (WHRC = EVT_017 grouped by `household_id` per ISO
+week), so an inflated count corrupts the product's headline metric rather than merely adding noise.
+The mapper makes "fires exactly once" testable without mounting anything, and the tests pin the three
+ways it could go wrong: a repeated render, a restore mistaken for a start, a resume mistaken for a
+start. EVT_020/021 fire from the **server's** streak response, never a client guess.
+
+**A B4.1 defect fixed on the way:** EVT_054 carried `code` and `surface`, where PDD §11.2 specifies
+`error_code` and `screen_id`. Nothing would have caught it — `event_id` is a text column and `props`
+a jsonb blob, so a divergent property name fails at the dashboard months later, as a query that
+quietly returns nothing.
+
+---
+
 # Verification
 
+- **EVT_* instrumentation: 244 mobile tests (+15) · tsc clean · eslint 0 errors.**
 - **B4.3: 59 vitest tests (+7) · mobile unchanged at 229 · tsc clean · eslint 0 errors.** The new
   suite asserts that a server report carries exactly four keys and never an error message (a leaky
   `select * from app_user where email = …` is checked not to survive), and that a DSN configured with
@@ -200,8 +224,9 @@ Tracking docs + a DECISIONS.md convention block (this checkpoint).
 - ~~PR #36 pending merge.~~ **Merged as `e1e10d4`; the docs checkpoint followed as PR #37 (`45f1b0d`).**
   Main's E2E is green again on both (runs 30156533738 and 30156615768) — it had gone honestly red
   after #35 exposed the MMKV bug.
-- **B4.1 (PR #39, `25275ff`) and B4.2 (PR #40, `c099263`) are merged.** B4.3 is on
-  `feat/b4-source-maps`, unreviewed.
+- **B4.1 (#39 `25275ff`), B4.2 (#40 `c099263`), the E2E fix (#41 `1e6f9b1`) and B4.3 (#42
+  `d70a201`) are all merged.** The EVT_* instrumentation is on `feat/b4-evt-instrumentation`,
+  unreviewed.
 - **Crash reports still go nowhere.** The fact to carry forward: error *rates* now land in
   `analytics_event` via EVT_054, but the diagnostic copy is dropped. Turning that on needs
   `@sentry/react-native` installed, a Sentry org + DSN (free tier suffices), and the adapter swapped
@@ -221,8 +246,10 @@ merely configured, and this milestone's whole premise is that the difference mat
 remaining work is small — install `@sentry/react-native` + its config plugin, then swap one line in
 `src/data/telemetryAdapter.ts` and one in `_shared/http.ts`.
 
-**Available now, not credential-blocked: wire the documented EVT_* at their call sites.** B4.2 built
-the sink but not the instrumentation, so `analytics_event` would today receive only EVT_054. EVT_012
-(today rendered) and EVT_017 (ritual complete — the North Star input) are the ones that matter; the
-North Star metric cannot be computed until EVT_017 is emitted. This is the best next increment if
-the Sentry org is not imminent.
+**Available now, not credential-blocked: exercise the analytics insert against the dev Supabase
+project.** The client assumes `analytics_ins_own` (insert-only, no select) and nothing has ever
+written a row — with real events now emitting, that is the leading untested claim in this milestone,
+and the alternative is production being the first real check.
+
+Alternative: the **API contract tests** owed since B1 de-declared the hollow gate
+(`packages/api/src/contracts/*`; the root vitest config already picks them up).
