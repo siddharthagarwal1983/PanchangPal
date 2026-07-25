@@ -177,8 +177,43 @@ quietly returns nothing.
 
 ---
 
+# 9. The analytics insert-only contract — gated, and checked against a real project
+
+`analytics_event` had never been written to. The adapter's insert path was covered only by unit
+tests against a fake repository, so "the client can insert and cannot read" was an assumption about
+a policy no test touched — and with the funnel now emitting, it was the load-bearing one.
+
+**Five pgTAP assertions** in the RLS suite cover it, using the exact envelope `buildEnvelope()`
+emits, including the null-household / null-session case an anonymous user produces. A schema or
+policy change that breaks the client now fails in CI.
+
+**A subtlety the writing surfaced:** UPDATE and DELETE are asserted with `is_empty(… returning 1)`,
+not `throws_ok`. Supabase grants anon/authenticated broad table privileges and lets RLS do the
+gating, so a write with no matching policy is **filtered rather than refused** — nothing visible,
+nothing modified, nothing raised. `throws_ok` would have failed; `lives_ok` alone would have passed
+while proving nothing.
+
+**Verified against the hosted staging project** with its anon key, because a test on an ephemeral CI
+database proves the migrations, not the deployed project:
+
+| Operation | Result |
+|---|---|
+| INSERT (anon) | `201` |
+| SELECT | `200 []` — RLS filters; nothing readable |
+| UPDATE | `200 []` — nothing modified |
+| DELETE | `200 []` — nothing removed |
+
+The probe row is permanent (client DELETE is denied — the property under test) and identifiable by a
+`user_pseudo_id` starting `probe-`. Dev's anon key is not on this machine; staging is the same
+migrations and the same policy.
+
+---
+
 # Verification
 
+- **Analytics RLS gate: 17 pgTAP assertions in the RLS suite (+5).** Not runnable locally (no
+  Docker); CI's db-tests job on pg17 is where it executes. The hosted staging probe above is the
+  independent check.
 - **EVT_* instrumentation: 244 mobile tests (+15) · tsc clean · eslint 0 errors.**
 - **B4.3: 59 vitest tests (+7) · mobile unchanged at 229 · tsc clean · eslint 0 errors.** The new
   suite asserts that a server report carries exactly four keys and never an error message (a leaky
@@ -246,10 +281,10 @@ merely configured, and this milestone's whole premise is that the difference mat
 remaining work is small — install `@sentry/react-native` + its config plugin, then swap one line in
 `src/data/telemetryAdapter.ts` and one in `_shared/http.ts`.
 
-**Available now, not credential-blocked: exercise the analytics insert against the dev Supabase
-project.** The client assumes `analytics_ins_own` (insert-only, no select) and nothing has ever
-written a row — with real events now emitting, that is the leading untested claim in this milestone,
-and the alternative is production being the first real check.
+**API contract tests** under `packages/api/src/contracts/*` — owed since B1 de-declared the hollow
+`--passWithNoTests` gate. The root vitest config already includes `packages/**/*.test.ts`, so real
+tests validating the zod schemas against `docs/api/openapi.yaml` (ADR-032) restore a release gate
+with no workflow change. Credential-free.
 
-Alternative: the **API contract tests** owed since B1 de-declared the hollow gate
-(`packages/api/src/contracts/*`; the root vitest config already picks them up).
+Still owner-gated: a **Sentry org + DSN** (free tier) closes B4.3's source-map upload and unblocks
+B4.4; prod Supabase (~$25/mo) closes B1; Apple $99 + Google Play $25 close most of B3.

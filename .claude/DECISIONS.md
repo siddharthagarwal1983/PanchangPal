@@ -856,3 +856,26 @@ first and match it exactly.
 
 **Only registry events fire (§11.0).** `buildEnvelope` rejects any id outside `EVENT_IDS`, so an
 invented event is a dropped event and a warning rather than a row nobody can interpret.
+
+---
+
+# 2026-07-25 — An unauthorised write in Supabase is filtered, not refused
+
+**Asserting that RLS blocks a write means asserting it changes NOTHING, not that it throws.**
+Supabase grants `anon`/`authenticated` broad table privileges and relies on RLS for authorization, so
+an UPDATE or DELETE with no matching policy simply sees no rows: nothing is modified and no error is
+raised. `throws_ok` fails, and `lives_ok` passes while proving nothing. The correct assertion is
+`is_empty($$ ... returning 1 $$)`, which makes the rows-affected count observable even when there is
+no SELECT policy to read the table with. INSERT is the exception — a `WITH CHECK` violation does
+raise 42501.
+
+**`analytics_event` is append-only from a device, and that is now a gate.** Five pgTAP assertions
+cover it with the exact envelope `buildEnvelope()` emits, including the null-household/null-session
+shape an anonymous user produces, so a schema or policy change that breaks the client fails in CI
+rather than at a dashboard.
+
+**A CI database proves the migrations; only the project proves the project.** The contract was also
+exercised against hosted staging with its anon key — INSERT `201`, SELECT/UPDATE/DELETE all `200 []`
+— because the pgTAP suite runs on an ephemeral Postgres built from the same migration files, which
+cannot detect a divergence in what is actually deployed. Probe rows carry a `user_pseudo_id` starting
+`probe-` and are permanent by design: client DELETE is denied, which is the property under test.

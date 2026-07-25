@@ -182,7 +182,7 @@ Implementation: Mobile MVP Phase 1 is feature-complete (M1–M8).
 | APIs | ✅ OpenAPI (65 operations) + SVC_* handlers |
 | RLS Policies | ✅ Defined across 29 tables |
 | AI Provider | ✅ OpenAI adapters + RAG pipeline + rate limit/cost |
-| Analytics Adapter | ✅ Client adapter + Postgres sink (ADR-013); daily-habit EVT_* emitting; insert path not yet exercised against a live table |
+| Analytics Adapter | ✅ Client adapter + Postgres sink (ADR-013); daily-habit EVT_* emitting; insert-only contract gated by pgTAP and verified against hosted staging (INSERT 201 · SELECT/UPDATE/DELETE all no-op) |
 | Payment Adapter | ✅ Webhook + BillingRepository (F-4) — webhook Edge Function pending |
 
 ---
@@ -258,9 +258,9 @@ gate that blocks a production build with Sentry unconfigured. What remains (the 
 the §7.2 dashboards/alerts) needs a real Sentry project to be verifiable rather than configured, so
 **B4 is now owner-gated like B1 and B3** — at no cost.
 
-The EVT_* instrumentation that was outstanding is now done — the daily habit funnel emits, EVT_017
-included — so the remaining credential-free work is **exercising the analytics insert against the dev
-project**, which would confirm the RLS assumption the client makes and which no test covers.
+The EVT_* instrumentation is done (the daily habit funnel emits, EVT_017 included) and the analytics
+insert-only contract is now gated in CI and verified against hosted staging. The remaining
+credential-free work is the **API contract tests** owed since B1 de-declared the hollow gate.
 
 Priority 2
 
@@ -315,6 +315,9 @@ prefs work today, so gating and prefs are real before the SDKs are wired.
 
 # Recently Completed
 
+- **Analytics insert-only contract gated (2026-07-25):** five pgTAP assertions on `analytics_event`
+  using the client's exact envelope, plus a hosted staging probe (INSERT 201; SELECT/UPDATE/DELETE
+  all no-ops). Surfaced that Supabase filters unauthorised writes rather than raising.
 - **EVT_* daily habit funnel (2026-07-25):** EVT_012/015/016/017/018/019/020/021 now emit at their
   call sites (PDD §11.4), so `analytics_event` receives more than errors and the North Star input
   (EVT_017) fires. Ritual events derive from view-model transitions via a pure mapper so a re-render

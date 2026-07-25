@@ -2,8 +2,8 @@
 
 # PanchangPal — Current Task
 
-Version: 3.6.0
-Last Updated: 2026-07-25 (daily habit funnel emitting; next free work is a live analytics insert)
+Version: 3.7.0
+Last Updated: 2026-07-25 (analytics insert-only contract gated + verified on staging)
 
 Purpose: the current implementation task. Stay focused; avoid unrelated work unless instructed.
 
@@ -174,14 +174,25 @@ re-render cannot double-count; EVT_020/021 come from the server's streak, never 
 Also fixed EVT_054's props — B4.1 shipped `code`/`surface` where §11.2 specifies
 `error_code`/`screen_id`. 244 tests (+15).
 
-### Next, and still not credential-blocked
-**Exercise the analytics insert against the dev Supabase project.** The client assumes the
-`analytics_ins_own` policy (insert-only, no select); nothing has ever written a row. Now that real
-events are emitted, this is the leading untested claim in the milestone — and the alternative is
-that production is the first real check.
+### Analytics insert-only contract — DONE (branch `test/analytics-rls-gate`, unreviewed)
+Five pgTAP assertions in the RLS suite, using the exact envelope `buildEnvelope()` emits (including
+the null-household / null-session case an anonymous user produces), so a schema or policy change
+that breaks the client fails in CI. Verified additionally against the hosted **staging** project
+with its anon key: INSERT `201` · SELECT `200 []` · UPDATE `200 []` · DELETE `200 []`.
 
-Alternative if that is deferred: **API contract tests** under `packages/api/src/contracts/*`, owed
-since B1 de-declared the hollow gate (the root vitest config already picks them up).
+Writing it surfaced a subtlety now recorded in DECISIONS.md: Supabase grants clients broad table
+privileges and lets RLS filter, so an unauthorised UPDATE/DELETE **modifies nothing rather than
+raising** — `throws_ok` would have failed, `lives_ok` would have passed while proving nothing. The
+assertions use `is_empty(… returning 1)`.
+
+### Next, and still not credential-blocked
+**API contract tests** under `packages/api/src/contracts/*` — owed since B1 de-declared the hollow
+`--passWithNoTests` gate. The root vitest config already includes `packages/**/*.test.ts`, so real
+tests validating the zod schemas against `docs/api/openapi.yaml` (ADR-032) restore the gate with no
+workflow change.
+
+Still owner-gated: a **Sentry org + DSN** (free tier) closes B4.3's source-map upload and unblocks
+B4.4; prod Supabase (~$25/mo) closes B1; Apple $99 + Google Play $25 close most of B3.
 
 B1/B3 remainders stay owner-gated (prod Supabase ~$25/mo closes B1; Apple $99 + Google Play $25 close
 most of B3).

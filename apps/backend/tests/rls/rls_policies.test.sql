@@ -12,6 +12,8 @@
 --   6. Service-only tables (job) reject client access.
 --   7. F-21 (ratified 2026-07-12): household members CAN read another member's
 --      completion/streak COUNTS.
+--   8. analytics_event is INSERT-ONLY for clients (ADR-013): the device can append
+--      envelopes and can never read, update, or delete them.
 --
 -- Run in CI against a freshly migrated DB (pgTAP), e.g.:
 --   supabase test db            # if wired to this path, or
@@ -22,7 +24,7 @@
 -- =============================================================================
 
 begin;
-select plan(12);
+select plan(17);
 
 -- pgTAP is provided by the `pgtap` extension in CI.
 create extension if not exists pgtap;
@@ -186,6 +188,65 @@ select ok(
   (select count(*) from ritual_completion
      where user_id = '33333333-3333-3333-3333-333333333333') = 0,
   'F-21: a non-household user cannot read those completions'
+);
+reset role;
+
+-- =============================================================================
+-- 9. analytics_event is INSERT-ONLY for clients (ADR-013 / TDD Part 5 §7.1)
+--
+--    The mobile analytics adapter writes envelopes here and never reads them;
+--    rollups run service-side (pg_cron, ADR-025). Until now nothing had ever
+--    written a row: the adapter's insert path was covered only by unit tests
+--    against a fake repository, so "the client can insert, and cannot read"
+--    was an assumption. These tests make it a gate, and they use the EXACT
+--    envelope shape `buildEnvelope()` produces — event_id, user_pseudo_id,
+--    household_id, session_id, ts, props — so a schema or policy change that
+--    breaks the client fails here rather than in production.
+-- =============================================================================
+select tests_set_user('11111111-1111-1111-1111-111111111111');
+set local role authenticated;
+
+select lives_ok(
+  $$ insert into analytics_event (event_id, user_pseudo_id, household_id, session_id, ts, props)
+     values ('EVT_017',
+             '7f3a1c94-0000-4000-8000-000000000001',
+             'aaaaaaaa-aaaa-aaaa-aaaa-aaaaaaaaaaaa',
+             'sess-1',
+             now(),
+             '{"ritual_id":"cccccccc-cccc-cccc-cccc-cccccccccccc","depth":"quick","duration_ms":90000}'::jsonb) $$,
+  'client can INSERT an analytics_event envelope (the North Star input, EVT_017)'
+);
+
+-- household_id and session_id are nullable in the envelope: an anonymous user with
+-- no household still emits events, and the client sends explicit nulls.
+select lives_ok(
+  $$ insert into analytics_event (event_id, user_pseudo_id, household_id, session_id, ts, props)
+     values ('EVT_012', '7f3a1c94-0000-4000-8000-000000000002', null, null, now(), '{}'::jsonb) $$,
+  'client can INSERT an event with no household and no session'
+);
+
+-- No SELECT policy exists, which is the point: a device contributes events and can
+-- never read anyone's, including its own. A count, not a throws_ok — RLS filters
+-- rows rather than raising, so a leak would show up as a non-zero count.
+select ok(
+  (select count(*) from analytics_event) = 0,
+  'client CANNOT read analytics_event (no select policy — rollups are service-side)'
+);
+
+-- UPDATE and DELETE are `is_empty`, NOT `throws_ok`, and the difference is the point.
+-- Supabase grants anon/authenticated broad table privileges and lets RLS do the gating, so a
+-- write with no matching policy is FILTERED rather than refused: no rows are visible, so none
+-- are modified, and Postgres raises nothing. Asserting a 42501 here would have failed — and
+-- asserting `lives_ok` alone would have passed while proving nothing. `returning 1` makes the
+-- rows-affected count observable without a SELECT policy.
+select is_empty(
+  $$ update analytics_event set session_id = 'tampered' returning 1 $$,
+  'client analytics_event UPDATE modifies nothing (append-only event store)'
+);
+
+select is_empty(
+  $$ delete from analytics_event returning 1 $$,
+  'client analytics_event DELETE removes nothing (append-only event store)'
 );
 reset role;
 

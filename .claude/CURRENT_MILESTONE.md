@@ -426,11 +426,15 @@ testers' hands.
   `analytics_event`, so error rates are visible even while stack-level reporting is not. Closing it
   needs a Sentry org + DSN (free tier suffices) and B4.3–B4.4. `getTelemetryBackend()` returns
   `'none'` while this holds, and a DSN configured with no adapter warns at startup.
-- **Analytics is unverified against a live database (2026-07-25, B4.2)** — now the leading untested
-  claim in this milestone, since the daily-habit funnel emits real events into it. The insert path is
-  covered by unit tests against a fake repository, not by a write to a real `analytics_event` table
-  under RLS. The policy (`analytics_ins_own`, insert-only, no select) is what the client assumes; that
-  assumption should be exercised against dev before B8, or the first real check is production.
+- ~~**Analytics is unverified against a live database.**~~ **CLOSED 2026-07-25.** Five pgTAP
+  assertions now gate `analytics_event`'s insert-only contract in CI, using the exact envelope
+  `buildEnvelope()` emits, and the contract was additionally verified against the hosted **staging**
+  project with its anon key: INSERT `201`, SELECT `200 []`, UPDATE `200 []`, DELETE `200 []`. Writing
+  the tests surfaced a real subtlety — Supabase grants clients broad table privileges and lets RLS
+  filter, so an unauthorised UPDATE/DELETE **modifies nothing rather than raising**; `throws_ok`
+  would have failed and `lives_ok` would have passed while proving nothing. (The staging probe row
+  is permanent — client DELETE is denied, which is the property under test — and is identifiable by
+  a `user_pseudo_id` starting `probe-`.)
 - **Deferred vendor deps** — `react-native-purchases` and `expo-notifications` are still uninstalled;
   purchase and push flows cannot be verified end-to-end until they land on the Mac with keys. Their
   Null adapters keep the app honest but leave those paths E2E-untested.
