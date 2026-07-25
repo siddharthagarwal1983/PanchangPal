@@ -64,8 +64,8 @@ describe('telemetry adapter resolution', () => {
       {
         eventId: 'EVT_054',
         props: {
-          code: 'ERR_OFFLINE',
-          surface: 'error-boundary',
+          error_code: 'ERR_OFFLINE',
+          screen_id: 'error-boundary',
           recoverable: true,
           correlation_id: 'corr-7',
         },

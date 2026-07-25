@@ -62,8 +62,9 @@ describe('toClientErrorEvent', () => {
     const event = toClientErrorEvent({ code: 'ERR_OFFLINE', surface: 'error-boundary' });
     expect(event.event_id).toBe(CLIENT_ERROR_EVENT_ID);
     expect(event.event_id).toBe('EVT_054');
-    expect(event.props.code).toBe('ERR_OFFLINE');
-    expect(event.props.surface).toBe('error-boundary');
+    // Property names are PDD §11.2's, not ours: `error_code` and `screen_id`.
+    expect(event.props.error_code).toBe('ERR_OFFLINE');
+    expect(event.props.screen_id).toBe('error-boundary');
   });
 
   it('defaults recoverable to false rather than assuming a retry will work', () => {
@@ -99,10 +100,10 @@ describe('toClientErrorEvent', () => {
       correlationId: 'corr-9',
     });
     expect(Object.keys(event.props).sort()).toEqual([
-      'code',
       'correlation_id',
+      'error_code',
       'recoverable',
-      'surface',
+      'screen_id',
     ]);
   });
 });

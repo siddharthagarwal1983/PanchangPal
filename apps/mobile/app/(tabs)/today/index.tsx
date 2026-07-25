@@ -8,6 +8,7 @@
  * canonical engine is blocked (ADR-033) — never fabricated values. The rest of Home (ritual,
  * streak, checklist, reflection) is fully functional; card-level errors are isolated (AC-HOME-04).
  */
+import { useEffect } from 'react';
 import { View } from 'react-native';
 import { router } from 'expo-router';
 import {
@@ -20,6 +21,7 @@ import { toRitualProgress } from '../../../src/domain/ritualProgressService';
 import { toStreakView } from '../../../src/domain/streakService';
 import { useUiStore } from '../../../src/store/ui';
 import { useLocalDate } from '../../../src/data/hooks/useLocalDate';
+import { getAnalyticsService } from '../../../src/data/analyticsAdapter';
 import { t } from '../../../src/i18n';
 
 export default function TodayScreen() {
@@ -36,6 +38,16 @@ export default function TodayScreen() {
   const today = useLocalDate();
   const checklist = useChecklist(today);
   const toggle = useToggleChecklistItem(today);
+
+  // EVT_012 Today Viewed (PDD §1 registry; AC-HOME-01). Keyed on the local date so it fires once
+  // per day rather than on every re-render — and fires AGAIN when the day rolls over while the app
+  // is open, which is a genuine second view of a different day (ADR-026). It waits for the zone to
+  // resolve: an event attributed to the wrong day would land in the wrong bucket of every daily
+  // funnel that reads it.
+  useEffect(() => {
+    if (!today) return;
+    getAnalyticsService().track('EVT_012', { screen_id: 'SCR_HOME_001', local_date: today });
+  }, [today]);
 
   const resume = useUiStore((s) => s.ritualResume);
   const ritual = toRitualProgress({ completedToday: false, resumeStep: resume?.step ?? null });
@@ -64,7 +76,12 @@ export default function TodayScreen() {
 
         <Checklist
           items={checklist.data ?? []}
-          onToggle={(id) => toggle.mutate(id)}
+          onToggle={(id) => {
+            toggle.mutate(id);
+            // EVT_019 Checklist Item Completed — §11.3 tracks checklist completion as habit depth
+            // (>=1 per DAU). `item_id` is a seeded content id, never user text.
+            getAnalyticsService().track('EVT_019', { screen_id: 'SCR_HOME_001', item_id: id });
+          }}
           allDoneLabel={t('today.checklistAllDone')}
           testID="today-checklist"
         />

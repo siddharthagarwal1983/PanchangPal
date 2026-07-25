@@ -45,7 +45,14 @@ export function toErrorCode(value: unknown): ErrorCode {
 }
 
 /**
- * The props half of an EVT_054 event. Closed shape: adding a field is a deliberate act.
+ * The props half of an EVT_054 event, per PDD §11.2: `error_code` (ERR_*), `screen_id`,
+ * `recoverable`.
+ *
+ * The names come from the taxonomy, not from us. B4.1 shipped `code`/`surface` here, which nothing
+ * would have caught — `event_id` and `props` are a text column and a jsonb blob, so a divergent
+ * property name fails at the dashboard, months later, as a query that quietly returns nothing.
+ * `correlation_id` is an addition rather than a rename: it is server-minted (ADR-022) and is what
+ * joins this event to the Edge Function log line for the same failure.
  *
  * A type alias rather than an interface so it carries an implicit index signature and can be handed
  * straight to the analytics port's prop bag — an interface cannot, and the workaround would be a
@@ -53,8 +60,9 @@ export function toErrorCode(value: unknown): ErrorCode {
  * one.
  */
 export type ClientErrorEventProps = {
-  code: ErrorCode;
-  surface: string;
+  error_code: ErrorCode;
+  /** `SCR_*` where one is known; otherwise where it was caught (an ErrorBoundary has no screen). */
+  screen_id: string;
   recoverable: boolean;
   correlation_id?: string;
 };
@@ -81,8 +89,8 @@ export function toClientErrorEvent(input: {
   return {
     event_id: CLIENT_ERROR_EVENT_ID,
     props: {
-      code: input.code,
-      surface: input.surface,
+      error_code: input.code,
+      screen_id: input.surface,
       recoverable: input.recoverable ?? false,
       ...(input.correlationId ? { correlation_id: input.correlationId } : {}),
     },
