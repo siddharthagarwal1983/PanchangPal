@@ -2,9 +2,9 @@
 
 # PanchangPal — Project Memory
 
-Version: 1.7.0
+Version: 1.8.0
 
-Last Updated: 2026-07-25 (TelemetryAdapter seam recorded alongside the ritual-session storage seam)
+Last Updated: 2026-07-25 (AnalyticsService + TelemetryAdapter seams recorded)
 
 Current Phase:
 Beta Readiness & Platform Hardening (TDD Part 5)
@@ -419,6 +419,22 @@ Stable, cross-cutting facts (permanent until an approved decision changes them):
   **No PII is structural** (§7.1 `[MANDATORY]`): unrecognised errors map to `ERR_UNKNOWN` rather than
   echoing a message, EVT_054's props are a closed four-key shape, and `componentStack` is never
   forwarded. Every ERR_* maps to EVT_054; its sink is the analytics adapter (ADR-013).
+- **AnalyticsService** (client, B4.2) — every `EVT_*` goes through this port (ADR-013); the launch
+  sink is the Postgres `analytics_event` table, which is INSERT-ONLY for clients (policy
+  `analytics_ins_own`, no select policy — rollups run service-side under pg_cron, ADR-025). Events
+  are batched in memory (20 per batch, capped at 200, oldest dropped first, flushed on
+  backgrounding); the queue is deliberately NOT persisted, since writing user-behaviour data to disk
+  is what ADR-031 argues against and a lost metric costs a row. `user_pseudo_id` is a **device-minted
+  random UUID, never derived from the auth uid or any identity** — a reinstall mints a new one, and
+  the North Star (Weekly Household Ritual Completions) is unaffected because it groups EVT_017 by
+  `household_id`. Props are **primitives only** (objects/arrays are dropped at the boundary — that is
+  how an error or a server response would carry PII in), and an event id outside the PDD §11 EVT_*
+  taxonomy is rejected rather than inserted. Every `ERR_*` is recorded as EVT_054 here, separately
+  from the crash reporter, so error rates do not wait on Sentry.
+- **The device key-value seam** lives in `src/data/keyValueStore.ts` — `createDeviceStore()` with the
+  degrade-to-memory fallback and `getStorageBackend()`. Both the ritual session store and the
+  analytics pseudonymous id use it; it is re-exported from `ritualSessionRepository`, its original
+  home, so existing callers are unchanged.
 - **MockPanchangProvider** is DEV/TEST ONLY and must never be imported by production code.
 - **Backend Edge Functions pending** — SVC_household (member/invite), SVC_notify_scheduler
   (notify/schedule), and SVC_revenuecat_webhook are pending backend deliverables; the corresponding

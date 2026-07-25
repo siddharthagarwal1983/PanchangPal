@@ -8,12 +8,15 @@
  * when it is not, which is precisely how ritual sessions ran on memory unnoticed for a week.
  */
 import { NullTelemetryAdapter, type TelemetryErrorReport } from '../../domain/telemetry';
+import type { AnalyticsProps } from '../../domain/analytics';
+import type { EventId } from '@panchangpal/shared';
 import {
   getTelemetryAdapter,
   getTelemetryBackend,
   resetTelemetryForTests,
   setTelemetryAdapter,
 } from '../telemetryAdapter';
+import { setAnalyticsService } from '../analyticsAdapter';
 import {
   installGlobalErrorHandler,
   resetGlobalErrorHandlerForTests,
@@ -37,9 +40,53 @@ describe('telemetry adapter resolution', () => {
     expect(getTelemetryBackend()).toBeNull();
   });
 
-  it('falls back to the Null adapter and reports the backend as none', () => {
-    expect(getTelemetryAdapter()).toBeInstanceOf(NullTelemetryAdapter);
+  it('reports the crash-reporter backend as none while Sentry is deferred', () => {
+    expect(getTelemetryAdapter()).toBeDefined();
     expect(getTelemetryBackend()).toBe('none');
+  });
+
+  it("records every error as EVT_054 even though the crash reporter is 'none' (§7.1)", () => {
+    const tracked: { eventId: EventId; props?: AnalyticsProps }[] = [];
+    setAnalyticsService({
+      track: (eventId, props) => void tracked.push({ eventId, props }),
+      flush: async () => undefined,
+      setHouseholdId: () => undefined,
+    });
+
+    getTelemetryAdapter().captureError({
+      code: 'ERR_OFFLINE',
+      surface: 'error-boundary',
+      recoverable: true,
+      correlationId: 'corr-7',
+    });
+
+    expect(tracked).toEqual([
+      {
+        eventId: 'EVT_054',
+        props: {
+          code: 'ERR_OFFLINE',
+          surface: 'error-boundary',
+          recoverable: true,
+          correlation_id: 'corr-7',
+        },
+      },
+    ]);
+    setAnalyticsService(null);
+  });
+
+  it('survives an analytics failure — reporting must not create a second error', () => {
+    setAnalyticsService({
+      track: () => {
+        throw new Error('analytics exploded');
+      },
+      flush: async () => undefined,
+      setHouseholdId: () => undefined,
+    });
+
+    expect(() =>
+      getTelemetryAdapter().captureError({ code: 'ERR_UNKNOWN', surface: 'manual' }),
+    ).not.toThrow();
+    setAnalyticsService(null);
   });
 
   it('returns the same singleton on repeat calls', () => {

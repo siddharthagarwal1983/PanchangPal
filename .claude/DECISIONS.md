@@ -742,3 +742,47 @@ nine repositories.
 **EVT_054's mapping is settled before its sink exists.** `toClientErrorEvent()` builds the event id
 and props now; the pseudonymous envelope and the `analytics_event` sink (ADR-013) are B4.2. The
 mapping is therefore tested and identical whichever sink eventually consumes it.
+
+---
+
+# 2026-07-25 — The analytics sink, and how a user is identified in it
+
+**`user_pseudo_id` is a device-minted random UUID, never derived from an identity.** No document
+specified a derivation — PDD §11.1 requires only that it be stable and pseudonymous — so this is the
+decision, not an implementation detail: mint a UUID on first use, persist it locally, and never
+compute it from the Supabase auth uid, an email, or anything else. Nothing links an event row back
+to a user row without the device, which is the strongest reading of ADR-031. **The cost is accepted
+knowingly:** a reinstall mints a new id, so a returning user looks new to retention and activation,
+and one person on two devices counts twice. The North Star (Weekly Household Ritual Completions)
+groups EVT_017 by `household_id`, so the headline metric is unaffected. When storage has degraded to
+memory the id regenerates per launch — analytics absorbs that rather than blocking events or
+inventing a stable id from the user's identity.
+
+**Props are primitives; objects and arrays are dropped at the boundary.** ADR-031 forbids PII in
+analytics, and the realistic vector is not a deliberate leak but a convenience: someone passes an
+error, a server response, or a form state into an event and user content lands in the store.
+`sanitizeProps` keeps `string | number | boolean | null`, drops everything else, and drops
+`undefined` entirely so an absent value never becomes a recorded `null`.
+
+**An event id outside the EVT_* taxonomy is rejected.** `event_id` is a text column, so nothing
+downstream would catch an invented event; PDD §11 owns that list. `buildEnvelope` throws, and the
+adapter turns that into a dropped event plus a warning — a bad metric call must never take a screen
+down.
+
+**The analytics queue is in memory, and stays there.** ADR-013 wants batching; it does not want
+user-behaviour data written to disk, which ADR-031 argues against. Events queued when the process
+dies are lost, and that is the right trade: a lost metric costs a row, where a lost ritual session
+costs a user their place — which is why *that* store persists and this one does not. The queue is
+capped (200) and drops oldest-first, so a device offline for a day cannot leak memory; a failed
+batch is re-queued ahead of newer events so a flaky network does not silently hollow out the
+dashboards.
+
+**The crash reporter and the error metric are separate destinations.** Every `ERR_*` is recorded as
+EVT_054 in `analytics_event` (§7.1) *and* handed to the reporter. Collapsing them would have made
+error-rate reporting wait on Sentry; as it stands the metric works today while the reporter is still
+deferred and still reports `'none'`.
+
+**The device key-value seam is shared, not duplicated.** `createDeviceStore` and its
+degrade-to-memory fallback moved out of `ritualSessionRepository` into `src/data/keyValueStore.ts`
+when the pseudonymous id needed identical behaviour, and is re-exported from its old home so
+existing callers and tests are untouched.

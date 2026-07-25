@@ -2,9 +2,9 @@
 
 # PanchangPal Dashboard
 
-Version: 1.10.0
+Version: 1.11.0
 
-Last Updated: 2026-07-25 (B4 opened — B4.1 telemetry seam landed; reports nothing until a real adapter)
+Last Updated: 2026-07-25 (B4.2 — EVT_* analytics sink landed; EVT_054 now has a working destination)
 
 Purpose:
 This is the first file Claude should read at the beginning of every session.
@@ -41,10 +41,10 @@ PanchangPal
 
 Progress
 
-16%
+19%
 
 (Canonical progress metric — 1 of 8 Beta Readiness slices COMPLETE: **B2 (E2E verification)**, plus
-**1 of B4's 4 increments** — B4.1, the telemetry seam — giving (1 + ¼)/8 ≈ 16%.
+**2 of B4's 4 increments** — B4.1 telemetry seam, B4.2 EVT_* analytics sink — giving (1 + ½)/8 ≈ 19%.
 B1 ~85%, B3 ~80%. B2 is now DONE: the bundle gate plus all three in-scope Maestro flows
 (FLOW_RETURNING, FLOW_MORNING_RITUAL, FLOW_SESSION_PERSISTENCE) are GREEN in CI on a real native
 Android build (run 30155737941, 2026-07-25). The three flows still not present — onboarding,
@@ -72,7 +72,31 @@ CURRENT_MILESTONE.md
 
 # Current Task
 
-**B4 — Observability, increment 1 of 4 done: the telemetry seam exists and reports nothing.**
+**B4 — Observability, 2 of 4 increments done. Errors are now measured, if not yet reported.**
+
+**B4.2 — the EVT_* analytics sink.** `AnalyticsService` port + a batching implementation over the
+`analytics_event` table (ADR-013; insert-only under RLS, no client read, rollups service-side).
+Batches of 20, capped at 200 with oldest-first drop, flushed on backgrounding; a failed batch
+re-queues ahead of newer events. The queue stays in memory — persisting user-behaviour data to disk
+is what ADR-031 argues against, and a lost metric costs a row where a lost ritual session costs a
+user their place.
+
+Two guarantees are structural: props are primitives only (an object or array is how an error or a
+server response would carry user content into the store), and an event id outside the PDD §11
+EVT_* taxonomy is rejected, since `event_id` is only a text column and nothing downstream would
+catch an invented event.
+
+**`user_pseudo_id` is a device-minted random UUID**, never derived from the auth uid — no document
+specified a derivation, so it is recorded as a decision. A reinstall mints a new id and two devices
+count twice; the North Star groups EVT_017 by `household_id`, so it is unaffected.
+
+**Every ERR_* now lands as EVT_054** in `analytics_event` — what §7.1 asked for and B4.1 could only
+map. The crash reporter stays a separate destination, so error-rate reporting no longer waits on
+Sentry. 229 tests (+24), tsc clean, eslint 0 errors.
+
+---
+
+**B4.1 — the telemetry seam** (earlier, merged as PR #39).
 
 `TelemetryAdapter` port + `NullTelemetryAdapter` (deferred Sentry, mirroring NotificationAdapter and
 PaymentAdapter); pure `toErrorCode()` / `toClientErrorEvent()` mapping every ERR_* to EVT_054 per
@@ -86,7 +110,10 @@ DSN is provisioned, so crash-free sessions (NFR-06) still cannot be measured and
 the seam. `getTelemetryBackend()` returns `'none'`, and a DSN configured with no adapter warns —
 because an app that reports nothing otherwise looks exactly like an app with no errors.
 
-Next: **B4.2** — the EVT_* analytics sink to `analytics_event` (ADR-013).
+Still true after B4.2: **crash reports go nowhere.** EVT_054 now lands in `analytics_event`, so error
+*rates* are measurable, but crash-free sessions (NFR-06, §7.2) still require a real reporter.
+
+Next: **B4.3** — source-map upload (the item B3 deferred) + Edge Function Sentry.
 
 ---
 
@@ -122,6 +149,11 @@ the MMKV v2→v4 fix); **B2 is complete**. Second, **B4 opened** with its teleme
 leave the app through one port, at both call sites, with the EVT_054 mapping settled and no PII
 possible by construction — while reporting nothing at all until a real adapter and a DSN land.
 
+Then **B4 opened and reached its halfway point**: B4.1 gave errors one exit (the TelemetryAdapter
+port at both call sites, EVT_054 mapping, no PII possible by construction), and B4.2 gave that
+mapping somewhere to go — the AnalyticsService port over the `analytics_event` sink, with a
+device-minted pseudonymous id and primitives-only props. Crash *reporting* is still deferred.
+
 No new product scope.
 
 # Overall Progress
@@ -142,14 +174,14 @@ No new product scope.
 | Mobile — Subscription | ✅ M8 |
 | AI Platform | 🟡 adapters done; corpus + eval pending |
 | Testing | 🟢 190 unit/component/domain (176 mobile + 14 shared) · bundle gate per PR · 🟢 **E2E green in CI** — 3/3 Maestro flows on a real native Android build incl. FLOW_SESSION_PERSISTENCE (run 30155737941, 2026-07-25); gate now fails fast (PR #35) · AI-eval + api-contract de-declared (owed: contract tests + §9.4 harness) |
-| Beta | 🚧 In progress — **B2 ✅ complete**; **B4 🟡 ~25%** (B4.1 telemetry seam in, reporting nothing yet); B1/B3 owner-gated; B5–B8 pending |
+| Beta | 🚧 In progress — **B2 ✅ complete**; **B4 🟡 ~50%** (B4.1 telemetry seam + B4.2 analytics sink in; crash reporter still deferred); B1/B3 owner-gated; B5–B8 pending |
 | Production | ⏳ |
 
 ---
 
 # Current Priorities
 
-1. **B4 — Observability**, continuing: B4.1 (telemetry seam) ✅ · B4.2 EVT_* analytics sink → `analytics_event` · B4.3 source-map upload + Edge Function Sentry · B4.4 SLO dashboards + alerts. A real reporter (a Sentry org + DSN) is what turns the seam into observability.
+1. **B4 — Observability**, continuing: B4.1 (telemetry seam) ✅ · B4.2 (EVT_* analytics sink) ✅ · B4.3 source-map upload + Edge Function Sentry · B4.4 SLO dashboards + alerts. A real reporter (a Sentry org + DSN) is still what turns crash telemetry from a seam into observability; EVT_054 already lands in `analytics_event`.
 2. Owner decisions: prod Supabase (~$25/mo, closes B1) · Apple $99 (iOS) · Google Play $25 (internal track)
 3. ⛔ Canonical Panchang Engine decision (ADR-033) — unblocks Today panchang, Calendar markers, notifications
 3. AI corpus ingestion + eval readiness — unblocks live Ask Guru (GURU_LIVE)
@@ -195,9 +227,10 @@ resolved (PR #14).
 
 # Next Deliverable
 
-**B4.2 — the EVT_* analytics sink** (analytics adapter → `analytics_event`, ADR-013), then B4.3
-source maps and B4.4 dashboards/alerts. B1/B3 remainders stay owner-gated: prod Supabase (~$25/mo)
-closes B1; Apple ($99) + Google Play ($25) close most of B3.
+**B4.3 — source-map upload** (in `release-build.yml`, the item B3 deferred) plus Edge Function
+Sentry, then B4.4 dashboards/alerts. Both B4.3 and B4.4 need a Sentry org + DSN to be verifiable, so
+B4 now runs into the same owner gate B1/B3 sit behind: prod Supabase (~$25/mo) closes B1; Apple ($99)
++ Google Play ($25) close most of B3; Sentry's free tier closes B4's remainder at no cost.
 
 ---
 

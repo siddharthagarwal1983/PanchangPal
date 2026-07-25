@@ -12,6 +12,7 @@ import { queryClient } from '../data/queryClient';
 import { ErrorBoundary } from '../navigation/ErrorBoundary';
 import { useTimeZoneSync } from '../data/hooks/useTimeZoneSync';
 import { installGlobalErrorHandler } from './installGlobalErrorHandler';
+import { installAnalyticsFlushOnBackground } from '../data/analyticsAdapter';
 import '../i18n';
 
 /**
@@ -34,6 +35,11 @@ export function AppProviders({ children }: { children: ReactNode }) {
   useEffect(() => {
     installGlobalErrorHandler();
   }, []);
+
+  // Send queued analytics before the OS may freeze or kill the process. The batch queue is in
+  // memory (ADR-013 batching, but no user-behaviour data on disk — ADR-031), so backgrounding is
+  // the last reliable moment to flush it.
+  useEffect(() => installAnalyticsFlushOnBackground(), []);
 
   return (
     <SafeAreaProvider>

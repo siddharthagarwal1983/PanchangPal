@@ -2,8 +2,8 @@
 
 # PanchangPal — Current Session
 
-Version: 1.14.0
-Last Updated: 2026-07-25 (B2 closed and merged; B4 opened with the telemetry seam)
+Version: 1.15.0
+Last Updated: 2026-07-25 (B2 closed; B4 at halfway — telemetry seam + analytics sink)
 
 ---
 
@@ -12,7 +12,7 @@ Last Updated: 2026-07-25 (B2 closed and merged; B4 opened with the telemetry sea
 Two objectives, in order. First: verify that a ritual session survives a process restart — the last
 free engineering item in B1/B2/B3. **Answered: yes, now**, by fixing the gate, reading the verdict,
 and shipping a fix; B2 is complete and merged. Second: **open B4 — Observability**, starting with the
-telemetry seam.
+telemetry seam and its sink.
 
 ---
 
@@ -75,8 +75,46 @@ someone believes crash reporting is on when it is not.
 
 ---
 
+# 5. B4.2 — the EVT_* analytics sink
+
+EVT_054 now has somewhere to go. `AnalyticsService` port (`src/domain/analytics/`) + a batching
+implementation over the `analytics_event` table (`src/data/analyticsAdapter.ts` +
+`analyticsRepository.ts`): batches of 20, capped at 200 with oldest-first drop, flushed when the app
+backgrounds, a failed batch re-queued ahead of newer events. Insert-only under RLS — the table has no
+client select policy, and rollups run service-side (ADR-025).
+
+**Three privacy decisions no document had settled**, now recorded in DECISIONS.md rather than left
+implicit in code:
+
+- **`user_pseudo_id` is a device-minted random UUID**, persisted locally, never derived from the
+  auth uid or any other identity — the strongest reading of ADR-031, since nothing links an event row
+  to a user row without the device. Cost accepted knowingly: a reinstall mints a new id and one
+  person on two devices counts twice. The North Star groups EVT_017 by `household_id`, so the
+  headline metric is unaffected.
+- **Props are primitives only.** Objects and arrays are dropped at the boundary, because the
+  realistic PII vector is not malice but convenience — passing an error, a server response, or a form
+  state straight into an event.
+- **An unknown EVT_* is rejected**, not inserted. `event_id` is a text column, so nothing downstream
+  would catch an invented event; PDD §11 owns that list.
+
+The crash reporter and the error metric stayed separate destinations on purpose: collapsing them
+would have made error-rate reporting wait on Sentry, which is still deferred.
+
+Reuse rather than duplication: `createDeviceStore` and its degrade-to-memory fallback moved out of
+`ritualSessionRepository` into `src/data/keyValueStore.ts`, since the pseudonymous id needs identical
+behaviour. Re-exported from the old home; the persistence tests are untouched and still pass.
+
+---
+
 # Verification
 
+- **B4.2: 229 mobile tests (+24) · tsc clean · eslint 0 errors.** The new suites assert that props
+  survive only as primitives (an Error, a payload object and an array are all dropped while a
+  sibling string is kept), that an event outside the taxonomy is dropped with a warning rather than
+  thrown, that a failed batch re-queues ahead of newer events with order preserved, and that the
+  pseudonymous id is stable across a fresh resolution but unrelated on a fresh device.
+  **Not verified:** the insert path has never run against a real `analytics_event` table under RLS —
+  only against a fake repository.
 - **B4.1: 205 mobile tests (+29) · tsc clean · eslint 0 errors.** The new suites assert the no-PII
   guarantees directly (a free-text message never survives mapping; EVT_054 carries exactly four
   keys), that the backend reports `'none'`, that a DSN-without-adapter warns, and that the global
@@ -110,21 +148,24 @@ Tracking docs + a DECISIONS.md convention block (this checkpoint).
 - ~~PR #36 pending merge.~~ **Merged as `e1e10d4`; the docs checkpoint followed as PR #37 (`45f1b0d`).**
   Main's E2E is green again on both (runs 30156533738 and 30156615768) — it had gone honestly red
   after #35 exposed the MMKV bug.
-- **B4.1 is on `feat/b4-telemetry-seam`, not yet pushed or reviewed.**
-- **Nothing is reported to anywhere.** The single fact to carry forward: the telemetry port exists
-  and its destination does not. Turning the seam into observability needs `@sentry/react-native`
-  installed, a Sentry org + DSN (free tier suffices), and the adapter swapped in one line at
-  `src/data/telemetryAdapter.ts`.
+- **B4.1 merged as PR #39 (`25275ff`).** B4.2 is on `feat/b4-analytics-sink`, unreviewed.
+- **Crash reports still go nowhere.** The fact to carry forward: error *rates* now land in
+  `analytics_event` via EVT_054, but the diagnostic copy is dropped. Turning that on needs
+  `@sentry/react-native` installed, a Sentry org + DSN (free tier suffices), and the adapter swapped
+  in one line at `src/data/telemetryAdapter.ts`.
+- **The analytics insert path is untested against a live database.** It assumes the
+  `analytics_ins_own` policy (insert-only, no select); that should be exercised against dev before
+  B8, or production is the first real check.
 - Onboarding still unreachable — `ONBOARDED = true`, `app/index.tsx:16`.
 - Emulator flake: a "Pixel Launcher isn't responding" ANR can overlay the app and fail flows;
   transient, cleared by re-run. Harden later (dismiss-dialog / retry) if it recurs.
 
 # Recommended Next Task
 
-**B4.2 — the EVT_* analytics sink.** The analytics adapter writing pseudonymous envelopes to
-`analytics_event` (ADR-013, §7.1), which gives `toClientErrorEvent`'s EVT_054 output somewhere to go
-and covers the PDD §11 dashboards. `apps/mobile/src/analytics/` is an empty directory today; the
-table exists (`apps/backend/migrations/20260712000080_platform.sql`).
+**B4.3 — source-map upload** in `release-build.yml` (the item B3 deferred) plus Sentry for Edge
+Functions, then **B4.4** (SLO dashboards + alerts). Both need a Sentry org + DSN to be verifiable
+rather than merely configured — free tier suffices, but it is an owner action, so B4's remainder now
+sits behind the same kind of gate as B1 and B3.
 
-Then B4.3 (source-map upload in `release-build.yml` + Edge Function Sentry) and B4.4 (SLO dashboards
-+ alerts). B1/B3 remainders stay owner-gated (prod Supabase, Apple, Google Play).
+Worth doing alongside: emitting the documented EVT_* at their call sites (EVT_012 today rendered,
+EVT_017 ritual complete — the North Star input), which B4.2 made possible but did not wire.

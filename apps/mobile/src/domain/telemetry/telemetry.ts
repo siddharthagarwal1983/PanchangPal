@@ -44,13 +44,20 @@ export function toErrorCode(value: unknown): ErrorCode {
   return 'ERR_UNKNOWN';
 }
 
-/** The props half of an EVT_054 event. Closed shape: adding a field is a deliberate act. */
-export interface ClientErrorEventProps {
+/**
+ * The props half of an EVT_054 event. Closed shape: adding a field is a deliberate act.
+ *
+ * A type alias rather than an interface so it carries an implicit index signature and can be handed
+ * straight to the analytics port's prop bag — an interface cannot, and the workaround would be a
+ * spread or a cast at the call site, either of which would quietly permit a shape that is not this
+ * one.
+ */
+export type ClientErrorEventProps = {
   code: ErrorCode;
   surface: string;
   recoverable: boolean;
   correlation_id?: string;
-}
+};
 
 export interface ClientErrorEvent {
   event_id: typeof CLIENT_ERROR_EVENT_ID;
