@@ -15,6 +15,18 @@ appId: com.panchangpal.app
 - launchApp:
     clearState: false # returning user: an existing anonymous session is the point
 
+# Pass the onboarding gate if it is showing. Making the gate real (PR #50) changed what a
+# FRESH DEVICE does on first launch: CI emulators start with no stored state, so the app
+# correctly opens on SCR_AUTH_001 rather than Today. This flow is about the daily loop, not
+# about auth, so it skips through — conditionally, so the step is a no-op on a device that
+# has already been through it.
+- runFlow:
+    when:
+      visible: 'Skip for now'
+    commands:
+      - tapOn:
+          id: 'auth-skip'
+
 # Splash resolves to Today. Anonymous sign-in happens before any screen renders
 # (UX-2 / ADR-009), so reaching this at all proves the session bootstrapped.
 # Wait explicitly: launchApp returns before the JS bundle has rendered. A bare assertion
