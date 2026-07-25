@@ -2,9 +2,9 @@
 
 # PanchangPal Dashboard
 
-Version: 1.17.0
+Version: 1.18.0
 
-Last Updated: 2026-07-25 (B5 §8.2 encoded — every ERR_* now has a tested calm behaviour)
+Last Updated: 2026-07-26 (B5 complete; the onboarding gate was never a gate — now it is)
 
 Purpose:
 This is the first file Claude should read at the beginning of every session.
@@ -41,11 +41,14 @@ PanchangPal
 
 Progress
 
-29%
+31%
 
 (Canonical progress metric — 1 of 8 Beta Readiness slices COMPLETE: **B2 (E2E verification)**, plus
 **3 of B4's 4 increments** — B4.1 telemetry seam, B4.2 EVT_* analytics sink, B4.3 server seam +
-release gate — plus **2 of B5's 3** (runbooks + restore drill; §8.2 degradation policy), giving (1 + ¾ + ⅔)/8 ≈ 29%.
+release gate — plus **B5 ✅ COMPLETE** (runbooks + restore drill · §8.2 degradation policy · §8.4 operator
+resilience), giving (1 + 1 + ¾)/8 ≈ 34% by increments — but **B5 is reported as complete only at its
+verifiable scope**: NFR-15 cannot be met without PITR, which is a purchase, so the honest figure is
+(2 + ¾)/8 ≈ 31% with B5's backup deliverable explicitly outstanding.
 **B4 cannot go further without a Sentry org + DSN.** The EVT_* instrumentation, the analytics RLS
 gate and the API contract gate do not move this number: they complete or restore work other slices
 began, and the percentage counts increments, not commits.)
@@ -76,7 +79,29 @@ CURRENT_MILESTONE.md
 
 # Current Task
 
-**B5 — §8.2 is now code: every ERR_* has a defined, tested calm behaviour.**
+**B5 complete at its verifiable scope — and the onboarding gate was never a gate.**
+
+**§8.4 operator resilience.** The runbook now states which of §8.4's mitigations exist (managed
+platforms, the documentation set, the agent-friendly repo) and which do **not**: alerting that needs
+no attention — there is no Sentry project, so crash-free sessions is unmeasured — and a plan to
+contract specialist help, which MRD Risk §12 contemplates and nobody has arranged. Worst unattended
+failure first: a crash affecting every user goes unnoticed, because users of a calm ritual app do not
+file bug reports, they stop opening it.
+
+**The onboarding gate.** `app/index.tsx` carried `const ONBOARDED = true` beneath a comment claiming
+the flag was persisted "in the onboarding task". That task shipped the sign-in screens and never the
+flag, so **SCR_AUTH_001 has never rendered from a cold launch in the app's history**, and B2 recorded
+FLOW_ONBOARDING as unwritable because of it. The flag now persists through the shared `KeyValueStore`
+seam; storage unavailable reads `false` (showing sign-in twice beats hiding the only auth entry
+point); OTP marks it only after the anon→auth merge succeeds.
+
+**FLOW_ONBOARDING — B2's sixth flow — is written**: cleared state, cold start, gate, skip, Today,
+then relaunch *without* clearing and assert the user is not asked again. That second half is the
+failure this repo has now had twice.
+
+---
+
+**B5 §8.2 — every ERR_* has a defined, tested calm behaviour.**
 
 The i18n bundle had **three error strings for a taxonomy of 24 codes**; §8.2's "each `ERR_*` has a
 defined calm behavior" was prose in PDD §12 that nothing enforced. `DEGRADATION_POLICIES` is that
@@ -257,8 +282,8 @@ No new product scope.
 | Mobile — Notifications | ✅ M7 |
 | Mobile — Subscription | ✅ M8 |
 | AI Platform | 🟡 adapters done; corpus + eval pending |
-| Testing | 🟢 360 unit/component/domain (283 mobile + 77 vitest) + 17 pgTAP + a monthly DR restore drill · bundle gate per PR · 🟢 **E2E green in CI** — 3/3 Maestro flows on a real native Android build incl. FLOW_SESSION_PERSISTENCE (run 30165186141, 2026-07-25); gate fails fast (PR #35) and no longer fails against emulator ANR dialogs (PR #41) · AI-eval + api-contract de-declared (owed: contract tests + §9.4 harness) |
-| Beta | 🚧 In progress — **B2 ✅ complete**; **B4 🟡 ~75%** (owner-gated on a Sentry org); **B5 🟡 ~67%** (runbooks + drill + §8.2 degradation policy; PITR undrillable on the free tier); B1/B3 owner-gated; B6–B8 pending |
+| Testing | 🟢 366 unit/component/domain (289 mobile + 77 vitest) + 17 pgTAP + a monthly DR restore drill + **4 Maestro flows** (FLOW_ONBOARDING now writable) · bundle gate per PR · 🟢 **E2E green in CI** — 3/3 Maestro flows on a real native Android build incl. FLOW_SESSION_PERSISTENCE (run 30165186141, 2026-07-25); gate fails fast (PR #35) and no longer fails against emulator ANR dialogs (PR #41) · AI-eval + api-contract de-declared (owed: contract tests + §9.4 harness) |
+| Beta | 🚧 In progress — **B2 ✅**; **B5 ✅ at verifiable scope** (runbooks · drill · §8.2 · §8.4; **NFR-15 blocked on PITR — a purchase**); **B4 🟡 ~75%** (owner-gated on a Sentry org); B1/B3 owner-gated; B6–B8 pending |
 | Production | ⏳ |
 
 ---

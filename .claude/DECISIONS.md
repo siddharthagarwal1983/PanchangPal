@@ -961,3 +961,33 @@ trust surface. §13.5 covers nine of twenty-four codes; the rest fall back to th
 ERR_UNKNOWN string and are pinned in `AWAITING_APPROVED_COPY` by a test so the list cannot grow
 quietly. Writing plausible replacements in code would invent UX and, worse, would erase the evidence
 that PDD owes them.
+
+---
+
+# 2026-07-26 — A constant standing in for state
+
+**`const ONBOARDED = true` is the same defect class as a gate that cannot fail.** The splash screen
+computed a route from a value that could never change, beneath a comment asserting the flag was
+persisted elsewhere. It was not. The code read as though a decision was being made; no decision was.
+SCR_AUTH_001 never rendered from a cold launch across two milestones, and B2 had to record
+FLOW_ONBOARDING as unwritable — a whole E2E flow blocked by one hardcoded boolean.
+
+**When a placeholder value is unavoidable, it must fail loudly rather than default to the happy
+path.** `ONBOARDED = true` chose "skip the gate", so the missing implementation was invisible.
+`false` would have made every launch land in onboarding and the gap would have been found in
+minutes.
+
+**Storage failure resolves toward showing the gate, not skipping it.** The persisted flag reads
+`false` when storage is unavailable: sign-in appearing twice is a small annoyance, while silently
+skipping it hides the app's only auth entry point.
+
+**Both exits from a gate must close it, and only after the work succeeds.** "Skip for now" marks
+onboarding complete because under deferred auth (UX-2 / ADR-009) skipping is a legitimate
+completion, not an abandonment. OTP verification marks it only AFTER the anon→auth merge resolves —
+marking it earlier would strand a user in tabs with a half-merged account.
+
+**A guard for an inlined constant has to read the source.** Once a constant is inlined there is no
+runtime behaviour left to assert, which is precisely why no existing test could see this. The
+regression test greps `app/index.tsx`, anchored to a line start so the explanatory comment quoting
+the old constant does not trip it — its first draft did exactly that, which is fair evidence the
+assertion is looking at something real.
