@@ -2,9 +2,9 @@
 
 # PanchangPal Dashboard
 
-Version: 1.9.0
+Version: 1.9.1
 
-Last Updated: 2026-07-25 (session persistence VERIFIED end-to-end; MMKV v2→v4 New-Arch fix; B2 complete)
+Last Updated: 2026-07-25 (PR #36 + #37 merged; main E2E green; next slice is B4 — Observability)
 
 Purpose:
 This is the first file Claude should read at the beginning of every session.
@@ -71,7 +71,7 @@ CURRENT_MILESTONE.md
 
 # Current Task
 
-**Session persistence: ANSWERED and FIXED. Merge PR #36, then pick the next slice.**
+**Session persistence: ANSWERED, FIXED, and MERGED. Next: B4 — Observability.**
 
 The question that stood open for a week — does a ritual session survive a process restart — is
 answered: **yes, now.** The path there, this session:
@@ -94,7 +94,8 @@ answered: **yes, now.** The path there, this session:
    **E2E on a native build (run 30155737941): all three flows GREEN, `FLOW_SESSION_PERSISTENCE`
    PASSED.** MMKV v4 loads and persists under New Arch; no memory fallback.
 
-Verified end-to-end. PR #36 open, CI green, pending merge. See TASK.md.
+Verified end-to-end. **PR #36 merged to main as `e1e10d4`**; the docs checkpoint followed as PR #37
+(`45f1b0d`). Main's E2E is green again (run 30156615768). See TASK.md.
 
 # Today's Objective
 
@@ -132,7 +133,7 @@ No new product scope.
 
 # Current Priorities
 
-1. Merge PR #36 (MMKV v4 — session persistence fix), then pick the next Beta slice (B4 observability is the next unblocked engineering slice; B1/B3 remainders are owner-gated)
+1. **B4 — Observability** (Sentry wiring, source-map upload, dashboards/alerts): the next Beta slice with unblocked engineering. B1/B3 remainders are owner-gated.
 2. Owner decisions: prod Supabase (~$25/mo, closes B1) · Apple $99 (iOS) · Google Play $25 (internal track)
 3. ⛔ Canonical Panchang Engine decision (ADR-033) — unblocks Today panchang, Calendar markers, notifications
 3. AI corpus ingestion + eval readiness — unblocks live Ask Guru (GURU_LIVE)
@@ -178,9 +179,9 @@ resolved (PR #14).
 
 # Next Deliverable
 
-Merge PR #36. Then B4 — Observability (Sentry wiring, source-map upload, dashboards/alerts) is the
-next slice with unblocked engineering. B1/B3 remainders are owner-gated: prod Supabase (~$25/mo)
-closes B1; Apple ($99) + Google Play ($25) close most of B3.
+B4 — Observability (Sentry wiring, source-map upload, dashboards/alerts) — the next slice with
+unblocked engineering. B1/B3 remainders are owner-gated: prod Supabase (~$25/mo) closes B1;
+Apple ($99) + Google Play ($25) close most of B3.
 
 ---
 
