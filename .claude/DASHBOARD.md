@@ -2,9 +2,9 @@
 
 # PanchangPal Dashboard
 
-Version: 1.16.0
+Version: 1.17.0
 
-Last Updated: 2026-07-25 (B5 opened — DR runbooks + a mechanised restore drill; PITR gap stated)
+Last Updated: 2026-07-25 (B5 §8.2 encoded — every ERR_* now has a tested calm behaviour)
 
 Purpose:
 This is the first file Claude should read at the beginning of every session.
@@ -41,11 +41,11 @@ PanchangPal
 
 Progress
 
-25%
+29%
 
 (Canonical progress metric — 1 of 8 Beta Readiness slices COMPLETE: **B2 (E2E verification)**, plus
 **3 of B4's 4 increments** — B4.1 telemetry seam, B4.2 EVT_* analytics sink, B4.3 server seam +
-release gate — plus **1 of B5's 3** (runbooks + restore drill), giving (1 + ¾ + ⅓)/8 ≈ 25%.
+release gate — plus **2 of B5's 3** (runbooks + restore drill; §8.2 degradation policy), giving (1 + ¾ + ⅔)/8 ≈ 29%.
 **B4 cannot go further without a Sentry org + DSN.** The EVT_* instrumentation, the analytics RLS
 gate and the API contract gate do not move this number: they complete or restore work other slices
 began, and the percentage counts increments, not commits.)
@@ -75,6 +75,27 @@ CURRENT_MILESTONE.md
 ---
 
 # Current Task
+
+**B5 — §8.2 is now code: every ERR_* has a defined, tested calm behaviour.**
+
+The i18n bundle had **three error strings for a taxonomy of 24 codes**; §8.2's "each `ERR_*` has a
+defined calm behavior" was prose in PDD §12 that nothing enforced. `DEGRADATION_POLICIES` is that
+table as data — surface, retry, queues, `blocksDailyLoop`, copy key, and the §12 row each entry
+encodes — with an exhaustive test over `ERROR_CODES`, so a new code cannot enter the taxonomy
+without a degradation decision, and every copy key must resolve in the bundle.
+
+The tests assert the invariants rather than the table: **no failure blocks the daily loop** (P4);
+the honest-decline codes deliberately offer **no retry** (a decline is correct, and "try again"
+invites retrying into a fabricated answer); AI failures do retry; offline/sync failures queue;
+location failures redirect to city entry rather than erroring; only genuinely uncaught failures take
+the whole screen.
+
+**Copy is PDD §13.5 verbatim, or absent — never invented.** §13.5 approves nine codes; the other
+eleven fall back to the approved ERR_UNKNOWN string and are listed in `AWAITING_APPROVED_COPY`,
+pinned by a test. **PDD owes copy for those eleven** — it is a documentation deliverable, and
+writing plausible calm strings would both invent UX and hide the gap.
+
+---
 
 **B5 — Reliability & DR opened: runbooks exist, and the drill is mechanised.**
 
@@ -236,8 +257,8 @@ No new product scope.
 | Mobile — Notifications | ✅ M7 |
 | Mobile — Subscription | ✅ M8 |
 | AI Platform | 🟡 adapters done; corpus + eval pending |
-| Testing | 🟢 321 unit/component/domain (244 mobile + 77 vitest) + 17 pgTAP · bundle gate per PR · 🟢 **E2E green in CI** — 3/3 Maestro flows on a real native Android build incl. FLOW_SESSION_PERSISTENCE (run 30165186141, 2026-07-25); gate fails fast (PR #35) and no longer fails against emulator ANR dialogs (PR #41) · AI-eval + api-contract de-declared (owed: contract tests + §9.4 harness) |
-| Beta | 🚧 In progress — **B2 ✅ complete**; **B4 🟡 ~75%** (owner-gated on a Sentry org); **B5 🟡 ~33%** (runbooks + drill in; PITR undrillable on the free tier); B1/B3 owner-gated; B6–B8 pending |
+| Testing | 🟢 360 unit/component/domain (283 mobile + 77 vitest) + 17 pgTAP + a monthly DR restore drill · bundle gate per PR · 🟢 **E2E green in CI** — 3/3 Maestro flows on a real native Android build incl. FLOW_SESSION_PERSISTENCE (run 30165186141, 2026-07-25); gate fails fast (PR #35) and no longer fails against emulator ANR dialogs (PR #41) · AI-eval + api-contract de-declared (owed: contract tests + §9.4 harness) |
+| Beta | 🚧 In progress — **B2 ✅ complete**; **B4 🟡 ~75%** (owner-gated on a Sentry org); **B5 🟡 ~67%** (runbooks + drill + §8.2 degradation policy; PITR undrillable on the free tier); B1/B3 owner-gated; B6–B8 pending |
 | Production | ⏳ |
 
 ---
@@ -245,7 +266,8 @@ No new product scope.
 # Current Priorities
 
 1. **Owner: create a Sentry org + DSN (free tier)** — B4's remaining work (source-map upload, §7.2 dashboards/alerts) needs a real project to be verifiable. B4.1 ✅ · B4.2 ✅ · B4.3 ✅ to its credential-free limit · B4.4 blocked.
-2. **Credential-free engineering:** `FLOW_ONBOARDING` is still unreachable (`app/index.tsx:16` hardcodes `ONBOARDED = true`), or continue **B5** (graceful-degradation verification, §8.2).
+2. **PDD owes approved copy for eleven ERR_* codes** (listed in `AWAITING_APPROVED_COPY`) — they currently show the calm generic message where §12 specifies something more useful.
+3. **Credential-free engineering:** `FLOW_ONBOARDING` is still unreachable (`app/index.tsx:16` hardcodes `ONBOARDED = true`), or finish **B5** (§8.4 single-founder mitigations).
 3. Owner decisions: prod Supabase (~$25/mo, closes B1) · Apple $99 (iOS) · Google Play $25 (internal track)
 3. ⛔ Canonical Panchang Engine decision (ADR-033) — unblocks Today panchang, Calendar markers, notifications
 3. AI corpus ingestion + eval readiness — unblocks live Ask Guru (GURU_LIVE)

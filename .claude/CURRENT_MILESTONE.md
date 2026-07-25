@@ -2,9 +2,9 @@
 
 # PanchangPal — Current Milestone
 
-Version: 3.6.0
+Version: 3.7.0
 
-Last Updated: 2026-07-25 (B5 opened — runbooks + drill; the PITR gap is now explicit)
+Last Updated: 2026-07-25 (B5 §8.2 encoded; PDD owes copy for 11 ERR_* codes)
 
 Purpose:
 This document defines the current milestone. Unlike SESSION.md (daily work) or TASK.md (current
@@ -23,7 +23,7 @@ Status
 
 Overall Progress
 
-25% (1 of 8 slices COMPLETE — **B2 ✅** — plus 3 of B4's 4 and 1 of B5's 3; B1 ~85%, B3 ~80%)
+29% (1 of 8 slices COMPLETE — **B2 ✅** — plus 3 of B4's 4 and 2 of B5's 3; B1 ~85%, B3 ~80%)
 
 **B4 is three-quarters through, and now owner-gated (2026-07-25).** It is sliced into four increments so the number above
 is auditable: **B4.1 telemetry seam ✅** (TelemetryAdapter port + the two error call sites) ·
@@ -318,7 +318,7 @@ possible fix and would have caught defects 1–3 at M1.
 | B2 | E2E verification | bundle gate (done in B1) + Maestro FLOW_*; green in CI (§2.2, §10.1) | ✅ COMPLETE (2026-07-25) — bundle gate + 3 in-scope flows GREEN in CI on a native build (incl. FLOW_SESSION_PERSISTENCE); other 3 flows blocked on other slices/backends/gated feature |
 | B3 | Build & distribution | eas.json profiles, Hermes, signing, source maps, TestFlight / Play Internal (§2.3) | 🟡 ~80% — automated builds work; store accounts + Sentry (B4) remain |
 | B4 | Observability | Sentry, telemetry, SLO dashboards + alerts (§7) | 🟡 ~75% — B4.1 seam ✅ · B4.2 sink ✅ · B4.3 server seam + prod release gate ✅ · EVT_* daily-habit funnel now emitting (§11.4, incl. the North Star input EVT_017); **upload + B4.4 owner-gated on a Sentry org (free tier)** |
-| B5 | Reliability & DR | backups, restore drill, runbooks, graceful degradation (§8) | 🟡 ~33% — runbooks (§8.3) + a mechanised restore drill ✅; **PITR undrillable on the free tier, so NFR-15 is UNMET for user data**; §8.2 degradation verification pending |
+| B5 | Reliability & DR | backups, restore drill, runbooks, graceful degradation (§8) | 🟡 ~67% — runbooks (§8.3) ✅ · restore drill ✅ · §8.2 degradation policy encoded + tested ✅; **PITR undrillable on the free tier, so NFR-15 is UNMET for user data**; §8.4 pending |
 | B6 | Security & privacy | OWASP Mobile review, CCPA export/delete verification, store privacy labels (§5, §6) | ⏳ |
 | B7 | Release management | versioning/trains, OTA policy + channels, staged rollout, rollback verification (§3) | ⏳ |
 | B8 | Go/no-go & launch | §10.1 checklist execution, internal → beta cohort, sign-off | ⏳ |
@@ -350,7 +350,11 @@ One slice per session, same cadence as M1–M8: implemented, self-verified, revi
             seeded row-count equality. Monthly, plus on any PR touching migrations or seed. First
             run: restore 1s, invariants OK both sides.
       - [ ] **Backup policy cannot be confirmed** — there is no PITR to confirm (see the risk below).
-      - [ ] §8.2 graceful degradation verified end to end; §8.4 single-founder mitigations recorded.
+      - [x] **§8.2 graceful degradation encoded and tested** — a policy per ERR_* (surface, retry,
+            queueing, daily-loop impact, copy key, §12 row), exhaustive over the shared taxonomy,
+            with the invariants asserted: no failure blocks the daily loop, honest declines offer no
+            retry, offline/sync queue, location redirects, only uncaught failures go global.
+      - [ ] §8.4 single-founder mitigations recorded.
 - [ ] **B6** — OWASP Mobile review completed; CCPA export/delete verified end-to-end (F-3/F-10);
       privacy policy + store privacy labels accurate.
 - [ ] **B7** — version trains, OTA channels (`staging`/`prod`) with runtime-version binding and
@@ -428,6 +432,12 @@ testers' hands.
 - ~~**Postgres version drift.**~~ **Resolved** (PR #28). CI runs `pgvector/pgvector:pg17` with
   `postgresql-17-pgtap`, matching dev (17.6.1.147) and staging (17.6.1.141) — both confirmed engine
   17 against the Supabase Management API. The gate now tests what the environments actually run.
+- **PDD owes approved copy for eleven ERR_* codes (found 2026-07-25, B5).** §13.5 approves calm
+  copy for nine codes; the taxonomy has twenty-four. The rest now degrade with the approved generic
+  ERR_UNKNOWN string, which is honest but less useful than the handling §12 specifies for them —
+  `ERR_AUTH_EXPIRED`, `ERR_NOTIF_DENIED`, `ERR_SUBSCRIPTION_INVALID` and `ERR_SYNC_CONFLICT` in
+  particular deserve their own. The list is pinned in `AWAITING_APPROVED_COPY` and by a test, so it
+  cannot grow silently. Writing the strings in code would be inventing UX and would hide the gap.
 - **Onboarding is unreachable and therefore untested** — `app/index.tsx` hardcodes
   `ONBOARDED = true`, so SCR_ONBOARDING_* never renders from launch.
 - **Crash reporting is wired but silent (2026-07-25, B4.1/B4.2)** — the TelemetryAdapter port and

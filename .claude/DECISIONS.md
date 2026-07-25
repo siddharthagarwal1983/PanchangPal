@@ -935,3 +935,29 @@ reliability decision, not an environments line item.
 **Label the runbooks nobody has walked.** PITR restore, region incident response, and Edge Function
 rollback are documented and unexercised; §6 of the runbook says so. A runbook nobody has exercised is
 a plan, not a capability, and the difference matters only at the moment it is needed.
+
+---
+
+# 2026-07-25 — Degradation is a table with tests, and copy is owned by the PDD
+
+**"Each ERR_* has a defined calm behavior" (§8.2) is only true if something enforces it.** PDD §12
+specifies the behaviour for 23 conditions in prose; the app encoded none of it, and the i18n bundle
+carried three error strings for a taxonomy of twenty-four codes. `DEGRADATION_POLICIES` makes it
+data — surface, retry, queueing, daily-loop impact, copy key, and the §12 row each entry encodes —
+and an exhaustive test over the shared `ERROR_CODES` means a new code cannot join the taxonomy
+without someone deciding how the app degrades for it.
+
+**Assert the invariants, not the table.** A test that reads back each field would restate the data
+and pass forever. The ones worth having are the properties §8.2 exists to protect: no failure blocks
+the daily loop (P4); the honest-decline codes offer NO retry, because a decline is the correct
+outcome and a retry affordance invites a user to retry their way into a fabricated answer; offline
+and sync failures queue rather than lose the action; location failures redirect to manual entry
+instead of showing an error at all; and only genuinely uncaught failures claim the global surface —
+a second one appearing there means something stopped degrading at card level.
+
+**Approved copy is used verbatim; missing copy stays missing.** PDD §13.5 owns user-facing error
+strings, and a developer paraphrase is a silent product change — the calm, specific tone IS the
+trust surface. §13.5 covers nine of twenty-four codes; the rest fall back to the approved
+ERR_UNKNOWN string and are pinned in `AWAITING_APPROVED_COPY` by a test so the list cannot grow
+quietly. Writing plausible replacements in code would invent UX and, worse, would erase the evidence
+that PDD owes them.
