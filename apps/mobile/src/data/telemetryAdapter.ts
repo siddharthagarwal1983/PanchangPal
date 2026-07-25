@@ -13,9 +13,20 @@
  * crash reporting is on when it is not.
  */
 import Constants from 'expo-constants';
-import { NullTelemetryAdapter, type TelemetryAdapter } from '../domain/telemetry';
+import {
+  NullTelemetryAdapter,
+  toClientErrorEvent,
+  type TelemetryAdapter,
+  type TelemetryBreadcrumb,
+  type TelemetryErrorReport,
+} from '../domain/telemetry';
+import { getAnalyticsService } from './analyticsAdapter';
 
-/** Which reporter actually receives errors. `'none'` means they are dropped. */
+/**
+ * Which CRASH REPORTER receives errors. `'none'` means the diagnostic copy is dropped — it does
+ * not mean nothing happens: since B4.2 every error is also recorded as EVT_054 in `analytics_event`,
+ * which is a working sink. The two are separate on purpose (see ReportingTelemetryAdapter below).
+ */
 export type TelemetryBackend = 'sentry' | 'none';
 
 let adapter: TelemetryAdapter | null = null;
@@ -33,9 +44,46 @@ function isDsnConfigured(): boolean {
   return dsn.length > 0;
 }
 
+/**
+ * Wraps a crash reporter so every error is ALSO recorded as EVT_054 — §7.1's "every `ERR_*` →
+ * `EVT_054`", which B4.1 could only map, having no sink to send it to. B4.2 gives it one.
+ *
+ * The two destinations are deliberately different in kind and must not be collapsed: the reporter
+ * is for diagnosis (deferred, currently dropping), while EVT_054 is a product metric that lands in
+ * `analytics_event` and works today. An error-rate dashboard therefore does not wait on Sentry.
+ */
+class ReportingTelemetryAdapter implements TelemetryAdapter {
+  constructor(private readonly reporter: TelemetryAdapter) {}
+
+  captureError(report: TelemetryErrorReport, error?: unknown): void {
+    this.reporter.captureError(report, error);
+    // Analytics must never turn an error into a second error; `track` already swallows, and this
+    // guards the lookup itself.
+    try {
+      const event = toClientErrorEvent({
+        code: report.code,
+        surface: report.surface,
+        recoverable: report.recoverable ?? false,
+        correlationId: report.correlationId ?? null,
+      });
+      getAnalyticsService().track(event.event_id, event.props);
+    } catch {
+      // Deliberately silent: the reporter above already saw the original error.
+    }
+  }
+
+  addBreadcrumb(breadcrumb: TelemetryBreadcrumb): void {
+    this.reporter.addBreadcrumb(breadcrumb);
+  }
+
+  setUserPseudoId(pseudoId: string | null): void {
+    this.reporter.setUserPseudoId(pseudoId);
+  }
+}
+
 export function getTelemetryAdapter(): TelemetryAdapter {
   if (!adapter) {
-    adapter = new NullTelemetryAdapter();
+    adapter = new ReportingTelemetryAdapter(new NullTelemetryAdapter());
     activeBackend = 'none';
 
     if (isDsnConfigured()) {
