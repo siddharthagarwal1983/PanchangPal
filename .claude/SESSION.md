@@ -2,8 +2,8 @@
 
 # PanchangPal — Current Session
 
-Version: 1.15.0
-Last Updated: 2026-07-25 (B2 closed; B4 at halfway — telemetry seam + analytics sink)
+Version: 1.16.0
+Last Updated: 2026-07-25 (B4.1–B4.3 in; B4 now blocked on a Sentry org)
 
 ---
 
@@ -106,8 +106,60 @@ behaviour. Re-exported from the old home; the persistence tests are untouched an
 
 ---
 
+# 6. The E2E gate went red, and it was the gate's fault (PR #41)
+
+After B4.1 merged, main's E2E reported **3/3 flows failed** — which reads as "the telemetry seam
+broke the app". It had not. The screen hierarchy Maestro captured at every failing step contained a
+`"Pixel Launcher isn't responding"` dialog from the emulator's own Google apps, and logcat showed the
+app healthy throughout: `START ... MainActivity`, `Running "main"`, ExpoModulesCore initialised,
+RNScreens rendering, no JS exception, no storage fallback.
+
+**I called it a transient flake and re-ran. The re-run failed identically** — same dialog, same three
+flows. So it was reproducible, not transient, and the earlier session's "cleared by re-run" note had
+been luck rather than diagnosis.
+
+Fixed by `adb shell settings put global hide_error_dialogs 1` before the flows run (PR #41). It
+suppresses the OS dialog only; if our own app hangs the flows still fail on their own assertions.
+**Verified: 3/3 flows GREEN on main in 1m18s** (run 30165186141) — note the flows had been burning
+28-64s each fighting the dialog before failing.
+
+The lesson is the one this milestone keeps paying for: **a false red costs what a false green costs.**
+The first occurrence was written off, so the second had to be diagnosed from scratch before it could
+be dismissed, and the next would have been blamed on whatever had just merged.
+
+---
+
+# 7. B4.3 — server telemetry, and a production build that refuses to ship blind
+
+- **Edge Function seam.** Every ERR_* now passes through a `ServerTelemetry` port at
+  `errorResponse()` — the single exit they all already shared — carrying the function name and the
+  correlation id. `NullServerTelemetry` drops them. The report carries **no message**: on the server
+  an unknown error is usually a library's, and a Postgres or fetch failure will put a query, a row,
+  or a URL with a token in its text. Reporting is wrapped so a telemetry fault cannot turn a handled
+  400 into an unhandled 500.
+- **preflight** requires `SENTRY_DSN`/`SENTRY_ORG`/`SENTRY_PROJECT`/`SENTRY_AUTH_TOKEN` at the
+  production tier, warn-only at staging. Proven by running it: exit 1 unset, exit 0 set.
+- **release-build.yml** blocks a production build when Sentry is unconfigured, warns on staging, and
+  warns even when configured that the upload is not wired.
+
+**The upload itself is not done and cannot be faked.** Hermes maps must be uploaded from inside the
+EAS build that produced the bundle (`@sentry/react-native`'s Expo config plugin); maps from a
+separate `expo export` belong to a different bundle, so uploading them would give symbolication that
+is confidently wrong — worse than none.
+
+The gate's first draft was broken and caught before commit: under `set -e`, `[ -z x ] && missing=...`
+returns non-zero when the test is false and kills the script, so the all-secrets-present case would
+have failed the step. Rewritten as if-statements and exercised in all four branches locally — a
+workflow otherwise only gets tested where being wrong is expensive.
+
+---
+
 # Verification
 
+- **B4.3: 59 vitest tests (+7) · mobile unchanged at 229 · tsc clean · eslint 0 errors.** The new
+  suite asserts that a server report carries exactly four keys and never an error message (a leaky
+  `select * from app_user where email = …` is checked not to survive), and that a DSN configured with
+  no client warns. preflight and the release gate were each exercised by running them.
 - **B4.2: 229 mobile tests (+24) · tsc clean · eslint 0 errors.** The new suites assert that props
   survive only as primitives (an Error, a payload object and an array are all dropped while a
   sibling string is kept), that an event outside the taxonomy is dropped with a warning rather than
@@ -148,7 +200,8 @@ Tracking docs + a DECISIONS.md convention block (this checkpoint).
 - ~~PR #36 pending merge.~~ **Merged as `e1e10d4`; the docs checkpoint followed as PR #37 (`45f1b0d`).**
   Main's E2E is green again on both (runs 30156533738 and 30156615768) — it had gone honestly red
   after #35 exposed the MMKV bug.
-- **B4.1 merged as PR #39 (`25275ff`).** B4.2 is on `feat/b4-analytics-sink`, unreviewed.
+- **B4.1 (PR #39, `25275ff`) and B4.2 (PR #40, `c099263`) are merged.** B4.3 is on
+  `feat/b4-source-maps`, unreviewed.
 - **Crash reports still go nowhere.** The fact to carry forward: error *rates* now land in
   `analytics_event` via EVT_054, but the diagnostic copy is dropped. Turning that on needs
   `@sentry/react-native` installed, a Sentry org + DSN (free tier suffices), and the adapter swapped
@@ -162,10 +215,14 @@ Tracking docs + a DECISIONS.md convention block (this checkpoint).
 
 # Recommended Next Task
 
-**B4.3 — source-map upload** in `release-build.yml` (the item B3 deferred) plus Sentry for Edge
-Functions, then **B4.4** (SLO dashboards + alerts). Both need a Sentry org + DSN to be verifiable
-rather than merely configured — free tier suffices, but it is an owner action, so B4's remainder now
-sits behind the same kind of gate as B1 and B3.
+**Owner action — create a Sentry org + DSN (free tier).** B4 stops here without it: both the
+source-map upload and B4.4's dashboards/alerts need a real project to be *verifiable* rather than
+merely configured, and this milestone's whole premise is that the difference matters. With it, the
+remaining work is small — install `@sentry/react-native` + its config plugin, then swap one line in
+`src/data/telemetryAdapter.ts` and one in `_shared/http.ts`.
 
-Worth doing alongside: emitting the documented EVT_* at their call sites (EVT_012 today rendered,
-EVT_017 ritual complete — the North Star input), which B4.2 made possible but did not wire.
+**Available now, not credential-blocked: wire the documented EVT_* at their call sites.** B4.2 built
+the sink but not the instrumentation, so `analytics_event` would today receive only EVT_054. EVT_012
+(today rendered) and EVT_017 (ritual complete — the North Star input) are the ones that matter; the
+North Star metric cannot be computed until EVT_017 is emitted. This is the best next increment if
+the Sentry org is not imminent.

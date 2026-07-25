@@ -2,9 +2,9 @@
 
 # PanchangPal Dashboard
 
-Version: 1.11.0
+Version: 1.12.0
 
-Last Updated: 2026-07-25 (B4.2 — EVT_* analytics sink landed; EVT_054 now has a working destination)
+Last Updated: 2026-07-25 (B4.3 done to its credential-free limit; B4 now blocked on a Sentry org)
 
 Purpose:
 This is the first file Claude should read at the beginning of every session.
@@ -41,10 +41,11 @@ PanchangPal
 
 Progress
 
-19%
+22%
 
 (Canonical progress metric — 1 of 8 Beta Readiness slices COMPLETE: **B2 (E2E verification)**, plus
-**2 of B4's 4 increments** — B4.1 telemetry seam, B4.2 EVT_* analytics sink — giving (1 + ½)/8 ≈ 19%.
+**3 of B4's 4 increments** — B4.1 telemetry seam, B4.2 EVT_* analytics sink, B4.3 server seam +
+release gate — giving (1 + ¾)/8 ≈ 22%. **B4 cannot go further without a Sentry org + DSN.**
 B1 ~85%, B3 ~80%. B2 is now DONE: the bundle gate plus all three in-scope Maestro flows
 (FLOW_RETURNING, FLOW_MORNING_RITUAL, FLOW_SESSION_PERSISTENCE) are GREEN in CI on a real native
 Android build (run 30155737941, 2026-07-25). The three flows still not present — onboarding,
@@ -72,7 +73,29 @@ CURRENT_MILESTONE.md
 
 # Current Task
 
-**B4 — Observability, 2 of 4 increments done. Errors are now measured, if not yet reported.**
+**B4 — Observability, 3 of 4 increments done. Blocked on an owner action, not on engineering.**
+
+**B4.3 — the server seam and a release gate that can fail.** Edge Function errors now leave through
+a `ServerTelemetry` port at `errorResponse()` (the one exit every ERR_* already shared), carrying the
+function name and correlation id and **no message** — on the server an unknown error is usually a
+library's, and a Postgres or fetch failure puts a query or a token in its text. preflight now
+requires `SENTRY_DSN`/`SENTRY_ORG`/`SENTRY_PROJECT`/`SENTRY_AUTH_TOKEN` at the production tier
+(proven: exit 1 unset, exit 0 set), and `release-build.yml` blocks a production build when Sentry is
+unconfigured — a release with no crash reporting cannot be measured against NFR-06, which §10.1
+gates on.
+
+**The source-map upload is deliberately NOT wired.** Hermes maps must be uploaded from inside the
+EAS build that produced the bundle (`@sentry/react-native`'s config plugin); maps from a separate
+`expo export` belong to a different bundle, so uploading them gives symbolication that is
+confidently wrong. The gate says so rather than a step pretending to upload.
+
+⛔ **B4 stops here without a Sentry org + DSN** (free tier). Available meanwhile, with no external
+dependency: **emit the documented EVT_* at their call sites** — only EVT_054 reaches
+`analytics_event` today, so the North Star cannot be computed until EVT_017 is emitted.
+
+---
+
+**B4.2 — the EVT_* analytics sink** (merged, PR #40).
 
 **B4.2 — the EVT_* analytics sink.** `AnalyticsService` port + a batching implementation over the
 `analytics_event` table (ADR-013; insert-only under RLS, no client read, rollups service-side).
@@ -173,16 +196,17 @@ No new product scope.
 | Mobile — Notifications | ✅ M7 |
 | Mobile — Subscription | ✅ M8 |
 | AI Platform | 🟡 adapters done; corpus + eval pending |
-| Testing | 🟢 190 unit/component/domain (176 mobile + 14 shared) · bundle gate per PR · 🟢 **E2E green in CI** — 3/3 Maestro flows on a real native Android build incl. FLOW_SESSION_PERSISTENCE (run 30155737941, 2026-07-25); gate now fails fast (PR #35) · AI-eval + api-contract de-declared (owed: contract tests + §9.4 harness) |
-| Beta | 🚧 In progress — **B2 ✅ complete**; **B4 🟡 ~50%** (B4.1 telemetry seam + B4.2 analytics sink in; crash reporter still deferred); B1/B3 owner-gated; B5–B8 pending |
+| Testing | 🟢 288 unit/component/domain (229 mobile + 59 vitest) · bundle gate per PR · 🟢 **E2E green in CI** — 3/3 Maestro flows on a real native Android build incl. FLOW_SESSION_PERSISTENCE (run 30165186141, 2026-07-25); gate fails fast (PR #35) and no longer fails against emulator ANR dialogs (PR #41) · AI-eval + api-contract de-declared (owed: contract tests + §9.4 harness) |
+| Beta | 🚧 In progress — **B2 ✅ complete**; **B4 🟡 ~75%** (B4.1–B4.3 in; the upload + dashboards need a Sentry org — owner-gated); B1/B3 owner-gated; B5–B8 pending |
 | Production | ⏳ |
 
 ---
 
 # Current Priorities
 
-1. **B4 — Observability**, continuing: B4.1 (telemetry seam) ✅ · B4.2 (EVT_* analytics sink) ✅ · B4.3 source-map upload + Edge Function Sentry · B4.4 SLO dashboards + alerts. A real reporter (a Sentry org + DSN) is still what turns crash telemetry from a seam into observability; EVT_054 already lands in `analytics_event`.
-2. Owner decisions: prod Supabase (~$25/mo, closes B1) · Apple $99 (iOS) · Google Play $25 (internal track)
+1. **Owner: create a Sentry org + DSN (free tier)** — B4's remaining work (source-map upload, §7.2 dashboards/alerts) needs a real project to be verifiable. B4.1 ✅ · B4.2 ✅ · B4.3 ✅ to its credential-free limit · B4.4 blocked.
+2. **Engineering available now (not credential-blocked): emit the documented EVT_* at their call sites** — B4.2 built the sink, so `analytics_event` today receives only EVT_054; the North Star (Weekly Household Ritual Completions) cannot be computed until EVT_017 is emitted.
+3. Owner decisions: prod Supabase (~$25/mo, closes B1) · Apple $99 (iOS) · Google Play $25 (internal track)
 3. ⛔ Canonical Panchang Engine decision (ADR-033) — unblocks Today panchang, Calendar markers, notifications
 3. AI corpus ingestion + eval readiness — unblocks live Ask Guru (GURU_LIVE)
 4. Backend Edge Functions: SVC_household, SVC_notify_scheduler, SVC_revenuecat_webhook (client contracts coded)
@@ -227,10 +251,10 @@ resolved (PR #14).
 
 # Next Deliverable
 
-**B4.3 — source-map upload** (in `release-build.yml`, the item B3 deferred) plus Edge Function
-Sentry, then B4.4 dashboards/alerts. Both B4.3 and B4.4 need a Sentry org + DSN to be verifiable, so
-B4 now runs into the same owner gate B1/B3 sit behind: prod Supabase (~$25/mo) closes B1; Apple ($99)
-+ Google Play ($25) close most of B3; Sentry's free tier closes B4's remainder at no cost.
+**A Sentry org + DSN (free tier, owner action)** — it closes B4.3's upload and unblocks B4.4. Until
+then the best engineering increment is **emitting the documented EVT_* at their call sites**, which
+needs nothing external. B1/B3 remainders stay owner-gated: prod Supabase (~$25/mo) closes B1; Apple
+($99) + Google Play ($25) close most of B3.
 
 ---
 

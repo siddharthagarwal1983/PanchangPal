@@ -2,8 +2,8 @@
 
 # PanchangPal — Current Task
 
-Version: 3.4.0
-Last Updated: 2026-07-25 (B4.2 analytics sink done; current task is B4.3 — source maps + Edge Function Sentry)
+Version: 3.5.0
+Last Updated: 2026-07-25 (B4.3 done to its credential-free limit; B4 blocked on a Sentry org)
 
 Purpose: the current implementation task. Stay focused; avoid unrelated work unless instructed.
 
@@ -110,14 +110,15 @@ green in CI on a real native build. Canonical progress 0% → 13% (1 of 8 Beta s
 # Current Task
 
 ## Title
-B4 — Observability · increment 3: source-map upload + Edge Function Sentry
+B4 — Observability · OWNER ACTION NEEDED: a Sentry org + DSN
 
 Status
-🟡 **B4.1 ✅ (merged, PR #39). B4.2 ✅ (branch `feat/b4-analytics-sink`, unreviewed). B4.3 is next.**
+🟡 **B4.1 ✅ (PR #39, `25275ff`) · B4.2 ✅ (PR #40, `c099263`) · B4.3 ✅ to its credential-free limit
+(branch `feat/b4-source-maps`, unreviewed) · B4.4 blocked.** Canonical progress 19% → 22%.
 
-B4 is sliced into four increments: **B4.1 telemetry seam ✅** · **B4.2 EVT_* analytics sink ✅** ·
-**B4.3 source-map upload + Edge Function Sentry** · B4.4 SLO dashboards + alerts. Canonical progress
-16% → 19%.
+**B4 cannot progress further on engineering alone.** Both remaining pieces — the source-map upload
+and the §7.2 dashboards/alerts — need a Sentry org and DSN to be real rather than configured. The
+free tier suffices, so this is an owner action, not a cost.
 
 ### B4.1 — done
 `TelemetryAdapter` port + `NullTelemetryAdapter` (`src/domain/telemetry/`), composed in
@@ -140,18 +141,35 @@ from an identity, primitives-only props, and rejection of any event id outside t
 229 tests (+24), tsc clean, eslint 0 errors. **Not verified against a live database** — the insert
 path has only run against a fake repository, never a real `analytics_event` under RLS.
 
-### B4.3 — next
-Source-map upload per build in `release-build.yml` (§2.3 — deferred by B3 and owed to this slice) and
-Sentry for the Edge Functions (§7.1 covers server as well as client). Then **B4.4**: the §7.2 SLO
-dashboards and alerts.
+### B4.3 — done, to the limit credentials allow
+- **Edge Function telemetry seam.** Every ERR_* now passes through a `ServerTelemetry` port at
+  `errorResponse()` — the one exit all of them already shared — carrying the function name and the
+  correlation id that threads the structured logs and the client's EVT_054. `NullServerTelemetry`
+  drops them; no message is ever included, because a server-side unknown error is usually a
+  library's and will happily put a query or a token in its text.
+- **preflight:** `SENTRY_DSN` / `SENTRY_ORG` / `SENTRY_PROJECT` / `SENTRY_AUTH_TOKEN` required at
+  the production tier, warn-only at staging — the asymmetry B1 set for `REVENUECAT_WEBHOOK_SECRET`.
+  Proven by running it: exit 1 unset, exit 0 set.
+- **release-build.yml:** a readiness gate that BLOCKS a production build with Sentry unconfigured
+  and warns on staging. A production release without crash reporting cannot be measured against
+  NFR-06, which §10.1 gates on.
 
-Both remaining increments need a Sentry org + DSN to be verifiable rather than merely configured.
-The free tier suffices, so this is an owner action rather than a cost — but it does mean B4's
-remainder sits behind the same kind of gate as B1 and B3.
+**Not done, and not fakeable:** the source-map upload itself. Hermes maps must be uploaded from
+inside the EAS build that produced the bundle (what `@sentry/react-native`'s Expo config plugin
+does); maps from a separate `expo export` belong to a different bundle, so uploading them yields
+symbolication that is confidently wrong. The SDK is not installed, so the gate says so out loud
+rather than a step pretending to upload.
 
-Also uncovered and worth its own increment: the documented EVT_* are not emitted at their call sites.
-B4.2 built the sink; EVT_012 (today rendered), EVT_017 (ritual complete — the North Star input) and
-the rest still need wiring where they happen.
+### Blocked on the owner — a Sentry org + DSN (free tier)
+With it: install `@sentry/react-native` + its config plugin, swap one line in
+`src/data/telemetryAdapter.ts` and one in `_shared/http.ts`, and B4.3's upload plus B4.4's
+dashboards/alerts become verifiable. Without it, B4 stops here.
+
+### Also outstanding, and NOT credential-blocked
+The documented EVT_* are still not emitted at their call sites. B4.2 built the sink; EVT_012 (today
+rendered), EVT_017 (ritual complete — the North Star input) and the rest need wiring where they
+happen. This is real, verifiable work available now — the best next increment if the Sentry org is
+not imminent.
 
 B1/B3 remainders stay owner-gated (prod Supabase ~$25/mo closes B1; Apple $99 + Google Play $25 close
 most of B3).

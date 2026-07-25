@@ -2,8 +2,8 @@
 
 # PanchangPal — Implementation Roadmap
 
-Version: 1.6.0
-Last Updated: 2026-07-25 (B4 at halfway — B4.1 telemetry seam + B4.2 EVT_* analytics sink)
+Version: 1.7.0
+Last Updated: 2026-07-25 (B4.1–B4.3 in; B4's remainder owner-gated on a Sentry org)
 
 Purpose: the forward plan from the current state. Complements PROJECT_STATUS.md (snapshot) and
 CURRENT_MILESTONE.md (active milestone). Updated when scope or sequencing changes — and at every
@@ -86,10 +86,24 @@ shipped in this state would fly blind on the metric §10.1 gates on. The differe
 is that the degradation is not silent: `getTelemetryBackend()` reports `'none'`, and a DSN configured
 with no adapter warns at startup.
 
-Progress is **19%** ((1 + ½)/8). Remaining in B4: B4.3 source-map upload (the item B3 deferred) plus
-Edge Function Sentry, and B4.4 SLO dashboards + alerts — both of which need a Sentry org and DSN to
-be verifiable, so B4's remainder now sits behind the same kind of owner gate as B1 and B3, though at
-no cost (free tier).
+**B4.3 then closed everything that could be made real without credentials.** The Edge Function half
+of §7.1 — a ServerTelemetry port at `errorResponse()`, carrying the ERR_* code and correlation id and
+never a message — plus the guardrails around shipping: `SENTRY_*` required at preflight's production
+tier (proven by running it), and a release-build gate that blocks a production build when Sentry is
+unconfigured, because a release with no crash reporting cannot be measured against NFR-06.
+
+The source-map upload was deliberately NOT written. Hermes maps must be uploaded from inside the EAS
+build that produced the bundle; maps from a separate `expo export` belong to a different bundle and
+would symbolicate confidently wrong. A step that appears to upload would be exactly the placeholder
+this milestone spent B1 and B3 removing, so the gate states the gap instead.
+
+Progress is **22%** ((1 + ¾)/8), and **B4 now waits on the owner** for a Sentry org + DSN (free
+tier) — the same shape of gate as B1's prod Supabase and B3's store accounts, at no cost.
+
+**The engineering that is NOT blocked** is the instrumentation B4.2's sink was built for: the
+documented EVT_* are still not emitted at their call sites, so `analytics_event` would receive only
+EVT_054, and the North Star (Weekly Household Ritual Completions) cannot be computed until EVT_017
+is emitted.
 
 One blocker: the Canonical Panchang Engine (ADR-033, Proposed) — astronomical algorithm
 undocumented; the whole system depends only on the abstract PanchangEngine/PanchangProvider
