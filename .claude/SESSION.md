@@ -2,8 +2,8 @@
 
 # PanchangPal — Current Session
 
-Version: 2.0.1
-Last Updated: 2026-07-26 (End Session — B2 and B5 complete; E2E regression from #50 fixed in #53)
+Version: 2.1.0
+Last Updated: 2026-07-26 (End Session — B2/B5 complete; MAIN'S E2E LEFT RED, cause diagnosed)
 
 ---
 
@@ -38,7 +38,19 @@ which blocked FLOW_ONBOARDING and hid an unbuilt screen set for two milestones.
 
 # Open
 
-- **I broke main's E2E with PR #50, and fixed it in #53.** Making the onboarding gate real changed
+- **⛔ MAIN'S E2E IS RED, AND THE FIX IS UNPROVEN. START HERE NEXT SESSION.**
+  The last run (30170796356, on `4ea3f5f`) failed 4/4 — but on the emulator's ANR dialog, not on the
+  flows: every captured hierarchy shows `"Pixel Launcher isn't responding"` covering the screen while
+  logcat shows our app running (`Running "main"`). So PR #53's correctness is **untested**, not
+  disproven.
+  **`hide_error_dialogs 1` is no longer sufficient.** It is applied (`e2e.yml:194`) and it held for
+  three consecutive green runs; the launcher now ANRs through it.
+  **Recommended next lever:** the AVD is `target: google_apis`, which ships Pixel Launcher and the
+  Google app — the ANR source, and the origin of the `DiscoverPrecheckException` noise in every log.
+  Switching to the AOSP `default` image removes those processes. Our app needs no Play Services
+  (`expo-notifications` is not installed), so no flow depends on them. One line in `e2e.yml`, then a
+  run on main settles both the ANR and #53 together.
+- **I broke main's E2E with PR #50, and fixed it in #53 (fix unverified — see above).** Making the onboarding gate real changed
   what a FRESH device does on first launch — a CI emulator has no stored state, so the app correctly
   opened on SCR_AUTH_001 while all three pre-existing flows launched and asserted Today. 4/4 red,
   with the app behaving correctly and the flows asserting the old behaviour. The three flows now skip
@@ -64,5 +76,9 @@ which blocked FLOW_ONBOARDING and hid an unbuilt screen set for two milestones.
 
 # Recommended next task
 
-**B6 — Security & Privacy** (§5/§6): OWASP Mobile review, CCPA export/delete verified end to end
+**First: get main's E2E green** (see the first Open item — switch the AVD to the AOSP `default`
+image). It is a one-line change, and leaving the gate red means every subsequent merge lands against
+a signal nobody can read.
+
+**Then: B6 — Security & Privacy** (§5/§6): OWASP Mobile review, CCPA export/delete verified end to end
 (F-3/F-10), store privacy labels. The next unstarted slice, and entirely credential-free.

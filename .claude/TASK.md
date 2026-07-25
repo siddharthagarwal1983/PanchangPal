@@ -110,7 +110,17 @@ green in CI on a real native build. Canonical progress 0% → 13% (1 of 8 Beta s
 # Current Task
 
 ## Title
-B5 ✅ complete at verifiable scope · next slice is B6 (Security & Privacy)
+⛔ FIRST: get main's E2E green · then B6 (Security & Privacy)
+
+## Status — main's E2E is RED, and the fix for it is unproven
+Run 30170796356 (`4ea3f5f`) failed 4/4 **on the emulator's ANR dialog**, not on the flows: every
+hierarchy shows `"Pixel Launcher isn't responding"` over the app while logcat shows it running.
+PR #53 (which fixed the flows for the now-real onboarding gate) is therefore **untested**.
+
+`hide_error_dialogs 1` is applied (`e2e.yml:194`) and held for three green runs; it is no longer
+enough. **Next lever:** `target: google_apis` → `default` (AOSP, no Pixel Launcher, no Google app).
+The app needs no Play Services — `expo-notifications` is not installed — so no flow depends on them.
+One line, then one run on main settles both the ANR and #53.
 
 Status
 🟡 **B4.1 ✅ (PR #39, `25275ff`) · B4.2 ✅ (PR #40, `c099263`) · B4.3 ✅ to its credential-free limit
