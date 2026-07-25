@@ -8,6 +8,8 @@ import { useMutation, useQueryClient } from '@tanstack/react-query';
 import { randomUUID } from 'expo-crypto';
 import { todayRepository } from '../todayRepository';
 import { useOfflineQueueStore } from '../../store/offlineQueue';
+import { streakEvents } from '../../domain/analytics';
+import { getAnalyticsService } from '../analyticsAdapter';
 
 /**
  * `localDate` is nullable because the day is not known until the user's time zone resolves
@@ -30,6 +32,12 @@ export function useCompleteRitual(localDate: string | null) {
     },
     onSuccess: (streak) => {
       qc.setQueryData(['streak', localDate], streak); // reconcile from server truth
+      // EVT_020 / EVT_021 (PDD §11.2) fire from the SERVER's streak, not a client guess — the
+      // streak is server-derived, and an event that disagreed with the number the user sees on
+      // Today would corrupt the retention analysis it exists to feed.
+      for (const event of streakEvents(streak)) {
+        getAnalyticsService().track(event.eventId, event.props);
+      }
     },
   });
 }

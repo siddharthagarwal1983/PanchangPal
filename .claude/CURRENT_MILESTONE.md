@@ -312,7 +312,7 @@ possible fix and would have caught defects 1–3 at M1.
 | B1 | Environments & secrets | dev/staging/prod projects, per-env secrets, fail-closed preflight (§1, §4) | 🟡 ~85% — prod blocked on a paid plan |
 | B2 | E2E verification | bundle gate (done in B1) + Maestro FLOW_*; green in CI (§2.2, §10.1) | ✅ COMPLETE (2026-07-25) — bundle gate + 3 in-scope flows GREEN in CI on a native build (incl. FLOW_SESSION_PERSISTENCE); other 3 flows blocked on other slices/backends/gated feature |
 | B3 | Build & distribution | eas.json profiles, Hermes, signing, source maps, TestFlight / Play Internal (§2.3) | 🟡 ~80% — automated builds work; store accounts + Sentry (B4) remain |
-| B4 | Observability | Sentry, telemetry, SLO dashboards + alerts (§7) | 🟡 ~75% — B4.1 seam ✅ · B4.2 sink ✅ · B4.3 server seam + prod release gate ✅; **upload + B4.4 owner-gated on a Sentry org (free tier)** |
+| B4 | Observability | Sentry, telemetry, SLO dashboards + alerts (§7) | 🟡 ~75% — B4.1 seam ✅ · B4.2 sink ✅ · B4.3 server seam + prod release gate ✅ · EVT_* daily-habit funnel now emitting (§11.4, incl. the North Star input EVT_017); **upload + B4.4 owner-gated on a Sentry org (free tier)** |
 | B5 | Reliability & DR | backups, restore drill, runbooks, graceful degradation (§8) | ⏳ |
 | B6 | Security & privacy | OWASP Mobile review, CCPA export/delete verification, store privacy labels (§5, §6) | ⏳ |
 | B7 | Release management | versioning/trains, OTA policy + channels, staged rollout, rollback verification (§3) | ⏳ |
@@ -426,9 +426,10 @@ testers' hands.
   `analytics_event`, so error rates are visible even while stack-level reporting is not. Closing it
   needs a Sentry org + DSN (free tier suffices) and B4.3–B4.4. `getTelemetryBackend()` returns
   `'none'` while this holds, and a DSN configured with no adapter warns at startup.
-- **Analytics is unverified against a live database (2026-07-25, B4.2)** — the insert path is covered
-  by unit tests against a fake repository, not by a write to a real `analytics_event` table under
-  RLS. The policy (`analytics_ins_own`, insert-only, no select) is what the client assumes; that
+- **Analytics is unverified against a live database (2026-07-25, B4.2)** — now the leading untested
+  claim in this milestone, since the daily-habit funnel emits real events into it. The insert path is
+  covered by unit tests against a fake repository, not by a write to a real `analytics_event` table
+  under RLS. The policy (`analytics_ins_own`, insert-only, no select) is what the client assumes; that
   assumption should be exercised against dev before B8, or the first real check is production.
 - **Deferred vendor deps** — `react-native-purchases` and `expo-notifications` are still uninstalled;
   purchase and push flows cannot be verified end-to-end until they land on the Mac with keys. Their

@@ -182,7 +182,7 @@ Implementation: Mobile MVP Phase 1 is feature-complete (M1–M8).
 | APIs | ✅ OpenAPI (65 operations) + SVC_* handlers |
 | RLS Policies | ✅ Defined across 29 tables |
 | AI Provider | ✅ OpenAI adapters + RAG pipeline + rate limit/cost |
-| Analytics Adapter | ⏳ Pending |
+| Analytics Adapter | ✅ Client adapter + Postgres sink (ADR-013); daily-habit EVT_* emitting; insert path not yet exercised against a live table |
 | Payment Adapter | ✅ Webhook + BillingRepository (F-4) — webhook Edge Function pending |
 
 ---
@@ -258,9 +258,9 @@ gate that blocks a production build with Sentry unconfigured. What remains (the 
 the §7.2 dashboards/alerts) needs a real Sentry project to be verifiable rather than configured, so
 **B4 is now owner-gated like B1 and B3** — at no cost.
 
-Engineering available meanwhile, credential-free: **emit the documented EVT_* at their call sites.**
-`analytics_event` receives only EVT_054 today, so the North Star (Weekly Household Ritual
-Completions) cannot be computed until EVT_017 is emitted.
+The EVT_* instrumentation that was outstanding is now done — the daily habit funnel emits, EVT_017
+included — so the remaining credential-free work is **exercising the analytics insert against the dev
+project**, which would confirm the RLS assumption the client makes and which no test covers.
 
 Priority 2
 
@@ -315,6 +315,11 @@ prefs work today, so gating and prefs are real before the SDKs are wired.
 
 # Recently Completed
 
+- **EVT_* daily habit funnel (2026-07-25):** EVT_012/015/016/017/018/019/020/021 now emit at their
+  call sites (PDD §11.4), so `analytics_event` receives more than errors and the North Star input
+  (EVT_017) fires. Ritual events derive from view-model transitions via a pure mapper so a re-render
+  cannot double-count the metric the North Star sums. Also fixed EVT_054's property names, which
+  B4.1 shipped as `code`/`surface` against §11.2's `error_code`/`screen_id`.
 - **B4.3 — server telemetry seam + release gate (2026-07-25):** Edge Function errors report through
   a ServerTelemetry port at `errorResponse()` (no message, no PII); `SENTRY_*` required at the
   production preflight tier; `release-build.yml` blocks a production build with Sentry unconfigured.

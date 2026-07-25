@@ -10,6 +10,14 @@ export {
   type AnalyticsService,
 } from './AnalyticsService';
 export {
+  ritualAbandonedEvent,
+  ritualTransitionEvents,
+  streakEvents,
+  type RitualAnalyticsEvent,
+  type RitualEventContext,
+  type StreakResult,
+} from './ritualEvents';
+export {
   ANALYTICS_BATCH_SIZE,
   ANALYTICS_QUEUE_LIMIT,
   buildEnvelope,

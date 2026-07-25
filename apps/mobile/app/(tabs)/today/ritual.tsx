@@ -7,6 +7,9 @@ import { View } from 'react-native';
 import { router } from 'expo-router';
 import { CompletionMoment, PrimaryButton, RitualIntro, RitualStep, Screen, Text, useTheme } from '@panchangpal/ui';
 import { RitualEngine, NullAudioAdapter, resolveRitualScreenState, type RitualPlayerViewModel } from '../../../src/domain/ritual';
+import { ritualAbandonedEvent, ritualTransitionEvents, type RitualEventContext } from '../../../src/domain/analytics';
+import { getAnalyticsService } from '../../../src/data/analyticsAdapter';
+import { useOnline } from '../../../src/data/useOnline';
 import { getRitualSessionRepository } from '../../../src/data/ritualSessionRepository';
 import { useRitualToday } from '../../../src/data/hooks/useRitualToday';
 import { useCompleteRitual } from '../../../src/data/hooks/useCompleteRitual';
@@ -16,6 +19,7 @@ import { t } from '../../../src/i18n';
 
 export default function RitualScreen() {
   const { theme } = useTheme();
+  const online = useOnline();
   const tradition = usePrefsStore((state) => state.tradition);
   const depth = usePrefsStore((state) => state.depth);
   const ritual = useRitualToday(tradition, depth);
@@ -65,17 +69,52 @@ export default function RitualScreen() {
     // writing progress into yesterday's session.
   }, [ritual.data, today]);
 
+  // Wall-clock start of the ritual, for EVT_017's `duration_ms` (PDD §11.2). A ref, not state:
+  // it must not trigger a render, and it is read only when an event fires.
+  const startedAt = useRef<number | null>(null);
+
+  const analyticsContext = useCallback(
+    (): RitualEventContext => ({
+      ritualId: ritual.data?.id ?? 'unknown',
+      tradition,
+      durationMs: startedAt.current === null ? null : Date.now() - startedAt.current,
+      offline: !online,
+    }),
+    [ritual.data?.id, tradition, online],
+  );
+
   const dispatch = useCallback(async (intent: (value: RitualEngine) => Promise<void>) => {
     if (!engine.current) return;
+    const previous = engine.current.view();
     await intent(engine.current);
     const next = engine.current.view();
     setView(next);
+
+    // The daily habit funnel (PDD §11.4), derived from the transition rather than emitted at each
+    // call site — a screen that tracks in six places double-counts as soon as a re-render repeats
+    // a state, and an inflated count is worse than none for the metric the North Star sums.
+    if (previous.state === 'intro' && next.state === 'active') startedAt.current = Date.now();
+    for (const event of ritualTransitionEvents(previous, next, analyticsContext())) {
+      getAnalyticsService().track(event.eventId, event.props);
+    }
+
     if (next.state === 'completed' && !next.completionRecorded && ritual.data) {
       completion.mutate(ritual.data.id);
       await engine.current.markCompletionRecorded();
       setView(engine.current.view());
     }
-  }, [completion, ritual.data]);
+  }, [analyticsContext, completion, ritual.data]);
+
+  /** Leaving mid-ritual is EVT_018 (Ritual Abandoned) — a navigation intent, not a state change. */
+  const leave = useCallback(async () => {
+    const current = engine.current?.view();
+    if (current) {
+      const abandoned = ritualAbandonedEvent(current, analyticsContext());
+      if (abandoned) getAnalyticsService().track(abandoned.eventId, abandoned.props);
+    }
+    await dispatch(async (value) => { await value.leave(); });
+    router.back();
+  }, [analyticsContext, dispatch]);
 
   // Ordering lives in resolveRitualScreenState so it can be unit-tested — the ORDER was the
   // defect: `!view` was tested first and swallowed both the error and the empty case.
@@ -119,9 +158,9 @@ export default function RitualScreen() {
         {view.state === 'active' && view.step && view.stepNumber ? <View style={{ gap: theme.spacing.md }}>
           <RitualStep text={view.step.text} current={view.stepNumber} total={view.totalSteps} progressLabel={t('ritual.progress', { current: view.stepNumber, total: view.totalSteps })} nextLabel={view.stepNumber === view.totalSteps ? t('ritual.complete') : t('ritual.next')} skipLabel={t('ritual.skip')} playLabel={t('ritual.playAudio')} audioUnavailableLabel={t('ritual.audioUnavailable')} audioAvailable={view.audioAvailable} canSkip={view.canSkip} onNext={() => void dispatch((value) => value.next())} onSkip={() => void dispatch((value) => value.skip())} onPlayAudio={() => void dispatch((value) => value.toggleAudio())} />
           <PrimaryButton label={t('ritual.pause')} onPress={() => void dispatch((value) => value.pause())} />
-          <PrimaryButton label={t('ritual.leave')} onPress={() => void dispatch(async (value) => { await value.leave(); router.back(); })} />
+          <PrimaryButton label={t('ritual.leave')} onPress={() => void leave()} />
         </View> : null}
-        {view.state === 'paused' ? <View style={{ gap: theme.spacing.md }}><PrimaryButton label={t('ritual.resume')} onPress={() => void dispatch((value) => value.resume())} /><PrimaryButton label={t('ritual.leave')} onPress={() => void dispatch(async (value) => { await value.leave(); router.back(); })} /></View> : null}
+        {view.state === 'paused' ? <View style={{ gap: theme.spacing.md }}><PrimaryButton label={t('ritual.resume')} onPress={() => void dispatch((value) => value.resume())} /><PrimaryButton label={t('ritual.leave')} onPress={() => void leave()} /></View> : null}
         {view.state === 'completed' ? <CompletionMoment title={t('ritual.completeTitle')} body={t('ritual.completeBody')} continueLabel={t('ritual.returnToday')} onContinue={() => router.replace('/(tabs)/today')} /> : null}
       </View>
     </Screen>
