@@ -2,9 +2,9 @@
 
 # PanchangPal — Project Memory
 
-Version: 1.8.0
+Version: 1.9.0
 
-Last Updated: 2026-07-25 (AnalyticsService + TelemetryAdapter seams recorded)
+Last Updated: 2026-07-26 (onboarding gate + DR runbooks recorded as permanent seams)
 
 Current Phase:
 Beta Readiness & Platform Hardening (TDD Part 5)
@@ -435,6 +435,18 @@ Stable, cross-cutting facts (permanent until an approved decision changes them):
   degrade-to-memory fallback and `getStorageBackend()`. Both the ritual session store and the
   analytics pseudonymous id use it; it is re-exported from `ritualSessionRepository`, its original
   home, so existing callers are unchanged.
+- **The onboarding gate is real state, not a constant** — `app/index.tsx` routes on a flag persisted
+  through the shared `KeyValueStore` seam (`isOnboarded()` / `setOnboarded()`), NOT the hardcoded
+  `ONBOARDED = true` it carried through M1–M8. Both exits close the gate: "Skip for now" (deferred
+  auth means skipping is a legitimate completion, UX-2 / ADR-009) and OTP verification, the latter
+  only AFTER the anon→auth merge succeeds. When storage is unavailable the flag reads `false`, so the
+  gate is shown again rather than silently skipped. A regression test greps the source, because an
+  inlined constant leaves no runtime behaviour to assert.
+- **DR runbooks live at `docs/devops/DR_RUNBOOKS.md`** and are exercised by a monthly restore drill
+  (`.github/workflows/dr-drill.yml`) that also runs on any PR touching migrations or seed. **NFR-15
+  is NOT met**: Supabase PITR is a paid-plan feature and the hosted projects are free-tier, so schema
+  and seed rebuild from the repo in minutes while user data is unrecoverable. Do not launch to real
+  users in that state.
 - **MockPanchangProvider** is DEV/TEST ONLY and must never be imported by production code.
 - **Backend Edge Functions pending** — SVC_household (member/invite), SVC_notify_scheduler
   (notify/schedule), and SVC_revenuecat_webhook are pending backend deliverables; the corresponding
