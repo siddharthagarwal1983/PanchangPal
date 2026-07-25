@@ -2,8 +2,8 @@
 
 # PanchangPal — Current Task
 
-Version: 3.9.0
-Last Updated: 2026-07-25 (B5 opened — runbooks + drill; NFR-15 found unmet without PITR)
+Version: 3.10.0
+Last Updated: 2026-07-25 (B5 §8.2 encoded; PDD owes copy for 11 ERR_* codes)
 
 Purpose: the current implementation task. Stay focused; avoid unrelated work unless instructed.
 
@@ -210,10 +210,18 @@ Shipping to real users in this state means one incident is permanent data loss. 
 ~$25/month purchase that closes B1, which makes that purchase a reliability decision rather than an
 environments one.
 
+### B5 increment 2 — DONE (PR #48, merged)
+`DEGRADATION_POLICIES`: a tested policy per ERR_* (surface, retry, queueing, daily-loop impact, copy
+key, §12 row), exhaustive over the shared taxonomy. Invariants asserted: no failure blocks the daily
+loop, honest declines offer no retry, offline/sync queue, location redirects, only uncaught failures
+go global. Copy is §13.5 verbatim; the eleven codes it does not cover are pinned in
+`AWAITING_APPROVED_COPY`. **PDD owes those eleven strings** — a documentation deliverable, not a
+coding one.
+
 ### Next
 Credential-free options, in rough order of value:
-1. **B5 remaining increments** — §8.2 graceful-degradation verification (each `ERR_*` has a defined
-   calm behaviour per PDD §12; nothing has checked that the app actually does it) and §8.4.
+1. **B5 §8.4** — the last increment: single-founder mitigations recorded (§8.4 is largely a
+   documentation deliverable, and the runbooks already carry most of it).
 2. **`FLOW_ONBOARDING`** is still unreachable: `app/index.tsx:16` hardcodes `ONBOARDED = true`, so
    SCR_ONBOARDING_* has never rendered from launch and one of B2's six flows cannot be written.
 3. **AI eval harness** (§9.4) — the last de-declared gate, blocked on the reviewed corpus.

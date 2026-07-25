@@ -2,8 +2,8 @@
 
 # PanchangPal — Current Session
 
-Version: 1.17.0
-Last Updated: 2026-07-25 (B5 opened; NFR-15 found unmet — no PITR on the free tier)
+Version: 1.18.0
+Last Updated: 2026-07-25 (B5 §8.2 encoded; PDD owes copy for 11 ERR_* codes)
 
 ---
 
@@ -272,8 +272,38 @@ region response, Edge Function rollback. A runbook nobody has exercised is a pla
 
 ---
 
+# 12. B5 §8.2 — graceful degradation, from prose to code
+
+The starting state made the gap concrete: **three error strings in the i18n bundle for a taxonomy of
+24 codes.** §8.2's "each `ERR_*` has a defined calm behavior" lived in PDD §12's 23-row table and
+nothing in the app encoded it.
+
+`DEGRADATION_POLICIES` is that table as data — surface (global / card / inline / banner / redirect),
+retry, queueing, `blocksDailyLoop`, copy key, and the §12 row each entry encodes — with an
+**exhaustive test over the shared `ERROR_CODES`**, so a new code cannot enter the taxonomy without a
+degradation decision, and every copy key must resolve in the bundle rather than rendering as a raw
+key when a user is already having a bad time.
+
+The tests assert the invariants, not the table's contents:
+
+- **no failure blocks the daily loop** (P4 — the ritual runs from local storage and completions queue)
+- **the honest-decline codes offer no retry** — a decline is the correct outcome, and "try again"
+  would invite a user to retry their way into a fabricated answer
+- AI failures *do* retry · offline/sync failures queue · location failures redirect to city entry
+  rather than erroring · only genuinely uncaught failures take the whole screen
+
+**Copy is PDD §13.5 verbatim, or absent.** §13.5 approves nine codes; the other eleven fall back to
+the approved ERR_UNKNOWN string and are pinned in `AWAITING_APPROVED_COPY` by a test. Writing
+plausible calm strings for them would invent UX *and* hide the gap — **PDD owes those eleven**.
+
+Two errors caught by running rather than reading: the i18n export is `enUS`, not `en`, and the
+awaiting-copy list initially named two codes that already have in-app copy.
+
+---
+
 # Verification
 
+- **B5 §8.2: 283 mobile tests (+39) · tsc clean · eslint 0 errors.**
 - **B5 DR drill: green on its own PR** (run 30168068264) — `pg_dump` 108K, restore 1s, `DR
   invariants: OK` on source AND restored, seeded row counts equal (4/4, 4/4, 1/1, 1/1, 3/3).
 - **API contract gate: 16 vitest tests (77 total) · tsc clean · eslint 0 errors.** Proven to fail by
@@ -353,8 +383,8 @@ a paid Supabase plan (~$25/mo) closes B1 **and** is the only way NFR-15 becomes 
 
 Credential-free options, in rough order of value:
 
-0. **B5's remaining increments** — §8.2 graceful degradation verified end to end (every `ERR_*` has a
-   defined calm behaviour in PDD §12; nothing has checked the app actually does it), and §8.4.
+0. **B5 §8.4** — the last increment; largely a documentation deliverable, and the runbooks already
+   carry most of it.
 1. **`FLOW_ONBOARDING` is still unreachable** — `app/index.tsx:16` hardcodes `ONBOARDED = true`, so
    SCR_ONBOARDING_* has never rendered from launch and one of B2's six flows cannot be written. The
    onboarding screens exist and have never been executed, which is the same shape of gap that hid
