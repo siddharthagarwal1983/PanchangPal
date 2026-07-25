@@ -2,16 +2,17 @@
 
 # PanchangPal — Current Session
 
-Version: 1.13.1
-Last Updated: 2026-07-25 (PR #36 + #37 merged; main E2E green)
+Version: 1.14.0
+Last Updated: 2026-07-25 (B2 closed and merged; B4 opened with the telemetry seam)
 
 ---
 
 # Session Objective
 
-Verify that a ritual session survives a process restart — the last free engineering item in B1/B2/B3.
-
-**Answered: yes, now.** It took fixing the gate, reading the verdict, and shipping a fix.
+Two objectives, in order. First: verify that a ritual session survives a process restart — the last
+free engineering item in B1/B2/B3. **Answered: yes, now**, by fixing the gate, reading the verdict,
+and shipping a fix; B2 is complete and merged. Second: **open B4 — Observability**, starting with the
+telemetry seam.
 
 ---
 
@@ -51,9 +52,38 @@ import side-effect-free and makes `createMMKV` throw exactly as off-device nativ
 
 ---
 
+# 4. B4 opened — the telemetry seam (B4.1 of 4)
+
+Errors now leave the app through one port. `TelemetryAdapter` + `NullTelemetryAdapter`
+(`src/domain/telemetry/`), composed in `src/data/telemetryAdapter.ts`, wired at both call sites:
+`ErrorBoundary.componentDidCatch` — replacing the `// TODO: Replace with Sentry` that had sat there
+since M1 — and a global `ErrorUtils` handler for throws no React tree is on the stack for. The pure
+mapping resolves any thrown value to an ERR_* code and builds the EVT_054 event §7.1 requires from
+every ERR_*; emission needs the pseudonymous envelope and the `analytics_event` sink, which is B4.2.
+
+**No PII is structural, not procedural.** An unrecognised error yields `ERR_UNKNOWN` rather than its
+message (a message is free text, and free text is how a user's Ask Guru question would reach a crash
+reporter); EVT_054's props are a closed four-key shape with no field to widen; `componentStack` is
+not forwarded, since it can carry rendered values.
+
+**And it reports nothing.** `@sentry/react-native` is uninstalled and no DSN is provisioned, so the
+Null adapter drops every correctly-built report. This was a deliberate choice this session, taken
+with the trade-off stated: the §7.2 crash-free SLO stays unmeasurable and B4 cannot close on the seam
+alone. Unlike the MMKV case, the degradation is visible — `getTelemetryBackend()` returns `'none'`,
+and a DSN configured with no adapter to consume it warns at startup, because that combination means
+someone believes crash reporting is on when it is not.
+
+---
+
 # Verification
 
-- 176 mobile tests · tsc clean · eslint 0 errors.
+- **B4.1: 205 mobile tests (+29) · tsc clean · eslint 0 errors.** The new suites assert the no-PII
+  guarantees directly (a free-text message never survives mapping; EVT_054 carries exactly four
+  keys), that the backend reports `'none'`, that a DSN-without-adapter warns, and that the global
+  handler is idempotent, always delegates to the previous handler, and survives its own reporter
+  throwing. Note: jest's "worker process failed to exit gracefully" warning is pre-existing on main
+  (reproduced 3/3 on a clean tree), not introduced here.
+- 176 mobile tests · tsc clean · eslint 0 errors (at the MMKV fix, earlier in the session).
 - **E2E on a native Android emulator build (run 30155737941, 2026-07-25): `BUILD SUCCESSFUL`, all
   three flows GREEN — FLOW_MORNING_RITUAL, FLOW_SESSION_PERSISTENCE, FLOW_RETURNING.** Logcat shows
   NitroMmkv loading and **no** "storage unavailable" fallback: MMKV v4 initialises under New Arch and
@@ -64,25 +94,37 @@ import side-effect-free and makes `createMMKV` throw exactly as off-device nativ
 
 # Modified / created
 
-`.github/workflows/e2e.yml` (fail-fast + trim), `apps/mobile/package.json` + `pnpm-lock.yaml` (mmkv v4
-+ nitro), `apps/mobile/src/data/ritualSessionRepository.ts` (v4 API at the port),
-`apps/mobile/__mocks__/react-native-mmkv.js` (new). Tracking docs (this checkpoint).
+MMKV fix: `.github/workflows/e2e.yml` (fail-fast + trim), `apps/mobile/package.json` +
+`pnpm-lock.yaml` (mmkv v4 + nitro), `apps/mobile/src/data/ritualSessionRepository.ts` (v4 API at the
+port), `apps/mobile/__mocks__/react-native-mmkv.js` (new).
+
+B4.1: `apps/mobile/src/domain/telemetry/{TelemetryAdapter,telemetry,index}.ts` (new),
+`apps/mobile/src/data/telemetryAdapter.ts` (new),
+`apps/mobile/src/providers/installGlobalErrorHandler.ts` (new),
+`apps/mobile/src/navigation/ErrorBoundary.tsx` + `src/providers/AppProviders.tsx` (wiring),
+`src/domain/__tests__/telemetry.test.ts` + `src/data/__tests__/telemetryAdapter.test.ts` (new).
+Tracking docs + a DECISIONS.md convention block (this checkpoint).
 
 # Open
 
 - ~~PR #36 pending merge.~~ **Merged as `e1e10d4`; the docs checkpoint followed as PR #37 (`45f1b0d`).**
   Main's E2E is green again on both (runs 30156533738 and 30156615768) — it had gone honestly red
   after #35 exposed the MMKV bug.
+- **B4.1 is on `feat/b4-telemetry-seam`, not yet pushed or reviewed.**
+- **Nothing is reported to anywhere.** The single fact to carry forward: the telemetry port exists
+  and its destination does not. Turning the seam into observability needs `@sentry/react-native`
+  installed, a Sentry org + DSN (free tier suffices), and the adapter swapped in one line at
+  `src/data/telemetryAdapter.ts`.
 - Onboarding still unreachable — `ONBOARDED = true`, `app/index.tsx:16`.
 - Emulator flake: a "Pixel Launcher isn't responding" ANR can overlay the app and fail flows;
   transient, cleared by re-run. Harden later (dismiss-dialog / retry) if it recurs.
 
 # Recommended Next Task
 
-Start **B4 — Observability** (Sentry wiring + source-map upload + dashboards), the next slice with
-unblocked engineering. B1/B3 remainders are owner-gated (prod Supabase, Apple, Google Play).
+**B4.2 — the EVT_* analytics sink.** The analytics adapter writing pseudonymous envelopes to
+`analytics_event` (ADR-013, §7.1), which gives `toClientErrorEvent`'s EVT_054 output somewhere to go
+and covers the PDD §11 dashboards. `apps/mobile/src/analytics/` is an empty directory today; the
+table exists (`apps/backend/migrations/20260712000080_platform.sql`).
 
-Starting position, verified against the repo: nothing is wired. `app.config.ts:53` exposes
-`sentryDsn` from `EXPO_PUBLIC_SENTRY_DSN` and nothing reads it; `src/navigation/ErrorBoundary.tsx:30`
-carries a `// TODO: Replace with Sentry`; `@sentry/react-native` is not a dependency. B3's owed
-source-map upload lands here too.
+Then B4.3 (source-map upload in `release-build.yml` + Edge Function Sentry) and B4.4 (SLO dashboards
++ alerts). B1/B3 remainders stay owner-gated (prod Supabase, Apple, Google Play).

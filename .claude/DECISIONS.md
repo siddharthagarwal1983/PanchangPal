@@ -707,3 +707,38 @@ and `mergeReleaseNativeDebugMetadata` (AAB crash-symbol metadata, unused by an A
 **Verified, not assumed.** Session persistence — open and "unverifiable" for a week — was closed only
 by a green FLOW_SESSION_PERSISTENCE on a real native emulator build (run 30155737941), with logcat
 confirming MMKV initialised and did not fall back. A green unit suite never proved it and never could.
+
+---
+
+# 2026-07-25 — Telemetry leaves through one port, and reports nothing until it does
+
+**Errors and crashes leave the app through the `TelemetryAdapter` port, never a vendor SDK.** Same
+seam rule as NotificationAdapter, PaymentAdapter, and AudioAdapter (Provider Adapter pattern, TDD
+Part 5 §7.1). Two call sites feed it: `ErrorBoundary.componentDidCatch` for render errors, and a
+global `ErrorUtils` handler for throws that no React tree is on the stack for — a timer, a listener,
+an async callback. The concrete Sentry adapter is deferred; `NullTelemetryAdapter` holds the seam.
+
+**A port is readiness, not observability.** With the Null adapter in place nothing is reported
+anywhere: the §7.2 crash-free SLO stays unmet and B4 cannot close on the seam alone. This is stated
+in the code, not just here, because an app that reports nothing is indistinguishable from an app with
+no errors — the same invisibility that let ritual sessions run on memory for a week.
+`getTelemetryBackend()` reports `'none'`, and a configured DSN with no adapter to consume it warns
+loudly: that combination means an operator believes crash reporting is on when it is not.
+
+**No PII is enforced structurally, not by review.** §7.1 is `[MANDATORY]` about it, and the cheapest
+way for user content to reach a reporter is an error message forwarded verbatim. So: `toErrorCode()`
+returns `ERR_UNKNOWN` for anything outside the shared ERR_* taxonomy rather than echoing the message;
+EVT_054's props are a closed four-key shape (`code`, `surface`, `recoverable`, `correlation_id`) with
+no free-text field to widen; and `errorInfo.componentStack` is deliberately not forwarded, since a
+component stack can carry rendered values. `correlation_id` is server-minted (ADR-022), not a user id.
+
+**Telemetry must never replace the user's error with one of its own.** The global handler always
+delegates to the previous handler (RN's default is what shows the redbox and terminates on a fatal),
+swallows any failure of its own reporting, and is idempotent so a re-run composition root cannot
+chain it onto itself and report every error N times. It installs in an effect rather than at module
+scope — an eager side effect on import is the exact defect shape that took down the ritual screen and
+nine repositories.
+
+**EVT_054's mapping is settled before its sink exists.** `toClientErrorEvent()` builds the event id
+and props now; the pseudonymous envelope and the `analytics_event` sink (ADR-013) are B4.2. The
+mapping is therefore tested and identical whichever sink eventually consumes it.
