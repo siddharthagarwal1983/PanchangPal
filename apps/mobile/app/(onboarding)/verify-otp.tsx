@@ -9,6 +9,7 @@ import { router, useLocalSearchParams } from 'expo-router';
 import { Screen, AppHeader, AuthButton, Text, useTheme } from '@panchangpal/ui';
 import { authRepository } from '../../src/data/authRepository';
 import { useSessionStore } from '../../src/store/session';
+import { setOnboarded } from '../../src/data/onboardingRepository';
 import { t } from '../../src/i18n';
 
 export default function VerifyOtp() {
@@ -26,6 +27,10 @@ export default function VerifyOtp() {
     try {
       const session = await authRepository.verifyEmailOtp(String(email), code);
       await upgradeAndMerge(session, previousAnonUid);
+      // The other exit from the gate (the first is "Skip for now"). Marked only AFTER the merge
+      // succeeds: if the upgrade throws, the user stays in onboarding rather than being sent to
+      // tabs with a half-merged account.
+      setOnboarded();
       router.replace('/(tabs)/today');
     } catch {
       setError(t('auth.otpError'));

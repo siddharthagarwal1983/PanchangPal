@@ -1,7 +1,7 @@
 # DR Runbooks — PanchangPal
 
 **Status:** Active · **Owner:** Solo operator (see §0) · **Source:** TDD Part 5 §8.3
-**Last verified:** 2026-07-25 (restore drill mechanised; PITR gap recorded)
+**Last verified:** 2026-07-25 (restore drill mechanised; PITR gap recorded; §8.4 operator-resilience section added)
 
 Five runbooks §8.3 mandates: **DB restore**, **region incident**, **Edge Function outage**,
 **secret compromise**, **store outage**. Each names the owner, how the problem is detected, the
@@ -187,3 +187,48 @@ Honest list of what is documented here but **not yet verified end to end**:
 
 A runbook nobody has walked is a plan, not a capability. These are labelled so the difference is
 visible at the moment it matters.
+
+---
+
+## 7. If the operator is unavailable (TRISK-11, §8.4)
+
+The largest reliability risk in this project is not a database or a region. It is that **one person
+holds every credential, every decision, and all the operational context**, and the runbooks above
+all begin "you". §8.4 names the mitigations; this section states honestly which exist.
+
+### What is already true
+
+| Mitigation (§8.4) | Reality |
+|---|---|
+| **Managed platforms — fewer things to run** | Real. Supabase, EAS, GitHub Actions, RevenueCat. Nothing is self-hosted; there are no servers to patch and no cluster to keep alive. |
+| **Documentation as knowledge capture** | Real, and unusually complete: MRD/PRD/PDD/TDD, 33 ADRs, an OpenAPI spec, this runbook set, and a decision log that records *why* rather than only what. |
+| **AI-agent-friendly repository** | Real. `.claude/` carries the operating context, every non-obvious decision is commented at the site of the code, and gates are designed to fail loudly rather than require a human to interpret them. |
+| **Alerting that does not require constant attention** | **NOT true yet.** B4 wired the telemetry seams; no Sentry project exists, so nothing pages anyone. Crash-free sessions (NFR-06) is currently unmeasured. |
+| **A documented plan to contract specialist help** | **NOT true.** MRD Risk §12 contemplates it; no arrangement, contact, or budget exists. |
+
+### The unattended failure modes, worst first
+
+1. **A crash affecting every user goes unnoticed.** Nothing is watching (see above), and users of a
+   calm daily-ritual app do not file bug reports — they stop opening it. Closed by a Sentry project
+   plus B4.4's alerts.
+2. **User data is lost permanently.** No PITR on the free tier (§0). Closed by the paid plan.
+3. **Certificates and tokens expire silently.** `EXPO_ACCESS_TOKEN`, the Apple membership (annual,
+   once purchased), and store credentials all lapse on a calendar, not on an incident. A lapsed
+   credential is discovered at the next release, which is exactly when it costs the most.
+4. **A dependency deprecation breaks the build months later.** The MMKV v2 defect this month is the
+   pattern: nothing was wrong until a native build ran under the New Architecture.
+
+### What a handover would need
+
+If someone else has to take this over — for a week or permanently — they need, in this order:
+
+1. **Access:** the GitHub repository and its Actions secrets; the Supabase organisation; the Expo
+   account; RevenueCat; the Apple and Google developer accounts once they exist.
+2. **The Android keystore**, which is backed up off-machine (issue #25) and **cannot be regenerated**
+   — losing it ends the ability to update the app for existing installs.
+3. **This documentation set**, starting at `.claude/DASHBOARD.md`, then `CURRENT_MILESTONE.md`, then
+   these runbooks.
+4. **The standing rule that explains most of the codebase:** a gate is added only when it can fail,
+   and a claim in a document is not a verified behaviour.
+
+None of this is a substitute for a second person. It is what makes the first day survivable.

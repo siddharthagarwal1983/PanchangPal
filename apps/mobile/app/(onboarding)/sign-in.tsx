@@ -10,6 +10,7 @@ import { router } from 'expo-router';
 import { Screen, AppHeader, AuthButton, Text, useTheme } from '@panchangpal/ui';
 import { authRepository } from '../../src/data/authRepository';
 import { useSessionStore } from '../../src/store/session';
+import { setOnboarded } from '../../src/data/onboardingRepository';
 import { t } from '../../src/i18n';
 
 export default function SignIn() {
@@ -19,7 +20,12 @@ export default function SignIn() {
   const [busy, setBusy] = useState<null | 'apple' | 'google' | 'email'>(null);
   const [error, setError] = useState<string | null>(null);
 
-  const skip = () => router.replace('/(tabs)/today');
+  // Skipping IS completing, under deferred auth (UX-2 / ADR-009): an anonymous user is a
+  // first-class user, so the gate must not send them back here on every launch.
+  const skip = () => {
+    setOnboarded();
+    router.replace('/(tabs)/today');
+  };
 
   const startEmail = async () => {
     if (!email.includes('@')) return;
