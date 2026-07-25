@@ -181,6 +181,17 @@ jobs:
           # two produce an identical screenshot.
           script: |
             adb install -r apps/mobile/android/app/build/outputs/apk/release/app-release.apk
+            # Suppress system "isn't responding" (ANR) dialogs.
+            #
+            # Twice now a run has failed 3/3 flows with the app itself healthy: a "Pixel Launcher
+            # isn't responding" dialog from the emulator's own Google apps covered the screen, and
+            # Maestro asserted against the dialog. Logcat both times showed the app running
+            # normally ("Running \"main\"", ExpoModulesCore initialized) — a false red, which is as
+            # corrosive to a gate's credibility as a false green.
+            #
+            # This hides the OS dialog only; it does not make an unresponsive app pass. If OUR app
+            # hangs, the flow still fails on its own assertions, which is the signal we want.
+            adb shell settings put global hide_error_dialogs 1
             adb logcat -c
             set +e
             maestro test tests/flows/
