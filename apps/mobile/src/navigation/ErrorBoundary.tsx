@@ -6,6 +6,8 @@
 import { Component, type ErrorInfo, type ReactNode } from 'react';
 import { ErrorState } from '@panchangpal/ui';
 import { t } from '../i18n';
+import { toErrorCode } from '../domain/telemetry';
+import { getTelemetryAdapter } from '../data/telemetryAdapter';
 
 interface Props {
   children: ReactNode;
@@ -27,7 +29,17 @@ export class ErrorBoundary extends Component<Props, State> {
   }
 
   override componentDidCatch(error: Error, errorInfo: ErrorInfo): void {
-    // TODO: Replace with Sentry/Crashlytics or your logging service.
+    // Report through the TelemetryAdapter port (TDD Part 5 §7.1) — never a vendor SDK directly.
+    // The adapter is currently the Null implementation, so this reaches no service yet; the call
+    // site is what B4.1 fixes, the destination is what wiring a real adapter fixes.
+    //
+    // `errorInfo.componentStack` is deliberately NOT forwarded: §7.1 forbids PII in telemetry, and
+    // a component stack can carry rendered values. The Error itself is passed for a future
+    // reporter's own stack handling; the structured report carries only the ERR_* code.
+    getTelemetryAdapter().captureError(
+      { code: toErrorCode(error), surface: 'error-boundary', recoverable: true },
+      error,
+    );
     console.error('ErrorBoundary caught an error:', error, errorInfo);
   }
 
