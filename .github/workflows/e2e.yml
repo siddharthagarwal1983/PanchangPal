@@ -128,7 +128,24 @@ jobs:
       # release-build.yml builds the real artifact, with every ABI.
       - name: Build APK
         working-directory: apps/mobile/android
-        run: ./gradlew assembleRelease --no-daemon -PreactNativeArchitectures=x86_64
+        # FAIL FAST, LOUD. Run 29949921351 proved the danger: assembleRelease failed at ~11 min, then
+        # Gradle sat on stuck workers for ~80 min until timeout-minutes killed the whole job and it
+        # reported `cancelled` — a red build wearing a timeout's costume, the exact "gate goes dark"
+        # failure this milestone exists to remove. `timeout` caps a stuck build so it surfaces as a
+        # red STEP in minutes (--kill-after force-reaps lingering no-daemon workers); --stacktrace
+        # prints the real failure the killed run never got to emit. 40m is generous headroom over a
+        # cold single-ABI native compile and still leaves the emulator + flows room under the 90m job.
+        #
+        # TRIM to what an emulator FLOW_* run needs. This APK is the throwaway debug-signed one (see
+        # header) — never shipped, so release-only work is dead weight and, worse, was the failure:
+        #   lintVitalRelease / lintVitalAnalyzeRelease — release lint; release-build.yml owns that gate.
+        #   mergeReleaseNativeDebugMetadata — crash-symbolication metadata bundled into the AAB, unused
+        #     by an APK, and the task that actually FAILED under the single-ABI build.
+        run: |
+          timeout --kill-after=2m 40m ./gradlew assembleRelease --no-daemon --stacktrace \
+            -PreactNativeArchitectures=x86_64 \
+            -x lintVitalRelease -x lintVitalAnalyzeRelease \
+            -x mergeReleaseNativeDebugMetadata
 
       - name: Install Maestro
         run: |
