@@ -2,8 +2,8 @@
 
 # PanchangPal — Implementation Roadmap
 
-Version: 1.3.0
-Last Updated: 2026-07-18 (M8 Subscription Increment 2 complete)
+Version: 1.4.0
+Last Updated: 2026-07-25 (B2 E2E verification complete — session persistence verified; MMKV v4)
 
 Purpose: the forward plan from the current state. Complements PROJECT_STATUS.md (snapshot) and
 CURRENT_MILESTONE.md (active milestone). Updated when scope or sequencing changes — and at every
@@ -53,8 +53,16 @@ layered on top.
   existed.
 
 Both are the same lesson the Execution Gap taught, in a new place: a claim in CI, or in an ADR, is
-not a verified behaviour. Session persistence — the item this session set out to close — is still
-unverified, because no E2E run has reached the emulator.
+not a verified behaviour.
+
+**Update (2026-07-25). B2 — E2E verification — is now COMPLETE, and it earned the lesson a third
+time.** Fixing the E2E build (PR #35 — it had been failing in `assembleRelease` and hanging to the
+timeout, so `cancelled` hid a red build) let `FLOW_SESSION_PERSISTENCE` run for the first time. It
+failed, correctly: `react-native-mmkv@2.12.2` is incompatible with the New Architecture's bridgeless
+runtime, so MMKV silently degraded to memory and ritual sessions never persisted — invisible until a
+native build ran the flow. Fixed by MMKV v2→v4 (PR #36). All three in-scope Maestro flows are now
+GREEN in CI on a real native build (run 30155737941). Canonical progress 0% → 13% (1 of 8). Next
+unblocked engineering slice: **B4 — Observability**.
 
 One blocker: the Canonical Panchang Engine (ADR-033, Proposed) — astronomical algorithm
 undocumented; the whole system depends only on the abstract PanchangEngine/PanchangProvider

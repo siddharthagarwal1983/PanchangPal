@@ -23,16 +23,19 @@ Status
 
 Overall Progress
 
-0% (0 of 8 slices COMPLETE — B1 ~85%, B2 ~75%, B3 ~80%)
+13% (1 of 8 slices COMPLETE — **B2 ✅**; B1 ~85%, B3 ~80%)
 
-B2 is revised DOWN from ~85%. That figure rested on a run from 2026-07-19 11:59 UTC that has not
-held since: the Android build outgrew its timeout when expo-updates landed, and every run
-afterwards was cancelled or killed. The flows themselves were not shown to be broken — but a gate
-whose last word is three days old is not 85% done.
+**B2 (E2E verification) is now COMPLETE (2026-07-25).** The bundle gate plus all three in-scope
+Maestro flows — FLOW_RETURNING, FLOW_MORNING_RITUAL, FLOW_SESSION_PERSISTENCE — are GREEN in CI on a
+real native Android build (run 30155737941). Getting there took fixing the E2E build (which was
+failing disguised as a timeout — PR #35) and then fixing a real bug the working gate caught: mmkv v2
+is incompatible with the New Architecture, so ritual sessions silently ran on memory and never
+survived a restart (fixed by MMKV v2→v4, PR #36). The three flows still absent — onboarding,
+household invite, live Ask Guru — are blocked on other slices / backends / a gated feature, not on
+B2's engineering, so B2 is done at its verifiable scope.
 
-A slice counts only when done. Three are most of the way there, and every remaining item in them
-is gated on money, a store account, or a later slice — not on engineering. The number stayed at 0
-through a very productive day, which is the honest reading.
+A slice counts only when done. B1 and B3 remain most of the way there, with every remaining item
+gated on money, a store account, or a later slice — not on engineering.
 
 Previous Milestones
 
@@ -126,8 +129,11 @@ the 2026-07-19 result. PR #32 fixes all of it: no cancel-on-push for a 20-40 min
 90-minute budget, a Gradle cache, and building one ABI rather than four (the emulator is x86_64;
 three quarters of the native build was compiled and discarded every run).
 
-`FLOW_SESSION_PERSISTENCE` is written and asserts the intended post-restart state, but **no run has
-reached the emulator**, so it has never executed.
+**Update (2026-07-25):** PR #35 fixed a further layer — the single-ABI `assembleRelease` was itself
+failing at ~11 min and Gradle then hung to the 90-min timeout, so it still reported `cancelled`.
+Wrapping the Build APK step in `timeout` + `--stacktrace` and trimming release-only work made it fail
+fast and go green. `FLOW_SESSION_PERSISTENCE` then executed for the first time, caught a real bug
+(mmkv v2 vs New Arch), and — after the v2→v4 fix (PR #36) — now **PASSES** on a native build.
 
 Remaining, and NOT achievable within B2: `FLOW_ONBOARDING` is unreachable because
 `app/index.tsx` hardcodes `ONBOARDED = true`; `FLOW_HOUSEHOLD_INVITE` needs the unimplemented
@@ -276,7 +282,7 @@ possible fix and would have caught defects 1–3 at M1.
 | # | Slice | Covers | Status |
 |---|---|---|---|
 | B1 | Environments & secrets | dev/staging/prod projects, per-env secrets, fail-closed preflight (§1, §4) | 🟡 ~85% — prod blocked on a paid plan |
-| B2 | E2E verification | bundle gate (done in B1) + Maestro FLOW_*; green in CI (§2.2, §10.1) | 🟡 ~85% — 2 flows green; 3 blocked by backend/vendor gaps |
+| B2 | E2E verification | bundle gate (done in B1) + Maestro FLOW_*; green in CI (§2.2, §10.1) | ✅ COMPLETE (2026-07-25) — bundle gate + 3 in-scope flows GREEN in CI on a native build (incl. FLOW_SESSION_PERSISTENCE); other 3 flows blocked on other slices/backends/gated feature |
 | B3 | Build & distribution | eas.json profiles, Hermes, signing, source maps, TestFlight / Play Internal (§2.3) | 🟡 ~80% — automated builds work; store accounts + Sentry (B4) remain |
 | B4 | Observability | Sentry, telemetry, SLO dashboards + alerts (§7) | ⏳ |
 | B5 | Reliability & DR | backups, restore drill, runbooks, graceful degradation (§8) | ⏳ |
@@ -346,23 +352,24 @@ testers' hands.
     only in `authRepository.ts` was generalized: all ten `src/data` repositories now resolve their
     client through `(this._db ??= getSupabase())`, so construction no longer requires configuration
     and a misconfigured build cannot fail during route module evaluation.
-  - **`react-native-mmkv` is unavailable in Expo Go.** The "Ritual screen crashes there" half of
-    this entry is **likely stale**: PR #24 wrapped `new MMKV()` in try/catch and made construction
-    lazy (`ritualSessionRepository.ts:47`), so it degrades to memory with a warning instead of
-    crashing. Marked likely-stale rather than fixed — the code path was read, not observed on a
-    device. The consequence that remains is real: ritual sessions cannot persist in Expo Go, so
-    persistence must be verified on a native build.
+  - ~~**`react-native-mmkv` unavailable / broken.**~~ **RESOLVED (2026-07-25, PR #36).** Two layers:
+    (1) it throws in Expo Go / on absent native modules — handled since PR #24 by the lazy
+    `createDeviceStore` degrading to memory with a warning instead of crashing; (2) the deeper bug the
+    now-working E2E gate exposed — **mmkv v2 is incompatible with the New Architecture (bridgeless)**,
+    so MMKV's JSI never installed and it degraded to memory even on a native build, meaning ritual
+    sessions never persisted. Fixed by the v2→v4 upgrade (Nitro line), verified by a green
+    FLOW_SESSION_PERSISTENCE on a native emulator build (run 30155737941).
 - ~~**SDK 54 native runtime unverified**~~ — **CLOSED 2026-07-19.** Three Android APKs built and
   run; the New Architecture works natively. iOS remains unbuilt (no Apple membership), so that
   half of the baseline is still unproven.
-- **Session persistence is STILL unverified (2026-07-22).** PR #24 made the degradation
-  observable (`getStorageBackend()`, `src/data/ritualSessionRepository.ts:38`), and
-  `FLOW_SESSION_PERSISTENCE` (PR #32) now encodes the check — complete the ritual, `stopApp`,
-  relaunch, assert `Done for today`, with `adb logcat` captured so the two candidate causes are
-  separable. **It has never executed**: no E2E run has reached the emulator since the gate went
-  dark. It also cannot be answered in Expo Go, where MMKV is absent and the store degrades to
-  memory by design. The domain logic is not the suspect — `advanceSession` leaves `stepIndex` on
-  the last step, so `isSessionForRitual` holds and a completed session restores as completed.
+- ~~**Session persistence unverified.**~~ **VERIFIED 2026-07-25.** `FLOW_SESSION_PERSISTENCE`
+  (PR #32) — complete the ritual, `stopApp`, relaunch, assert `Done for today`, with `adb logcat`
+  captured so the two candidate causes are separable — finally executed once the E2E build was fixed
+  (PR #35). It first failed, correctly: logcat showed the "Persistent storage unavailable" fallback,
+  i.e. MMKV was degrading to memory (mmkv v2 vs New Arch). After the v2→v4 fix (PR #36), the flow
+  PASSES with no fallback (run 30155737941). Sessions now survive a restart. The domain logic was
+  never the suspect — `advanceSession` leaves `stepIndex` on the last step, so a completed session
+  restores as completed; the store was the problem.
 - **⚠️ The E2E gate reported nothing between 2026-07-19 and 2026-07-22.** See B2 above. The
   mechanism matters more than the outage: `cancel-in-progress: true` on a 20-40 minute job means a
   busy afternoon produces no signal at all, and a cancelled run reads as "not run" rather than

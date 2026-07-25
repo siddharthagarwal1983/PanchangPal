@@ -671,3 +671,39 @@ cancelling costs the signal the job exists to produce.
 four-ABI default compiled three that were discarded, and that waste is what made the timeout
 reachable. Safe only because the CI APK is explicitly not the shippable artifact — `release-build.yml`
 builds that one, with every ABI.
+
+---
+
+# 2026-07-25 — MMKV v4 under the New Architecture, and making a build fail loudly
+
+**Ritual sessions persist through a `KeyValueStore` port backed by react-native-mmkv v4 (Nitro).**
+The device store is created via the `createMMKV()` factory (v4 replaced `new MMKV()`), resolved lazily
+on first use, and `delete()`→`remove()` is adapted at the port so nothing else sees the vendor API.
+**v4 is required because the app runs the New Architecture (bridgeless): mmkv v2 could not install its
+JSI bindings there**, so every instance threw "React Native is not running on-device" and the store
+degraded silently to memory — ritual sessions never survived a restart, in a release build. A
+dependency-version bug, not a storage-logic bug. When the native module is genuinely absent (Expo Go,
+off-device, jest), the port still degrades to memory with a visible warning and `getStorageBackend()`
+reports `'memory'`; the ritual keeps working, it just will not persist.
+
+**A native module that runs code at import needs a jest manual mock.** v4 eagerly imports
+`react-native-nitro-modules`, whose `TurboModuleRegistry.getEnforcing` throws at module load in
+node/jest and crashed every suite before a test ran. `apps/mobile/__mocks__/react-native-mmkv.js`
+keeps the import side-effect-free and makes `createMMKV` throw exactly as off-device native does,
+which drives the repository's memory-fallback path — the behaviour the degradation tests already
+assert. The mmkv-success path is verified where it is real: the native FLOW_SESSION_PERSISTENCE build.
+
+**A CI build must fail fast and loud, never slow and silent.** The E2E `assembleRelease` had been
+failing at ~11 min, after which Gradle hung ~80 min on stuck workers until the job timeout killed it
+and it reported `cancelled` — a red build wearing a timeout's costume, the same "gate goes dark"
+pathology one layer down. The Build APK step is now wrapped in `timeout --kill-after=2m 40m` with
+`--stacktrace`, so a stuck or failing build surfaces as a red step in minutes with the real error.
+
+**A CI build should do only the work the test needs.** The emulator E2E APK is throwaway and
+debug-signed, so release-only work is dead weight — and was the failure. Release lint (`lintVital`)
+and `mergeReleaseNativeDebugMetadata` (AAB crash-symbol metadata, unused by an APK) are excluded via
+`-x`. Release-specific correctness is `release-build.yml`'s job, on the real artifact.
+
+**Verified, not assumed.** Session persistence — open and "unverifiable" for a week — was closed only
+by a green FLOW_SESSION_PERSISTENCE on a real native emulator build (run 30155737941), with logcat
+confirming MMKV initialised and did not fall back. A green unit suite never proved it and never could.

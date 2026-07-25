@@ -83,30 +83,44 @@ budget, Gradle cache, one ABI instead of four.
 
 ---
 
+# Previous Task — completed 2026-07-25
+
+## Answer the persistence question — DONE. Sessions survive a restart.
+Status: ✅ COMPLETE. Three moves, in order:
+
+1. **PR #35 (merged) — E2E build fixed.** The single-ABI run had failed in `assembleRelease` at ~11
+   min, then Gradle hung ~80 min until the 90-min timeout killed it as `cancelled` (a red build
+   disguised as a timeout). Fixed workflow-only: `timeout --kill-after=2m 40m` + `--stacktrace` on the
+   Build APK step, and dropped release-only work the emulator APK doesn't need (release `lintVital`,
+   `mergeReleaseNativeDebugMetadata`). Build green in ~10 min; flows finally ran.
+2. **Verdict read.** `FLOW_SESSION_PERSISTENCE` failed — sessions did not survive a restart. Logcat
+   root cause: `react-native-mmkv@2.12.2` is incompatible with the New Architecture (bridgeless), so
+   MMKV's JSI never installed and the ritual store silently ran on its in-memory fallback. A
+   dependency-version bug; `ritualSessionRepository` was correct.
+3. **PR #36 (open, CI green) — the fix.** MMKV v2→v4.3.2 (Nitro, bridgeless-compatible) + nitro peer;
+   v4 API (`createMMKV()`, `delete`→`remove`) absorbed at the port; jest mock for v4's eager nitro
+   import. **E2E on a native build (run 30155737941): all three flows GREEN, FLOW_SESSION_PERSISTENCE
+   PASSED.** No memory fallback. 176 tests, tsc, eslint all clean.
+
+**With this, B2 (E2E verification) is COMPLETE** — bundle gate + the three in-scope Maestro flows
+green in CI on a real native build. Canonical progress 0% → 13% (1 of 8 Beta slices).
+
+---
+
 # Current Task
 
 ## Title
-Answer the persistence question, then resume B1/B2/B3 remainders
+Merge PR #36, then start B4 — Observability
 
 Status
-🔴 **Session persistence is still unverified — and the E2E gate is red under its timeout costume.**
-#31/#32/#33 merged. The single-ABI run on the main tip (29949921351) did NOT slow-build to the
-timeout: `assembleRelease` **failed fast at ~11 min** (`:app:mergeReleaseNativeDebugMetadata`,
-`:react-native-screens:lintVitalAnalyzeRelease`, `:expo:verifyReleaseResources`), then Gradle hung
-~80 min and the 90-min `timeout-minutes` killed it as `cancelled`. Emulator never booted; no flow
-ran. The real error summary was never emitted, so root cause is uncaptured. (Full autopsy in
-SESSION.md.) `FLOW_SESSION_PERSISTENCE` still asserts the right post-restart state; it just never
-executed. Cannot be answered in Expo Go either — MMKV absent, store degrades to memory by design.
+🟢 **PR #36 open, CI green, pending merge.** On merge, main's E2E returns green (it went honestly red
+after #35 exposed the MMKV bug). Then B4 — Observability (Sentry wiring, source-map upload,
+dashboards/alerts, §2.3/§B4) is the next slice with unblocked engineering. B1/B3 remainders stay
+owner-gated (prod Supabase ~$25/mo closes B1; Apple $99 + Google Play $25 close most of B3).
 
-Next steps, in order:
-1. **Make the build fail-fast and loud, not slow-and-silent.** Cap the Build APK step with coreutils
-   `timeout` + `--stacktrace`; drop release-only work the emulator APK doesn't need (release
-   `lintVital`, native-debug-metadata) — likely removes both the failing tasks and the 80-min hang.
-2. Re-run E2E, read the **real** `assembleRelease` error, iterate to a green build.
-3. Only then read the persistence verdict from the flow, and from `maestro-logcat.txt` if red — the
-   presence of `[ritual] Persistent storage unavailable` distinguishes "MMKV fell back to memory"
-   from "MMKV was active and the session was never persisted". The two produce identical screenshots.
-4. If red, fix; if green, B2 gains a real persistence assertion.
+The remaining Maestro flows are still out of B2/engineering reach: `FLOW_ONBOARDING` unreachable while
+`ONBOARDED = true` (`app/index.tsx:16`); `FLOW_HOUSEHOLD_INVITE` needs SVC_household; `FLOW_ASK_GURU`
+only exercises the gated path (GURU_LIVE=false).
 
 Everything else in B1/B2/B3 remains gated on money, a store account, or a later slice.
 
@@ -143,12 +157,10 @@ marked as such rather than asserted.
       versions were confirmed against the Supabase Management API first: dev 17.6.1.147, staging
       17.6.1.141, both engine 17. The db-tests job passed on 17 with pgTAP 1.3.4 from PGDG.
       Anyone with a local stack needs `supabase stop --no-backup` before the next `supabase start`.
-- [ ] Verify session persistence actually survives a restart. Observable since PR #24
-      (`getStorageBackend()`) and ENCODED as `FLOW_SESSION_PERSISTENCE` (PR #32) — but the flow has
-      STILL never executed. The gate is no longer dark from cancellation; now the single-ABI
-      `assembleRelease` fails at ~11 min and Gradle hangs to the 90-min timeout, so it reports
-      `cancelled`. Blocked on fixing that build (fail-fast + trim to what the emulator needs) before
-      the flow can run. Still the last free engineering item.
+- [x] **Verify session persistence survives a restart — DONE 2026-07-25.** Fixed the E2E build
+      (PR #35, fail-fast + trim), which let `FLOW_SESSION_PERSISTENCE` run; it caught a real bug
+      (mmkv v2 incompatible with New Arch → silent memory fallback); fixed by MMKV v2→v4 (PR #36).
+      E2E run 30155737941: all three flows GREEN, persistence PASSED. B2 complete.
 - [x] **Fix issue #30 — UTC dates** (PR #31, 2026-07-22). Not on the original list; found while
       reading the ritual code. The daily loop stored UTC days as the user's local date, which in
       AU/NZ meant the morning ritual was recorded against yesterday all morning.
