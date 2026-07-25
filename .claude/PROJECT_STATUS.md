@@ -39,7 +39,7 @@ Overall Progress
 
 ░░░░░░░░░░░░░░░░░░░░
 
-**Mobile MVP — Phase 1: ✅ 100% (all 8 slices, merged)** · **Beta Readiness & Platform Hardening: 🚧 16% (1 of 8 slices — B2 E2E verification — plus B4.1 of B4)**
+**Mobile MVP — Phase 1: ✅ 100% (all 8 slices, merged)** · **Beta Readiness & Platform Hardening: 🚧 19% (1 of 8 slices — B2 E2E verification — plus B4.1 + B4.2 of B4)**
 
 Project Health
 
@@ -74,7 +74,7 @@ TBD
 | Mobile Development (feature slices) | ✅ Complete | 100% (M1–M8 done) |
 | AI Platform | 🟡 In Progress | Adapters + RAG pipeline done; corpus + eval pending |
 | Testing | 🟡 In Progress | 190 unit/component/domain green in CI (176 mobile + 14 shared); 3 Maestro FLOW_* authored, but the E2E gate produced no signal 2026-07-19 → 2026-07-22 (build outgrew its timeout; cancelled runs hid it — PR #32) |
-| Beta | 🚧 In progress | 16% (B2 ✅ complete; B4 🟡 ~25% — B4.1 telemetry seam in, reporting nothing yet; B1/B3 owner-gated; B5–B8 pending) |
+| Beta | 🚧 In progress | 19% (B2 ✅ complete; B4 🟡 ~50% — B4.1 telemetry seam + B4.2 analytics sink in; crash reporting still deferred; B1/B3 owner-gated; B5–B8 pending) |
 | Production Launch | ⏳ Pending | 0% |
 
 ---
@@ -252,10 +252,11 @@ Implementation: Mobile MVP Phase 1 is feature-complete (M1–M8).
 
 Priority 1
 
-**B4 — Observability, increments 2–4.** B4.1 (the telemetry seam) is in; it reports nothing until a
-Sentry org + DSN exist, so crash-free sessions (NFR-06) still cannot be measured. Next is B4.2, the
-EVT_* analytics sink → `analytics_event` (ADR-013), then B4.3 source maps and B4.4 dashboards/alerts.
-(PR #36 merged as `e1e10d4`; session persistence ✅ verified 2026-07-25.)
+**B4 — Observability, increments 3–4.** B4.1 (telemetry seam) and B4.2 (EVT_* analytics sink) are
+in: every ERR_* now lands as EVT_054 in `analytics_event`, so error rates are measurable. Crash
+reporting still is not — no Sentry org or DSN exists, so crash-free sessions (NFR-06) cannot be
+measured and B4 cannot close. Next: B4.3 source-map upload + Edge Function Sentry, then B4.4
+dashboards/alerts. Both need a Sentry org (free tier suffices).
 
 Priority 2
 
@@ -310,10 +311,14 @@ prefs work today, so gating and prefs are real before the SDKs are wired.
 
 # Recently Completed
 
+- **B4.2 — EVT_* analytics sink (2026-07-25):** AnalyticsService port + batching implementation over
+  the `analytics_event` table (ADR-013), a device-minted pseudonymous id, primitives-only props, and
+  EVT_* validation against the PDD §11 taxonomy. Gives EVT_054 a working destination.
 - **B4.1 — telemetry seam (2026-07-25):** TelemetryAdapter port + NullTelemetryAdapter, the pure
   ERR_* → EVT_054 mapping (§7.1), and both error call sites wired (ErrorBoundary + a global
-  ErrorUtils handler). No PII by construction. Reports nothing yet — Sentry is deferred and no DSN is
-  provisioned — so `getTelemetryBackend()` returns `'none'` and a DSN without an adapter warns.
+  ErrorUtils handler). No PII by construction. Crash reports still go nowhere — Sentry is deferred
+  and no DSN is provisioned — so `getTelemetryBackend()` returns `'none'` and a DSN without an
+  adapter warns.
 - **B2 — E2E verification (2026-07-25):** E2E build made to fail fast (PR #35); MMKV v2→v4 so ritual
   sessions persist under New Arch (PR #36); all 3 in-scope Maestro flows GREEN in CI on a native build,
   session persistence verified end-to-end.
@@ -409,21 +414,24 @@ The Mobile MVP Phase 1 feature-slice milestone is **complete (100%)** and merged
 slices — App Shell, Today, Guided Ritual, Calendar Shell, Ask Guru Client, Profile/Household,
 Notifications, and Subscription (M1–M8) — are implemented, tsc/eslint clean, and green in CI.
 
-The project is now in **Beta Readiness & Platform Hardening** (TDD Part 5), sliced B1–B8, at **16%
-(1 of 8 — B2 complete — plus B4.1)**. The milestone opened on a known gap: CD reported green while
+The project is now in **Beta Readiness & Platform Hardening** (TDD Part 5), sliced B1–B8, at **19%
+(1 of 8 — B2 complete — plus B4.1 and B4.2)**. The milestone opened on a known gap: CD reported green while
 its Maestro E2E and EAS build jobs were placeholders. **B2 (E2E verification) is now complete** — the
 Maestro placeholder is replaced by three real FLOW_* specs GREEN in CI on a native Android build,
 including FLOW_SESSION_PERSISTENCE, which along the way exposed and fixed a real persistence bug
 (MMKV v2 vs New Architecture → v4 upgrade, PR #36). Staging migrations and Edge Function deploys are
 real. B1 (prod environment) and B3 (store distribution) remainders are owner-gated.
 
-**B4 (observability) is under way at ~25%.** Its first increment gives errors a single exit — the
-TelemetryAdapter port, wired at the ErrorBoundary and at a global handler, with the ERR_* → EVT_054
-mapping settled and no PII possible by construction. It is readiness, not observability: the concrete
-Sentry adapter is deferred and no DSN exists, so nothing is reported and the §7.2 crash-free SLO
-remains unmeasurable. That state is deliberately inspectable (`getTelemetryBackend() === 'none'`)
-rather than silent, because an app that reports nothing is otherwise indistinguishable from an app
-with no errors.
+**B4 (observability) is at ~50%.** B4.1 gives errors a single exit — the TelemetryAdapter port,
+wired at the ErrorBoundary and at a global handler, with the ERR_* → EVT_054 mapping settled and no
+PII possible by construction — and B4.2 gives that mapping a destination: the AnalyticsService port
+over the `analytics_event` sink (ADR-013), with a device-minted pseudonymous id and primitives-only
+props. Error rates are therefore measurable today.
+
+Crash reporting is not. The concrete Sentry adapter is deferred and no DSN exists, so the §7.2
+crash-free SLO remains unmeasurable and B4 cannot close. That state is deliberately inspectable
+(`getTelemetryBackend() === 'none'`) rather than silent, because an app that reports nothing is
+otherwise indistinguishable from an app with no errors.
 The only architectural blocker is the Canonical Panchang Engine decision (ADR-033); Ask Guru live
 answers are intentionally gated until corpus/eval readiness.
 

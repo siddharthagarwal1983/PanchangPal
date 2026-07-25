@@ -2,9 +2,9 @@
 
 # PanchangPal — Current Milestone
 
-Version: 3.3.0
+Version: 3.4.0
 
-Last Updated: 2026-07-25 (B2 complete; B4 opened — B4.1 telemetry seam landed behind a Null adapter)
+Last Updated: 2026-07-25 (B4 at halfway — B4.1 telemetry seam + B4.2 EVT_* analytics sink)
 
 Purpose:
 This document defines the current milestone. Unlike SESSION.md (daily work) or TASK.md (current
@@ -23,18 +23,26 @@ Status
 
 Overall Progress
 
-16% (1 of 8 slices COMPLETE — **B2 ✅** — plus 1 of B4's 4 increments; B1 ~85%, B3 ~80%)
+19% (1 of 8 slices COMPLETE — **B2 ✅** — plus 2 of B4's 4 increments; B1 ~85%, B3 ~80%)
 
-**B4 is under way (2026-07-25).** It is sliced into four increments so the number above is
-auditable: **B4.1 telemetry seam ✅** (TelemetryAdapter port + the two error call sites) ·
-B4.2 EVT_* analytics sink → `analytics_event` (ADR-013) · B4.3 source-map upload + Edge Function
-Sentry · B4.4 SLO dashboards + alerts. Counting B4.1 gives (1 + ¼)/8 ≈ 16%.
+**B4 is at its halfway point (2026-07-25).** It is sliced into four increments so the number above
+is auditable: **B4.1 telemetry seam ✅** (TelemetryAdapter port + the two error call sites) ·
+**B4.2 EVT_* analytics sink ✅** (AnalyticsService port → `analytics_event`, ADR-013) · B4.3
+source-map upload + Edge Function Sentry · B4.4 SLO dashboards + alerts. Counting both gives
+(1 + ½)/8 ≈ 19%.
 
-**B4.1 reports nothing yet, by decision.** The concrete Sentry adapter is deferred
-(`@sentry/react-native` uninstalled, no DSN provisioned), so `NullTelemetryAdapter` holds the seam
-and every error is dropped after being correctly built. The §7.2 crash-free SLO is therefore still
-unmet and B4 cannot close on the seam alone — `getTelemetryBackend()` reports `'none'` so that
-status is inspectable rather than assumed.
+**What is now measurable, and what is not.** B4.2 gives EVT_054 a working destination, so error
+*rates* land in `analytics_event` today — that half of §7.1 is real. Crash *reporting* is not: the
+concrete Sentry adapter stays deferred (`@sentry/react-native` uninstalled, no DSN), so
+`NullTelemetryAdapter` drops the diagnostic copy, crash-free sessions (NFR-06, §7.2) cannot be
+measured, and B4 cannot close. `getTelemetryBackend()` reports `'none'` so that status is
+inspectable rather than assumed.
+
+**Privacy decisions this forced, recorded in DECISIONS.md rather than left implicit:**
+`user_pseudo_id` is a device-minted random UUID never derived from an identity (a reinstall mints a
+new one; the household-grain North Star is unaffected); props are primitives only, since an object
+or array is how an error or a server response would carry user content into the store; and an event
+id outside the PDD §11 taxonomy is rejected, because `event_id` is only a text column.
 
 **B2 (E2E verification) is now COMPLETE (2026-07-25).** The bundle gate plus all three in-scope
 Maestro flows — FLOW_RETURNING, FLOW_MORNING_RITUAL, FLOW_SESSION_PERSISTENCE — are GREEN in CI on a
@@ -295,7 +303,7 @@ possible fix and would have caught defects 1–3 at M1.
 | B1 | Environments & secrets | dev/staging/prod projects, per-env secrets, fail-closed preflight (§1, §4) | 🟡 ~85% — prod blocked on a paid plan |
 | B2 | E2E verification | bundle gate (done in B1) + Maestro FLOW_*; green in CI (§2.2, §10.1) | ✅ COMPLETE (2026-07-25) — bundle gate + 3 in-scope flows GREEN in CI on a native build (incl. FLOW_SESSION_PERSISTENCE); other 3 flows blocked on other slices/backends/gated feature |
 | B3 | Build & distribution | eas.json profiles, Hermes, signing, source maps, TestFlight / Play Internal (§2.3) | 🟡 ~80% — automated builds work; store accounts + Sentry (B4) remain |
-| B4 | Observability | Sentry, telemetry, SLO dashboards + alerts (§7) | 🟡 ~25% — B4.1 telemetry seam ✅ (port + call sites, Null adapter: nothing reported yet); B4.2–B4.4 pending |
+| B4 | Observability | Sentry, telemetry, SLO dashboards + alerts (§7) | 🟡 ~50% — B4.1 telemetry seam ✅ · B4.2 EVT_* analytics sink ✅ (EVT_054 lands in `analytics_event`); crash reporting still deferred; B4.3–B4.4 pending |
 | B5 | Reliability & DR | backups, restore drill, runbooks, graceful degradation (§8) | ⏳ |
 | B6 | Security & privacy | OWASP Mobile review, CCPA export/delete verification, store privacy labels (§5, §6) | ⏳ |
 | B7 | Release management | versioning/trains, OTA policy + channels, staged rollout, rollback verification (§3) | ⏳ |
@@ -393,12 +401,18 @@ testers' hands.
   17 against the Supabase Management API. The gate now tests what the environments actually run.
 - **Onboarding is unreachable and therefore untested** — `app/index.tsx` hardcodes
   `ONBOARDED = true`, so SCR_ONBOARDING_* never renders from launch.
-- **Telemetry is wired but silent (2026-07-25, B4.1)** — the TelemetryAdapter port and both error
-  call sites exist, and drop every report: `@sentry/react-native` is not installed and no DSN is
-  provisioned. Crash-free sessions (NFR-06, §7.2) cannot be measured, so a beta shipped in this state
-  would fly blind on the one metric §10.1 gates on. Closing it needs B4.2–B4.4 plus a Sentry org.
-  `getTelemetryBackend()` returns `'none'` while this holds, and a DSN configured with no adapter
-  warns at startup.
+- **Crash reporting is wired but silent (2026-07-25, B4.1/B4.2)** — the TelemetryAdapter port and
+  both error call sites exist, and the diagnostic copy of every error is dropped:
+  `@sentry/react-native` is not installed and no DSN is provisioned. Crash-free sessions (NFR-06,
+  §7.2) cannot be measured, so a beta shipped in this state would fly blind on the one metric §10.1
+  gates on. **Partially mitigated by B4.2:** every ERR_* is now recorded as EVT_054 in
+  `analytics_event`, so error rates are visible even while stack-level reporting is not. Closing it
+  needs a Sentry org + DSN (free tier suffices) and B4.3–B4.4. `getTelemetryBackend()` returns
+  `'none'` while this holds, and a DSN configured with no adapter warns at startup.
+- **Analytics is unverified against a live database (2026-07-25, B4.2)** — the insert path is covered
+  by unit tests against a fake repository, not by a write to a real `analytics_event` table under
+  RLS. The policy (`analytics_ins_own`, insert-only, no select) is what the client assumes; that
+  assumption should be exercised against dev before B8, or the first real check is production.
 - **Deferred vendor deps** — `react-native-purchases` and `expo-notifications` are still uninstalled;
   purchase and push flows cannot be verified end-to-end until they land on the Mac with keys. Their
   Null adapters keep the app honest but leave those paths E2E-untested.

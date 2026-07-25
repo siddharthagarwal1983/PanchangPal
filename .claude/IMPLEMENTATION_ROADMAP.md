@@ -2,8 +2,8 @@
 
 # PanchangPal — Implementation Roadmap
 
-Version: 1.5.0
-Last Updated: 2026-07-25 (B4 opened — B4.1 telemetry seam landed, reporting nothing until a real adapter)
+Version: 1.6.0
+Last Updated: 2026-07-25 (B4 at halfway — B4.1 telemetry seam + B4.2 EVT_* analytics sink)
 
 Purpose: the forward plan from the current state. Complements PROJECT_STATUS.md (snapshot) and
 CURRENT_MILESTONE.md (active milestone). Updated when scope or sequencing changes — and at every
@@ -73,12 +73,23 @@ and at a global `ErrorUtils` handler, with §7.1's ERR_* → EVT_054 mapping set
 by construction (unrecognised errors become `ERR_UNKNOWN` rather than their message; EVT_054's props
 are a closed four-key shape).
 
-It is also, deliberately, the same distinction this roadmap keeps re-learning: **a seam is not the
-behaviour.** The concrete Sentry adapter is deferred and no DSN is provisioned, so every report is
+**B4.2 then gave that mapping a destination.** The AnalyticsService port over the `analytics_event`
+sink (ADR-013) — batched, capped, flushed on backgrounding, insert-only under RLS — means every
+ERR_* is now recorded as EVT_054 for real, so error *rates* are measurable today. It forced three
+privacy decisions no document had settled, now in DECISIONS.md: `user_pseudo_id` is a device-minted
+random UUID never derived from an identity, props are primitives only, and an event id outside the
+PDD §11 taxonomy is rejected.
+
+The seam distinction still stands for the other half: **a seam is not the behaviour.** The concrete Sentry adapter is deferred and no DSN is provisioned, so every report is
 built correctly and then dropped — crash-free sessions (NFR-06, §7.2) remain unmeasurable, and a beta
 shipped in this state would fly blind on the metric §10.1 gates on. The difference from the MMKV case
 is that the degradation is not silent: `getTelemetryBackend()` reports `'none'`, and a DSN configured
 with no adapter warns at startup.
+
+Progress is **19%** ((1 + ½)/8). Remaining in B4: B4.3 source-map upload (the item B3 deferred) plus
+Edge Function Sentry, and B4.4 SLO dashboards + alerts — both of which need a Sentry org and DSN to
+be verifiable, so B4's remainder now sits behind the same kind of owner gate as B1 and B3, though at
+no cost (free tier).
 
 One blocker: the Canonical Panchang Engine (ADR-033, Proposed) — astronomical algorithm
 undocumented; the whole system depends only on the abstract PanchangEngine/PanchangProvider

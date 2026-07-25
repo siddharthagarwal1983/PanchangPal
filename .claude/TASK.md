@@ -2,8 +2,8 @@
 
 # PanchangPal — Current Task
 
-Version: 3.3.0
-Last Updated: 2026-07-25 (B4.1 telemetry seam done; current task is B4.2 — the EVT_* analytics sink)
+Version: 3.4.0
+Last Updated: 2026-07-25 (B4.2 analytics sink done; current task is B4.3 — source maps + Edge Function Sentry)
 
 Purpose: the current implementation task. Stay focused; avoid unrelated work unless instructed.
 
@@ -110,14 +110,14 @@ green in CI on a real native build. Canonical progress 0% → 13% (1 of 8 Beta s
 # Current Task
 
 ## Title
-B4 — Observability · increment 2: the EVT_* analytics sink
+B4 — Observability · increment 3: source-map upload + Edge Function Sentry
 
 Status
-🟡 **B4.1 ✅ (branch `feat/b4-telemetry-seam`, unreviewed). B4.2 is next.**
+🟡 **B4.1 ✅ (merged, PR #39). B4.2 ✅ (branch `feat/b4-analytics-sink`, unreviewed). B4.3 is next.**
 
-B4 is sliced into four increments: **B4.1 telemetry seam ✅** · **B4.2 EVT_* analytics sink** ·
-B4.3 source-map upload + Edge Function Sentry · B4.4 SLO dashboards + alerts. Canonical progress
-13% → 16%.
+B4 is sliced into four increments: **B4.1 telemetry seam ✅** · **B4.2 EVT_* analytics sink ✅** ·
+**B4.3 source-map upload + Edge Function Sentry** · B4.4 SLO dashboards + alerts. Canonical progress
+16% → 19%.
 
 ### B4.1 — done
 `TelemetryAdapter` port + `NullTelemetryAdapter` (`src/domain/telemetry/`), composed in
@@ -131,11 +131,27 @@ on the seam. `getTelemetryBackend()` returns `'none'` and a DSN without an adapt
 is visible rather than silent. Turning it on: install the SDK, provision a Sentry org + DSN (free
 tier suffices), swap one line in the composition root.
 
-### B4.2 — next
-The analytics adapter writing pseudonymous `AnalyticsEventEnvelope`s to `analytics_event`
-(ADR-013, §7.1) — the sink `toClientErrorEvent`'s EVT_054 output currently has nowhere to send to,
-and the basis for the PDD §11 dashboards. `apps/mobile/src/analytics/` is an empty directory; the
-table already exists (`apps/backend/migrations/20260712000080_platform.sql`). No PII (ADR-013/031).
+### B4.2 — done
+`AnalyticsService` port + batching implementation over `analytics_event` (ADR-013): batches of 20,
+capped at 200 oldest-first, flushed on backgrounding, failed batches re-queued in order, insert-only
+under RLS. Every ERR_* now lands as EVT_054, so error rates are measurable without Sentry. Three
+privacy decisions recorded in DECISIONS.md: a device-minted random `user_pseudo_id` never derived
+from an identity, primitives-only props, and rejection of any event id outside the PDD §11 taxonomy.
+229 tests (+24), tsc clean, eslint 0 errors. **Not verified against a live database** — the insert
+path has only run against a fake repository, never a real `analytics_event` under RLS.
+
+### B4.3 — next
+Source-map upload per build in `release-build.yml` (§2.3 — deferred by B3 and owed to this slice) and
+Sentry for the Edge Functions (§7.1 covers server as well as client). Then **B4.4**: the §7.2 SLO
+dashboards and alerts.
+
+Both remaining increments need a Sentry org + DSN to be verifiable rather than merely configured.
+The free tier suffices, so this is an owner action rather than a cost — but it does mean B4's
+remainder sits behind the same kind of gate as B1 and B3.
+
+Also uncovered and worth its own increment: the documented EVT_* are not emitted at their call sites.
+B4.2 built the sink; EVT_012 (today rendered), EVT_017 (ritual complete — the North Star input) and
+the rest still need wiring where they happen.
 
 B1/B3 remainders stay owner-gated (prod Supabase ~$25/mo closes B1; Apple $99 + Google Play $25 close
 most of B3).
