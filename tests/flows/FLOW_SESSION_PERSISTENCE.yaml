@@ -33,6 +33,17 @@ appId: com.panchangpal.app
 - launchApp:
     clearState: true
 
+# Pass the onboarding gate if it is showing. Making the gate real (PR #50) changed what a
+# FRESH DEVICE does on first launch: a CI emulator has no stored state, so the app correctly
+# opens on SCR_AUTH_001 rather than Today. This flow is about the daily loop, not auth, so it
+# skips through — conditionally, so the step is a no-op once the device has been through it.
+- runFlow:
+    when:
+      visible: 'Skip for now'
+    commands:
+      - tapOn:
+          id: 'auth-skip'
+
 - extendedWaitUntil:
     visible: "Today's ritual"
     timeout: 60000

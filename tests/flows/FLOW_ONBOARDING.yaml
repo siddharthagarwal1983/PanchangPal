@@ -27,7 +27,12 @@ appId: com.panchangpal.app
 # Deferred auth is the product decision, so the screen must SAY so. If this copy ever
 # disappears, the app has started implying an account is required — a product change,
 # not a copy tweak.
-- assertVisible: 'You can keep using the app without an account.'
+#
+# Matched as a REGEX against the whole element text, because that is Maestro's semantics:
+# the first draft asserted the fragment on its own and failed against the full subtitle,
+# which is one string ("Sign in to sync across devices and your household. You can keep
+# using the app without an account.").
+- assertVisible: '.*keep using the app without an account\.'
 - assertVisible: 'Continue with Apple'
 - assertVisible: 'Continue with Google'
 - assertVisible: 'Skip for now'
