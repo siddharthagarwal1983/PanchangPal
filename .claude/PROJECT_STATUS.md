@@ -73,7 +73,7 @@ TBD
 | Backend Foundation (SVC_*) | ✅ Complete | 100% (panchang compute blocked by ADR-033) |
 | Mobile Development (feature slices) | ✅ Complete | 100% (M1–M8 done) |
 | AI Platform | 🟡 In Progress | Adapters + RAG pipeline done; corpus + eval pending |
-| Testing | 🟡 In Progress | 190 unit/component/domain green in CI (176 mobile + 14 shared); 3 Maestro FLOW_* authored, but the E2E gate produced no signal 2026-07-19 → 2026-07-22 (build outgrew its timeout; cancelled runs hid it — PR #32) |
+| Testing | 🟢 Healthy | 321 green (244 mobile jest + 77 vitest) + 17 pgTAP RLS/DB assertions; bundle gate per PR; 3 Maestro FLOW_* green on main (E2E false reds from emulator ANR dialogs fixed, PR #41); API contract gate restored and proven to fail; AI eval harness still owed |
 | Beta | 🚧 In progress | 22% (B2 ✅ complete; B4 🟡 ~75% — B4.1–B4.3 in, remainder owner-gated on a Sentry org; B1/B3 owner-gated; B5–B8 pending) |
 | Production Launch | ⏳ Pending | 0% |
 
@@ -258,9 +258,10 @@ gate that blocks a production build with Sentry unconfigured. What remains (the 
 the §7.2 dashboards/alerts) needs a real Sentry project to be verifiable rather than configured, so
 **B4 is now owner-gated like B1 and B3** — at no cost.
 
-The EVT_* instrumentation is done (the daily habit funnel emits, EVT_017 included) and the analytics
-insert-only contract is now gated in CI and verified against hosted staging. The remaining
-credential-free work is the **API contract tests** owed since B1 de-declared the hollow gate.
+The EVT_* instrumentation is done (the daily habit funnel emits, EVT_017 included), the analytics
+insert-only contract is gated in CI and verified against hosted staging, and the **API contract gate
+B1 de-declared is restored as a real one** — proven to fail by three deliberate perturbations. Of
+B1's two hollow gates, only the AI eval harness remains owed, and it is blocked on the corpus.
 
 Priority 2
 
@@ -315,6 +316,10 @@ prefs work today, so gating and prefs are real before the SDKs are wired.
 
 # Recently Completed
 
+- **API contract gate restored (2026-07-25):** `openapi-conformance.test.ts` compares the zod
+  contracts with `docs/api/openapi.yaml` — eight shared enums, ErrorEnvelope, and API_GET_TODAY's
+  parameters/response — and was proven to fail by dropping a param, inventing an ERR_*, and renaming
+  a response property.
 - **Analytics insert-only contract gated (2026-07-25):** five pgTAP assertions on `analytics_event`
   using the client's exact envelope, plus a hosted staging probe (INSERT 201; SELECT/UPDATE/DELETE
   all no-ops). Surfaced that Supabase filters unauthorised writes rather than raising.

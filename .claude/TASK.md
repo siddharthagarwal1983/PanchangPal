@@ -2,8 +2,8 @@
 
 # PanchangPal — Current Task
 
-Version: 3.7.0
-Last Updated: 2026-07-25 (analytics insert-only contract gated + verified on staging)
+Version: 3.8.0
+Last Updated: 2026-07-25 (API contract gate restored; both B1 de-declarations now settled or owed only on AI eval)
 
 Purpose: the current implementation task. Stay focused; avoid unrelated work unless instructed.
 
@@ -185,11 +185,24 @@ privileges and lets RLS filter, so an unauthorised UPDATE/DELETE **modifies noth
 raising** — `throws_ok` would have failed, `lives_ok` would have passed while proving nothing. The
 assertions use `is_empty(… returning 1)`.
 
-### Next, and still not credential-blocked
-**API contract tests** under `packages/api/src/contracts/*` — owed since B1 de-declared the hollow
-`--passWithNoTests` gate. The root vitest config already includes `packages/**/*.test.ts`, so real
-tests validating the zod schemas against `docs/api/openapi.yaml` (ADR-032) restore the gate with no
-workflow change.
+### API contract tests — DONE (branch `test/api-contract-tests`, unreviewed)
+`openapi-conformance.test.ts` compares the zod contracts against `docs/api/openapi.yaml`: eight
+shared enums vs the components that mirror them, ErrorEnvelope's required set, and API_GET_TODAY's
+required query params + response properties (equality both ways). **Proven to fail** by three
+perturbations — a dropped `tz` param, an invented ERR_* in the spec, a renamed response property —
+each failing exactly one test. Deliberately NOT a suite that parses a valid object with zod, which
+would restate the schema and pass forever.
+
+Of B1's two de-declared gates, only the **AI eval harness** (refusal + golden-set subset, TDD Part 3
+§9.4) remains owed; it needs the corpus, which is a separate blocker.
+
+### Next
+Credential-free options, in rough order of value:
+1. **AI eval harness** (§9.4) — blocked on reviewed corpus, so probably not now.
+2. **`FLOW_ONBOARDING`** is still unreachable: `app/index.tsx:16` hardcodes `ONBOARDED = true`, so
+   SCR_ONBOARDING_* has never rendered from launch and one of B2's six flows cannot be written.
+3. **B5 — Reliability & DR** (backups, a real restore drill, runbooks): the next unstarted slice,
+   and TRISK-11 says it is not optional for a single-founder project.
 
 Still owner-gated: a **Sentry org + DSN** (free tier) closes B4.3's source-map upload and unblocks
 B4.4; prod Supabase (~$25/mo) closes B1; Apple $99 + Google Play $25 close most of B3.

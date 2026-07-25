@@ -2,9 +2,9 @@
 
 # PanchangPal Dashboard
 
-Version: 1.14.0
+Version: 1.15.0
 
-Last Updated: 2026-07-25 (analytics insert-only contract gated in CI and verified on hosted staging)
+Last Updated: 2026-07-25 (API contract gate restored as a real, proven-to-fail gate)
 
 Purpose:
 This is the first file Claude should read at the beginning of every session.
@@ -217,7 +217,7 @@ No new product scope.
 | Mobile — Notifications | ✅ M7 |
 | Mobile — Subscription | ✅ M8 |
 | AI Platform | 🟡 adapters done; corpus + eval pending |
-| Testing | 🟢 303 unit/component/domain (244 mobile + 59 vitest) · bundle gate per PR · 🟢 **E2E green in CI** — 3/3 Maestro flows on a real native Android build incl. FLOW_SESSION_PERSISTENCE (run 30165186141, 2026-07-25); gate fails fast (PR #35) and no longer fails against emulator ANR dialogs (PR #41) · AI-eval + api-contract de-declared (owed: contract tests + §9.4 harness) |
+| Testing | 🟢 321 unit/component/domain (244 mobile + 77 vitest) + 17 pgTAP · bundle gate per PR · 🟢 **E2E green in CI** — 3/3 Maestro flows on a real native Android build incl. FLOW_SESSION_PERSISTENCE (run 30165186141, 2026-07-25); gate fails fast (PR #35) and no longer fails against emulator ANR dialogs (PR #41) · AI-eval + api-contract de-declared (owed: contract tests + §9.4 harness) |
 | Beta | 🚧 In progress — **B2 ✅ complete**; **B4 🟡 ~75%** (B4.1–B4.3 in; the upload + dashboards need a Sentry org — owner-gated); B1/B3 owner-gated; B5–B8 pending |
 | Production | ⏳ |
 
@@ -226,7 +226,7 @@ No new product scope.
 # Current Priorities
 
 1. **Owner: create a Sentry org + DSN (free tier)** — B4's remaining work (source-map upload, §7.2 dashboards/alerts) needs a real project to be verifiable. B4.1 ✅ · B4.2 ✅ · B4.3 ✅ to its credential-free limit · B4.4 blocked.
-2. **API contract tests** (`packages/api/src/contracts/*`) — owed since B1 de-declared the hollow gate; credential-free. (Analytics' insert-only contract is now gated in CI and verified on staging.)
+2. **Credential-free engineering:** `FLOW_ONBOARDING` is still unreachable (`app/index.tsx:16` hardcodes `ONBOARDED = true`), or start **B5 — Reliability & DR**. (The API contract gate and analytics' insert-only contract are both now real, proven gates.)
 3. Owner decisions: prod Supabase (~$25/mo, closes B1) · Apple $99 (iOS) · Google Play $25 (internal track)
 3. ⛔ Canonical Panchang Engine decision (ADR-033) — unblocks Today panchang, Calendar markers, notifications
 3. AI corpus ingestion + eval readiness — unblocks live Ask Guru (GURU_LIVE)
@@ -273,8 +273,8 @@ resolved (PR #14).
 # Next Deliverable
 
 **A Sentry org + DSN (free tier, owner action)** — it closes B4.3's upload and unblocks B4.4. Until
-then the best engineering increment is the **API contract tests** owed since B1
-(`packages/api/src/contracts/*`), which need nothing external. B1/B3 remainders stay owner-gated: prod Supabase (~$25/mo) closes B1; Apple
+then the credential-free options are making onboarding reachable (`ONBOARDED = true` at
+`app/index.tsx:16` blocks a whole E2E flow) or starting **B5 — Reliability & DR**. B1/B3 remainders stay owner-gated: prod Supabase (~$25/mo) closes B1; Apple
 ($99) + Google Play ($25) close most of B3.
 
 ---
