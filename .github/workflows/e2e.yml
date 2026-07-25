@@ -221,4 +221,4 @@ jobs:
         if: always()
         run: |
           echo "### E2E (Maestro): ${{ job.status }}" >> "$GITHUB_STEP_SUMMARY"
-          echo "Flows: FLOW_RETURNING, FLOW_MORNING_RITUAL, FLOW_SESSION_PERSISTENCE" >> "$GITHUB_STEP_SUMMARY"
+          echo "Flows: FLOW_RETURNING, FLOW_MORNING_RITUAL, FLOW_SESSION_PERSISTENCE, FLOW_ONBOARDING" >> "$GITHUB_STEP_SUMMARY"

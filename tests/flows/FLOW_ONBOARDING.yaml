@@ -1,0 +1,59 @@
+# FLOW_ONBOARDING — a first-launch user meets the gate, skips, and lands in the daily loop.
+#
+# This flow could not be written until now. `app/index.tsx` carried
+# `const ONBOARDED = true`, so the gate always resolved to tabs and SCR_AUTH_001 never
+# rendered from a cold launch. B2 recorded FLOW_ONBOARDING as blocked for exactly that
+# reason — one of its six flows was unwritable because a constant stood in for state.
+#
+# What this proves that a unit test cannot: that a REAL first launch — cleared state,
+# cold start, anonymous bootstrap — actually stops at the gate, and that skipping it
+# persists, so the user is not asked again. The second half is the part that would
+# otherwise ship broken and look fine in review: "does this survive a relaunch" has been
+# wrong twice in this project already (MMKV v2, and the gate itself).
+appId: com.panchangpal.app
+---
+# clearState: TRUE is the whole point — this is a first install, not a returning user.
+# FLOW_RETURNING deliberately does the opposite.
+- launchApp:
+    clearState: true
+
+# The gate. Wait explicitly: launchApp returns before the JS bundle has rendered, and
+# anonymous sign-in (UX-2 / ADR-009) happens before any screen appears, so a bare
+# assertion passes on a warm start and fails on a cold one.
+- extendedWaitUntil:
+    visible: 'Sign in'
+    timeout: 30000
+
+# Deferred auth is the product decision, so the screen must SAY so. If this copy ever
+# disappears, the app has started implying an account is required — a product change,
+# not a copy tweak.
+- assertVisible: 'You can keep using the app without an account.'
+- assertVisible: 'Continue with Apple'
+- assertVisible: 'Continue with Google'
+- assertVisible: 'Skip for now'
+
+# Today must NOT be reachable behind the gate on a first launch.
+- assertNotVisible: "Today's ritual"
+
+# Skipping is a legitimate completion under deferred auth, not an abandonment.
+- tapOn:
+    id: 'auth-skip'
+
+- extendedWaitUntil:
+    visible: 'Today'
+    timeout: 20000
+- assertVisible: "Today's ritual"
+
+# The half that matters: relaunch WITHOUT clearing state. A returning user must land in
+# the daily loop, not back at the gate. This is what proves the flag was persisted rather
+# than held in memory — the exact failure mode that made ritual sessions evaporate for a
+# week before FLOW_SESSION_PERSISTENCE caught it.
+- stopApp
+- launchApp:
+    clearState: false
+
+- extendedWaitUntil:
+    visible: 'Today'
+    timeout: 30000
+- assertVisible: "Today's ritual"
+- assertNotVisible: 'Skip for now'
