@@ -2,9 +2,9 @@
 
 # PanchangPal — Current Milestone
 
-Version: 3.7.0
+Version: 3.8.0
 
-Last Updated: 2026-07-25 (B5 §8.2 encoded; PDD owes copy for 11 ERR_* codes)
+Last Updated: 2026-07-26 (B5 complete at verifiable scope; onboarding gate fixed)
 
 Purpose:
 This document defines the current milestone. Unlike SESSION.md (daily work) or TASK.md (current
@@ -23,7 +23,7 @@ Status
 
 Overall Progress
 
-29% (1 of 8 slices COMPLETE — **B2 ✅** — plus 3 of B4's 4 and 2 of B5's 3; B1 ~85%, B3 ~80%)
+31% (2 of 8 slices COMPLETE — **B2 ✅**, **B5 ✅ at verifiable scope** — plus 3 of B4's 4; B1 ~85%, B3 ~80%)
 
 **B4 is three-quarters through, and now owner-gated (2026-07-25).** It is sliced into four increments so the number above
 is auditable: **B4.1 telemetry seam ✅** (TelemetryAdapter port + the two error call sites) ·
@@ -318,7 +318,7 @@ possible fix and would have caught defects 1–3 at M1.
 | B2 | E2E verification | bundle gate (done in B1) + Maestro FLOW_*; green in CI (§2.2, §10.1) | ✅ COMPLETE (2026-07-25) — bundle gate + 3 in-scope flows GREEN in CI on a native build (incl. FLOW_SESSION_PERSISTENCE); other 3 flows blocked on other slices/backends/gated feature |
 | B3 | Build & distribution | eas.json profiles, Hermes, signing, source maps, TestFlight / Play Internal (§2.3) | 🟡 ~80% — automated builds work; store accounts + Sentry (B4) remain |
 | B4 | Observability | Sentry, telemetry, SLO dashboards + alerts (§7) | 🟡 ~75% — B4.1 seam ✅ · B4.2 sink ✅ · B4.3 server seam + prod release gate ✅ · EVT_* daily-habit funnel now emitting (§11.4, incl. the North Star input EVT_017); **upload + B4.4 owner-gated on a Sentry org (free tier)** |
-| B5 | Reliability & DR | backups, restore drill, runbooks, graceful degradation (§8) | 🟡 ~67% — runbooks (§8.3) ✅ · restore drill ✅ · §8.2 degradation policy encoded + tested ✅; **PITR undrillable on the free tier, so NFR-15 is UNMET for user data**; §8.4 pending |
+| B5 | Reliability & DR | backups, restore drill, runbooks, graceful degradation (§8) | ✅ COMPLETE at verifiable scope — runbooks (§8.3) · mechanised restore drill · §8.2 degradation policy · §8.4 operator resilience. **One deliverable is NOT engineering-closable: NFR-15 needs PITR, which is a purchase.** Recorded as a launch blocker rather than counted as done. |
 | B6 | Security & privacy | OWASP Mobile review, CCPA export/delete verification, store privacy labels (§5, §6) | ⏳ |
 | B7 | Release management | versioning/trains, OTA policy + channels, staged rollout, rollback verification (§3) | ⏳ |
 | B8 | Go/no-go & launch | §10.1 checklist execution, internal → beta cohort, sign-off | ⏳ |
@@ -354,7 +354,10 @@ One slice per session, same cadence as M1–M8: implemented, self-verified, revi
             queueing, daily-loop impact, copy key, §12 row), exhaustive over the shared taxonomy,
             with the invariants asserted: no failure blocks the daily loop, honest declines offer no
             retry, offline/sync queue, location redirects, only uncaught failures go global.
-      - [ ] §8.4 single-founder mitigations recorded.
+      - [x] **§8.4 single-founder mitigations recorded**, separating the ones that exist (managed
+            platforms, documentation, agent-friendly repo) from the ones that do not (unattended
+            alerting; a plan to contract help), with the unattended failure modes and what a
+            handover would need.
 - [ ] **B6** — OWASP Mobile review completed; CCPA export/delete verified end-to-end (F-3/F-10);
       privacy policy + store privacy labels accurate.
 - [ ] **B7** — version trains, OTA channels (`staging`/`prod`) with runtime-version binding and
@@ -438,8 +441,13 @@ testers' hands.
   `ERR_AUTH_EXPIRED`, `ERR_NOTIF_DENIED`, `ERR_SUBSCRIPTION_INVALID` and `ERR_SYNC_CONFLICT` in
   particular deserve their own. The list is pinned in `AWAITING_APPROVED_COPY` and by a test, so it
   cannot grow silently. Writing the strings in code would be inventing UX and would hide the gap.
-- **Onboarding is unreachable and therefore untested** — `app/index.tsx` hardcodes
-  `ONBOARDED = true`, so SCR_ONBOARDING_* never renders from launch.
+- ~~**Onboarding is unreachable and therefore untested.**~~ **RESOLVED 2026-07-26.** `app/index.tsx`
+  had hardcoded `ONBOARDED = true` beneath a comment claiming the flag was persisted elsewhere; it
+  never was, so SCR_AUTH_001 had never rendered from a cold launch and B2 could not write
+  FLOW_ONBOARDING. The flag now persists through the shared `KeyValueStore` seam, both exits from
+  the gate mark it, and `FLOW_ONBOARDING` asserts the first launch, the skip, and — the half that
+  matters — a relaunch that does not ask again. The remaining SCR_ONBOARDING_* slides are a separate
+  product deliverable that has never been built; the gate no longer hides that fact.
 - **Crash reporting is wired but silent (2026-07-25, B4.1/B4.2)** — the TelemetryAdapter port and
   both error call sites exist, and the diagnostic copy of every error is dropped:
   `@sentry/react-native` is not installed and no DSN is provisioned. Crash-free sessions (NFR-06,

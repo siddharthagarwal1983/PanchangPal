@@ -2,8 +2,8 @@
 
 # PanchangPal — Current Task
 
-Version: 3.10.0
-Last Updated: 2026-07-25 (B5 §8.2 encoded; PDD owes copy for 11 ERR_* codes)
+Version: 3.11.0
+Last Updated: 2026-07-26 (B5 complete at verifiable scope; onboarding gate fixed)
 
 Purpose: the current implementation task. Stay focused; avoid unrelated work unless instructed.
 
@@ -110,7 +110,7 @@ green in CI on a real native build. Canonical progress 0% → 13% (1 of 8 Beta s
 # Current Task
 
 ## Title
-B5 — Reliability & DR · increment 1 done · TWO OWNER PURCHASES NOW GATE RELIABILITY
+B5 ✅ complete at verifiable scope · next slice is B6 (Security & Privacy)
 
 Status
 🟡 **B4.1 ✅ (PR #39, `25275ff`) · B4.2 ✅ (PR #40, `c099263`) · B4.3 ✅ to its credential-free limit
@@ -218,10 +218,15 @@ go global. Copy is §13.5 verbatim; the eleven codes it does not cover are pinne
 `AWAITING_APPROVED_COPY`. **PDD owes those eleven strings** — a documentation deliverable, not a
 coding one.
 
+### B5 increment 3 — DONE (PR #50, merged)
+§8.4 operator resilience recorded honestly (what exists vs what does not), plus the onboarding gate:
+`const ONBOARDED = true` replaced by a persisted flag through the shared `KeyValueStore` seam, both
+gate exits marking it, and **FLOW_ONBOARDING written** — B2's sixth flow, unwritable until now.
+
 ### Next
-Credential-free options, in rough order of value:
-1. **B5 §8.4** — the last increment: single-founder mitigations recorded (§8.4 is largely a
-   documentation deliverable, and the runbooks already carry most of it).
+1. **B6 — Security & Privacy** (§5/§6): OWASP Mobile review, CCPA export/delete verified end to end
+   (F-3/F-10), store privacy labels. The next unstarted slice, and entirely credential-free.
+2. **AI eval harness** (§9.4) — the last de-declared gate, blocked on the reviewed corpus.
 2. **`FLOW_ONBOARDING`** is still unreachable: `app/index.tsx:16` hardcodes `ONBOARDED = true`, so
    SCR_ONBOARDING_* has never rendered from launch and one of B2's six flows cannot be written.
 3. **AI eval harness** (§9.4) — the last de-declared gate, blocked on the reviewed corpus.

@@ -39,7 +39,7 @@ Overall Progress
 
 ░░░░░░░░░░░░░░░░░░░░
 
-**Mobile MVP — Phase 1: ✅ 100% (all 8 slices, merged)** · **Beta Readiness & Platform Hardening: 🚧 29% (1 of 8 slices — B2 — plus B4.1–B4.3 and 2 of B5's 3)**
+**Mobile MVP — Phase 1: ✅ 100% (all 8 slices, merged)** · **Beta Readiness & Platform Hardening: 🚧 31% (2 of 8 slices — B2, B5 — plus B4.1–B4.3)**
 
 Project Health
 
@@ -74,7 +74,7 @@ TBD
 | Mobile Development (feature slices) | ✅ Complete | 100% (M1–M8 done) |
 | AI Platform | 🟡 In Progress | Adapters + RAG pipeline done; corpus + eval pending |
 | Testing | 🟢 Healthy | 321 green (244 mobile jest + 77 vitest) + 17 pgTAP RLS/DB assertions; bundle gate per PR; 3 Maestro FLOW_* green on main (E2E false reds from emulator ANR dialogs fixed, PR #41); API contract gate restored and proven to fail; AI eval harness still owed |
-| Beta | 🚧 In progress | 29% (B2 ✅; B4 🟡 ~75% owner-gated on a Sentry org; B5 🟡 ~67% — runbooks, drill, §8.2 policy; PITR undrillable on the free tier; B1/B3 owner-gated; B6–B8 pending) |
+| Beta | 🚧 In progress | 31% (B2 ✅; B5 ✅ at verifiable scope — NFR-15 still needs PITR, a purchase; B4 🟡 ~75% owner-gated on a Sentry org; B1/B3 owner-gated; B6–B8 pending) |
 | Production Launch | ⏳ Pending | 0% |
 
 ---
@@ -316,6 +316,10 @@ prefs work today, so gating and prefs are real before the SDKs are wired.
 
 # Recently Completed
 
+- **B5 §8.4 + the onboarding gate (2026-07-26):** operator-resilience section separating §8.4's real
+  mitigations from the absent ones (no alerting, no contracted help). And `app/index.tsx`'s
+  `const ONBOARDED = true` replaced with a persisted flag — SCR_AUTH_001 had never rendered from a
+  cold launch, which is why B2 could not write FLOW_ONBOARDING. That flow now exists.
 - **B5 §8.2 — graceful degradation encoded (2026-07-25):** a tested policy per ERR_* (surface,
   retry, queueing, daily-loop impact, copy key, PDD §12 row), exhaustive over the taxonomy. The
   bundle had three error strings for 24 codes. Copy is §13.5 verbatim where approved; the eleven
@@ -448,8 +452,8 @@ The Mobile MVP Phase 1 feature-slice milestone is **complete (100%)** and merged
 slices — App Shell, Today, Guided Ritual, Calendar Shell, Ask Guru Client, Profile/Household,
 Notifications, and Subscription (M1–M8) — are implemented, tsc/eslint clean, and green in CI.
 
-The project is now in **Beta Readiness & Platform Hardening** (TDD Part 5), sliced B1–B8, at **29%
-(1 of 8 — B2 complete — plus B4.1–B4.3 and two of B5's three increments)**. The milestone opened on a known gap: CD reported green while
+The project is now in **Beta Readiness & Platform Hardening** (TDD Part 5), sliced B1–B8, at **31%
+(2 of 8 — B2 and B5 complete at verifiable scope — plus B4.1–B4.3)**. The milestone opened on a known gap: CD reported green while
 its Maestro E2E and EAS build jobs were placeholders. **B2 (E2E verification) is now complete** — the
 Maestro placeholder is replaced by three real FLOW_* specs GREEN in CI on a native Android build,
 including FLOW_SESSION_PERSISTENCE, which along the way exposed and fixed a real persistence bug

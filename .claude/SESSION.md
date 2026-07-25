@@ -2,8 +2,8 @@
 
 # PanchangPal — Current Session
 
-Version: 1.18.0
-Last Updated: 2026-07-25 (B5 §8.2 encoded; PDD owes copy for 11 ERR_* codes)
+Version: 1.19.0
+Last Updated: 2026-07-26 (B5 complete at verifiable scope; the onboarding gate was never a gate)
 
 ---
 
@@ -301,8 +301,43 @@ awaiting-copy list initially named two codes that already have in-app copy.
 
 ---
 
+# 13. B5 §8.4, and a gate that was never a gate
+
+**§8.4 operator resilience** is now a section of the runbook that separates the mitigations which
+exist — managed platforms, the documentation set, the agent-friendly repo — from the two that do
+not: alerting that needs no attention (there is no Sentry project, so crash-free sessions is
+unmeasured) and a plan to contract specialist help (MRD Risk §12 contemplates it; nothing is
+arranged). It lists the unattended failure modes worst-first, the first being that a crash affecting
+every user goes unnoticed, because users of a calm ritual app do not file bug reports — they stop
+opening it — and what a handover would need, including the Android keystore, which cannot be
+regenerated.
+
+**Then the onboarding gate.** `app/index.tsx` carried `const ONBOARDED = true` beneath a comment
+saying the flag "is persisted (MMKV) in the onboarding task". That task shipped the sign-in screens
+and never the flag. So the gate always resolved to `tabs`: **SCR_AUTH_001 has never rendered from a
+cold launch in this app's history**, and B2 recorded FLOW_ONBOARDING as unwritable for precisely that
+reason. A constant standing in for state reads like a decision and makes none — the same shape as a
+gate that cannot fail, which is the pathology this milestone keeps finding.
+
+The flag now persists through the shared `KeyValueStore` seam (degrade-to-memory inherited, not
+reimplemented). Storage unavailable reads `false`, the honest direction: showing sign-in twice is a
+small annoyance, silently skipping it hides the app's only auth entry point. Both exits mark it —
+"Skip for now", because under deferred auth skipping is a legitimate completion, and OTP
+verification, but only **after** the anon→auth merge succeeds.
+
+**FLOW_ONBOARDING is written** — B2's sixth flow: cleared state, cold start, assert the gate, skip,
+reach Today, then relaunch *without* clearing and assert the user is not asked again. The second half
+is the failure mode this repo has now had twice.
+
+The regression guard reads the source file, because a constant has no runtime behaviour left to
+assert once inlined — which is exactly why the defect survived two milestones. Its first draft
+matched the explanatory comment quoting the old constant, fair evidence it is looking.
+
+---
+
 # Verification
 
+- **B5 §8.4 + onboarding gate: 289 mobile tests (+6) · tsc clean · eslint 0 errors.** FLOW_ONBOARDING runs on main from this merge — E2E is main-only, so merging is what proves it.
 - **B5 §8.2: 283 mobile tests (+39) · tsc clean · eslint 0 errors.**
 - **B5 DR drill: green on its own PR** (run 30168068264) — `pg_dump` 108K, restore 1s, `DR
   invariants: OK` on source AND restored, seeded row counts equal (4/4, 4/4, 1/1, 1/1, 3/3).
@@ -383,8 +418,8 @@ a paid Supabase plan (~$25/mo) closes B1 **and** is the only way NFR-15 becomes 
 
 Credential-free options, in rough order of value:
 
-0. **B5 §8.4** — the last increment; largely a documentation deliverable, and the runbooks already
-   carry most of it.
+0. **B6 — Security & Privacy** (§5/§6): OWASP Mobile review, CCPA export/delete verified end to end
+   (F-3/F-10), store privacy labels. Next unstarted slice, entirely credential-free.
 1. **`FLOW_ONBOARDING` is still unreachable** — `app/index.tsx:16` hardcodes `ONBOARDED = true`, so
    SCR_ONBOARDING_* has never rendered from launch and one of B2's six flows cannot be written. The
    onboarding screens exist and have never been executed, which is the same shape of gap that hid
