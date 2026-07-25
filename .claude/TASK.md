@@ -2,8 +2,8 @@
 
 # PanchangPal — Current Task
 
-Version: 3.2.0
-Last Updated: 2026-07-25
+Version: 3.2.1
+Last Updated: 2026-07-25 (PR #36 merged; current task is now B4 — Observability)
 
 Purpose: the current implementation task. Stay focused; avoid unrelated work unless instructed.
 
@@ -97,7 +97,7 @@ Status: ✅ COMPLETE. Three moves, in order:
    root cause: `react-native-mmkv@2.12.2` is incompatible with the New Architecture (bridgeless), so
    MMKV's JSI never installed and the ritual store silently ran on its in-memory fallback. A
    dependency-version bug; `ritualSessionRepository` was correct.
-3. **PR #36 (open, CI green) — the fix.** MMKV v2→v4.3.2 (Nitro, bridgeless-compatible) + nitro peer;
+3. **PR #36 (merged as `e1e10d4`) — the fix.** MMKV v2→v4.3.2 (Nitro, bridgeless-compatible) + nitro peer;
    v4 API (`createMMKV()`, `delete`→`remove`) absorbed at the port; jest mock for v4's eager nitro
    import. **E2E on a native build (run 30155737941): all three flows GREEN, FLOW_SESSION_PERSISTENCE
    PASSED.** No memory fallback. 176 tests, tsc, eslint all clean.
@@ -110,13 +110,19 @@ green in CI on a real native build. Canonical progress 0% → 13% (1 of 8 Beta s
 # Current Task
 
 ## Title
-Merge PR #36, then start B4 — Observability
+B4 — Observability
 
 Status
-🟢 **PR #36 open, CI green, pending merge.** On merge, main's E2E returns green (it went honestly red
-after #35 exposed the MMKV bug). Then B4 — Observability (Sentry wiring, source-map upload,
-dashboards/alerts, §2.3/§B4) is the next slice with unblocked engineering. B1/B3 remainders stay
-owner-gated (prod Supabase ~$25/mo closes B1; Apple $99 + Google Play $25 close most of B3).
+🟢 **B2 closed out and merged.** PR #36 landed as `e1e10d4` and the docs checkpoint as PR #37
+(`45f1b0d`); main's E2E is green again (run 30156615768), after going honestly red when #35 exposed
+the MMKV bug. Next is **B4 — Observability** (Sentry wiring, source-map upload, dashboards/alerts,
+§2.3/§7) — the slice with unblocked engineering. B1/B3 remainders stay owner-gated (prod Supabase
+~$25/mo closes B1; Apple $99 + Google Play $25 close most of B3).
+
+B4's starting position, verified against the repo: nothing is wired. `apps/mobile/app.config.ts:53`
+exposes `sentryDsn` from `EXPO_PUBLIC_SENTRY_DSN` with no reader; `apps/mobile/src/navigation/
+ErrorBoundary.tsx:30` holds a `// TODO: Replace with Sentry`; `@sentry/react-native` is not a
+dependency. The source-map upload B3 deferred belongs to this slice.
 
 The remaining Maestro flows are still out of B2/engineering reach: `FLOW_ONBOARDING` unreachable while
 `ONBOARDED = true` (`app/index.tsx:16`); `FLOW_HOUSEHOLD_INVITE` needs SVC_household; `FLOW_ASK_GURU`

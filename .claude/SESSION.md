@@ -2,8 +2,8 @@
 
 # PanchangPal — Current Session
 
-Version: 1.13.0
-Last Updated: 2026-07-25
+Version: 1.13.1
+Last Updated: 2026-07-25 (PR #36 + #37 merged; main E2E green)
 
 ---
 
@@ -39,7 +39,7 @@ A dependency-version bug, not a storage-logic bug — the repository code was co
 
 ---
 
-# 3. The fix: MMKV v2 → v4 (PR #36, open, CI green)
+# 3. The fix: MMKV v2 → v4 (PR #36, merged as `e1e10d4`)
 
 `react-native-mmkv` `^2.12.2` → `^4.3.2` (Nitro line, bridgeless-compatible) + its
 `react-native-nitro-modules@^0.35.9` peer (resolved 0.35.10). v4 API changes absorbed at the
@@ -70,14 +70,19 @@ import side-effect-free and makes `createMMKV` throw exactly as off-device nativ
 
 # Open
 
-- **PR #36 open, CI green, pending merge.** On merge, main's E2E returns green (it went honestly red
-  after #35 on the MMKV bug).
+- ~~PR #36 pending merge.~~ **Merged as `e1e10d4`; the docs checkpoint followed as PR #37 (`45f1b0d`).**
+  Main's E2E is green again on both (runs 30156533738 and 30156615768) — it had gone honestly red
+  after #35 exposed the MMKV bug.
 - Onboarding still unreachable — `ONBOARDED = true`, `app/index.tsx:16`.
 - Emulator flake: a "Pixel Launcher isn't responding" ANR can overlay the app and fail flows;
   transient, cleared by re-run. Harden later (dismiss-dialog / retry) if it recurs.
 
 # Recommended Next Task
 
-Merge PR #36, then start **B4 — Observability** (Sentry wiring + source-map upload + dashboards),
-the next slice with unblocked engineering. B1/B3 remainders are owner-gated (prod Supabase, Apple,
-Google Play).
+Start **B4 — Observability** (Sentry wiring + source-map upload + dashboards), the next slice with
+unblocked engineering. B1/B3 remainders are owner-gated (prod Supabase, Apple, Google Play).
+
+Starting position, verified against the repo: nothing is wired. `app.config.ts:53` exposes
+`sentryDsn` from `EXPO_PUBLIC_SENTRY_DSN` and nothing reads it; `src/navigation/ErrorBoundary.tsx:30`
+carries a `// TODO: Replace with Sentry`; `@sentry/react-native` is not a dependency. B3's owed
+source-map upload lands here too.
