@@ -879,3 +879,30 @@ exercised against hosted staging with its anon key — INSERT `201`, SELECT/UPDA
 — because the pgTAP suite runs on an ephemeral Postgres built from the same migration files, which
 cannot detect a divergence in what is actually deployed. Probe rows carry a `user_pseudo_id` starting
 `probe-` and are permanent by design: client DELETE is denied, which is the property under test.
+
+---
+
+# 2026-07-25 — What a contract test is for
+
+**A contract test compares two artifacts; it does not exercise a schema against itself.** Feeding a
+valid object to a zod schema and asserting it parses tests zod, restates the schema, and passes
+forever regardless of whether the API still looks like that — which is what `--passWithNoTests`
+already did, only shorter. `openapi-conformance.test.ts` instead compares the zod contracts to
+`docs/api/openapi.yaml` and to the shared enum sources both claim to mirror, so every assertion
+fails when someone edits one artifact and not the other. That is the only failure this package can
+really have.
+
+**Field sets are compared for EQUALITY, not containment.** A field the spec requires and the client
+omits is a 4xx in production; a field the client sends that the spec does not document is an
+undocumented dependency. Both are defects, so neither direction is allowed to drift.
+
+**A test harness needs its own guard.** If spec loading breaks — a moved file, a rename — every
+assertion would pass vacuously against `undefined`, producing exactly the confidently-green nothing
+this milestone keeps removing. One assertion checks the spec parsed and has paths and schemas before
+anything else runs. For the same reason, missing components resolve to `[]` rather than a non-null
+assertion: an absent schema must fail, not skip.
+
+**Prove the gate fails before trusting it.** Three perturbations were run and reverted — a dropped
+required parameter, an ERR_* present in the spec but not in `packages/shared`, and a renamed
+response property — each failing exactly one test. Same discipline as the ADR-026 ESLint guard,
+which was proven by reintroducing the exact expression it forbids.

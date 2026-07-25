@@ -209,8 +209,40 @@ migrations and the same policy.
 
 ---
 
+# 10. The API contract gate, restored as a real one
+
+B1 removed the `api-contract` job because it ran `--passWithNoTests` against a package with no test
+files — a release-blocking gate that validated nothing. It has been owed back ever since.
+
+`packages/api/src/contracts/openapi-conformance.test.ts` compares **independently maintained
+artifacts** rather than exercising zod against itself: eight shared enums against the OpenAPI
+components that claim to mirror them, `ErrorEnvelope`'s required set against the zod schema, and
+API_GET_TODAY's required query parameters and response properties against the contract the client
+actually sends and accepts. Parameter and property sets are compared for **equality in both
+directions** — a field the spec requires and the client omits is a 4xx in production; one the client
+sends that the spec does not document is an undocumented dependency.
+
+**Proven to fail**, per the standing rule that a gate is added only when it can:
+
+| Perturbation | Result |
+|---|---|
+| client drops the required `tz` param | request-parameter test fails |
+| spec gains an `ERR_*` the shared taxonomy lacks | ErrorCode enum test fails |
+| spec renames a `TodayResponse` property | response-property test fails |
+
+Each failed exactly one test; the tree was restored afterwards. There is also a guard on the harness
+itself — if spec loading breaks, every other assertion would pass vacuously against `undefined`.
+
+No workflow change was needed: the root vitest config already includes `packages/**/*.test.ts`.
+Of B1's two de-declared gates, only the **AI eval harness** (§9.4) remains owed, and it needs the
+corpus.
+
+---
+
 # Verification
 
+- **API contract gate: 16 vitest tests (77 total) · tsc clean · eslint 0 errors.** Proven to fail by
+  three perturbations, not merely observed to pass.
 - **Analytics RLS gate: 17 pgTAP assertions in the RLS suite (+5).** Not runnable locally (no
   Docker); CI's db-tests job on pg17 is where it executes. The hosted staging probe above is the
   independent check.
@@ -281,10 +313,16 @@ merely configured, and this milestone's whole premise is that the difference mat
 remaining work is small — install `@sentry/react-native` + its config plugin, then swap one line in
 `src/data/telemetryAdapter.ts` and one in `_shared/http.ts`.
 
-**API contract tests** under `packages/api/src/contracts/*` — owed since B1 de-declared the hollow
-`--passWithNoTests` gate. The root vitest config already includes `packages/**/*.test.ts`, so real
-tests validating the zod schemas against `docs/api/openapi.yaml` (ADR-032) restore a release gate
-with no workflow change. Credential-free.
+Credential-free options, in rough order of value:
+
+1. **`FLOW_ONBOARDING` is still unreachable** — `app/index.tsx:16` hardcodes `ONBOARDED = true`, so
+   SCR_ONBOARDING_* has never rendered from launch and one of B2's six flows cannot be written. The
+   onboarding screens exist and have never been executed, which is the same shape of gap that hid
+   twelve defects before the app was first run.
+2. **B5 — Reliability & DR** (backups, a real restore drill, runbooks). The next unstarted slice;
+   TRISK-11 (single-founder resilience) says it is not optional.
+3. **AI eval harness** (§9.4) — the last of B1's de-declared gates, but blocked on the reviewed
+   corpus.
 
 Still owner-gated: a **Sentry org + DSN** (free tier) closes B4.3's source-map upload and unblocks
 B4.4; prod Supabase (~$25/mo) closes B1; Apple $99 + Google Play $25 close most of B3.

@@ -124,9 +124,14 @@ test files. Both were declared release-blocking and validated nothing.
 an absent one — it reads as coverage, which is precisely the mechanism that let six defects reach M8.
 Removing them makes CI's true coverage legible. What is now owed, tracked in the workflow itself:
 
-- **API contract tests** — real tests under `packages/api/src/contracts/*` validating the zod schemas
-  against `docs/api/openapi.yaml` (ADR-032). No workflow change needed to restore the gate: the root
-  vitest config already includes `packages/**/*.test.ts`, so they will run in `unit-component-a11y`.
+- ~~**API contract tests**~~ — **DELIVERED 2026-07-25.** `packages/api/src/contracts/openapi-conformance.test.ts`
+  compares the zod contracts against `docs/api/openapi.yaml` (ADR-032): eight shared enums against
+  the components that mirror them, ErrorEnvelope's required set, and API_GET_TODAY's required query
+  parameters and response properties — equality in both directions, since a field the spec requires
+  and the client omits is a 4xx, and one the client sends undocumented is a hidden dependency.
+  **Proven to fail** by three perturbations (dropped param, invented ERR_*, renamed response
+  property). No workflow change was needed: the root vitest config already includes
+  `packages/**/*.test.ts`, so it runs in `unit-component-a11y`.
 - **AI eval harness** — refusal + golden-set subset (TDD Part 3 §9.4), re-added as a job that can
   fail once the harness exists. AI regressions must block merge (ADR-029).
 
@@ -185,7 +190,7 @@ The milestone opened recording **two** placeholders. A full sweep of all three w
 
 | Placeholder | Where | Resolution |
 |---|---|---|
-| `api-contract` | ci.yml | de-declared (B1) |
+| `api-contract` | ci.yml | de-declared (B1) → **restored 2026-07-25** as real conformance tests, proven to fail |
 | `ai-eval-subset` | ci.yml | de-declared (B1) |
 | `e2e-staging` | cd.yml | de-declared (B3) — B2 restores it |
 | `eas-build` | cd.yml | de-declared (B3) — pending credentials |
