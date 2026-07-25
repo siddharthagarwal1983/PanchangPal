@@ -4,7 +4,7 @@
 
 Version: 1.6.0
 
-Last Updated: 2026-07-22 (tz-aware date seam added — ADR-026 conformance)
+Last Updated: 2026-07-25 (ritual-session storage seam recorded — mmkv v4 / New Arch; persistence verified)
 
 Current Phase:
 Beta Readiness & Platform Hardening (TDD Part 5)
@@ -400,6 +400,15 @@ Stable, cross-cutting facts (permanent until an approved decision changes them):
   fails the build on `toISOString().slice/substring/substr/split`, exempting only the shared test
   that must demonstrate the wrong pattern. Established by issue #30, where UTC dates recorded the
   AU/NZ morning ritual against yesterday.
+- **Ritual sessions persist through ONE seam** — `ritualSessionRepository` writes local ritual
+  sessions through a `KeyValueStore` port (never a vendor SDK directly). The device backend is
+  **react-native-mmkv v4** (the Nitro-based line), created via the `createMMKV()` factory and resolved
+  lazily on first use. v4 is REQUIRED because the app runs the **New Architecture (bridgeless)**, and
+  mmkv v2 could not install its JSI bindings there — it degraded silently to memory and sessions never
+  survived a restart (caught by FLOW_SESSION_PERSISTENCE on a native build; fixed 2026-07-25, PR #36).
+  When the native module is unavailable (Expo Go, or off-device), the port degrades to an in-memory
+  store with a visible warning and `getStorageBackend()` reports `'memory'` — the ritual still works,
+  it just will not survive a restart. Persistence is verified end-to-end in CI, not assumed.
 - **MockPanchangProvider** is DEV/TEST ONLY and must never be imported by production code.
 - **Backend Edge Functions pending** — SVC_household (member/invite), SVC_notify_scheduler
   (notify/schedule), and SVC_revenuecat_webhook are pending backend deliverables; the corresponding

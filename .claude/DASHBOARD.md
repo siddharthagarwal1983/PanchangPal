@@ -2,9 +2,9 @@
 
 # PanchangPal Dashboard
 
-Version: 1.8.0
+Version: 1.9.0
 
-Last Updated: 2026-07-22 (ADR-026 date defect fixed; E2E gate found dark since 2026-07-19)
+Last Updated: 2026-07-25 (session persistence VERIFIED end-to-end; MMKV v2→v4 New-Arch fix; B2 complete)
 
 Purpose:
 This is the first file Claude should read at the beginning of every session.
@@ -41,14 +41,16 @@ PanchangPal
 
 Progress
 
-0%
+13%
 
-(Canonical progress metric — 0 of 8 Beta Readiness slices COMPLETE. B1 ~85%, B2 ~75%, B3 ~80%;
-B2 revised down on 2026-07-22: its ~85% rested on a 2026-07-19 run that has not held since, because
-the gate then produced no signal for three days;
-a slice counts only when done, and every remaining item in those three is gated on money, a store
-account, or a later slice. PROJECT_STATUS.md and CURRENT_MILESTONE.md must report this same
-number; DASHBOARD.md is authoritative if they diverge.)
+(Canonical progress metric — 1 of 8 Beta Readiness slices COMPLETE: **B2 (E2E verification)**.
+B1 ~85%, B3 ~80%. B2 is now DONE: the bundle gate plus all three in-scope Maestro flows
+(FLOW_RETURNING, FLOW_MORNING_RITUAL, FLOW_SESSION_PERSISTENCE) are GREEN in CI on a real native
+Android build (run 30155737941, 2026-07-25). The three flows still not present — onboarding,
+household invite, live Ask Guru — are blocked on other slices / backends / a gated feature, not on
+B2's engineering. B1 and B3's remaining items are gated on money, a store account, or a later slice.
+PROJECT_STATUS.md and CURRENT_MILESTONE.md must report this same number; DASHBOARD.md is
+authoritative if they diverge.)
 
 Mobile MVP Phase 1: ✅ 100% (M1–M8, merged 2026-07-18).
 
@@ -69,47 +71,39 @@ CURRENT_MILESTONE.md
 
 # Current Task
 
-**Land PR #31 and PR #32, then read the persistence verdict.**
+**Session persistence: ANSWERED and FIXED. Merge PR #36, then pick the next slice.**
 
-1. **PR #31 — issue #30 fixed.** Today and Ritual derived the day with
-   `new Date().toISOString().slice(0, 10)`, which is UTC. In New Zealand and Australia that named
-   **yesterday for the entire local morning** — the morning ritual, in two of three primary launch
-   markets. Four commits: the tz utility ADR-026 always required, adopting the device zone into
-   `user_profile.timezone` (which nothing had ever written), `useLocalDate` in the screens, and an
-   ESLint guard proven to fail on the reintroduced expression.
+The question that stood open for a week — does a ritual session survive a process restart — is
+answered: **yes, now.** The path there, this session:
 
-2. **PR #32 — the E2E gate had gone dark.** No run has completed since 2026-07-19 11:59 UTC.
-   `expo-updates` (PR #24) pushed the Android build past `timeout-minutes: 45`, and six runs were
-   cancelled by `cancel-in-progress` before any of them could say so. A cancelled run is not a red
-   run, so nothing was reported. Fixed: no cancel-on-push, 90-minute budget, Gradle cache, and one
-   ABI instead of four.
+1. **PR #35 — the E2E build was failing, disguised as a timeout.** The single-ABI run had failed in
+   `assembleRelease` at ~11 min, then Gradle hung ~80 min until the 90-min job timeout killed it and
+   it reported `cancelled` — the "gate goes dark" pathology, one layer down. Fixed: cap the build
+   step with `timeout` + `--stacktrace`, and drop release-only work the emulator APK doesn't need
+   (release lint + native-debug-metadata). Build then went green (~10 min) and the flows finally ran.
 
-3. **Session persistence is STILL UNVERIFIED.** `FLOW_SESSION_PERSISTENCE` is written and asserts
-   the intended behaviour, but **no run has reached the emulator**. Merging #32 may turn main's E2E
-   red — that is an honest gate reporting a real defect, and is the expected outcome if the defect
-   is real.
+2. **The flow ran and caught a real bug.** `FLOW_SESSION_PERSISTENCE` failed: sessions did not
+   survive a restart. Logcat proved the cause — **`react-native-mmkv@2.12.2` is incompatible with
+   the New Architecture's bridgeless runtime**, so MMKV's JSI never installed, every instance threw,
+   and `ritualSessionRepository` silently ran on its in-memory fallback. A dependency-version bug,
+   not a storage-logic bug.
 
-The 2026-07-19 reconciliation still holds: claims here carry a file:line where one exists, and
-anything unverifiable from the repo is marked rather than asserted.
+3. **PR #36 — the fix.** Upgrade `react-native-mmkv` v2→**v4.3.2** (Nitro line, bridgeless-compatible)
+   + its `react-native-nitro-modules` peer; absorb the v4 API changes (`createMMKV()` factory,
+   `delete`→`remove`) at the port boundary; jest mock so v4's eager nitro import doesn't crash suites.
+   **E2E on a native build (run 30155737941): all three flows GREEN, `FLOW_SESSION_PERSISTENCE`
+   PASSED.** MMKV v4 loads and persists under New Arch; no memory fallback.
 
-See:
-
-TASK.md
+Verified end-to-end. PR #36 open, CI green, pending merge. See TASK.md.
 
 # Today's Objective
 
-Session of 2026-07-22. One question asked — does a ritual session survive a restart — and it is
-**still unanswered**, because two things stood in front of it.
-
-The E2E gate had been silent for three days: `expo-updates` made the Android build outgrow its
-timeout, and concurrency cancellation hid that fact behind runs that were neither green nor red.
-
-Reading the ritual code to design the persistence flow surfaced a worse defect: every date in the
-daily loop was computed in UTC and stored as the user's local date. Australia and New Zealand
-recorded the morning ritual against yesterday, all morning.
-
-iOS now runs in Expo Go (bundle verified, HTTP 200) — but persistence cannot be tested there, since
-MMKV is absent and the store degrades to memory by design.
+Session of 2026-07-25. The question — does a ritual session survive a restart — is **answered:
+yes, now.** Three steps got there: fix the E2E build (which was failing disguised as a timeout);
+read the verdict the working gate produced (persistence failed — MMKV v2 is incompatible with the
+New Architecture, so storage silently ran on memory); ship the fix (MMKV v2→v4, the bridgeless-
+compatible Nitro line). A native E2E build now runs all three flows green, `FLOW_SESSION_PERSISTENCE`
+included. B2 (E2E verification) is complete.
 
 No new product scope.
 
@@ -130,15 +124,15 @@ No new product scope.
 | Mobile — Notifications | ✅ M7 |
 | Mobile — Subscription | ✅ M8 |
 | AI Platform | 🟡 adapters done; corpus + eval pending |
-| Testing | 🟢 190 unit/component/domain (176 mobile + 14 shared) · bundle gate per PR · ⚠️ **E2E produced no signal 2026-07-19 → 2026-07-22** (build outgrew its timeout; cancelled runs hid it — PR #32) · AI-eval + api-contract de-declared (owed: contract tests + §9.4 harness) |
-| Beta | 🚧 In progress (B1–B8) |
+| Testing | 🟢 190 unit/component/domain (176 mobile + 14 shared) · bundle gate per PR · 🟢 **E2E green in CI** — 3/3 Maestro flows on a real native Android build incl. FLOW_SESSION_PERSISTENCE (run 30155737941, 2026-07-25); gate now fails fast (PR #35) · AI-eval + api-contract de-declared (owed: contract tests + §9.4 harness) |
+| Beta | 🚧 In progress — **B2 ✅ complete**; B1/B3 owner-gated; B4–B8 pending |
 | Production | ⏳ |
 
 ---
 
 # Current Priorities
 
-1. Land PR #31 (issue #30 — UTC dates) and PR #32 (E2E gate fixes), then re-run E2E and read the persistence verdict — still unverified, no run has reached the emulator
+1. Merge PR #36 (MMKV v4 — session persistence fix), then pick the next Beta slice (B4 observability is the next unblocked engineering slice; B1/B3 remainders are owner-gated)
 2. Owner decisions: prod Supabase (~$25/mo, closes B1) · Apple $99 (iOS) · Google Play $25 (internal track)
 3. ⛔ Canonical Panchang Engine decision (ADR-033) — unblocks Today panchang, Calendar markers, notifications
 3. AI corpus ingestion + eval readiness — unblocks live Ask Guru (GURU_LIVE)
@@ -172,18 +166,21 @@ SDK 54 upgrade — so this deferral is now a choice, not a constraint.)
 `chore/expo-sdk-54-upgrade` (unmerged). Verified by bundling, 121 tests, and Expo Go on device;
 **not** verified against a native build — no Xcode here. B3 is the first real test.
 
-⚠️ One open defect from the 2026-07-18 demo session: `react-native-mmkv` is unavailable in Expo Go,
-so the Ritual screen crashes there. It sits behind the `KeyValueStore` port, and a development build
-(B3) removes the constraint entirely. The repositories-throw-on-absent-config defect that stood
-alongside it is resolved (PR #14 — all ten now construct lazily). Details in CURRENT_MILESTONE.md →
-Current Risks.
+✅ Resolved (2026-07-25): the `react-native-mmkv` defect. Two layers — (1) it threw in Expo Go / on
+absent native modules, handled since PR #24 by the `KeyValueStore` port degrading to memory rather
+than crashing; (2) the deeper bug the working E2E gate exposed — **mmkv v2 is incompatible with the
+New Architecture (bridgeless)**, so it degraded to memory even on a native build and ritual sessions
+never persisted. Fixed by the v2→v4 upgrade (PR #36), verified by a green FLOW_SESSION_PERSISTENCE on
+a native emulator build. The repositories-throw-on-absent-config defect alongside it was already
+resolved (PR #14).
 
 ---
 
 # Next Deliverable
 
-Owner-gated: prod Supabase project (~$25/mo) closes B1. Apple ($99) and Google Play ($25) close
-most of B3. Everything achievable without spending has been done.
+Merge PR #36. Then B4 — Observability (Sentry wiring, source-map upload, dashboards/alerts) is the
+next slice with unblocked engineering. B1/B3 remainders are owner-gated: prod Supabase (~$25/mo)
+closes B1; Apple ($99) + Google Play ($25) close most of B3.
 
 ---
 

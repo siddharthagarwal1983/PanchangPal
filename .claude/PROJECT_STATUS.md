@@ -2,9 +2,9 @@
 
 # PanchangPal — Project Status Dashboard
 
-Version: 1.4.0
+Version: 1.5.0
 
-Last Updated: 2026-07-22 (ADR-026 date defect fixed; E2E gate found dark since 2026-07-19)
+Last Updated: 2026-07-25 (B2 E2E verification complete — session persistence verified; MMKV v2→v4)
 
 Purpose:
 This document provides a high-level snapshot of the overall project.
@@ -39,7 +39,7 @@ Overall Progress
 
 ░░░░░░░░░░░░░░░░░░░░
 
-**Mobile MVP — Phase 1: ✅ 100% (all 8 slices, merged)** · **Beta Readiness & Platform Hardening: 🚧 0% (0 of 8 slices)**
+**Mobile MVP — Phase 1: ✅ 100% (all 8 slices, merged)** · **Beta Readiness & Platform Hardening: 🚧 13% (1 of 8 slices — B2 E2E verification complete)**
 
 Project Health
 
@@ -74,7 +74,7 @@ TBD
 | Mobile Development (feature slices) | ✅ Complete | 100% (M1–M8 done) |
 | AI Platform | 🟡 In Progress | Adapters + RAG pipeline done; corpus + eval pending |
 | Testing | 🟡 In Progress | 190 unit/component/domain green in CI (176 mobile + 14 shared); 3 Maestro FLOW_* authored, but the E2E gate produced no signal 2026-07-19 → 2026-07-22 (build outgrew its timeout; cancelled runs hid it — PR #32) |
-| Beta | ⏳ Pending | 0% |
+| Beta | 🚧 In progress | 13% (B2 ✅ complete; B1/B3 owner-gated; B4–B8 pending) |
 | Production Launch | ⏳ Pending | 0% |
 
 ---
@@ -100,6 +100,13 @@ Current Focus
 Completed slices: M1 App Shell · M2 Today · M3 Guided Ritual · M4 Calendar Shell · M5 Ask Guru ·
 M6 Profile/Household · M7 Notifications.
 
+- **Session of 2026-07-25 — B2 (E2E verification) COMPLETE; session persistence verified.** Fixing
+  the E2E build (PR #35 — it had been failing in `assembleRelease` and hanging to the timeout, so
+  `cancelled` disguised a red build) let `FLOW_SESSION_PERSISTENCE` run. It failed, correctly:
+  `react-native-mmkv@2.12.2` is incompatible with the New Architecture's bridgeless runtime, so MMKV
+  degraded to memory and ritual sessions never persisted. Fixed by MMKV v2→v4 (PR #36). All three
+  in-scope Maestro flows now GREEN in CI on a real native Android build (run 30155737941), persistence
+  included. 176 tests, tsc, eslint clean.
 - **Session of 2026-07-22** — issue #30: every date in the daily loop was computed in **UTC** and
   stored as the user's local date. In New Zealand and Australia that recorded the morning ritual
   against **yesterday for the entire local morning** — two of the three primary launch markets.
@@ -107,14 +114,13 @@ M6 Profile/Household · M7 Notifications.
   the device zone into `user_profile.timezone` (which nothing had ever written), `useLocalDate` in
   the screens, and an ESLint guard proven to fail on the reintroduced expression. Separately, the
   E2E gate was found to have produced **no signal since 2026-07-19** — `expo-updates` pushed the
-  Android build past its timeout and cancelled runs hid it (PR #32). iOS verified running in Expo
-  Go. **Session persistence remains unverified.**
+  Android build past its timeout and cancelled runs hid it (PR #32). iOS verified running in Expo Go.
 - **Beta Readiness build-out (2026-07-18/19)** — ✅ merged, 14 PRs. The MVP had never been
   executed anywhere; 12 defects fixed. Platform re-baselined to Expo SDK 54 / RN 0.81 / React 19
   and verified natively (3 Android APKs). CI now compiles the app every PR; CD migrates, seeds and
   deploys for real; dev + staging both provisioned and seeded; releases build unattended from a
-  `v*` tag; two Maestro E2E flows green in CI. B1 ~85%, B2 ~75% (revised down 2026-07-22), B3 ~80% — none
-  complete, every remainder gated on money, a store account, or a later slice. See CURRENT_MILESTONE.md.
+  `v*` tag; Maestro E2E flows green in CI. **B2 now ✅ complete (2026-07-25).** B1 ~85%, B3 ~80% —
+  their remainders gated on money, a store account, or a later slice. See CURRENT_MILESTONE.md.
 
 See:
 
@@ -238,7 +244,7 @@ Implementation: Mobile MVP Phase 1 is feature-complete (M1–M8).
 | Component Tests | 🟢 In place for delivered slices |
 | Accessibility Tests | 🟢 a11y assertions in slice tests |
 | AI Evaluation | ⏳ Pending |
-| E2E Tests | 🟡 3 FLOW_* authored (RETURNING, MORNING_RITUAL, SESSION_PERSISTENCE); gate dark 07-19 → 07-22, fixes in PR #32; SESSION_PERSISTENCE has never executed |
+| E2E Tests | 🟢 3 FLOW_* GREEN in CI on a native build (RETURNING, MORNING_RITUAL, SESSION_PERSISTENCE) — run 30155737941, 2026-07-25; gate now fails fast (PR #35) |
 
 ---
 
@@ -246,8 +252,8 @@ Implementation: Mobile MVP Phase 1 is feature-complete (M1–M8).
 
 Priority 1
 
-Land PR #31 (issue #30 — dates computed in UTC rather than the user's zone) and PR #32 (E2E gate
-fixes), then re-run E2E and finally answer whether a ritual session survives a restart
+Merge PR #36 (MMKV v4 — session persistence fix; E2E green), then start B4 — Observability, the next
+Beta slice with unblocked engineering. (Session persistence: ✅ verified 2026-07-25.)
 
 Priority 2
 
@@ -302,6 +308,9 @@ prefs work today, so gating and prefs are real before the SDKs are wired.
 
 # Recently Completed
 
+- **B2 — E2E verification (2026-07-25):** E2E build made to fail fast (PR #35); MMKV v2→v4 so ritual
+  sessions persist under New Arch (PR #36); all 3 in-scope Maestro flows GREEN in CI on a native build,
+  session persistence verified end-to-end.
 - Market Research
 - MRD
 - PRD
@@ -394,10 +403,14 @@ The Mobile MVP Phase 1 feature-slice milestone is **complete (100%)** and merged
 slices — App Shell, Today, Guided Ritual, Calendar Shell, Ask Guru Client, Profile/Household,
 Notifications, and Subscription (M1–M8) — are implemented, tsc/eslint clean, and green in CI.
 
-The project is now in **Beta Readiness & Platform Hardening** (TDD Part 5), sliced B1–B8. The
-milestone opens on a known gap: CD reports green while its Maestro E2E and EAS build jobs are
-placeholders, and `preflight.sh` cannot fail a deploy on a missing secret. Staging migrations and
-Edge Function deploys are real. B1 and B2 close that gap first.
+The project is now in **Beta Readiness & Platform Hardening** (TDD Part 5), sliced B1–B8, at **13%
+(1 of 8 — B2 complete)**. The milestone opened on a known gap: CD reported green while its Maestro
+E2E and EAS build jobs were placeholders. **B2 (E2E verification) is now complete** — the Maestro
+placeholder is replaced by three real FLOW_* specs GREEN in CI on a native Android build, including
+FLOW_SESSION_PERSISTENCE, which along the way exposed and fixed a real persistence bug (MMKV v2 vs
+New Architecture → v4 upgrade, PR #36). Staging migrations and Edge Function deploys are real. B1
+(prod environment) and B3 (store distribution) remainders are owner-gated; B4 (observability) is the
+next unblocked engineering slice.
 The only architectural blocker is the Canonical Panchang Engine decision (ADR-033); Ask Guru live
 answers are intentionally gated until corpus/eval readiness.
 
