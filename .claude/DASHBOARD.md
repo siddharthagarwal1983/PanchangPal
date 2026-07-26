@@ -2,9 +2,9 @@
 
 # PanchangPal Dashboard
 
-Version: 1.20.0
+Version: 1.21.0
 
-Last Updated: 2026-07-26 (B6 security: two critical defects found and fixed; 3 of 4 increments)
+Last Updated: 2026-07-26 (offline sync implemented — the app is offline-first in practice, not just on paper)
 
 Purpose:
 This is the first file Claude should read at the beginning of every session.
@@ -67,7 +67,11 @@ on money, a store account, or a later slice.
 PROJECT_STATUS.md and CURRENT_MILESTONE.md must report this same number; DASHBOARD.md is
 authoritative if they diverge.)
 
-Mobile MVP Phase 1: ✅ 100% (M1–M8, merged 2026-07-18).
+Mobile MVP Phase 1: ✅ 100% (M1–M8, merged 2026-07-18) — with one correction recorded 2026-07-26:
+**TDD Part 4 §6 (offline-first) was never implemented** despite the milestone being declared
+feature-complete. The mutation queue held state in memory beneath a header claiming persistence,
+and the read cache was not persisted at all. Both are now built. "Feature-complete" has meant
+"written and unit-tested" more than once in this repo; §6 is the third instance.
 
 Prior phases ✅ complete: Documentation → Repository & Platform Foundation → Backend Foundation →
 Mobile MVP Phase 1 (M1–M8).
@@ -86,7 +90,46 @@ CURRENT_MILESTONE.md
 
 # Current Task
 
-**B6 — Security & Privacy. Two critical defects found; both fixed and proven.**
+**Offline sync — implemented. The launch blocker B6 found is closed at engineering scope.**
+
+`STORE_offlineQueue` was an in-memory zustand slice beneath a header claiming MMKV persistence:
+never written to disk, never drained, never dequeued. **Nothing in `src/data` bound API_POST_SYNC
+at all** — SVC_sync has been fully implemented server-side since the Backend Foundation milestone
+and was unreachable from the app. Offline, a completion was lost on app kill; online it worked only
+because every hook also called its API directly, and the successful entry then leaked forever.
+This contradicted **offline-first**, a permanent architecture decision.
+
+Now built in layers — decisions pure and tested, effects thin: `domain/sync` (FIFO batching,
+exponential backoff with half-range jitter, capped attempts, reconciliation) · a persisted
+`STORE_offlineQueue` through the shared `KeyValueStore` seam · `syncRepository` (the missing
+API_POST_SYNC binding) · `syncService` (single-flight drain, non-blocking status) · `useOfflineSync`
+(§6.4's three triggers) · **`queryPersistence` (§6.1)**, the READ half, without which a cold start
+offline is empty and §6.2's `[MANDATORY]` cached daily loop cannot hold.
+
+A conflict counts as **acknowledged** (§6.3 resolves by rule); anything returned in neither
+`applied` nor `conflicts` is retried, because treating a 200 as success is exactly how a mutation
+gets dropped silently. Attempts are capped to stop silent retrying, **never to discard a
+completion**.
+
+**Two defects found while building it.** (1) The client queued five mutation kinds and SVC_sync
+accepts three — `preferences` and `notif_prefs` hit the handler's `default:` branch and were
+returned in neither list, so nothing could ever retire them; the type now narrows to the server's
+contract and a test reads the kinds out of the handler's SOURCE so the two cannot drift. (2)
+Enqueuing before hydration overwrote the previous launch's pending mutations — caught by a test
+that failed on its first run.
+
+**Proven, not asserted:** four perturbations, each failing the right tests. 350 mobile tests (+51),
+82 vitest, tsc clean, eslint 0 errors, bundle gate green.
+
+**Not done, and stated:** never exercised against a live backend; no `FLOW_OFFLINE_SYNC` flow;
+`STORE_syncStatus` has no UI surface because PDD specifies none.
+
+**Progress unchanged at 44%** — this is a TDD Part 4 §6 gap in the Mobile MVP found during B6, not
+one of the eight Beta slices. It closes a launch blocker without advancing a slice.
+
+---
+
+**Previously — B6 — Security & Privacy. Two critical defects found; both fixed and proven.**
 
 **1. The auth session was never persisted (OWASP M1/M9, PR #57).** `supabaseClient.ts` asked for
 `persistSession: true` and passed no `storage` adapter; React Native has no `localStorage`, so
@@ -315,6 +358,14 @@ Verified end-to-end. **PR #36 merged to main as `e1e10d4`**; the docs checkpoint
 
 # Today's Objective
 
+Session of 2026-07-26 (part 3). **Offline sync.** Close the launch blocker B6 surfaced: make the
+mutation queue durable, drain it to SVC_sync, and persist the read cache so the daily loop is
+genuinely usable offline rather than only documented as such. Outcome: implemented across six
+modules with the drain rules pure and tested, two further defects found and guarded, four
+perturbations proven to fail. No product scope. Next: **B6.3**.
+
+---
+
 Session of 2026-07-26 (part 2). **B6 — Security & Privacy.** The §5.2 OWASP Mobile Top 10 review,
 performed against the app as built rather than as documented. It found two critical defects — the
 auth session that never persisted, and SVC_account trusting the request body for identity — both now
@@ -360,7 +411,7 @@ No new product scope.
 | Mobile — Notifications | ✅ M7 |
 | Mobile — Subscription | ✅ M8 |
 | AI Platform | 🟡 adapters done; corpus + eval pending |
-| Testing | 🟢 381 unit/component/domain (299 mobile + 82 vitest) + 17 pgTAP + a monthly DR restore drill + **4 Maestro flows, all green** · bundle gate per PR · 🟢 **E2E green in CI** — 4/4 on a real native Android build incl. FLOW_SESSION_PERSISTENCE and FLOW_ONBOARDING (`0ca0906` run 30171884650; AOSP image confirmed on run 30196467032); gate fails fast (PR #35) and the launcher-ANR false-red is removed at its cause (PR #55 — `hide_error_dialogs` alone had stopped being sufficient) · AI-eval de-declared (owed: §9.4 harness); api-contract restored |
+| Testing | 🟢 432 unit/component/domain (350 mobile + 82 vitest) + 17 pgTAP + a monthly DR restore drill + **4 Maestro flows, all green** · bundle gate per PR · 🟢 **E2E green in CI** — 4/4 on a real native Android build incl. FLOW_SESSION_PERSISTENCE and FLOW_ONBOARDING (`0ca0906` run 30171884650; AOSP image confirmed on run 30196467032); gate fails fast (PR #35) and the launcher-ANR false-red is removed at its cause (PR #55 — `hide_error_dialogs` alone had stopped being sufficient) · AI-eval de-declared (owed: §9.4 harness); api-contract restored |
 | Beta | 🚧 In progress — **B2 ✅**; **B5 ✅ at verifiable scope** (NFR-15 blocked on PITR — a purchase); **B6 🟡 ~75%** (OWASP review ✅ · CCPA export + SVC_account authz ✅ · §5.2 controls ✅ · B6.3 inventory/policy/labels pending); **B4 🟡 ~75%** (owner-gated on a Sentry org); B1/B3 owner-gated; B7–B8 pending |
 | Production | ⏳ |
 
@@ -368,11 +419,12 @@ No new product scope.
 
 # Current Priorities
 
-1. **⛔ Offline sync is not implemented** — the queue is never persisted, drained or dequeued, so
-   offline mutations are silently lost on app kill. Contradicts the offline-first permanent
-   architecture principle and §10.1's "offline loop + sync verified". A launch blocker, and the
-   next engineering increment.
-2. **Owner: create a Sentry org + DSN (free tier)** — B4's remaining work (source-map upload, §7.2 dashboards/alerts) needs a real project to be verifiable. B4.1 ✅ · B4.2 ✅ · B4.3 ✅ to its credential-free limit · B4.4 blocked.
+1. ~~**⛔ Offline sync is not implemented**~~ — **CLOSED 2026-07-26.** The queue is persisted,
+   drained and dequeued; the §6.1 read cache is persisted too. Residual, and honest: it has never
+   run against a live backend, and there is no `FLOW_OFFLINE_SYNC` Maestro flow — the class of gap
+   a real flow caught for MMKV and unit tests cannot.
+2. **B6.3 — data inventory, privacy policy, store labels.** The last credential-free slice work.
+3. **Owner: create a Sentry org + DSN (free tier)** — B4's remaining work (source-map upload, §7.2 dashboards/alerts) needs a real project to be verifiable. B4.1 ✅ · B4.2 ✅ · B4.3 ✅ to its credential-free limit · B4.4 blocked.
 2. **PDD owes approved copy for eleven ERR_* codes** (listed in `AWAITING_APPROVED_COPY`) — they currently show the calm generic message where §12 specifies something more useful.
 3. **Credential-free engineering: start B6 — Security & Privacy** (§5/§6) — OWASP Mobile review, CCPA export/delete verified end to end (F-3/F-10), store privacy labels. B5 is complete and `FLOW_ONBOARDING` is written and green, so this is the next unstarted slice.
 3. Owner decisions: prod Supabase (~$25/mo, closes B1) · Apple $99 (iOS) · Google Play $25 (internal track)

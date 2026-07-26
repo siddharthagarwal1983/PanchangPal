@@ -21,6 +21,62 @@ docs/architecture/adr/
 
 # Product Decisions
 
+## 2026-07-26 — The offline queue carries only the mutation kinds SVC_sync reconciles
+
+**Decision.** `SYNCABLE_KINDS` is `ritual_complete | checklist | personal_date` — exactly the kinds
+`apps/backend/functions/sync/index.ts` switches on and TDD Part 2 §6.6 defines a conflict rule for.
+`preferences` and `notif_prefs`, which the queue's type carried from M2 through M8, are removed.
+
+**Why.** Those two reached SVC_sync's `default:` branch: logged as `sync_unknown_kind` and returned
+in neither `applied` nor `conflicts`. A client that dequeues on acknowledgement therefore could
+never retire them, so they would retry until the attempt cap and sit in durable storage forever.
+They bought the user nothing either way — the optimistic patch still reverts on the failed direct
+write — so keeping them was durability theatre plus a storage leak.
+
+**Why narrow the TYPE rather than filter at the drain.** A filter is a runtime decision someone can
+regress; a narrowed union makes the two hooks fail to compile. The contract is enforced where the
+mistake would be made.
+
+**The client and server lists are pinned to each other by reading the handler's source.** A
+restated constant agrees with itself forever. The test greps `case '...'` out of the Edge Function
+and asserts set equality, so adding a kind on either side alone fails CI.
+
+**What is owed.** Genuinely durable offline preference changes need an approved §6.6 conflict rule
+and a matching server branch. Inventing either in the client would be inventing business rules.
+
+## 2026-07-26 — Conflicts are acknowledgements; silence is not
+
+**Decision.** A mutation SVC_sync returns under `conflicts` is dequeued, exactly like an applied
+one. A mutation returned in neither list is retried.
+
+**Why.** §6.3 resolves conflicts by rule — `deduped`, `superseded`, `tombstoned` all mean the server
+has reached its final state — so re-sending would retry a decision already made. Conversely,
+treating a 200 as blanket success is precisely how a silently dropped mutation looks from the
+client, and this queue exists so a completion is never lost. When the two readings disagree, the
+conservative one wins: a redundant retry is idempotent by `client_id`; a dropped completion is not
+recoverable.
+
+**Capped attempts stop silent retrying, they do not discard.** After `MAX_SYNC_ATTEMPTS` the entry
+stays queued and surfaces a non-blocking "will retry" status. §6 forbids losing a completion, and
+no failure blocks the daily loop (§8.2).
+
+## 2026-07-26 — The persisted query cache is an allowlist, and entitlement is not on it
+
+**Decision.** Only §6.1's persisted set — `today`, `calendar`, `ritual`, `checklist`, `streak`,
+`preferences`, `notif_prefs` — is written to disk, and only in `success` state. `entitlement` and
+`invite` stay in memory, as do Ask Guru conversations.
+
+**Why those exclusions specifically.** §6.2 names Ask Guru, invites, auth and subscription as
+network-only. Beyond that: entitlement gates paid capability, is server-authoritative and
+household-grain, and the `entitlement` table denies client writes precisely so the device is never
+the authority on it — restoring a stale copy from disk would grant or deny premium from a snapshot
+the server has already changed. An invite is a short-lived token, so persisting it writes a
+credential-shaped value to disk. And ADR-031's argument against user-content on disk applies most
+strongly to what someone asked a spiritual assistant.
+
+**Mutations are never persisted by the query cache.** STORE_offlineQueue already owns them
+durably; letting TanStack persist them too would give one completion two independent replay paths.
+
 ## 2026-07-26 — CCPA export envelope is versioned because F-10 is unratified (B6.2)
 
 **Decision.** `SVC_account.export` returns `{ format: 'panchangpal.export.v1', format_status:

@@ -1,17 +1,24 @@
 /**
  * HOOK_usePreferences + useUpdatePreferences (TDD Part 4 §5.2 / §4.2). Server-authoritative
- * preferences read (owner-only) plus an OPTIMISTIC update that (1) patches the Query cache,
- * (2) mirrors the display subset into STORE_prefs for instant theming/tradition UI, and
- * (3) enqueues the mutation in STORE_offlineQueue (drained by SVC_sync). On error it reverts
- * both the cache and the mirror. Server data is never copied into Zustand beyond the mirror.
+ * preferences read (owner-only) plus an OPTIMISTIC update that (1) patches the Query cache and
+ * (2) mirrors the display subset into STORE_prefs for instant theming/tradition UI. On error it
+ * reverts both the cache and the mirror. Server data is never copied into Zustand beyond the mirror.
+ *
+ * This used to also enqueue into STORE_offlineQueue "drained by SVC_sync". It was not: SVC_sync
+ * switches on the three kinds TDD Part 2 §6.6 defines conflict rules for, and `preferences` fell
+ * through to its `default:` branch — logged as `sync_unknown_kind` and returned in neither
+ * `applied` nor `conflicts`. The entry could therefore never be acknowledged or retired, so it
+ * bought the user nothing (the optimistic patch still reverts on a failed write) while a row
+ * accumulated in durable storage forever.
+ *
+ * Making an offline preference change genuinely durable needs an approved §6.6 conflict rule and a
+ * server branch to match. Both are owed; inventing either here would be inventing business rules.
  */
 import { useQuery, useMutation, useQueryClient } from '@tanstack/react-query';
-import { randomUUID } from 'expo-crypto';
 import { getProfileRepository } from '../profileRepository';
 import { DEFAULT_PREFERENCES, type Preferences, type PreferencesPatch } from '../../domain/profile';
 import { useSessionStore } from '../../store/session';
 import { usePrefsStore } from '../../store/prefs';
-import { useOfflineQueueStore } from '../../store/offlineQueue';
 
 const KEY = (userId: string) => ['preferences', userId] as const;
 
@@ -44,20 +51,10 @@ function mirror(p: Pick<Preferences, 'tradition' | 'depth' | 'appearance' | 'tim
 export function useUpdatePreferences() {
   const qc = useQueryClient();
   const userId = useSessionStore((s) => s.userId);
-  const enqueue = useOfflineQueueStore((s) => s.enqueue);
   const key = KEY(userId ?? 'anon');
 
   return useMutation({
     mutationFn: async (patch: PreferencesPatch) => {
-      const client_id = randomUUID();
-      enqueue({
-        id: client_id,
-        kind: 'preferences',
-        payload: { patch, user_id: userId },
-        client_id,
-        local_ts: new Date().toISOString(),
-        attempts: 0,
-      });
       return getProfileRepository().updatePreferences(userId as string, patch);
     },
     onMutate: async (patch) => {
