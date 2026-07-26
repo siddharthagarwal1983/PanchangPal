@@ -2,8 +2,8 @@
 
 # PanchangPal — Implementation Roadmap
 
-Version: 1.8.0
-Last Updated: 2026-07-25 (B5 opened; NFR-15 found unmet — no PITR on the free tier)
+Version: 1.9.0
+Last Updated: 2026-07-26 (E2E green on main; the false-red closed at its cause; next slice B6)
 
 Purpose: the forward plan from the current state. Complements PROJECT_STATUS.md (snapshot) and
 CURRENT_MILESTONE.md (active milestone). Updated when scope or sequencing changes — and at every
@@ -118,6 +118,30 @@ incident is permanent data loss. Progress **25%**.
 documented EVT_* are still not emitted at their call sites, so `analytics_event` would receive only
 EVT_054, and the North Star (Weekly Household Ritual Completions) cannot be computed until EVT_017
 is emitted.
+
+**Update (2026-07-26). The E2E gate is green and now trustworthy; next slice is B6.** Two things
+were settled, and the first is a process finding rather than an engineering one.
+
+**The previous session's handoff was wrong.** It opened with "⛔ MAIN'S E2E IS RED, AND THE FIX IS
+UNPROVEN — START HERE." Main had gone **4/4 green including FLOW_ONBOARDING** (run 30171884650,
+`0ca0906`) half an hour after the failure the note was written from, so PR #53 was already verified.
+A session began by acting on that note without checking CI — one command — and wrote a fix for a
+problem that had resolved itself. This is the Execution Gap's lesson a fourth time, in a new place:
+it applied to CI's green status, to an ADR's mandate, to a claim in a test, and now to our own
+status docs. **A written status is not a verified state, including one we wrote.**
+
+**The gate was failing ~21% of the time for reasons outside the app.** Reading the uploaded
+artifacts across all four recent failures — logcat and screen hierarchies exist ONLY in the artifact,
+so grepping the run log finds nothing and reads convincingly as absence of evidence — shows **3 of 4
+were `Pixel Launcher isn't responding` dialogs** covering a healthy app, every one with PR #41's
+`hide_error_dialogs 1` already active. The fourth was the genuine #50 onboarding-gate breakage.
+PR #55 fixes it at the cause: AVD `target: google_apis` → `default` (AOSP), no Pixel Launcher and no
+Google app, neither of which anything under test needs. Verified 4/4 in 1m23s with zero
+`Pixel Launcher` references in the artifacts — a structural absence, not a lucky green.
+
+**Progress stays 25%→31% unchanged by this work**: B2 was already complete and repairing a flaky
+gate is not an increment. Next unblocked engineering slice: **B6 — Security & Privacy** (§5/§6),
+entirely credential-free.
 
 One blocker: the Canonical Panchang Engine (ADR-033, Proposed) — astronomical algorithm
 undocumented; the whole system depends only on the abstract PanchangEngine/PanchangProvider

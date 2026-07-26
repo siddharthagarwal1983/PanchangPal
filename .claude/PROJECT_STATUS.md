@@ -2,9 +2,9 @@
 
 # PanchangPal — Project Status Dashboard
 
-Version: 1.5.0
+Version: 1.6.0
 
-Last Updated: 2026-07-25 (B2 E2E verification complete — session persistence verified; MMKV v2→v4)
+Last Updated: 2026-07-26 (E2E green on main, 4/4; launcher-ANR false-red closed at its cause)
 
 Purpose:
 This document provides a high-level snapshot of the overall project.
@@ -73,7 +73,7 @@ TBD
 | Backend Foundation (SVC_*) | ✅ Complete | 100% (panchang compute blocked by ADR-033) |
 | Mobile Development (feature slices) | ✅ Complete | 100% (M1–M8 done) |
 | AI Platform | 🟡 In Progress | Adapters + RAG pipeline done; corpus + eval pending |
-| Testing | 🟢 Healthy | 321 green (244 mobile jest + 77 vitest) + 17 pgTAP RLS/DB assertions; bundle gate per PR; 3 Maestro FLOW_* green on main (E2E false reds from emulator ANR dialogs fixed, PR #41); API contract gate restored and proven to fail; AI eval harness still owed |
+| Testing | 🟢 Healthy | 321 green (244 mobile jest + 77 vitest) + 17 pgTAP RLS/DB assertions; bundle gate per PR; **4 Maestro FLOW_* green on main**; the emulator-ANR false-red is now fixed at its cause (AOSP image, PR #55) after PR #41's `hide_error_dialogs` proved a symptom patch — 3 of the last 4 failures were launcher ANRs; API contract gate restored and proven to fail; AI eval harness still owed |
 | Beta | 🚧 In progress | 31% (B2 ✅; B5 ✅ at verifiable scope — NFR-15 still needs PITR, a purchase; B4 🟡 ~75% owner-gated on a Sentry org; B1/B3 owner-gated; B6–B8 pending) |
 | Production Launch | ⏳ Pending | 0% |
 
@@ -244,7 +244,7 @@ Implementation: Mobile MVP Phase 1 is feature-complete (M1–M8).
 | Component Tests | 🟢 In place for delivered slices |
 | Accessibility Tests | 🟢 a11y assertions in slice tests |
 | AI Evaluation | ⏳ Pending |
-| E2E Tests | 🟢 3 FLOW_* GREEN in CI on a native build (RETURNING, MORNING_RITUAL, SESSION_PERSISTENCE) — run 30155737941, 2026-07-25; gate now fails fast (PR #35) |
+| E2E Tests | 🟢 **4 FLOW_* GREEN** in CI on a native build (RETURNING, MORNING_RITUAL, SESSION_PERSISTENCE, ONBOARDING) — run 30171884650 on `0ca0906`, 2026-07-26; gate fails fast (PR #35) and the launcher-ANR false-red is removed at its cause by the AOSP system image (PR #55, verified 4/4 in 1m23s on run 30196467032) |
 
 ---
 
@@ -316,6 +316,15 @@ prefs work today, so gating and prefs are real before the SDKs are wired.
 
 # Recently Completed
 
+- **E2E gate made trustworthy (2026-07-26, PR #55):** the launcher-ANR false-red is removed at its
+  cause — AVD `target: google_apis` → `default` (AOSP), which ships neither Pixel Launcher nor the
+  Google app, neither of which anything under test needs. PR #41's `hide_error_dialogs` had bought
+  three green runs and then stopped holding. Artifact analysis across the four recent failures put
+  the real rate at **3 of 4 (~21% of runs)**, all with the suppression already active; the fourth was
+  the genuine #50 gate breakage. Verified 4/4 in 1m23s with zero `Pixel Launcher` references in the
+  artifacts. **Also corrected: the previous handoff recorded main as red with PR #53 unproven — main
+  had gone 4/4 green half an hour after the failure it was written from.** A written status is not a
+  verified state.
 - **B5 §8.4 + the onboarding gate (2026-07-26):** operator-resilience section separating §8.4's real
   mitigations from the absent ones (no alerting, no contracted help). And `app/index.tsx`'s
   `const ONBOARDED = true` replaced with a persisted flag — SCR_AUTH_001 had never rendered from a

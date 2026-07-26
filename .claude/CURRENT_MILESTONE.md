@@ -2,9 +2,9 @@
 
 # PanchangPal — Current Milestone
 
-Version: 3.8.0
+Version: 3.9.0
 
-Last Updated: 2026-07-26 (B5 complete at verifiable scope; onboarding gate fixed)
+Last Updated: 2026-07-26 (E2E false-red closed at its cause; main green; #53 verified)
 
 Purpose:
 This document defines the current milestone. Unlike SESSION.md (daily work) or TASK.md (current
@@ -168,10 +168,11 @@ Wrapping the Build APK step in `timeout` + `--stacktrace` and trimming release-o
 fast and go green. `FLOW_SESSION_PERSISTENCE` then executed for the first time, caught a real bug
 (mmkv v2 vs New Arch), and — after the v2→v4 fix (PR #36) — now **PASSES** on a native build.
 
-Remaining, and NOT achievable within B2: `FLOW_ONBOARDING` is unreachable because
-`app/index.tsx` hardcodes `ONBOARDED = true`; `FLOW_HOUSEHOLD_INVITE` needs the unimplemented
-`SVC_household`; the subscription path can only assert "unavailable" while
-`react-native-purchases` is deferred; `FLOW_ASK_GURU` can only exercise the gated path.
+**Update (2026-07-26):** `FLOW_ONBOARDING` is no longer among the blocked flows — PR #50 made the
+onboarding gate a persisted flag, the flow was written, and it passes in CI. **Four flows now run,
+not three.** Still NOT achievable within B2: `FLOW_HOUSEHOLD_INVITE` needs the unimplemented
+`SVC_household`; the subscription path can only assert "unavailable" while `react-native-purchases`
+is deferred; `FLOW_ASK_GURU` can only exercise the gated path.
 
 ### B3 — Build & distribution · ~80%
 Done: `eas.json` with three profiles and an explicit environment each; store identifiers
@@ -315,7 +316,7 @@ possible fix and would have caught defects 1–3 at M1.
 | # | Slice | Covers | Status |
 |---|---|---|---|
 | B1 | Environments & secrets | dev/staging/prod projects, per-env secrets, fail-closed preflight (§1, §4) | 🟡 ~85% — prod blocked on a paid plan |
-| B2 | E2E verification | bundle gate (done in B1) + Maestro FLOW_*; green in CI (§2.2, §10.1) | ✅ COMPLETE (2026-07-25) — bundle gate + 3 in-scope flows GREEN in CI on a native build (incl. FLOW_SESSION_PERSISTENCE); other 3 flows blocked on other slices/backends/gated feature |
+| B2 | E2E verification | bundle gate (done in B1) + Maestro FLOW_*; green in CI (§2.2, §10.1) | ✅ COMPLETE — bundle gate + **4 flows GREEN** on a native build (incl. FLOW_SESSION_PERSISTENCE and FLOW_ONBOARDING, the latter unblocked by PR #50). Gate hardened at its cause: the launcher-ANR false-red is gone with the move to the AOSP image (PR #55). Remaining 2 flows blocked on other slices/backends/gated feature |
 | B3 | Build & distribution | eas.json profiles, Hermes, signing, source maps, TestFlight / Play Internal (§2.3) | 🟡 ~80% — automated builds work; store accounts + Sentry (B4) remain |
 | B4 | Observability | Sentry, telemetry, SLO dashboards + alerts (§7) | 🟡 ~75% — B4.1 seam ✅ · B4.2 sink ✅ · B4.3 server seam + prod release gate ✅ · EVT_* daily-habit funnel now emitting (§11.4, incl. the North Star input EVT_017); **upload + B4.4 owner-gated on a Sentry org (free tier)** |
 | B5 | Reliability & DR | backups, restore drill, runbooks, graceful degradation (§8) | ✅ COMPLETE at verifiable scope — runbooks (§8.3) · mechanised restore drill · §8.2 degradation policy · §8.4 operator resilience. **One deliverable is NOT engineering-closable: NFR-15 needs PITR, which is a purchase.** Recorded as a launch blocker rather than counted as done. |
@@ -417,14 +418,23 @@ testers' hands.
   PASSES with no fallback (run 30155737941). Sessions now survive a restart. The domain logic was
   never the suspect — `advanceSession` leaves `stepIndex` on the last step, so a completed session
   restores as completed; the store was the problem.
-- **⚠️ The E2E gate produced two FALSE REDS on 2026-07-25 (fixed, PR #41).** After B4.1 merged it
-  reported 3/3 flows failed, and the re-run failed identically — a `"Pixel Launcher isn't responding"`
-  dialog from the emulator's own Google apps covered the app while Maestro asserted, with logcat
-  showing the app healthy throughout. Fixed with `hide_error_dialogs`; verified 3/3 green in 1m18s
-  (run 30165186141). The mechanism is the mirror of the outage below: **a false red costs what a
-  false green costs** — the first occurrence was dismissed as a flake, so the second had to be
-  diagnosed from scratch before it could be dismissed, and the next would have been blamed on
-  whatever had just merged.
+- ~~**⚠️ The E2E gate produced two FALSE REDS on 2026-07-25 (fixed, PR #41).**~~ **PR #41 was a
+  symptom patch, and it stopped working. CLOSED PROPERLY 2026-07-26 (PR #55).** The
+  `"Pixel Launcher isn't responding"` dialog kept covering the app while Maestro asserted;
+  `hide_error_dialogs 1` bought three green runs and then the launcher ANR'd through it. Reading the
+  uploaded artifacts across all four recent failures — logcat and hierarchies exist ONLY in the
+  artifact, so grepping the run log finds nothing and reads as absence of evidence — gives the real
+  rate: **3 of 4 failures were launcher ANRs (~21% of runs), every one with `hide_error_dialogs`
+  already active.** The fourth was the genuine #50 gate breakage.
+  **Fixed at the cause:** AVD `target: google_apis` → `default` (AOSP), which ships neither Pixel
+  Launcher nor the Google app. Nothing under test needs Play Services (`expo-notifications` and
+  `react-native-purchases` both uninstalled; no Maps, no Play Billing). Verified 4/4 in 1m23s (run
+  30196467032) with **zero `Pixel Launcher` references anywhere in the artifacts**. The absence is
+  structural — an uninstalled process cannot ANR — which is a stronger claim than "green once."
+  **a false red costs what a false green costs**, and this one collected its bill: the first
+  occurrence was dismissed as a flake, the second had to be diagnosed from scratch, and the third
+  was written into a session handoff as a red main that had in fact gone green half an hour earlier.
+  A gate failing a fifth of the time for reasons outside the code teaches everyone to shrug at red.
 - **⚠️ The E2E gate reported nothing between 2026-07-19 and 2026-07-22.** See B2 above. The
   mechanism matters more than the outage: `cancel-in-progress: true` on a 20-40 minute job means a
   busy afternoon produces no signal at all, and a cancelled run reads as "not run" rather than
