@@ -1,0 +1,103 @@
+# FLOW_AUTH_SESSION_PERSISTENCE — does the user's IDENTITY survive a process restart?
+#
+# This is a different question from FLOW_SESSION_PERSISTENCE, which asks whether the RITUAL
+# session survives. That one passes on MMKV alone: the ritual session is device-local and keyed
+# independently of the user, so it survives even when the account behind it does not.
+#
+# THE DEFECT THIS EXISTS FOR (found in the B6 OWASP review). `supabaseClient.ts` asked for
+# `persistSession: true` and passed NO `storage` adapter. React Native has no `localStorage`, so
+# auth-js falls back to an in-memory store — the flag asked for persistence and got memory.
+# Because the app is anon-first, the consequence was not a lost login but a lost IDENTITY:
+# `restore()` returned null on every cold start and `session.ts` minted a FRESH anonymous uid,
+# orphaning the previous user's profile, household, streak, completions, personal dates and
+# conversations. Every restart, silently.
+#
+# WHY NO EXISTING FLOW CAUGHT IT. FLOW_RETURNING relaunches with clearState:false and asserts
+# "Light the lamp" — SEEDED content, which a brand-new anonymous user sees identically. Every
+# assertion in the suite was satisfiable by a stranger.
+#
+# WHY THE TRADITION PREFERENCE IS THE PROBE. Nothing on screen renders the uid, so the identity
+# has to be observed through something only that identity can read back. `user_profile` is
+# upserted by `user_id` under owner-RLS (profileRepository.updatePreferences) and read back the
+# same way; STORE_prefs is in-memory Zustand and the TanStack query cache is NOT persisted, so
+# after a restart the value on screen can only have come from the server. Default is 'generic'
+# (domain/profile/types.ts), so 'bengali' is unambiguous:
+#   - identity survived  → same uid → the row is found  → Bengali still selected
+#   - identity lost      → new uid  → no row → defaults → reverts to Generic, and this fails
+#
+# SELECTORS ARE testIDs, NOT TEXT — see FLOW_MORNING_RITUAL for why text matching silently
+# passes while navigating nowhere.
+appId: com.panchangpal.app
+---
+- launchApp:
+    clearState: true
+
+# Pass the onboarding gate if showing. A CI emulator has no stored state, so a fresh device
+# correctly opens SCR_AUTH_001 (PR #50). Conditional, so it is a no-op after the first pass.
+- runFlow:
+    when:
+      visible: 'Skip for now'
+    commands:
+      - tapOn:
+          id: 'auth-skip'
+
+- extendedWaitUntil:
+    visible: "Today's ritual"
+    timeout: 60000
+
+# Establish something only THIS user can read back. The upsert is server-authoritative; the
+# optimistic mirror is discarded with the process, which is the point.
+- tapOn:
+    id: 'tab-you'
+- tapOn:
+    id: 'you-settings-entry'
+- assertVisible:
+    id: 'settings-screen'
+- tapOn:
+    id: 'settings-tradition-bengali'
+- assertVisible:
+    id: 'settings-tradition-bengali'
+    selected: true
+- takeScreenshot: auth-session-01-preference-set
+
+# Kill the process. Anything held only in memory — the auth session when no storage adapter is
+# configured, STORE_prefs, the query cache — is gone. Only what SecureStore wrote survives.
+- stopApp
+
+- launchApp:
+    clearState: false
+
+# The gate must NOT reappear (the onboarding flag is MMKV-persisted, PR #50). Asserting its
+# absence here would duplicate FLOW_ONBOARDING, so this stays conditional and tolerant: this
+# flow is about identity, and a gate regression should fail the flow that owns it.
+- runFlow:
+    when:
+      visible: 'Skip for now'
+    commands:
+      - tapOn:
+          id: 'auth-skip'
+
+- extendedWaitUntil:
+    visible: "Today's ritual"
+    timeout: 60000
+
+- tapOn:
+    id: 'tab-you'
+- tapOn:
+    id: 'you-settings-entry'
+- assertVisible:
+    id: 'settings-screen'
+- takeScreenshot: auth-session-02-after-restart
+
+# THE ASSERTION. Bengali still selected means the session was restored from SecureStore and the
+# same uid read back its own profile row. A revert to Generic means a new anonymous user was
+# minted and the previous one's data is now unreachable.
+#
+# If this fails, `adb logcat` from the same run (captured by e2e.yml) separates the causes: the
+# '[auth-storage] SecureStore unavailable' warning means the keystore degraded to memory; its
+# absence means SecureStore was active and the persist/restore path itself is at fault.
+- assertVisible:
+    id: 'settings-tradition-bengali'
+    selected: true
+
+- clearState
