@@ -82,15 +82,21 @@ jobs:
       #   project:info  — can that identity READ this specific app? This is the exact
       #                   operation that failed, so it reproduces the fault in seconds
       #                   rather than after a dependency install.
+      # eas-cli is PINNED (was @latest). Recorded by the OWASP Mobile review as an M2 supply-chain
+      # finding: `@latest` resolves at run time, so the tool that builds and SIGNS the release
+      # artifact was never the one any previous run used, and a compromised or merely broken
+      # publish would land straight in the release path. e2e.yml already made this argument for
+      # the Expo CLI ("pnpm exec, NOT pnpm dlx") after a `@latest` fetch broke the config loader;
+      # this applies the same rule to the release path. Bumping it is now a visible commit.
       - name: Verify EAS credentials and project access
         working-directory: apps/mobile
         run: |
           set -uo pipefail
-          if ! pnpm dlx eas-cli@latest whoami; then
+          if ! pnpm dlx eas-cli@21.2.0 whoami; then
             echo "::error::EXPO_ACCESS_TOKEN is missing, invalid, or expired — eas-cli could not authenticate."
             exit 1
           fi
-          if ! pnpm dlx eas-cli@latest project:info; then
+          if ! pnpm dlx eas-cli@21.2.0 project:info; then
             echo "::error::Authenticated, but this identity cannot read the EAS project. If the token belongs to a robot user, grant it access to the project (expo.dev -> project -> Access) with at least Developer permission, or use a token from the account that owns the project."
             exit 1
           fi
@@ -154,7 +160,7 @@ jobs:
       # trigger further — do not make the job stop checking.
       - name: EAS build
         working-directory: apps/mobile
-        run: pnpm dlx eas-cli@latest build --platform android --profile "${{ inputs.profile || 'staging' }}" --non-interactive
+        run: pnpm dlx eas-cli@21.2.0 build --platform android --profile "${{ inputs.profile || 'staging' }}" --non-interactive
         env:
           EXPO_TOKEN: ${{ secrets.EXPO_ACCESS_TOKEN }}
 

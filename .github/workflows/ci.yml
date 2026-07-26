@@ -226,3 +226,26 @@ jobs:
           done
       - name: Dependency audit
         run: pnpm audit --audit-level=high || true
+
+      # SBOM (TDD Part 5 §5.2 [MANDATORY]). Recorded as missing by the OWASP Mobile review
+      # (docs/devops/OWASP_MOBILE_REVIEW.md, M2).
+      #
+      # cdxgen rather than cyclonedx-npm: this is a pnpm workspace, and cyclonedx-npm reads an
+      # npm tree. Version is PINNED, not @latest — pinning the tool that inventories the supply
+      # chain is the same argument as pinning the tools in the supply chain, and the review's M2
+      # finding names four `@latest` invocations as a hazard. Bumping this is a visible commit.
+      - name: Generate SBOM (CycloneDX)
+        run: pnpm dlx @cyclonedx/cdxgen@12.8.2 -t pnpm -o sbom.json --no-recurse-mode
+        continue-on-error: true
+
+      # Retained as an artifact rather than gated on: an SBOM's value is answering "were we
+      # exposed to X" on the day X is disclosed, which requires the inventory for a build that
+      # already shipped. Gating a PR on it would only test that the generator ran.
+      - name: Upload SBOM
+        uses: actions/upload-artifact@v4
+        if: always()
+        with:
+          name: sbom
+          path: sbom.json
+          if-no-files-found: warn
+          retention-days: 90
