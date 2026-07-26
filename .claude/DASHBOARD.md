@@ -2,9 +2,9 @@
 
 # PanchangPal Dashboard
 
-Version: 1.19.0
+Version: 1.20.0
 
-Last Updated: 2026-07-26 (E2E green on main; #53 verified; ANR cause removed at the system image)
+Last Updated: 2026-07-26 (B6 security: two critical defects found and fixed; 3 of 4 increments)
 
 Purpose:
 This is the first file Claude should read at the beginning of every session.
@@ -41,9 +41,14 @@ PanchangPal
 
 Progress
 
-31%
+44%
 
-(Canonical progress metric — 2 of 8 Beta Readiness slices COMPLETE: **B2 (E2E verification)** and
+(Canonical progress metric — 2 of 8 Beta Readiness slices COMPLETE plus **¾ of B6** and **¾ of B4**:
+(2 + ¾ + ¾)/8 ≈ 44%. B6.1 OWASP review · B6.2 CCPA export + the SVC_account authorization fix ·
+B6.4 §5.2 supply-chain controls are done; **B6.3** (data inventory, privacy policy, store labels)
+remains. B6.2 is counted at its VERIFIABLE scope, as B5 was: the delete/export path is unit-tested
+and proven-to-fail, but not exercised end-to-end against a live backend, which needs a redeploy.
+Prior detail — 2 of 8 slices COMPLETE: **B2 (E2E verification)** and
 **B5 (Reliability & DR, at verifiable scope)**, plus
 **3 of B4's 4 increments** — B4.1 telemetry seam, B4.2 EVT_* analytics sink, B4.3 server seam +
 release gate — plus **B5 ✅ COMPLETE** (runbooks + restore drill · §8.2 degradation policy · §8.4 operator
@@ -80,6 +85,36 @@ CURRENT_MILESTONE.md
 ---
 
 # Current Task
+
+**B6 — Security & Privacy. Two critical defects found; both fixed and proven.**
+
+**1. The auth session was never persisted (OWASP M1/M9, PR #57).** `supabaseClient.ts` asked for
+`persistSession: true` and passed no `storage` adapter; React Native has no `localStorage`, so
+auth-js fell back to memory. Because the app is anon-first this cost **identity**, not login:
+`restore()` returned null every cold start and a FRESH anonymous uid was minted, orphaning that
+user's profile, household, streak, completions, personal dates and conversations. Fixed with a
+Keychain/Keystore adapter (`secureSessionStorage.ts`) and proven by
+`FLOW_AUTH_SESSION_PERSISTENCE`, which **fails with the fix reverted** and passes with it.
+
+**2. SVC_account had no authorization (OWASP M3, PR #58).** `withHandler` proves only that a bearer
+token is PRESENT, and the function runs with the SERVICE ROLE — so RLS is not a backstop. It read
+the acting identity from the request body: `delete` took `body.user_id`, `merge` took
+`body.auth_uid`/`body.anon_uid`. Anonymous sign-in is enabled, so anyone can mint a valid JWT for
+free. `POST /account/merge {"anon_uid": "<victim>", "auth_uid": "<attacker>"}` reassigned a victim's
+rows across every owned table — **account takeover**, after which the attacker read them under
+ordinary RLS. Household member lists expose `user_id`, so co-members were directly targetable.
+Both actions were ALSO broken for legitimate use (the client never sent those fields), which is why
+nothing surfaced it. Every action now derives the caller from the JWT; `merge` requires the anon
+session's **access token** as proof of ownership. Proven to fail on the reintroduced defect.
+
+**Also:** CCPA export built to the §6.4 row set behind a versioned envelope (F-10 unratified);
+§5.2's SBOM, Dependabot and `eas-cli@latest` pinning closed.
+
+**Found and recorded, not fixed:** the offline queue is never persisted, never drained and never
+dequeued, so the app is **not offline-first in practice**. A missing feature rather than a
+vulnerability — tracked as its own launch blocker.
+
+---
 
 **The E2E gate is green, and the handoff that said otherwise was wrong.**
 
@@ -280,7 +315,15 @@ Verified end-to-end. **PR #36 merged to main as `e1e10d4`**; the docs checkpoint
 
 # Today's Objective
 
-Session of 2026-07-26. Establish what the E2E gate is actually reporting, and make it trustworthy.
+Session of 2026-07-26 (part 2). **B6 — Security & Privacy.** The §5.2 OWASP Mobile Top 10 review,
+performed against the app as built rather than as documented. It found two critical defects — the
+auth session that never persisted, and SVC_account trusting the request body for identity — both now
+fixed and each proven by reintroducing the defect and watching the test fail. CCPA export built;
+§5.2's supply-chain controls closed. B6.3 (inventory, privacy policy, store labels) remains.
+
+---
+
+Session of 2026-07-26 (part 1). Establish what the E2E gate is actually reporting, and make it trustworthy.
 Outcome: main was already green (the handoff was stale), PR #53 is verified, and the launcher-ANR
 false-red — 3 of the last 4 failures — is removed at its cause by moving the emulator to the AOSP
 system image (PR #55). No product scope. Next: **B6 — Security & Privacy**.
@@ -317,15 +360,19 @@ No new product scope.
 | Mobile — Notifications | ✅ M7 |
 | Mobile — Subscription | ✅ M8 |
 | AI Platform | 🟡 adapters done; corpus + eval pending |
-| Testing | 🟢 366 unit/component/domain (289 mobile + 77 vitest) + 17 pgTAP + a monthly DR restore drill + **4 Maestro flows, all green** · bundle gate per PR · 🟢 **E2E green in CI** — 4/4 on a real native Android build incl. FLOW_SESSION_PERSISTENCE and FLOW_ONBOARDING (`0ca0906` run 30171884650; AOSP image confirmed on run 30196467032); gate fails fast (PR #35) and the launcher-ANR false-red is removed at its cause (PR #55 — `hide_error_dialogs` alone had stopped being sufficient) · AI-eval de-declared (owed: §9.4 harness); api-contract restored |
-| Beta | 🚧 In progress — **B2 ✅**; **B5 ✅ at verifiable scope** (runbooks · drill · §8.2 · §8.4; **NFR-15 blocked on PITR — a purchase**); **B4 🟡 ~75%** (owner-gated on a Sentry org); B1/B3 owner-gated; B6–B8 pending |
+| Testing | 🟢 381 unit/component/domain (299 mobile + 82 vitest) + 17 pgTAP + a monthly DR restore drill + **4 Maestro flows, all green** · bundle gate per PR · 🟢 **E2E green in CI** — 4/4 on a real native Android build incl. FLOW_SESSION_PERSISTENCE and FLOW_ONBOARDING (`0ca0906` run 30171884650; AOSP image confirmed on run 30196467032); gate fails fast (PR #35) and the launcher-ANR false-red is removed at its cause (PR #55 — `hide_error_dialogs` alone had stopped being sufficient) · AI-eval de-declared (owed: §9.4 harness); api-contract restored |
+| Beta | 🚧 In progress — **B2 ✅**; **B5 ✅ at verifiable scope** (NFR-15 blocked on PITR — a purchase); **B6 🟡 ~75%** (OWASP review ✅ · CCPA export + SVC_account authz ✅ · §5.2 controls ✅ · B6.3 inventory/policy/labels pending); **B4 🟡 ~75%** (owner-gated on a Sentry org); B1/B3 owner-gated; B7–B8 pending |
 | Production | ⏳ |
 
 ---
 
 # Current Priorities
 
-1. **Owner: create a Sentry org + DSN (free tier)** — B4's remaining work (source-map upload, §7.2 dashboards/alerts) needs a real project to be verifiable. B4.1 ✅ · B4.2 ✅ · B4.3 ✅ to its credential-free limit · B4.4 blocked.
+1. **⛔ Offline sync is not implemented** — the queue is never persisted, drained or dequeued, so
+   offline mutations are silently lost on app kill. Contradicts the offline-first permanent
+   architecture principle and §10.1's "offline loop + sync verified". A launch blocker, and the
+   next engineering increment.
+2. **Owner: create a Sentry org + DSN (free tier)** — B4's remaining work (source-map upload, §7.2 dashboards/alerts) needs a real project to be verifiable. B4.1 ✅ · B4.2 ✅ · B4.3 ✅ to its credential-free limit · B4.4 blocked.
 2. **PDD owes approved copy for eleven ERR_* codes** (listed in `AWAITING_APPROVED_COPY`) — they currently show the calm generic message where §12 specifies something more useful.
 3. **Credential-free engineering: start B6 — Security & Privacy** (§5/§6) — OWASP Mobile review, CCPA export/delete verified end to end (F-3/F-10), store privacy labels. B5 is complete and `FLOW_ONBOARDING` is written and green, so this is the next unstarted slice.
 3. Owner decisions: prod Supabase (~$25/mo, closes B1) · Apple $99 (iOS) · Google Play $25 (internal track)

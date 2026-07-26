@@ -1,0 +1,49 @@
+# Dependency update automation (TDD Part 5 §5.2 [MANDATORY] — "Dependency scanning
+# (Renovate/Dependabot + audit) + SBOM; pinned versions; minimal deps").
+#
+# Recorded as missing by the OWASP Mobile review (docs/devops/OWASP_MOBILE_REVIEW.md, M2):
+# dependency updates were entirely manual and unprompted. That is the mechanism by which
+# react-native-mmkv v2 stayed incompatible with the New Architecture for two milestones —
+# nothing surfaced that a newer major existed, and the failure was silent at runtime.
+#
+# GROUPED, not one PR per package. A single-founder project cannot absorb twenty dependency
+# PRs a week; ungrouped Dependabot output gets ignored wholesale, which is worse than none
+# because it looks like coverage. Weekly, grouped, with majors separated so a breaking bump
+# is never bundled into an otherwise-routine PR.
+version: 2
+
+updates:
+  - package-ecosystem: npm # covers pnpm workspaces
+    directory: /
+    schedule:
+      interval: weekly
+      day: monday
+    open-pull-requests-limit: 5
+    groups:
+      # Patch/minor across the workspace: the routine, low-risk stream.
+      production-minor:
+        applies-to: version-updates
+        update-types: ['minor', 'patch']
+        patterns: ['*']
+    ignore:
+      # Expo SDK packages are upgraded together via `expo install --fix`, never individually —
+      # a lone expo-* bump against a pinned SDK produces a build that resolves and then fails
+      # natively. SDK upgrades stay a deliberate, whole-platform exercise (see the SDK 54
+      # re-baseline).
+      - dependency-name: expo
+      - dependency-name: expo-*
+      - dependency-name: react-native
+      - dependency-name: react-native-*
+    labels: ['dependencies']
+
+  # The workflows themselves are a supply chain. A compromised or abandoned action runs with
+  # whatever the job grants it, and this repo's CI holds deploy credentials.
+  - package-ecosystem: github-actions
+    directory: /
+    schedule:
+      interval: monthly
+    open-pull-requests-limit: 3
+    groups:
+      actions:
+        patterns: ['*']
+    labels: ['dependencies', 'ci']

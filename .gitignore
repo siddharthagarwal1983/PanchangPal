@@ -85,6 +85,12 @@ apps/mobile/ios/
 credentials.json
 credentials/
 
+# Editor extension packages. A .vsix is a build artifact of some other project that happens to
+# get downloaded into whatever directory the terminal was in — half a megabyte of opaque zip
+# with nothing in this repo referencing it. Ignored so it cannot be swept into a commit by a
+# stray `git add -A`.
+*.vsix
+
 # Temporary / OS
 .tmp/
 temp/
