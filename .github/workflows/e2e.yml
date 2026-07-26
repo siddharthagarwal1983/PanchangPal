@@ -99,7 +99,7 @@ jobs:
       # so pull from there rather than duplicating the values into GitHub secrets.
       - name: Pull staging config from EAS
         working-directory: apps/mobile
-        run: pnpm dlx eas-cli@latest env:pull --environment preview --path .env --non-interactive
+        run: pnpm dlx eas-cli@21.2.0 env:pull --environment preview --path .env --non-interactive
         env:
           EXPO_TOKEN: ${{ secrets.EXPO_ACCESS_TOKEN }}
 
