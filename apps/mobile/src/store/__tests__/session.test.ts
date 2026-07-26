@@ -58,16 +58,35 @@ describe('upgradeAndMerge (F-1)', () => {
     mockMerge.mockResolvedValue(undefined);
     await useSessionStore
       .getState()
-      .upgradeAndMerge({ userId: 'auth-1', isAnonymous: false, jwt: 'jwt2' }, 'anon-9');
-    expect(mockMerge).toHaveBeenCalledWith('anon-9');
+      .upgradeAndMerge({ userId: 'auth-1', isAnonymous: false, jwt: 'jwt2' }, {
+        userId: 'anon-9',
+        jwt: 'anon-jwt-9',
+      });
+    // The TOKEN, not the uid. The server cannot authorize a merge from a uid — it is a claim, not
+    // proof of ownership — and passing one was how a victim's rows could be pulled into the
+    // caller's account (B6.2). The uid stays client-side, only to skip a no-op merge.
+    expect(mockMerge).toHaveBeenCalledWith('anon-jwt-9');
+    expect(mockMerge).not.toHaveBeenCalledWith('anon-9');
     expect(useSessionStore.getState().status).toBe('authenticated');
     expect(useSessionStore.getState().isAnonymous).toBe(false);
   });
 
-  it('does not merge when there is no previous anon uid', async () => {
+  it('does not merge when there is no previous anon session', async () => {
     await useSessionStore
       .getState()
       .upgradeAndMerge({ userId: 'auth-2', isAnonymous: false, jwt: 'jwt3' }, null);
+    expect(mockMerge).not.toHaveBeenCalled();
+  });
+
+  it('does not merge when the anon session has no usable token', async () => {
+    // Without a token there is nothing the server can verify, so sending the request would only
+    // produce a 422. Skipping is also the safe direction: no merge beats an unauthorized one.
+    await useSessionStore
+      .getState()
+      .upgradeAndMerge({ userId: 'auth-3', isAnonymous: false, jwt: 'jwt4' }, {
+        userId: 'anon-8',
+        jwt: '',
+      });
     expect(mockMerge).not.toHaveBeenCalled();
   });
 });

@@ -17,8 +17,50 @@ const OWNED_TABLES = [
   'referral',
 ] as const;
 
+/**
+ * The user's own rows, for CCPA export (TDD Part 2 §6.4 / Part 5 §6.2): "profile, personal dates,
+ * conversations, streak, completions". Checklist completions are included as part of "completions" —
+ * they are the user's own daily-loop records and withholding them would make the export incomplete
+ * in a way §6.2's intent does not support.
+ *
+ * DELIBERATELY NOT the same list as OWNED_TABLES. `push_token` is a device credential, `notification`
+ * is delivery bookkeeping, and `referral` concerns another party as much as this user — reassigning
+ * those on merge is right, handing them back as "your data" is not.
+ */
+const EXPORT_TABLES = [
+  'user_profile',
+  'personal_date',
+  'conversation',
+  'streak',
+  'ritual_completion',
+  'checklist_completion',
+] as const;
+
 export class AccountRepository {
   constructor(private db: SupabaseClient) {}
+
+  /**
+   * Resolve the CALLER from their JWT. `withHandler` only proves a bearer token is present, and
+   * this function runs with the service role — so RLS is not a backstop and the request body must
+   * never be trusted to say who the caller is. Mirrors SyncRepository.currentUserId, which had this
+   * right; SVC_account did not, and read the uid from the body (fixed in B6.2).
+   */
+  async currentUserId(jwt: string): Promise<string> {
+    const { data, error } = await this.db.auth.getUser(jwt);
+    if (error || !data.user) throw new Error('auth_getUser_failed');
+    return data.user.id;
+  }
+
+  /** Every row this user owns, keyed by table. Used only by the export action. */
+  async exportOwnedRows(userId: string): Promise<Record<string, unknown[]>> {
+    const out: Record<string, unknown[]> = {};
+    for (const table of EXPORT_TABLES) {
+      const { data, error } = await this.db.from(table).select('*').eq('user_id', userId);
+      if (error) throw error;
+      out[table] = data ?? [];
+    }
+    return out;
+  }
 
   async getStreakLen(userId: string): Promise<number> {
     const { data } = await this.db.from('streak').select('current_len').eq('user_id', userId).maybeSingle();

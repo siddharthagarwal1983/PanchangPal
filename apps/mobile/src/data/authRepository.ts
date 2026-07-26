@@ -71,10 +71,19 @@ export class AuthRepository {
     return toAuthSession(data.session)!;
   }
 
-  /** anon→auth merge — API_POST_AUTH_MERGE via SVC_account (F-1). */
-  async merge(anonUid: string): Promise<void> {
+  /**
+   * anon→auth merge — API_POST_AUTH_MERGE via SVC_account (F-1).
+   *
+   * Sends the anonymous session's ACCESS TOKEN, not its uid. The server cannot authorize a merge
+   * from a uid alone: the anon side is by definition not the caller's current identity, so a uid
+   * is a claim, not proof — and naming a victim's uid was enough to pull their rows into the
+   * caller's account (fixed in B6.2). The token is verified server-side like any other JWT.
+   *
+   * The auth side is taken from the caller's own token and is not sent at all.
+   */
+  async merge(anonAccessToken: string): Promise<void> {
     const { error } = await this.db.functions.invoke('account/merge', {
-      body: { anon_uid: anonUid, idempotency_key: randomUUID() },
+      body: { anon_access_token: anonAccessToken, idempotency_key: randomUUID() },
     });
     if (error) throw new Error(error.message);
   }

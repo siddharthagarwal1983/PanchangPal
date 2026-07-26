@@ -14,6 +14,19 @@ function errCode(error: unknown): string {
   return (error as { context?: { code?: string } })?.context?.code ?? (error as Error)?.message ?? 'ERR_UNKNOWN';
 }
 
+/**
+ * The CCPA export envelope (F-10, awaiting ratification — see `exportData`). `data` is keyed by
+ * table name and holds rows verbatim: a CCPA export is meant to be complete, and a mapping layer
+ * is where a field gets quietly dropped as the schema grows.
+ */
+export interface AccountExport {
+  format: string;
+  format_status: string;
+  exported_at: string;
+  user_id: string;
+  data: Record<string, unknown[]>;
+}
+
 export class AccountRepository {
   private _db?: SupabaseClient;
 
@@ -46,6 +59,27 @@ export class AccountRepository {
       body: { household_id: householdId, new_owner_id: newOwnerId },
     });
     if (error) throw new Error(errCode(error));
+  }
+
+  /**
+   * CCPA data export (POST /account/export, TDD Part 2 §6.4 / Part 5 §6.2, F-10).
+   *
+   * Returns the caller's own rows — the server derives the user from the JWT and there is no uid
+   * to pass, deliberately: an export endpoint that accepted a uid would hand any caller anyone's
+   * personal data.
+   *
+   * The envelope is versioned (`panchangpal.export.v1`) because F-10 is an unratified,
+   * product-owned decision: §6.4 specifies WHICH rows, not their shape. Callers should treat
+   * `format` as significant and not assume this shape survives ratification.
+   *
+   * NO UI CONSUMES THIS YET. PDD §5 governance lists "CCPA data export/delete" as outstanding and
+   * specifies no screen or affordance for it, so adding a Settings row here would be inventing UX.
+   * The capability is real and testable; the affordance is owed by the PDD.
+   */
+  async exportData(): Promise<AccountExport> {
+    const { data, error } = await this.db.functions.invoke('account/export', { body: {} });
+    if (error) throw new Error(errCode(error));
+    return data as AccountExport;
   }
 
   /**
