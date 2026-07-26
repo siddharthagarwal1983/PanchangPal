@@ -71,7 +71,7 @@ jobs:
       RESTORE_URL: postgresql://postgres:postgres@localhost:5432/dr_restore_target
 
     steps:
-      - uses: actions/checkout@v4
+      - uses: actions/checkout@v7
 
       # pg_dump/pg_restore must match the SERVER major version. Ubuntu's default
       # client is older than 17, and a v16 pg_dump refuses a v17 server outright —
