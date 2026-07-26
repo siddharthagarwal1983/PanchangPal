@@ -18,7 +18,7 @@ interface SessionState {
   /** Restore an existing session or create an anonymous one (bootstrap). */
   bootstrap: () => Promise<void>;
   /** Upgrade the anon session to a provider/OTP session and merge anon data (F-1). */
-  upgradeAndMerge: (next: AuthSession, previousAnonUid: string | null) => Promise<void>;
+  upgradeAndMerge: (next: AuthSession, previousAnon: { userId: string; jwt: string } | null) => Promise<void>;
   signOut: () => Promise<void>;
   apply: (s: AuthSession | null) => void;
 }
@@ -47,9 +47,11 @@ export const useSessionStore = create<SessionState>((set, get) => ({
     }
   },
 
-  upgradeAndMerge: async (next, previousAnonUid) => {
-    if (previousAnonUid && previousAnonUid !== next.userId) {
-      await authRepository.merge(previousAnonUid); // F-1 (EVT_045)
+  upgradeAndMerge: async (next, previousAnon) => {
+    // The anon session's own token is the proof the server needs that this caller owned it; the
+    // uid is kept only to skip a merge that would be a no-op.
+    if (previousAnon && previousAnon.userId !== next.userId && previousAnon.jwt) {
+      await authRepository.merge(previousAnon.jwt); // F-1 (EVT_045)
     }
     get().apply(next);
   },

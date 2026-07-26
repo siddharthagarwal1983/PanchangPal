@@ -15,7 +15,11 @@ import { t } from '../../src/i18n';
 export default function VerifyOtp() {
   const { theme } = useTheme();
   const { email } = useLocalSearchParams<{ email: string }>();
-  const previousAnonUid = useSessionStore((s) => (s.isAnonymous ? s.userId : null));
+  // Captured BEFORE verification replaces the session. The jwt travels with the uid because the
+  // server verifies ownership of the anonymous account from its token, not from its id.
+  const previousAnon = useSessionStore((s) =>
+    s.isAnonymous && s.userId && s.jwt ? { userId: s.userId, jwt: s.jwt } : null,
+  );
   const upgradeAndMerge = useSessionStore((s) => s.upgradeAndMerge);
   const [code, setCode] = useState('');
   const [busy, setBusy] = useState(false);
@@ -26,7 +30,7 @@ export default function VerifyOtp() {
     setError(null);
     try {
       const session = await authRepository.verifyEmailOtp(String(email), code);
-      await upgradeAndMerge(session, previousAnonUid);
+      await upgradeAndMerge(session, previousAnon);
       // The other exit from the gate (the first is "Skip for now"). Marked only AFTER the merge
       // succeeds: if the upgrade throws, the user stays in onboarding rather than being sent to
       // tabs with a half-merged account.

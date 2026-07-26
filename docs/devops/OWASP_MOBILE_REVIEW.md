@@ -35,7 +35,7 @@ project is that a documented control and a working one are different things.
 |---|---|---|
 | M1 | Improper Credential Usage | ✅ **fixed this review** (was ⛔) |
 | M2 | Inadequate Supply Chain Security | ✅ **closed this review** (was ⚠️) |
-| M3 | Insecure Authentication / Authorization | ✅ |
+| M3 | Insecure Authentication / Authorization | ✅ **fixed this review** (was ⛔ — see the correction below) |
 | M4 | Insufficient Input / Output Validation | ⚠️ |
 | M5 | Insecure Communication | ✅ |
 | M6 | Inadequate Privacy Controls | ✅ |
@@ -120,13 +120,63 @@ is indistinguishable from a control that was intended and never wired, which is 
 
 ---
 
-## M3 — Insecure Authentication / Authorization · ✅
+## M3 — Insecure Authentication / Authorization · ✅ (was ⛔)
 
-- **RLS is the authorization boundary**, not client logic (ADR-018), and is gated in CI by a pgTAP
-  policy suite (`ci.yml`, "RLS policy + DB integration suites (§4.4 security gate)").
-- **The client never asserts its own identity to the server.** `SVC_sync` derives the user from the
-  JWT (`sync/index.ts:37` — `repo.currentUserId(ctx.jwt)`) and uses that for every write; the
-  request body's contents cannot redirect a write to another user.
+### ⚠️ Correction to this review
+
+**This category was first recorded as ✅, and that was wrong.** The finding was drawn from
+`SVC_sync`, which derives identity correctly, and generalised to "the client never asserts its own
+identity to the server" without checking the other six functions. `SVC_account` did the opposite,
+and it is the function that deletes accounts and reassigns ownership.
+
+The error is worth recording rather than quietly editing: **a control verified in one place was
+reported as a property of the system.** That is the same reasoning error as trusting a status doc —
+one instance, generalised. It was caught only because B6.2 went to add an `export` action to that
+same function.
+
+### The defect (fixed in B6.2)
+
+`withHandler` proves only that a bearer token is **present** (`_shared/auth.ts:18-23`), and
+`SVC_account` runs with the **service role** — so RLS is not a backstop. It then took the acting
+identity from the **request body**:
+
+```ts
+case 'delete': { const userId = body.user_id ?? '';                          // account/index.ts:44
+case 'merge':  { const authUid = body.auth_uid; const anonUid = body.anon_uid;   // :25-26
+```
+
+Anonymous sign-in is enabled (`supabase/config.toml:52`), so anyone can mint a valid JWT for free;
+`verify_jwt` proves a token is *a* valid token, never *whose*. Two exploits followed:
+
+| Request | Effect |
+|---|---|
+| `POST /account/delete {"user_id": "<victim>"}` | schedules deletion of any account |
+| `POST /account/merge {"anon_uid": "<victim>", "auth_uid": "<attacker>"}` | `UPDATE … SET user_id = attacker WHERE user_id = victim` across every owned table (`accountRepo.ts:39-43`) — **account takeover**, after which the attacker reads the victim's rows through ordinary RLS |
+
+**Victim uids are not secret.** `household_member.user_id` is returned by the household query
+(`householdRepository.ts:23`), so any household member could take over a co-member's account — and
+households are the product's sharing primitive.
+
+**Both actions were also broken for legitimate use**, which is why nothing surfaced it: the client
+never sent `user_id` or `auth_uid` at all, so `delete` called `scheduleDeletion('')` and `merge`
+always returned 422. The endpoint was simultaneously non-functional and exploitable.
+
+### The fix
+
+Every action now derives the caller via `repo.currentUserId(ctx.jwt)` and ignores any body uid.
+`merge` additionally requires the anonymous session's **access token** as proof of ownership — a uid
+is a claim, not proof, and the anon side is by definition not the caller's current identity.
+
+`authorization.test.ts` asserts the invariant directly — *no uid in a request body may influence
+which rows this function touches* — with a hostile body per action, and was **proven to fail** by
+reintroducing `body.user_id ?? callerUid`.
+
+### Verified clean
+
+- **RLS is the authorization boundary** (ADR-018), gated in CI by a pgTAP policy suite.
+- **`SVC_sync` derives the user from the JWT** (`sync/index.ts:37`) and the body cannot redirect a
+  write to another user. This remains true — it was the generalisation that was wrong, not the
+  observation.
 - **Entitlement is read-only on device.** No `src/data` repository writes the `entitlement` table;
   the RevenueCat webhook is the sole writer (ADR/PROJECT_MEMORY, migration 20260712000060).
 - **Privileged household operations run server-side** — mint/accept invite and member changes go

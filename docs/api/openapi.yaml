@@ -1499,6 +1499,45 @@ paths:
                   execute_after: { type: string, format: date-time }
         '401': { $ref: '#/components/responses/Error' }  # ERR_AUTH_EXPIRED
 
+  /account/export:
+    post:
+      tags: [Notifications, Sync & Account]
+      operationId: API_POST_ACCOUNT_EXPORT
+      summary: Export the caller's own data (CCPA)
+      description: |
+        Returns the caller's owned rows as JSON — profile, personal dates, conversations,
+        streak and completions (TDD Part 2 §6.4, Part 5 §6.2).
+
+        Takes NO user identifier. The acting user is derived from the JWT: an export endpoint
+        that accepted a uid would return anyone's personal data to any caller.
+
+        The envelope is versioned because the export FORMAT is `F-10`, an unratified
+        product-owned decision — §6.4 specifies which rows, not their shape. Consumers must
+        branch on `format` rather than assume this shape is permanent.
+      x-impl: SVC_account
+      responses:
+        '200':
+          description: The caller's data
+          content:
+            application/json:
+              schema:
+                type: object
+                required: [format, exported_at, user_id, data]
+                properties:
+                  format: { type: string, example: panchangpal.export.v1 }
+                  format_status:
+                    type: string
+                    description: '`awaiting_ratification` until F-10 is settled.'
+                  exported_at: { type: string, format: date-time }
+                  user_id: { type: string, format: uuid }
+                  data:
+                    type: object
+                    description: Rows keyed by table name, returned verbatim.
+                    additionalProperties:
+                      type: array
+                      items: { type: object }
+        '401': { $ref: '#/components/responses/Error' }  # ERR_AUTH_EXPIRED
+
   /reauth:
     post:
       tags: [Notifications, Sync & Account]
