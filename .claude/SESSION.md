@@ -2,71 +2,67 @@
 
 # PanchangPal — Current Session
 
-Version: 2.4.0
-Last Updated: 2026-07-26 (offline sync implemented — the launch blocker B6 found)
+Version: 2.5.0
+Last Updated: 2026-07-26 (End Session — offline sync merged; first local native build)
 
 ---
 
-# Completed this session
+# Completed
 
-**Offline sync — the launch blocker is closed at engineering scope.** `STORE_offlineQueue` was an
-in-memory zustand slice beneath a header claiming MMKV persistence: never written to disk, never
-drained, never dequeued. SVC_sync had been fully implemented server-side since the Backend
-Foundation milestone and **nothing in `src/data` bound API_POST_SYNC at all**. Offline the mutation
-was lost on app kill; online it worked only because every hook also called its API directly, and
-the successful entry then leaked forever.
+**Offline sync — implemented, verified, merged as `86b3843` (PR #66).** The launch blocker B6's
+review surfaced. `STORE_offlineQueue` was an in-memory zustand slice beneath a header claiming MMKV
+persistence — never written to disk, never drained, never dequeued — and **nothing in `src/data`
+bound API_POST_SYNC at all**, so SVC_sync (implemented server-side since the Backend Foundation
+milestone) was unreachable from the app. Offline, a completion was lost on app kill; online it
+worked only because every hook also called its API directly, and the successful entry then leaked.
 
-Shipped, in layers:
+Shipped in layers, decisions pure and effects thin:
 
-- **`domain/sync`** (pure, 17 tests) — FIFO batching, exponential backoff with half-range jitter,
-  capped attempts, and reconciliation. A conflict counts as ACKNOWLEDGED (§6.3 resolves by rule);
-  anything returned in neither `applied` nor `conflicts` is retried, because assuming a 200 means
-  success is exactly how a mutation gets dropped silently.
-- **`STORE_offlineQueue`** — persisted through the shared `KeyValueStore` seam, resolved lazily.
-- **`syncRepository`** — the missing API_POST_SYNC binding.
-- **`syncService`** — single-flight drain, batch loop, non-blocking status. **Nothing is ever
-  discarded**: attempts are capped to stop silent retrying, not to drop a completion.
-- **`useOfflineSync`** — §6.4's three triggers (connectivity edge, foreground, periodic flush).
-- **`queryPersistence`** (§6.1) — the READ half. Without it a cold start offline is empty, so
-  §6.2's `[MANDATORY]` offline daily loop could not hold. Allowlisted to §6.1's set; `entitlement`
-  and `invite` stay in memory (§6.2 network-only, and the device is not the authority on paid
-  access). Built on `dehydrate`/`hydrate` from the declared `@tanstack/react-query` rather than
-  `persistQueryClient`, which lives in an undeclared package — reaching into the pnpm store is the
-  defect `@babel/runtime` and `babel-preset-expo` already cost this repo twice.
+- **`domain/sync`** — FIFO batching, exponential backoff with half-range jitter, capped attempts,
+  reconciliation. A conflict counts as ACKNOWLEDGED (§6.3 resolves by rule); anything returned in
+  neither `applied` nor `conflicts` is retried. Attempts cap to stop silent retrying, **never to
+  discard a completion**.
+- **`STORE_offlineQueue`** persisted through the shared `KeyValueStore` seam · **`syncRepository`**
+  (the missing binding) · **`syncService`** (single-flight drain) · **`useOfflineSync`** (§6.4's
+  three triggers) · **`queryPersistence`** (§6.1 read cache — without it a cold start offline is
+  empty and §6.2's `[MANDATORY]` daily loop cannot hold).
 
-**Proven, not asserted.** Four perturbations, each failing the right tests: persistence disabled
-(5 fail), "a 200 means success" (3), an unsyncable kind reintroduced (1), the persist allowlist
-ignored (4). 350 mobile tests (+51), 82 vitest, tsc clean, eslint 0 errors, bundle gate green.
+**Verification.** Four perturbations each failed the right tests. 350 mobile tests (+51), 82
+vitest, tsc clean, eslint 0 errors, bundle gate green. **E2E dispatched on the branch before merge**
+(run 30207484940, `a05760d`): **5/5 Maestro flows passed**, FLOW_ONBOARDING and FLOW_RETURNING
+included — the ones that would have caught the two new startup effects disturbing a fresh launch.
 
-# Defects found this session
+**The app now runs natively on this machine, for the first time.** Android SDK cmdline-tools + an
+AOSP arm64 API-34 system image installed, AVD `ppal_aosp34` created, `expo prebuild` + Gradle
+`assembleDebug` run locally, app installed and launched. Today renders; panchang correctly shows
+"temporarily unavailable" (ADR-033) and the streak reads 0 (no `.env`, so no backend — repositories
+degrade rather than crash, the PR #14 fix working).
 
-1. **The client queued five mutation kinds; SVC_sync accepts three.** `preferences` and
-   `notif_prefs` hit the handler's `default:` branch — logged as `sync_unknown_kind`, returned in
-   neither list, so nothing could ever retire them. `SYNCABLE_KINDS` now narrows the type so those
-   hooks cannot compile, and a test reads the kinds out of the handler's SOURCE so the two cannot
-   drift. Real offline durability for prefs needs an approved §6.6 conflict rule + a server branch.
-2. **Enqueuing before hydration wiped the persisted queue.** Every write persists the whole queue,
-   so a write against an un-hydrated store overwrote a previous launch's pending mutations with
-   just the new one — losing the completions the store exists to protect. Found by a test that
-   failed on its first run; fixed by hydrating before every write.
+# Defects found
+
+1. **The client queued five mutation kinds; SVC_sync accepts three.** `preferences`/`notif_prefs`
+   hit the handler's `default:` branch, returned in neither list, so nothing could ever retire
+   them. `SYNCABLE_KINDS` narrows the type so those hooks cannot compile, and a test reads the
+   kinds out of the handler's SOURCE so the two cannot drift.
+2. **Enqueuing before hydration wiped the persisted queue** — a write against an un-hydrated store
+   overwrote the previous launch's pending mutations. Caught by a test that failed on first run.
 
 # Open
 
-- **Not verified against a live backend.** SVC_sync has never been called from the client for real
-  — the drain is unit-tested against a fake. Same caveat B6.2's CCPA export carries.
-- **No E2E flow.** `FLOW_OFFLINE_SYNC` (airplane mode → complete → kill → restore → assert) is
-  unwritten. This is precisely the class a real flow caught for MMKV, and unit tests cannot.
-- **STORE_syncStatus has no UI surface** — PDD specifies none, so rendering one would invent UX.
-  Owed by PDD, same posture as the eleven missing ERR_* strings.
-- §6.4 wants EVT_* on sync confirm; B4.5 fires them from view-model transitions. Unchanged and
-  flagged — an `[ASSUMPTION T12]` question, not a defect.
+- **Offline sync has never run against a live backend**, and there is **no `FLOW_OFFLINE_SYNC`
+  Maestro flow** — the class of gap a real flow caught for MMKV and unit tests structurally cannot.
+- **`STORE_syncStatus` has no UI surface** — PDD specifies none; rendering one would invent UX.
+- **Doc/workflow drift: E2E runs 5 flows, not 4.** `FLOW_AUTH_SESSION_PERSISTENCE` was added in B6
+  and never counted; `e2e.yml`'s step-summary echo also still lists only four names. Corrected in
+  the tracking docs this session; **the workflow echo is still owed** (a code change, not a doc).
+- §6.4 wants EVT_* on sync confirm; B4.5 fires them from view-model transitions. Flagged, unchanged.
 - PDD owes approved copy for 11 of 24 ERR_* codes; SCR_ONBOARDING_* slides remain unbuilt.
-- Three Dependabot PRs are red on a jest 30.4.2 runtime/mock mismatch (`clearMocksOnScope`). Main
-  is unaffected.
+- Three Dependabot PRs red on a jest 30.4.2 runtime/mock mismatch (`clearMocksOnScope`). Main is
+  unaffected.
 
 # Blockers (all owner purchases)
 
-1. **Paid Supabase (~$25/mo)** — no PITR, so user data is unrecoverable. NFR-15 unmet; launch blocker.
+1. **Paid Supabase (~$25/mo)** — no PITR; user data unrecoverable. NFR-15 unmet, launch blocker.
 2. **Sentry org + DSN** (free tier) — the only thing between B4 and done.
 3. Apple $99 · Google Play $25 → most of B3.
 
@@ -74,7 +70,7 @@ ignored (4). 350 mobile tests (+51), 82 vitest, tsc clean, eslint 0 errors, bund
 
 **B6.3 — the rest of B6**: a data-collection inventory built from the code (every table, field and
 `EVT_*` the app actually writes), then a draft privacy policy and store Data Safety / App Privacy
-answers from it, marked as requiring legal review. It is the last credential-free slice work.
+answers derived from it, marked as requiring legal review. The last credential-free slice work.
 
-Then: `FLOW_OFFLINE_SYNC` in Maestro, and the residual review findings — zod contracts at the Edge
-Function boundaries (M4), `allowBackup=false` plus an explicit network security config (M8).
+Cheap follow-ups worth folding in: correct `e2e.yml`'s flow-name echo, and write
+`FLOW_OFFLINE_SYNC` now that a local emulator makes iterating on it fast.

@@ -90,7 +90,16 @@ CURRENT_MILESTONE.md
 
 # Current Task
 
-**Offline sync — implemented. The launch blocker B6 found is closed at engineering scope.**
+**Offline sync — MERGED as `86b3843` (PR #66). The launch blocker B6 found is closed at engineering
+scope.** Verified before merge: five CI gates green, and E2E dispatched on the branch (run
+30207484940, `a05760d`) passed **5/5 Maestro flows** — FLOW_ONBOARDING and FLOW_RETURNING included,
+which is what proves the two new startup effects did not disturb a fresh launch.
+
+**Also this session: the app ran natively on the development Mac for the first time.** Android SDK
+cmdline-tools + an AOSP arm64 API-34 image installed, AVD `ppal_aosp34` created, `expo prebuild` +
+Gradle build run locally, app installed and launched. Today renders correctly, with panchang
+showing "temporarily unavailable" (ADR-033) and a 0 streak (no `.env`, so no backend — the
+repositories degrade rather than crash, which is PR #14's fix working).
 
 `STORE_offlineQueue` was an in-memory zustand slice beneath a header claiming MMKV persistence:
 never written to disk, never drained, never dequeued. **Nothing in `src/data` bound API_POST_SYNC
@@ -411,7 +420,7 @@ No new product scope.
 | Mobile — Notifications | ✅ M7 |
 | Mobile — Subscription | ✅ M8 |
 | AI Platform | 🟡 adapters done; corpus + eval pending |
-| Testing | 🟢 432 unit/component/domain (350 mobile + 82 vitest) + 17 pgTAP + a monthly DR restore drill + **4 Maestro flows, all green** · bundle gate per PR · 🟢 **E2E green in CI** — 4/4 on a real native Android build incl. FLOW_SESSION_PERSISTENCE and FLOW_ONBOARDING (`0ca0906` run 30171884650; AOSP image confirmed on run 30196467032); gate fails fast (PR #35) and the launcher-ANR false-red is removed at its cause (PR #55 — `hide_error_dialogs` alone had stopped being sufficient) · AI-eval de-declared (owed: §9.4 harness); api-contract restored |
+| Testing | 🟢 432 unit/component/domain (350 mobile + 82 vitest) + 17 pgTAP + a monthly DR restore drill + **5 Maestro flows, all green** · bundle gate per PR · 🟢 **E2E green in CI** — **5/5** on a real native Android build (RETURNING · MORNING_RITUAL · SESSION_PERSISTENCE · AUTH_SESSION_PERSISTENCE · ONBOARDING) in 5m16s, run 30207484940 on `a05760d`, 2026-07-26. (The count read "4" until this session: FLOW_AUTH_SESSION_PERSISTENCE was added in B6 and never counted. `e2e.yml`'s step-summary echo still lists only four names — a workflow fix that is owed.); gate fails fast (PR #35) and the launcher-ANR false-red is removed at its cause (PR #55 — `hide_error_dialogs` alone had stopped being sufficient) · AI-eval de-declared (owed: §9.4 harness); api-contract restored |
 | Beta | 🚧 In progress — **B2 ✅**; **B5 ✅ at verifiable scope** (NFR-15 blocked on PITR — a purchase); **B6 🟡 ~75%** (OWASP review ✅ · CCPA export + SVC_account authz ✅ · §5.2 controls ✅ · B6.3 inventory/policy/labels pending); **B4 🟡 ~75%** (owner-gated on a Sentry org); B1/B3 owner-gated; B7–B8 pending |
 | Production | ⏳ |
 
