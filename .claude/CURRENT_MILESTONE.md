@@ -2,9 +2,9 @@
 
 # PanchangPal — Current Milestone
 
-Version: 3.9.0
+Version: 4.0.0
 
-Last Updated: 2026-07-26 (E2E false-red closed at its cause; main green; #53 verified)
+Last Updated: 2026-07-26 (B6 opened; two critical security defects found and fixed)
 
 Purpose:
 This document defines the current milestone. Unlike SESSION.md (daily work) or TASK.md (current
@@ -23,7 +23,19 @@ Status
 
 Overall Progress
 
-31% (2 of 8 slices COMPLETE — **B2 ✅**, **B5 ✅ at verifiable scope** — plus 3 of B4's 4; B1 ~85%, B3 ~80%)
+44% (2 of 8 slices COMPLETE — **B2 ✅**, **B5 ✅ at verifiable scope** — plus **¾ of B6** and ¾ of B4;
+B1 ~85%, B3 ~80%)
+
+**B6 — Security & Privacy is three-quarters through, and it found the two most serious defects of
+the milestone.** B6.1 OWASP Mobile Top 10 review ✅ · B6.2 CCPA export + the SVC_account
+authorization fix ✅ · B6.4 §5.2 supply-chain controls ✅ · **B6.3** (data-collection inventory,
+draft privacy policy, store labels) remains.
+
+Both defects share the shape this milestone keeps finding: **a documented control that was never
+implemented, with nothing asserting it.** The auth session claimed `persistSession: true` and got
+memory; SVC_account was documented as service-role-with-JWT-validation and validated only that a
+token was present. Neither was reachable by any existing test, and both were found by reading the
+claim against the implementation rather than by running the suite.
 
 **B4 is three-quarters through, and now owner-gated (2026-07-25).** It is sliced into four increments so the number above
 is auditable: **B4.1 telemetry seam ✅** (TelemetryAdapter port + the two error call sites) ·
@@ -320,7 +332,7 @@ possible fix and would have caught defects 1–3 at M1.
 | B3 | Build & distribution | eas.json profiles, Hermes, signing, source maps, TestFlight / Play Internal (§2.3) | 🟡 ~80% — automated builds work; store accounts + Sentry (B4) remain |
 | B4 | Observability | Sentry, telemetry, SLO dashboards + alerts (§7) | 🟡 ~75% — B4.1 seam ✅ · B4.2 sink ✅ · B4.3 server seam + prod release gate ✅ · EVT_* daily-habit funnel now emitting (§11.4, incl. the North Star input EVT_017); **upload + B4.4 owner-gated on a Sentry org (free tier)** |
 | B5 | Reliability & DR | backups, restore drill, runbooks, graceful degradation (§8) | ✅ COMPLETE at verifiable scope — runbooks (§8.3) · mechanised restore drill · §8.2 degradation policy · §8.4 operator resilience. **One deliverable is NOT engineering-closable: NFR-15 needs PITR, which is a purchase.** Recorded as a launch blocker rather than counted as done. |
-| B6 | Security & privacy | OWASP Mobile review, CCPA export/delete verification, store privacy labels (§5, §6) | ⏳ |
+| B6 | Security & privacy | OWASP Mobile review, CCPA export/delete verification, store privacy labels (§5, §6) | 🟡 ~75% — OWASP review ✅ (2 critical defects found + fixed, each proven by reintroducing it) · CCPA export + SVC_account authz ✅ · §5.2 SBOM/Dependabot/pinning ✅ · **B6.3 inventory + privacy policy + store labels pending**. CCPA export/delete is counted at VERIFIABLE scope: unit-tested and proven-to-fail, not yet exercised against a live backend |
 | B7 | Release management | versioning/trains, OTA policy + channels, staged rollout, rollback verification (§3) | ⏳ |
 | B8 | Go/no-go & launch | §10.1 checklist execution, internal → beta cohort, sign-off | ⏳ |
 

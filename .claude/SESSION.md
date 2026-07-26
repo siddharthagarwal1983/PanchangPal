@@ -2,12 +2,36 @@
 
 # PanchangPal — Current Session
 
-Version: 2.2.0
-Last Updated: 2026-07-26 (main's E2E is GREEN; #53 verified; the ANR cause removed at the image)
+Version: 2.3.0
+Last Updated: 2026-07-26 (End Session — B6 3 of 4; two critical security defects fixed)
 
 ---
 
 # Completed
+
+**B6 — Security & Privacy, 3 of 4 increments (PRs #57, #58).** The §5.2 OWASP Mobile Top 10 review,
+performed against the app as built rather than as documented. It found the two most serious defects
+of this milestone, both now fixed and each **proven by reintroducing the defect and watching the
+test fail**:
+
+1. **The auth session was never persisted (M1/M9).** `persistSession: true` with no `storage`
+   adapter falls back to memory in React Native. Because the app is anon-first, that cost
+   **identity**, not login: a fresh anonymous uid every cold start, orphaning the user's profile,
+   household, streak, completions, personal dates and conversations. `FLOW_AUTH_SESSION_PERSISTENCE`
+   fails with the fix reverted and passes with it.
+2. **SVC_account had no authorization (M3).** It read the acting identity from the request body
+   while running with the service role, so RLS was not a backstop. `POST /account/merge` with a
+   victim's uid reassigned their rows across every owned table — **account takeover** — and
+   `/account/delete` deleted any named account. Anonymous sign-in is enabled, so an attacker's JWT
+   is free; household member lists expose `user_id`, so co-members were directly targetable.
+
+Also: **CCPA export** built to the §6.4 row set behind a versioned envelope (F-10 unratified);
+**§5.2 controls** closed — SBOM (pinned cdxgen), Dependabot, and `eas-cli@latest` pinned at all four
+call sites.
+
+**E2E gate made trustworthy (PR #55).** 3 of 4 recent failures were Pixel Launcher ANR false-reds
+(~21%), all with `hide_error_dialogs` already active. Fixed at the cause by moving to the AOSP
+system image; three consecutive green runs since.
 
 **B2 — E2E verification ✅.** The E2E build had been failing in `assembleRelease` and then hanging to
 the job timeout, so `cancelled` disguised a red build (fixed, PR #35). With it fixed,
@@ -28,7 +52,14 @@ operator resilience and the onboarding gate (#50).
 (#44); the API contract gate B1 de-declared, restored as a real one and proven to fail by three
 perturbations (#45); two E2E false reds traced to an emulator ANR dialog and fixed (#41).
 
-# Defects found
+# Defects found (this session)
+
+The auth session never persisting · SVC_account trusting the request body for identity · the
+offline queue never draining · the E2E gate's ~21% ANR false-red rate · a stale handoff asserting a
+red main that had gone green half an hour earlier · my own OWASP review marking M3 ✅ from checking
+one function and generalising.
+
+# Defects found (earlier)
 
 MMKV v2 vs the New Architecture · EVT_054 shipped `code`/`surface` where PDD §11.2 specifies
 `error_code`/`screen_id` · a `set -e` bug in the release gate, caught pre-commit · emulator ANR
@@ -114,8 +145,15 @@ flow sees on a fresh emulator. Unit tests, typecheck, lint and the bundle gate a
 
 # Recommended next task
 
-**B6 — Security & Privacy** (§5/§6): OWASP Mobile review, CCPA export/delete verified end to end
-(F-3/F-10), store privacy labels. The next unstarted slice, and entirely credential-free — nothing in
-it waits on the Sentry org, the paid Supabase plan, or the store accounts.
+**1. Offline sync (launch blocker, and the largest open gap).** The queue is never persisted, never
+drained and never dequeued, so offline mutations are silently lost on app kill and successful ones
+leak. This contradicts the offline-first permanent architecture principle and §10.1's "offline loop
++ sync verified". Needs drain orchestration, MMKV persistence, retry/backoff and
+`ERR_SYNC_CONFLICT` handling per TDD Part 4 §6. Scoped as its own increment.
 
-The E2E gate is green and no longer a prerequisite for anything.
+**2. B6.3 — the rest of B6:** a data-collection inventory built from the code (every table, field
+and `EVT_*` the app actually writes), then a draft privacy policy and store Data Safety / App
+Privacy label answers from it, marked as requiring legal review.
+
+**3. Residual review findings:** apply the existing zod contracts at the Edge Function boundaries
+(M4), and set `allowBackup=false` plus an explicit network security config (M8).

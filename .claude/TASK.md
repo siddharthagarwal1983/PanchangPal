@@ -2,8 +2,8 @@
 
 # PanchangPal — Current Task
 
-Version: 3.11.0
-Last Updated: 2026-07-26 (B5 complete at verifiable scope; onboarding gate fixed)
+Version: 3.12.0
+Last Updated: 2026-07-26 (B6 3 of 4 complete; next: offline sync, then B6.3)
 
 Purpose: the current implementation task. Stay focused; avoid unrelated work unless instructed.
 
@@ -110,7 +110,48 @@ green in CI on a real native build. Canonical progress 0% → 13% (1 of 8 Beta s
 # Current Task
 
 ## Title
-B6 — Security & Privacy (§5/§6)
+✅ B6 3 of 4 COMPLETE · NEXT: offline sync (launch blocker), then B6.3
+
+## B6 — Security & Privacy: what shipped (PRs #57, #58)
+
+**B6.1 OWASP Mobile Top 10 review ✅** — `docs/devops/OWASP_MOBILE_REVIEW.md`, every category against
+the app as built with file:line evidence. Two categories were launch-blocking:
+
+- **M1/M9 — the auth session was never persisted.** `persistSession: true` with no `storage`
+  adapter falls back to memory in React Native; because the app is anon-first that minted a fresh
+  anonymous uid every cold start, orphaning the user's profile, household, streak, completions,
+  personal dates and conversations. Fixed with a Keychain/Keystore adapter; proven by
+  `FLOW_AUTH_SESSION_PERSISTENCE`, which FAILS with the fix reverted.
+- **M3 — SVC_account had no authorization.** It read the acting identity from the request body while
+  running with the service role. `POST /account/merge {"anon_uid": "<victim>"}` reassigned a victim's
+  rows across every owned table (account takeover); `/account/delete` deleted any named account.
+  Every action now derives the caller from the JWT; `merge` requires the anon session's ACCESS TOKEN
+  as proof of ownership. Proven to fail on the reintroduced defect.
+
+**B6.2 CCPA export ✅ at verifiable scope** — the five §6.4 row sets behind a versioned envelope
+(`panchangpal.export.v1`, `format_status: awaiting_ratification`) because F-10 is product-owned and
+unratified. **No UI consumes it**: PDD specifies no screen, so adding one would invent UX — the
+affordance is owed by the PDD. NOT yet exercised end-to-end against a live backend (needs a redeploy).
+
+**B6.4 §5.2 controls ✅** — SBOM via pinned cdxgen, Dependabot (grouped), and `eas-cli@latest` pinned
+at all four call sites, including the one that signs the release artifact.
+
+**B6.3 remains:** data-collection inventory → draft privacy policy + store Data Safety labels.
+
+## Next task — offline sync (launch blocker)
+
+`STORE_offlineQueue` is in-memory despite its header claiming MMKV persistence, is **never drained**
+to SVC_sync, and is **never dequeued** on success. Four hooks enqueue into it. Online the app works,
+because every hook also calls the API directly; offline, the mutation is silently lost on app kill,
+and successful ones leak. SVC_sync is fully implemented server-side and unreachable from the client.
+
+This contradicts **offline-first**, a permanent architecture decision, and §10.1's
+"☐ offline loop + sync verified". Needs drain orchestration, persistence, retry/backoff and
+`ERR_SYNC_CONFLICT` handling per TDD Part 4 §6.
+
+---
+
+## Superseded — B6 as originally scoped
 
 ## Status — the E2E gate is green; the previous "red main" task was based on a stale handoff
 **Closed 2026-07-26.** Main's E2E was already green when the previous session handed it off as the

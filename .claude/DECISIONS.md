@@ -21,6 +21,32 @@ docs/architecture/adr/
 
 # Product Decisions
 
+## 2026-07-26 — CCPA export envelope is versioned because F-10 is unratified (B6.2)
+
+**Decision.** `SVC_account.export` returns `{ format: 'panchangpal.export.v1', format_status:
+'awaiting_ratification', exported_at, user_id, data }`, where `data` holds the TDD Part 2 §6.4 row
+sets keyed by table name, **verbatim**.
+
+**Why a version field at all.** §6.4 specifies WHICH rows the export contains; the shape is `F-10`,
+an explicitly product-owned follow-up that has not been ratified. Shipping an unversioned envelope
+would freeze an engineering guess into a contract consumers cannot tell apart from an approved one.
+`format` plus `format_status` says out loud that this shape is provisional.
+
+**Why rows are verbatim rather than reshaped.** A CCPA export is meant to be complete. A mapping
+layer is precisely where a newly added column gets silently omitted as the schema grows, and the
+omission would be invisible — the export would still look well-formed.
+
+**Why the export table list differs from `OWNED_TABLES`.** Merge reassigns everything a user owns;
+an export returns what is meaningfully *theirs*. `push_token` is a device credential, `notification`
+is delivery bookkeeping, and `referral` concerns another party as much as this user.
+
+**Why no UI.** PDD §5 governance lists CCPA export as outstanding and specifies no screen or
+affordance. Adding a Settings row would be inventing UX. The capability is real and tested; the
+affordance is owed by the PDD — recorded rather than filled in, the same treatment as
+`AWAITING_APPROVED_COPY`.
+
+---
+
 ## Target Market
 
 Primary

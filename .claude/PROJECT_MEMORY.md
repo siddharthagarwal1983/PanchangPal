@@ -2,9 +2,9 @@
 
 # PanchangPal — Project Memory
 
-Version: 1.9.0
+Version: 2.0.0
 
-Last Updated: 2026-07-26 (onboarding gate + DR runbooks recorded as permanent seams)
+Last Updated: 2026-07-26 (auth-session and SVC_account authorization seams recorded)
 
 Current Phase:
 Beta Readiness & Platform Hardening (TDD Part 5)
@@ -447,6 +447,31 @@ Stable, cross-cutting facts (permanent until an approved decision changes them):
   is NOT met**: Supabase PITR is a paid-plan feature and the hosted projects are free-tier, so schema
   and seed rebuild from the repo in minutes while user data is unrecoverable. Do not launch to real
   users in that state.
+- **The auth session lives in the device KEYSTORE, never in the KeyValueStore seam** —
+  `src/data/secureSessionStorage.ts` backs supabase-js's `storage` option with `expo-secure-store`
+  (Keychain / Keystore-backed encrypted prefs). MMKV is deliberately NOT used: it is unencrypted at
+  rest and a refresh token is a bearer credential (OWASP M9). Values are chunked across numbered
+  keys because SecureStore warns above 2048 bytes and a session exceeds it; the count key is written
+  LAST and deleted FIRST, so a torn write or interrupted sign-out can never leave a partially
+  readable session. An unavailable keystore degrades to memory with a loud warning and an
+  inspectable `getSessionStorageBackend()`.
+  **`persistSession: true` alone is a no-op in React Native** — there is no `localStorage`, so
+  auth-js silently falls back to memory. That was the state through M1–M8: because the app is
+  anon-first, every cold start minted a NEW anonymous uid and orphaned the user's profile,
+  household, streak, completions, personal dates and conversations. Nothing caught it —
+  FLOW_RETURNING asserts seeded content a stranger sees identically. Guarded now by
+  `FLOW_AUTH_SESSION_PERSISTENCE`, which was proven to fail without the adapter.
+- **Edge Functions derive identity from the JWT, NEVER from the request body** — `withHandler`
+  proves only that a bearer token is PRESENT, and functions run with the SERVICE ROLE, so RLS is
+  **not** a backstop. Every action resolves the caller via `currentUserId(ctx.jwt)`
+  (`auth.getUser`). Anonymous sign-in is enabled, so any attacker can mint a valid JWT for free and
+  `verify_jwt` proves only that a token is *a* valid token, never *whose*.
+  Established by B6.2, where `SVC_account` took `body.user_id` / `body.auth_uid`: any caller could
+  delete any account, or reassign a victim's rows across every owned table to themselves and read
+  them under ordinary RLS — with household member lists exposing `user_id`, so co-members were
+  directly targetable. `merge` is the one case where the target is legitimately not the caller's
+  current uid; it therefore requires the anonymous session's **access token** as proof of ownership,
+  because a uid is a claim, not proof. Guarded by `account/authorization.test.ts`, proven to fail.
 - **MockPanchangProvider** is DEV/TEST ONLY and must never be imported by production code.
 - **Backend Edge Functions pending** — SVC_household (member/invite), SVC_notify_scheduler
   (notify/schedule), and SVC_revenuecat_webhook are pending backend deliverables; the corresponding

@@ -2,9 +2,9 @@
 
 # PanchangPal — Project Status Dashboard
 
-Version: 1.6.0
+Version: 1.7.0
 
-Last Updated: 2026-07-26 (E2E green on main, 4/4; launcher-ANR false-red closed at its cause)
+Last Updated: 2026-07-26 (B6 security: auth-session and SVC_account authz defects fixed)
 
 Purpose:
 This document provides a high-level snapshot of the overall project.
@@ -39,7 +39,7 @@ Overall Progress
 
 ░░░░░░░░░░░░░░░░░░░░
 
-**Mobile MVP — Phase 1: ✅ 100% (all 8 slices, merged)** · **Beta Readiness & Platform Hardening: 🚧 31% (2 of 8 slices — B2, B5 — plus B4.1–B4.3)**
+**Mobile MVP — Phase 1: ✅ 100% (all 8 slices, merged)** · **Beta Readiness & Platform Hardening: 🚧 44% (2 of 8 slices — B2, B5 — plus ¾ of B6 and ¾ of B4)**
 
 Project Health
 
@@ -74,7 +74,7 @@ TBD
 | Mobile Development (feature slices) | ✅ Complete | 100% (M1–M8 done) |
 | AI Platform | 🟡 In Progress | Adapters + RAG pipeline done; corpus + eval pending |
 | Testing | 🟢 Healthy | 321 green (244 mobile jest + 77 vitest) + 17 pgTAP RLS/DB assertions; bundle gate per PR; **4 Maestro FLOW_* green on main**; the emulator-ANR false-red is now fixed at its cause (AOSP image, PR #55) after PR #41's `hide_error_dialogs` proved a symptom patch — 3 of the last 4 failures were launcher ANRs; API contract gate restored and proven to fail; AI eval harness still owed |
-| Beta | 🚧 In progress | 31% (B2 ✅; B5 ✅ at verifiable scope — NFR-15 still needs PITR, a purchase; B4 🟡 ~75% owner-gated on a Sentry org; B1/B3 owner-gated; B6–B8 pending) |
+| Beta | 🚧 In progress | 44% (B2 ✅; B5 ✅ at verifiable scope — NFR-15 still needs PITR; **B6 🟡 ~75%** — OWASP review + 2 critical fixes + CCPA export + §5.2 controls, B6.3 pending; B4 🟡 ~75% owner-gated on a Sentry org; B1/B3 owner-gated; B7–B8 pending) |
 | Production Launch | ⏳ Pending | 0% |
 
 ---
@@ -244,7 +244,7 @@ Implementation: Mobile MVP Phase 1 is feature-complete (M1–M8).
 | Component Tests | 🟢 In place for delivered slices |
 | Accessibility Tests | 🟢 a11y assertions in slice tests |
 | AI Evaluation | ⏳ Pending |
-| E2E Tests | 🟢 **4 FLOW_* GREEN** in CI on a native build (RETURNING, MORNING_RITUAL, SESSION_PERSISTENCE, ONBOARDING) — run 30171884650 on `0ca0906`, 2026-07-26; gate fails fast (PR #35) and the launcher-ANR false-red is removed at its cause by the AOSP system image (PR #55, verified 4/4 in 1m23s on run 30196467032) |
+| E2E Tests | 🟢 **5 FLOW_* GREEN** (incl. FLOW_AUTH_SESSION_PERSISTENCE, proven to fail without its fix) in CI on a native build (RETURNING, MORNING_RITUAL, SESSION_PERSISTENCE, ONBOARDING) — run 30171884650 on `0ca0906`, 2026-07-26; gate fails fast (PR #35) and the launcher-ANR false-red is removed at its cause by the AOSP system image (PR #55, verified 4/4 in 1m23s on run 30196467032) |
 
 ---
 
@@ -316,6 +316,19 @@ prefs work today, so gating and prefs are real before the SDKs are wired.
 
 # Recently Completed
 
+- **B6 — Security & Privacy, 3 of 4 increments (2026-07-26, PRs #57/#58).** The §5.2 OWASP Mobile
+  Top 10 review, performed against the app as built. It found **two critical defects**, both fixed
+  and each proven by reintroducing the defect and watching the test fail:
+  **(1)** the auth session was never persisted — `persistSession: true` with no storage adapter
+  falls back to memory in React Native, and because the app is anon-first that minted a FRESH
+  anonymous uid on every cold start, orphaning the user's profile, household, streak, completions,
+  personal dates and conversations; **(2)** `SVC_account` read the acting identity from the request
+  body while running with the service role, so any caller could delete any account or reassign a
+  victim's owned rows to themselves — account takeover, with co-members directly targetable since
+  household member lists expose `user_id`. Also: CCPA export built to the §6.4 row set behind a
+  versioned envelope (F-10 unratified, so the shape is explicitly provisional), and §5.2's SBOM,
+  Dependabot and `eas-cli@latest` pinning closed. **B6.3** — data inventory, privacy policy, store
+  labels — remains.
 - **E2E gate made trustworthy (2026-07-26, PR #55):** the launcher-ANR false-red is removed at its
   cause — AVD `target: google_apis` → `default` (AOSP), which ships neither Pixel Launcher nor the
   Google app, neither of which anything under test needs. PR #41's `hide_error_dialogs` had bought
@@ -461,10 +474,20 @@ The Mobile MVP Phase 1 feature-slice milestone is **complete (100%)** and merged
 slices — App Shell, Today, Guided Ritual, Calendar Shell, Ask Guru Client, Profile/Household,
 Notifications, and Subscription (M1–M8) — are implemented, tsc/eslint clean, and green in CI.
 
-The project is now in **Beta Readiness & Platform Hardening** (TDD Part 5), sliced B1–B8, at **31%
-(2 of 8 — B2 and B5 complete at verifiable scope — plus B4.1–B4.3)**. The milestone opened on a known gap: CD reported green while
-its Maestro E2E and EAS build jobs were placeholders. **B2 (E2E verification) is now complete** — the
-Maestro placeholder is replaced by three real FLOW_* specs GREEN in CI on a native Android build,
+The project is now in **Beta Readiness & Platform Hardening** (TDD Part 5), sliced B1–B8, at **44%
+(2 of 8 — B2 and B5 complete at verifiable scope — plus ¾ of B6 and ¾ of B4)**. The milestone opened
+on a known gap: CD reported green while its Maestro E2E and EAS build jobs were placeholders.
+
+**B6's security review found the two most serious defects of the milestone** — the auth session that
+never persisted (so every restart minted a new anonymous identity and orphaned the user's data), and
+`SVC_account` reading the acting identity from the request body while running with the service role
+(so any caller could delete any account or reassign a victim's rows to themselves). Both are fixed,
+and each is proven by reintroducing the defect and watching the test fail. A third finding — the
+offline queue is never drained, so offline-first is not implemented on the client — is recorded as a
+launch blocker rather than fixed, because it is a missing feature and not a vulnerability.
+
+**B2 (E2E verification) is complete** — the
+Maestro placeholder is replaced by real FLOW_* specs GREEN in CI on a native Android build,
 including FLOW_SESSION_PERSISTENCE, which along the way exposed and fixed a real persistence bug
 (MMKV v2 vs New Architecture → v4 upgrade, PR #36). Staging migrations and Edge Function deploys are
 real. B1 (prod environment) and B3 (store distribution) remainders are owner-gated.

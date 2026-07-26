@@ -2,8 +2,8 @@
 
 # PanchangPal — Implementation Roadmap
 
-Version: 1.9.0
-Last Updated: 2026-07-26 (E2E green on main; the false-red closed at its cause; next slice B6)
+Version: 2.0.0
+Last Updated: 2026-07-26 (B6 3 of 4; two critical security defects; next: offline sync)
 
 Purpose: the forward plan from the current state. Complements PROJECT_STATUS.md (snapshot) and
 CURRENT_MILESTONE.md (active milestone). Updated when scope or sequencing changes — and at every
@@ -142,6 +142,26 @@ Google app, neither of which anything under test needs. Verified 4/4 in 1m23s wi
 **Progress stays 25%→31% unchanged by this work**: B2 was already complete and repairing a flaky
 gate is not an increment. Next unblocked engineering slice: **B6 — Security & Privacy** (§5/§6),
 entirely credential-free.
+
+**Update (2026-07-26, B6). The security review found the two most serious defects of the milestone,
+and one missing subsystem.** Progress **31% → 44%**.
+
+Both defects are the same shape the Execution Gap taught, now for the fifth and sixth time: **a
+documented control that was never implemented, with nothing asserting it.** `persistSession: true`
+claimed persistence and got memory. `SVC_account` was documented as "validate the JWT then act with
+the service role" and validated only that a token was *present* — so any caller could delete any
+account, or reassign a victim's rows to themselves and read them under ordinary RLS. Neither was
+reachable by any existing test; both were found by reading the claim against the implementation.
+
+Each fix is **proven by reintroducing the defect**: `FLOW_AUTH_SESSION_PERSISTENCE` fails without
+the storage adapter, and `authorization.test.ts` fails when `body.user_id` is restored. A test that
+has never failed is a claim, not a gate.
+
+**The missing subsystem is offline sync.** `STORE_offlineQueue` is in-memory despite claiming MMKV
+persistence, is never drained to SVC_sync, and is never dequeued. Online the app works because every
+hook also calls the API directly; offline, mutations are silently lost. **Offline-first is a
+permanent architecture decision and it is not implemented on the client.** That is the next
+increment, ahead of B6.3.
 
 One blocker: the Canonical Panchang Engine (ADR-033, Proposed) — astronomical algorithm
 undocumented; the whole system depends only on the abstract PanchangEngine/PanchangProvider
