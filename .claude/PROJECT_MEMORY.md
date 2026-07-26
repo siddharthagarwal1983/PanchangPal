@@ -496,6 +496,19 @@ Stable, cross-cutting facts (permanent until an approved decision changes them):
   `@tanstack/react-query`, NOT `persistQueryClient` — that lives in an undeclared package, and
   reaching into the pnpm store is the defect `@babel/runtime` and `babel-preset-expo` already cost
   this repo twice.
+- **A local Android build + emulator now works on the dev Mac** (established 2026-07-26). The
+  standing note that "no Android SDK, Java, or Xcode is available locally" — the reason B2 was
+  scoped as depending on B3 — is out of date for Android. Present: SDK cmdline-tools, an AOSP
+  arm64 API-34 system image, AVD `ppal_aosp34`, and a working `expo prebuild` + Gradle build;
+  Gradle auto-provisions JDK 17 regardless of `JAVA_HOME`. Three facts worth not rediscovering:
+  build with `-PreactNativeArchitectures=arm64-v8a` (the default builds four ABIs and throws three
+  away — the same waste PR #32 removed from CI); a **debug APK embeds no JS bundle**, so it needs
+  Metro plus `adb reverse tcp:8081 tcp:8081`, while `assembleRelease` embeds the bundle, signs with
+  the checked-in debug keystore and runs standalone; and `apps/mobile/android/` is GENERATED and
+  gitignored, so `expo prebuild` is safe to re-run (it does rewrite `package.json`'s `android`/`ios`
+  scripts, which should be reverted). **iOS is unchanged — still unbuilt, still needs an Apple
+  membership.** This matters mainly because Maestro flows can now be iterated locally instead of
+  through 20-minute CI runs.
 - **MockPanchangProvider** is DEV/TEST ONLY and must never be imported by production code.
 - **Backend Edge Functions pending** — SVC_household (member/invite), SVC_notify_scheduler
   (notify/schedule), and SVC_revenuecat_webhook are pending backend deliverables; the corresponding

@@ -110,7 +110,14 @@ green in CI on a real native build. Canonical progress 0% → 13% (1 of 8 Beta s
 # Current Task
 
 ## Title
-✅ OFFLINE SYNC COMPLETE (launch blocker closed at engineering scope) · NEXT: B6.3
+✅ OFFLINE SYNC MERGED (`86b3843`, PR #66) · NEXT: B6.3
+
+**Merged 2026-07-26 after verification, not before it.** Five CI gates green, and E2E dispatched on
+the branch (run 30207484940 on `a05760d`) passed **5/5 Maestro flows** in 5m16s — FLOW_ONBOARDING
+and FLOW_RETURNING included, which is what proves the two new startup effects (query-cache restore,
+drain on mount) did not disturb a fresh launch. E2E does not run on PRs (`e2e.yml` triggers on push
+to main + dispatch), so dispatching on the branch is the only way to get that signal pre-merge —
+the precedent PR #55 set.
 
 ## Offline sync — what shipped
 

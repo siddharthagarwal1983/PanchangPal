@@ -247,7 +247,7 @@ Implementation: Mobile MVP Phase 1 is feature-complete (M1–M8).
 | Component Tests | 🟢 In place for delivered slices |
 | Accessibility Tests | 🟢 a11y assertions in slice tests |
 | AI Evaluation | ⏳ Pending |
-| E2E Tests | 🟢 **5 FLOW_* GREEN** (incl. FLOW_AUTH_SESSION_PERSISTENCE, proven to fail without its fix) in CI on a native build (RETURNING, MORNING_RITUAL, SESSION_PERSISTENCE, ONBOARDING) — run 30171884650 on `0ca0906`, 2026-07-26; gate fails fast (PR #35) and the launcher-ANR false-red is removed at its cause by the AOSP system image (PR #55, verified 4/4 in 1m23s on run 30196467032) |
+| E2E Tests | 🟢 **5 FLOW_* GREEN** (incl. FLOW_AUTH_SESSION_PERSISTENCE, proven to fail without its fix) in CI on a native build (RETURNING, MORNING_RITUAL, SESSION_PERSISTENCE, AUTH_SESSION_PERSISTENCE, ONBOARDING) — **5/5 in 5m16s, run 30207484940 on `a05760d`**, 2026-07-26; gate fails fast (PR #35) and the launcher-ANR false-red is removed at its cause by the AOSP system image (PR #55, verified 4/4 in 1m23s on run 30196467032) |
 
 ---
 

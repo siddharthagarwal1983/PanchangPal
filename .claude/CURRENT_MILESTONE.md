@@ -340,7 +340,7 @@ possible fix and would have caught defects 1–3 at M1.
 | # | Slice | Covers | Status |
 |---|---|---|---|
 | B1 | Environments & secrets | dev/staging/prod projects, per-env secrets, fail-closed preflight (§1, §4) | 🟡 ~85% — prod blocked on a paid plan |
-| B2 | E2E verification | bundle gate (done in B1) + Maestro FLOW_*; green in CI (§2.2, §10.1) | ✅ COMPLETE — bundle gate + **4 flows GREEN** on a native build (incl. FLOW_SESSION_PERSISTENCE and FLOW_ONBOARDING, the latter unblocked by PR #50). Gate hardened at its cause: the launcher-ANR false-red is gone with the move to the AOSP image (PR #55). Remaining 2 flows blocked on other slices/backends/gated feature |
+| B2 | E2E verification | bundle gate (done in B1) + Maestro FLOW_*; green in CI (§2.2, §10.1) | ✅ COMPLETE — bundle gate + **5 flows GREEN** on a native build (RETURNING · MORNING_RITUAL · SESSION_PERSISTENCE · AUTH_SESSION_PERSISTENCE · ONBOARDING), 5/5 in 5m16s on run 30207484940. The count was recorded as 4 until 2026-07-26: FLOW_AUTH_SESSION_PERSISTENCE arrived with B6 and was never added to the tally, and `e2e.yml`'s own step summary still echoes four names. Gate hardened at its cause: the launcher-ANR false-red is gone with the move to the AOSP image (PR #55). Remaining 2 flows blocked on other slices/backends/gated feature |
 | B3 | Build & distribution | eas.json profiles, Hermes, signing, source maps, TestFlight / Play Internal (§2.3) | 🟡 ~80% — automated builds work; store accounts + Sentry (B4) remain |
 | B4 | Observability | Sentry, telemetry, SLO dashboards + alerts (§7) | 🟡 ~75% — B4.1 seam ✅ · B4.2 sink ✅ · B4.3 server seam + prod release gate ✅ · EVT_* daily-habit funnel now emitting (§11.4, incl. the North Star input EVT_017); **upload + B4.4 owner-gated on a Sentry org (free tier)** |
 | B5 | Reliability & DR | backups, restore drill, runbooks, graceful degradation (§8) | ✅ COMPLETE at verifiable scope — runbooks (§8.3) · mechanised restore drill · §8.2 degradation policy · §8.4 operator resilience. **One deliverable is NOT engineering-closable: NFR-15 needs PITR, which is a purchase.** Recorded as a launch blocker rather than counted as done. |
@@ -434,6 +434,19 @@ testers' hands.
 - ~~**SDK 54 native runtime unverified**~~ — **CLOSED 2026-07-19.** Three Android APKs built and
   run; the New Architecture works natively. iOS remains unbuilt (no Apple membership), so that
   half of the baseline is still unproven.
+- ~~**No local Android toolchain**~~ — **CHANGED 2026-07-26.** The B2 scoping note ("no Android SDK,
+  Java, or Xcode is available locally", which is why B2 was said to depend on B3) is now out of
+  date for Android. The dev Mac has cmdline-tools, an AOSP arm64 API-34 system image, the AVD
+  `ppal_aosp34`, and a working `expo prebuild` + Gradle build; the app has been installed and run
+  on the emulator, with Metro serving the bundle. **This makes Maestro flows iterable locally
+  instead of only in CI** — which matters directly for the owed `FLOW_OFFLINE_SYNC`, since a
+  flow involving airplane mode and app-kill is painful to develop through 20-minute CI runs.
+  Two practical notes for whoever picks it up: build with
+  `-PreactNativeArchitectures=arm64-v8a` (the default builds four ABIs and discards three, the
+  same waste PR #32 removed from CI), and a **debug APK contains no JS bundle** — it needs Metro
+  plus `adb reverse tcp:8081 tcp:8081`, whereas `assembleRelease` embeds the bundle and runs
+  standalone (it signs with the checked-in debug keystore, so it needs no credentials). iOS is
+  unchanged: still no Apple membership, still unbuilt.
 - ~~**Session persistence unverified.**~~ **VERIFIED 2026-07-25.** `FLOW_SESSION_PERSISTENCE`
   (PR #32) — complete the ritual, `stopApp`, relaunch, assert `Done for today`, with `adb logcat`
   captured so the two candidate causes are separable — finally executed once the E2E build was fixed
