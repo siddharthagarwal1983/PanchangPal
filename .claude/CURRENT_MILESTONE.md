@@ -2,9 +2,9 @@
 
 # PanchangPal — Current Milestone
 
-Version: 4.0.0
+Version: 4.1.0
 
-Last Updated: 2026-07-26 (B6 opened; two critical security defects found and fixed)
+Last Updated: 2026-07-26 (offline sync implemented — the §6 gap B6 surfaced)
 
 Purpose:
 This document defines the current milestone. Unlike SESSION.md (daily work) or TASK.md (current
@@ -25,6 +25,18 @@ Overall Progress
 
 44% (2 of 8 slices COMPLETE — **B2 ✅**, **B5 ✅ at verifiable scope** — plus **¾ of B6** and ¾ of B4;
 B1 ~85%, B3 ~80%)
+
+**Offline sync was implemented on 2026-07-26 and does NOT move this number.** TDD Part 4 §6 is a
+Mobile MVP deliverable that B6's review found unbuilt, not one of the eight Beta slices. It closes
+a launch blocker — the queue was in memory beneath a header claiming persistence, was never
+drained, and **nothing bound API_POST_SYNC at all**, so SVC_sync had been unreachable from the app
+since the Backend Foundation milestone — while advancing no slice. Counting it would inflate the
+percentage with work that belongs to a milestone already reported at 100%.
+
+**It is the third time "feature-complete" has meant "written and unit-tested."** The Execution Gap
+found twelve defects behind a green pipeline; issue #30 found an ADR nobody had implemented; §6 was
+documented in the header of the very file that did not implement it. The pattern is now specific
+enough to act on: a claim written in a comment is not a claim anyone has tested.
 
 **B6 — Security & Privacy is three-quarters through, and it found the two most serious defects of
 the milestone.** B6.1 OWASP Mobile Top 10 review ✅ · B6.2 CCPA export + the SVC_account
@@ -487,6 +499,16 @@ testers' hands.
   would have failed and `lives_ok` would have passed while proving nothing. (The staging probe row
   is permanent — client DELETE is denied, which is the property under test — and is identifiable by
   a `user_pseudo_id` starting `probe-`.)
+- ~~**⛔ The app is not offline-first in practice.**~~ **RESOLVED 2026-07-26.** `STORE_offlineQueue`
+  held pending mutations in memory beneath a header claiming MMKV persistence, was never drained
+  and never dequeued, and no client code bound API_POST_SYNC — SVC_sync was fully implemented and
+  unreachable. Offline, a completion was lost the moment the OS reclaimed the process; online, the
+  app worked only because every hook also called its API directly, leaving the queue to grow
+  forever. Now: durable queue through the shared `KeyValueStore` seam, a single-flight drain with
+  FIFO batching and jittered backoff, dequeue on server acknowledgement, and the §6.1 persisted
+  read cache so a cold start offline is not empty. **Residual risk, stated:** it has never run
+  against a live backend, and there is no `FLOW_OFFLINE_SYNC` Maestro flow — which is exactly the
+  class of gap a real flow caught for MMKV and unit tests structurally cannot.
 - **Deferred vendor deps** — `react-native-purchases` and `expo-notifications` are still uninstalled;
   purchase and push flows cannot be verified end-to-end until they land on the Mac with keys. Their
   Null adapters keep the app honest but leave those paths E2E-untested.

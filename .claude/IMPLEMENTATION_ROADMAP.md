@@ -11,7 +11,24 @@ increment/milestone boundary per the Increment & Milestone Completion Checkpoint
 
 ---
 
-## Where we are (2026-07-22)
+## Where we are (2026-07-26)
+
+**Beta Readiness & Platform Hardening, 44%** — B2 ✅ and B5 ✅ (at verifiable scope), plus ¾ of B6
+and ¾ of B4. B1 ~85%, B3 ~80%, all remainders owner-gated on money or a store account.
+
+**Offline sync (TDD Part 4 §6) was implemented on 2026-07-26**, closing a launch blocker B6's OWASP
+review surfaced: the mutation queue was in memory beneath a header claiming persistence, was never
+drained or dequeued, and nothing bound API_POST_SYNC, leaving SVC_sync unreachable from the app.
+The queue is now durable, drained on §6.4's three triggers with jittered backoff, and dequeued on
+server acknowledgement; the §6.1 read cache is persisted so an offline cold start is not empty. It
+does not move the percentage — §6 is a Mobile MVP deliverable, not a Beta slice.
+
+Next: **B6.3** (data-collection inventory → draft privacy policy → store Data Safety labels), the
+last credential-free slice work.
+
+---
+
+## Where we were (2026-07-22)
 
 Documentation, ADRs (33), OpenAPI, DB schema + migrations, monorepo scaffold, Expo app shell,
 CI/CD, Backend Foundation, and the design system are complete. The Mobile MVP — Phase 1 feature

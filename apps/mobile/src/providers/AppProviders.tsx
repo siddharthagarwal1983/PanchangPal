@@ -9,8 +9,10 @@ import { SafeAreaProvider } from 'react-native-safe-area-context';
 import { QueryClientProvider } from '@tanstack/react-query';
 import { ThemeProvider } from '@panchangpal/ui';
 import { queryClient } from '../data/queryClient';
+import { installQueryPersistence } from '../data/queryPersistence';
 import { ErrorBoundary } from '../navigation/ErrorBoundary';
 import { useTimeZoneSync } from '../data/hooks/useTimeZoneSync';
+import { useOfflineSync } from '../data/hooks/useOfflineSync';
 import { installGlobalErrorHandler } from './installGlobalErrorHandler';
 import { installAnalyticsFlushOnBackground } from '../data/analyticsAdapter';
 import '../i18n';
@@ -27,6 +29,16 @@ function TimeZoneSync() {
   return null;
 }
 
+/**
+ * Drains STORE_offlineQueue to SVC_sync (TDD Part 4 §6.4). Renderless and inside
+ * QueryClientProvider for the same two reasons as TimeZoneSync: it reconciles the query cache from
+ * server truth, and a drain settling must not re-render the tree.
+ */
+function OfflineSync() {
+  useOfflineSync();
+  return null;
+}
+
 export function AppProviders({ children }: { children: ReactNode }) {
   // In an effect rather than at module scope: an eager side effect on import is the exact shape of
   // defect that took down the ritual screen and nine repositories (§8.3 also wants non-critical
@@ -35,6 +47,11 @@ export function AppProviders({ children }: { children: ReactNode }) {
   useEffect(() => {
     installGlobalErrorHandler();
   }, []);
+
+  // Restore the persisted query cache and keep it current (§6.1), so a cold start with no network
+  // still has today's panchang, ritual, checklist and streak. In an effect for the same reason as
+  // above: it resolves device storage, which must never happen during module evaluation.
+  useEffect(() => installQueryPersistence(queryClient), []);
 
   // Send queued analytics before the OS may freeze or kill the process. The batch queue is in
   // memory (ADR-013 batching, but no user-behaviour data on disk — ADR-031), so backgrounding is
@@ -47,6 +64,7 @@ export function AppProviders({ children }: { children: ReactNode }) {
         <ThemeProvider appearance="system">
           <ErrorBoundary>
             <TimeZoneSync />
+            <OfflineSync />
             {children}
           </ErrorBoundary>
         </ThemeProvider>

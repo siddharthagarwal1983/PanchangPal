@@ -2,158 +2,79 @@
 
 # PanchangPal — Current Session
 
-Version: 2.3.0
-Last Updated: 2026-07-26 (End Session — B6 3 of 4; two critical security defects fixed)
+Version: 2.4.0
+Last Updated: 2026-07-26 (offline sync implemented — the launch blocker B6 found)
 
 ---
 
-# Completed
+# Completed this session
 
-**B6 — Security & Privacy, 3 of 4 increments (PRs #57, #58).** The §5.2 OWASP Mobile Top 10 review,
-performed against the app as built rather than as documented. It found the two most serious defects
-of this milestone, both now fixed and each **proven by reintroducing the defect and watching the
-test fail**:
+**Offline sync — the launch blocker is closed at engineering scope.** `STORE_offlineQueue` was an
+in-memory zustand slice beneath a header claiming MMKV persistence: never written to disk, never
+drained, never dequeued. SVC_sync had been fully implemented server-side since the Backend
+Foundation milestone and **nothing in `src/data` bound API_POST_SYNC at all**. Offline the mutation
+was lost on app kill; online it worked only because every hook also called its API directly, and
+the successful entry then leaked forever.
 
-1. **The auth session was never persisted (M1/M9).** `persistSession: true` with no `storage`
-   adapter falls back to memory in React Native. Because the app is anon-first, that cost
-   **identity**, not login: a fresh anonymous uid every cold start, orphaning the user's profile,
-   household, streak, completions, personal dates and conversations. `FLOW_AUTH_SESSION_PERSISTENCE`
-   fails with the fix reverted and passes with it.
-2. **SVC_account had no authorization (M3).** It read the acting identity from the request body
-   while running with the service role, so RLS was not a backstop. `POST /account/merge` with a
-   victim's uid reassigned their rows across every owned table — **account takeover** — and
-   `/account/delete` deleted any named account. Anonymous sign-in is enabled, so an attacker's JWT
-   is free; household member lists expose `user_id`, so co-members were directly targetable.
+Shipped, in layers:
 
-Also: **CCPA export** built to the §6.4 row set behind a versioned envelope (F-10 unratified);
-**§5.2 controls** closed — SBOM (pinned cdxgen), Dependabot, and `eas-cli@latest` pinned at all four
-call sites.
+- **`domain/sync`** (pure, 17 tests) — FIFO batching, exponential backoff with half-range jitter,
+  capped attempts, and reconciliation. A conflict counts as ACKNOWLEDGED (§6.3 resolves by rule);
+  anything returned in neither `applied` nor `conflicts` is retried, because assuming a 200 means
+  success is exactly how a mutation gets dropped silently.
+- **`STORE_offlineQueue`** — persisted through the shared `KeyValueStore` seam, resolved lazily.
+- **`syncRepository`** — the missing API_POST_SYNC binding.
+- **`syncService`** — single-flight drain, batch loop, non-blocking status. **Nothing is ever
+  discarded**: attempts are capped to stop silent retrying, not to drop a completion.
+- **`useOfflineSync`** — §6.4's three triggers (connectivity edge, foreground, periodic flush).
+- **`queryPersistence`** (§6.1) — the READ half. Without it a cold start offline is empty, so
+  §6.2's `[MANDATORY]` offline daily loop could not hold. Allowlisted to §6.1's set; `entitlement`
+  and `invite` stay in memory (§6.2 network-only, and the device is not the authority on paid
+  access). Built on `dehydrate`/`hydrate` from the declared `@tanstack/react-query` rather than
+  `persistQueryClient`, which lives in an undeclared package — reaching into the pnpm store is the
+  defect `@babel/runtime` and `babel-preset-expo` already cost this repo twice.
 
-**E2E gate made trustworthy (PR #55).** 3 of 4 recent failures were Pixel Launcher ANR false-reds
-(~21%), all with `hide_error_dialogs` already active. Fixed at the cause by moving to the AOSP
-system image; three consecutive green runs since.
+**Proven, not asserted.** Four perturbations, each failing the right tests: persistence disabled
+(5 fail), "a 200 means success" (3), an unsyncable kind reintroduced (1), the persist allowlist
+ignored (4). 350 mobile tests (+51), 82 vitest, tsc clean, eslint 0 errors, bundle gate green.
 
-**B2 — E2E verification ✅.** The E2E build had been failing in `assembleRelease` and then hanging to
-the job timeout, so `cancelled` disguised a red build (fixed, PR #35). With it fixed,
-`FLOW_SESSION_PERSISTENCE` ran and caught a real defect: `react-native-mmkv@2` cannot install its JSI
-bindings under the New Architecture, so ritual sessions silently ran on memory and never survived a
-restart. Fixed by v2→v4 (#36); three flows green on a native build.
+# Defects found this session
 
-**B4 — Observability, 3 of 4 increments.** Client `TelemetryAdapter` wired at both error call sites
-(#39); the `AnalyticsService` port over `analytics_event` (#40); the Edge Function seam plus
-preflight `SENTRY_*` requirements and a release gate that blocks a production build with Sentry
-unconfigured (#42); the PDD §11.4 daily habit funnel now emitting, EVT_017 included (#43).
-
-**B5 — Reliability & DR ✅ at verifiable scope.** Runbooks for §8.3's five scenarios and a mechanised
-restore drill (#46); the §8.2 degradation policy, exhaustive over the ERR_* taxonomy (#48); §8.4
-operator resilience and the onboarding gate (#50).
-
-**Also:** the analytics insert-only contract gated in pgTAP and verified against hosted staging
-(#44); the API contract gate B1 de-declared, restored as a real one and proven to fail by three
-perturbations (#45); two E2E false reds traced to an emulator ANR dialog and fixed (#41).
-
-# Defects found (this session)
-
-The auth session never persisting · SVC_account trusting the request body for identity · the
-offline queue never draining · the E2E gate's ~21% ANR false-red rate · a stale handoff asserting a
-red main that had gone green half an hour earlier · my own OWASP review marking M3 ✅ from checking
-one function and generalising.
-
-# Defects found (earlier)
-
-MMKV v2 vs the New Architecture · EVT_054 shipped `code`/`surface` where PDD §11.2 specifies
-`error_code`/`screen_id` · a `set -e` bug in the release gate, caught pre-commit · emulator ANR
-dialogs failing flows against a healthy app · Supabase **filtering** rather than refusing
-unauthorised writes (a `throws_ok` assertion would have proven nothing) · `const ONBOARDED = true`,
-which blocked FLOW_ONBOARDING and hid an unbuilt screen set for two milestones.
-
-# E2E — resolved 2026-07-26 (the previous handoff was wrong)
-
-**Main's E2E is GREEN, and PR #53 is VERIFIED.** The previous handoff opened with "⛔ MAIN'S E2E IS
-RED, AND THE FIX IS UNPROVEN — START HERE." Both halves were false by the time they were written.
-
-**What actually happened.** Run 30170796356 (`4ea3f5f`, 19:01) did fail 4/4, and its ANR diagnosis was
-correct — every hierarchy shows `"Pixel Launcher isn't responding"` with `Close app` / `Wait` and
-nothing of our app on screen. But **two green runs followed the same evening**: 30170895237
-(`bbeee1a`, 19:04) and 30171884650 (`0ca0906`, 19:34) — the latter **4/4 including FLOW_ONBOARDING,
-in 1m50s**. The handoff was authored from the 19:01 failure and never revisited once the greens
-landed, so it shipped a resolved problem as the top priority for the next session.
-
-**The lesson, and it is the same one this repo keeps paying for:** *a written status is not a
-verified state.* The Execution Gap taught it about CI, issue #30 taught it about an ADR, and it now
-applies to our own handoff notes. Checking CI before acting on a status doc costs one command; not
-checking it cost a session's opening analysis and a fix written for a problem that had already
-resolved itself.
-
-## What the artifacts show, across all four recent failures
-
-Downloaded and read rather than inferred from run logs (logcat and hierarchies live only in the
-uploaded artifact — grepping the run log finds nothing and looks like absence of evidence):
-
-| Run | Commit | On screen at failure | Verdict |
-|---|---|---|---|
-| 30167565823 | `ae290ea` | `Pixel Launcher isn't responding` ×3 | ANR false-red |
-| 30169099087 | `262ac88` | `Pixel Launcher isn't responding` ×3 | ANR false-red |
-| 30170189932 | `bfa3ebe` | `Sign in` / `Continue with Apple` ×4 | **real red** — the #50 gate breakage |
-| 30170796356 | `4ea3f5f` | `Pixel Launcher isn't responding` ×4 | ANR false-red |
-
-**Three of four failures were false reds** — ~21% of recent runs failing for a cause outside the
-app — and `hide_error_dialogs 1` (PR #41) was active for every one of them. It suppresses the
-dialog; it does not stop the launcher ANRing.
-
-## PR #55 — the cause removed rather than the symptom suppressed
-
-`e2e.yml`'s AVD moves `target: google_apis` → `default` (AOSP), which ships neither Pixel Launcher
-nor the Google app. Nothing under test needs Play Services: `expo-notifications` is uninstalled (M7
-ships a NullNotificationAdapter), `react-native-purchases` likewise, and there is no Maps or Play
-Billing dependency. `hide_error_dialogs` stays as a second layer, commented so that a third
-occurrence is read as a *different* cause rather than obscured.
-
-Verified on run 30196467032 (dispatch on the branch): **4/4 green in 1m23s**, the system image
-confirmed as `system-images;android-34;default;x86_64`, **zero `Pixel Launcher` references anywhere
-in the artifacts**, and zero failure hierarchies. The absence is structural — a process that is not
-installed cannot ANR — which is the claim worth making. "Proven stable over N runs" is not; one green
-run does not retire a flake.
-
-Merged as `d56a4cb`, and **confirmed on main**: run 30196966887 passed **4/4 in 1m21s** on the AOSP
-image. Two independent green runs on it now (branch dispatch and main's tip), against a ~21% failure
-rate before — still not "proven stable", but the mechanism is removed rather than masked.
-
-**#50 → #53 remains an honest entry in the ledger.** Run 30170189932 is the one genuine red: making
-the onboarding gate real changed what a FRESH device does on first launch, so a CI emulator correctly
-opened SCR_AUTH_001 while three pre-existing flows asserted Today. The three now skip the gate
-conditionally, and FLOW_ONBOARDING's own assertion was wrong too (Maestro regex-matches the WHOLE
-element text). The lesson is mine: changing first-launch behaviour necessarily changes what every
-flow sees on a fresh emulator. Unit tests, typecheck, lint and the bundle gate all passed it through.
+1. **The client queued five mutation kinds; SVC_sync accepts three.** `preferences` and
+   `notif_prefs` hit the handler's `default:` branch — logged as `sync_unknown_kind`, returned in
+   neither list, so nothing could ever retire them. `SYNCABLE_KINDS` now narrows the type so those
+   hooks cannot compile, and a test reads the kinds out of the handler's SOURCE so the two cannot
+   drift. Real offline durability for prefs needs an approved §6.6 conflict rule + a server branch.
+2. **Enqueuing before hydration wiped the persisted queue.** Every write persists the whole queue,
+   so a write against an un-hydrated store overwrote a previous launch's pending mutations with
+   just the new one — losing the completions the store exists to protect. Found by a test that
+   failed on its first run; fixed by hydrating before every write.
 
 # Open
 
-- **A pending E2E run was cancelled by a later merge.** With `cancel-in-progress: false`, a
-  concurrency group keeps only the most recent *pending* run, so three rapid merges (#49/#50/#51)
-  displaced #50's queued run before it started — the same "a cancelled run reads as no signal"
-  pathology PR #32 fixed, in a residual form. Main's tip carries the same code, so coverage is
-  deferred rather than lost, but the mechanism is worth closing.
-- **PDD owes approved copy for 11 of 24 ERR_* codes** — pinned by a test in `AWAITING_APPROVED_COPY`.
-- **SCR_ONBOARDING_* slides remain unbuilt**; the gate no longer hides that.
+- **Not verified against a live backend.** SVC_sync has never been called from the client for real
+  — the drain is unit-tested against a fake. Same caveat B6.2's CCPA export carries.
+- **No E2E flow.** `FLOW_OFFLINE_SYNC` (airplane mode → complete → kill → restore → assert) is
+  unwritten. This is precisely the class a real flow caught for MMKV, and unit tests cannot.
+- **STORE_syncStatus has no UI surface** — PDD specifies none, so rendering one would invent UX.
+  Owed by PDD, same posture as the eleven missing ERR_* strings.
+- §6.4 wants EVT_* on sync confirm; B4.5 fires them from view-model transitions. Unchanged and
+  flagged — an `[ASSUMPTION T12]` question, not a defect.
+- PDD owes approved copy for 11 of 24 ERR_* codes; SCR_ONBOARDING_* slides remain unbuilt.
+- Three Dependabot PRs are red on a jest 30.4.2 runtime/mock mismatch (`clearMocksOnScope`). Main
+  is unaffected.
 
 # Blockers (all owner purchases)
 
-1. **Paid Supabase (~$25/mo)** — no PITR means user data is unrecoverable. **NFR-15 is unmet, and
-   this is a launch blocker**, not a B1 chore.
+1. **Paid Supabase (~$25/mo)** — no PITR, so user data is unrecoverable. NFR-15 unmet; launch blocker.
 2. **Sentry org + DSN** (free tier) — the only thing between B4 and done.
 3. Apple $99 · Google Play $25 → most of B3.
 
 # Recommended next task
 
-**1. Offline sync (launch blocker, and the largest open gap).** The queue is never persisted, never
-drained and never dequeued, so offline mutations are silently lost on app kill and successful ones
-leak. This contradicts the offline-first permanent architecture principle and §10.1's "offline loop
-+ sync verified". Needs drain orchestration, MMKV persistence, retry/backoff and
-`ERR_SYNC_CONFLICT` handling per TDD Part 4 §6. Scoped as its own increment.
+**B6.3 — the rest of B6**: a data-collection inventory built from the code (every table, field and
+`EVT_*` the app actually writes), then a draft privacy policy and store Data Safety / App Privacy
+answers from it, marked as requiring legal review. It is the last credential-free slice work.
 
-**2. B6.3 — the rest of B6:** a data-collection inventory built from the code (every table, field
-and `EVT_*` the app actually writes), then a draft privacy policy and store Data Safety / App
-Privacy label answers from it, marked as requiring legal review.
-
-**3. Residual review findings:** apply the existing zod contracts at the Edge Function boundaries
-(M4), and set `allowBackup=false` plus an explicit network security config (M8).
+Then: `FLOW_OFFLINE_SYNC` in Maestro, and the residual review findings — zod contracts at the Edge
+Function boundaries (M4), `allowBackup=false` plus an explicit network security config (M8).

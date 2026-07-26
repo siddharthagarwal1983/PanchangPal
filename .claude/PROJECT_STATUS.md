@@ -2,9 +2,9 @@
 
 # PanchangPal — Project Status Dashboard
 
-Version: 1.7.0
+Version: 1.8.0
 
-Last Updated: 2026-07-26 (B6 security: auth-session and SVC_account authz defects fixed)
+Last Updated: 2026-07-26 (offline sync implemented — queue drain + §6.1 persisted read cache)
 
 Purpose:
 This document provides a high-level snapshot of the overall project.
@@ -91,6 +91,9 @@ product scope. Sliced B1–B8; see CURRENT_MILESTONE.md.
 
 Current Focus
 
+- **Offline sync (TDD Part 4 §6) — ✅ complete at engineering scope (2026-07-26).** Mutation queue
+  persisted and drained to SVC_sync; §6.1 read cache persisted. Never run against a live backend
+  and not covered by a Maestro flow. Next: **B6.3** (data inventory → privacy policy → store labels).
 - M7 Notifications — ✅ complete (reviewed/approved 2026-07-18).
 - M8 Subscription — ✅ complete (3 increments):
   - Increment 1 (household-grain entitlement read + gating) — ✅ complete, approved.
@@ -316,6 +319,23 @@ prefs work today, so gating and prefs are real before the SDKs are wired.
 
 # Recently Completed
 
+- **Offline sync — implemented (2026-07-26).** The launch blocker B6 surfaced. `STORE_offlineQueue`
+  was an in-memory zustand slice beneath a header claiming MMKV persistence — never written to
+  disk, never drained, never dequeued — and **nothing in `src/data` bound API_POST_SYNC at all**,
+  so SVC_sync (implemented server-side since the Backend Foundation milestone) was unreachable from
+  the app. Offline, a completion was lost on app kill; online, the successful entry leaked forever.
+  Now: pure drain rules in `domain/sync` (FIFO batching, exponential backoff with half-range
+  jitter, capped attempts, reconciliation where a conflict counts as acknowledged and anything
+  unacknowledged is retried), a persisted queue through the shared `KeyValueStore` seam, the
+  missing `syncRepository` binding, a single-flight `syncService`, `useOfflineSync` wiring §6.4's
+  three triggers, and **the §6.1 persisted query cache** — the read half, without which a cold
+  start offline is empty and §6.2's `[MANDATORY]` cached daily loop cannot hold. Two further
+  defects found and guarded: the client queued five mutation kinds against a server that accepts
+  three, and enqueuing before hydration overwrote the previous launch's pending mutations. Four
+  perturbations proven to fail; 350 mobile tests (+51), 82 vitest, tsc/eslint/bundle green.
+  **Not verified against a live backend, and no `FLOW_OFFLINE_SYNC` flow exists** — stated rather
+  than implied. Progress is unchanged at 44%: this is a TDD Part 4 §6 gap in the Mobile MVP, not
+  one of the eight Beta slices.
 - **B6 — Security & Privacy, 3 of 4 increments (2026-07-26, PRs #57/#58).** The §5.2 OWASP Mobile
   Top 10 review, performed against the app as built. It found **two critical defects**, both fixed
   and each proven by reintroducing the defect and watching the test fail:

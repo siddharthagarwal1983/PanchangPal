@@ -4,7 +4,7 @@
 
 Version: 2.0.0
 
-Last Updated: 2026-07-26 (auth-session and SVC_account authorization seams recorded)
+Last Updated: 2026-07-26 (offline sync + persisted query cache seams recorded)
 
 Current Phase:
 Beta Readiness & Platform Hardening (TDD Part 5)
@@ -472,6 +472,30 @@ Stable, cross-cutting facts (permanent until an approved decision changes them):
   directly targetable. `merge` is the one case where the target is legitimately not the caller's
   current uid; it therefore requires the anonymous session's **access token** as proof of ownership,
   because a uid is a claim, not proof. Guarded by `account/authorization.test.ts`, proven to fail.
+- **Offline writes leave the device through ONE seam** — `STORE_offlineQueue` → `syncService` →
+  `syncRepository` → API_POST_SYNC (SVC_sync). The queue is persisted through the shared
+  `KeyValueStore` seam (never a vendor SDK directly), resolved lazily; the drain RULES are pure and
+  live in `src/domain/sync` (FIFO batching, exponential backoff with half-range jitter, capped
+  attempts, reconciliation), so the effects layer decides nothing. **`SYNCABLE_KINDS` is the
+  server's contract, not a wish**: `ritual_complete | checklist | personal_date`, exactly what
+  SVC_sync switches on and TDD Part 2 §6.6 gives a conflict rule for, pinned by a test that reads
+  the kinds out of the handler's source. A conflict counts as ACKNOWLEDGED and is dequeued;
+  anything returned in neither `applied` nor `conflicts` is retried. Attempts are capped to stop
+  silent retrying, **never to discard a mutation** — §6 forbids losing a completion, and no sync
+  failure blocks the daily loop (§8.2). Established 2026-07-26: through M1–M8 the queue was an
+  in-memory zustand slice beneath a header claiming MMKV persistence, was never drained or
+  dequeued, and **nothing bound API_POST_SYNC at all**, so a fully implemented SVC_sync was
+  unreachable from the app. NOT yet exercised against a live backend, and no Maestro flow covers it.
+- **The persisted query cache is an allowlist** (`src/data/queryPersistence.ts`, §6.1) — the READ
+  half of offline-first, without which a cold start offline is empty and §6.2's `[MANDATORY]`
+  cached daily loop cannot hold. Only §6.1's set plus `checklist` is written to disk, only in
+  `success` state; `entitlement` and `invite` are excluded (§6.2 network-only — and the device is
+  never the authority on paid access), as are Ask Guru conversations (ADR-031). Mutations are never
+  persisted here, since STORE_offlineQueue already owns them durably and two replay paths for one
+  completion is how a ritual gets recorded twice. Built on `dehydrate`/`hydrate` from the declared
+  `@tanstack/react-query`, NOT `persistQueryClient` — that lives in an undeclared package, and
+  reaching into the pnpm store is the defect `@babel/runtime` and `babel-preset-expo` already cost
+  this repo twice.
 - **MockPanchangProvider** is DEV/TEST ONLY and must never be imported by production code.
 - **Backend Edge Functions pending** — SVC_household (member/invite), SVC_notify_scheduler
   (notify/schedule), and SVC_revenuecat_webhook are pending backend deliverables; the corresponding

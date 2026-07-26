@@ -2,8 +2,8 @@
 
 # PanchangPal — Current Task
 
-Version: 3.12.0
-Last Updated: 2026-07-26 (B6 3 of 4 complete; next: offline sync, then B6.3)
+Version: 3.13.0
+Last Updated: 2026-07-26 (offline sync COMPLETE; next: B6.3)
 
 Purpose: the current implementation task. Stay focused; avoid unrelated work unless instructed.
 
@@ -110,7 +110,62 @@ green in CI on a real native build. Canonical progress 0% → 13% (1 of 8 Beta s
 # Current Task
 
 ## Title
-✅ B6 3 of 4 COMPLETE · NEXT: offline sync (launch blocker), then B6.3
+✅ OFFLINE SYNC COMPLETE (launch blocker closed at engineering scope) · NEXT: B6.3
+
+## Offline sync — what shipped
+
+The queue was in-memory beneath a header claiming MMKV persistence, never drained and never
+dequeued, and **nothing in `src/data` bound API_POST_SYNC at all** — SVC_sync had been implemented
+server-side since the Backend Foundation milestone and was unreachable from the app. This
+contradicted **offline-first**, a permanent architecture decision, and §10.1's "offline loop + sync
+verified".
+
+Built in layers, decisions pure and effects thin:
+
+- **`src/domain/sync/`** — FIFO batching, exponential backoff with half-range jitter (full jitter
+  can return ~0, i.e. retry instantly into a radio that is still down), capped attempts,
+  reconciliation. A conflict is ACKNOWLEDGED, per §6.3's resolve-by-rule; anything the server
+  returned in neither list is retried.
+- **`STORE_offlineQueue`** — persisted through the shared `KeyValueStore` seam, lazily resolved.
+- **`src/data/syncRepository.ts`** — the missing API_POST_SYNC binding. Sends contract fields only;
+  local retry bookkeeping is none of the server's business.
+- **`src/data/syncService.ts`** — single-flight drain, batch loop, non-blocking status. Attempts
+  are capped to stop silent retrying, **never to discard a mutation** (§6 forbids losing one).
+- **`useOfflineSync`** — §6.4's three triggers, mounted renderless in AppProviders.
+- **`src/data/queryPersistence.ts`** (§6.1) — the READ half, which `queryClient.ts` had assigned to
+  "the offline-queue task". Without it a cold start offline shows nothing, so §6.2's `[MANDATORY]`
+  cached daily loop could not hold. Allowlisted to §6.1's set plus `checklist`; `entitlement` and
+  `invite` are excluded (§6.2 network-only; a stale entitlement off disk would grant or deny
+  premium from a snapshot the server has already changed).
+
+**Two defects found while building it**, both now guarded:
+
+1. **Five client kinds vs three server kinds.** `preferences` / `notif_prefs` reached SVC_sync's
+   `default:` branch and were returned in neither `applied` nor `conflicts`, so no drain could ever
+   retire them. The type now narrows to the server's contract, and a test reads the kinds out of
+   the handler's SOURCE so client and server cannot drift apart silently.
+2. **Enqueuing before hydration wiped the persisted queue** — a write against an un-hydrated store
+   overwrote the previous launch's pending mutations. Caught by a test that failed on first run.
+
+**Verified:** four perturbations each failed the right tests (persistence off → 5; "200 means
+success" → 3; unsyncable kind → 1; allowlist ignored → 4). 350 mobile tests (+51), 82 vitest, tsc
+clean, eslint 0 errors, `expo export` green.
+
+**NOT done, and stated rather than implied:** never exercised against a live backend; no
+`FLOW_OFFLINE_SYNC` Maestro flow; `STORE_syncStatus` has no UI surface because PDD specifies none.
+
+**Progress is unchanged at 44%** — offline sync is a TDD Part 4 §6 gap in the Mobile MVP found
+during B6, not one of the eight Beta slices. It closes a launch blocker without advancing a slice.
+
+## Next task — B6.3
+
+Data-collection inventory built from the code (every table, field and `EVT_*` the app actually
+writes), then a draft privacy policy and store Data Safety / App Privacy answers derived from it,
+marked as requiring legal review. The last credential-free slice work.
+
+---
+
+## Superseded — the previous task framing
 
 ## B6 — Security & Privacy: what shipped (PRs #57, #58)
 
