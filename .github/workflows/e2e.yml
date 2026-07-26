@@ -163,11 +163,24 @@ jobs:
 
       # x86_64, because the runner is x86_64 — the arm64 image used on an Apple Silicon
       # workstation would be emulated here and unusably slow.
+      #
+      # `default` (AOSP), not `google_apis`. The google_apis image ships Pixel Launcher and the
+      # Google app, and those — not our app — are what has now failed the gate twice: every
+      # captured hierarchy in run 30170796356 showed "Pixel Launcher isn't responding" covering
+      # the screen while logcat showed our app running normally. They are also the source of the
+      # DiscoverPrecheckException noise in every log we have. `hide_error_dialogs` (below) held
+      # for three green runs and then stopped being sufficient; removing the processes that ANR
+      # is the durable fix, where suppressing their dialogs was a patch on the symptom.
+      #
+      # Nothing we test needs Play Services: `expo-notifications` is not installed (M7 ships a
+      # NullNotificationAdapter), there is no Maps or Play Billing dependency, and
+      # `react-native-purchases` is likewise deferred. If a future slice installs one of those,
+      # this must go back to google_apis — and then the ANR problem returns with it.
       - name: Run FLOW_* on an emulator
         uses: reactivecircus/android-emulator-runner@v2
         with:
           api-level: 34
-          target: google_apis
+          target: default
           arch: x86_64
           profile: pixel_6
           ram-size: 4096M
@@ -191,6 +204,10 @@ jobs:
             #
             # This hides the OS dialog only; it does not make an unresponsive app pass. If OUR app
             # hangs, the flow still fails on its own assertions, which is the signal we want.
+            #
+            # Kept as a second layer after the move to the AOSP image (see `target:` above), which
+            # removes the processes that were ANRing. A third occurrence would mean the cause is
+            # something other than the Google apps, and this line must not be what obscures it.
             adb shell settings put global hide_error_dialogs 1
             adb logcat -c
             set +e
