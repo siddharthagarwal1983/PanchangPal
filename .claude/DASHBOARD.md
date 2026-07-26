@@ -2,9 +2,9 @@
 
 # PanchangPal Dashboard
 
-Version: 1.18.0
+Version: 1.19.0
 
-Last Updated: 2026-07-26 (B5 complete; the onboarding gate was never a gate — now it is)
+Last Updated: 2026-07-26 (E2E green on main; #53 verified; ANR cause removed at the system image)
 
 Purpose:
 This is the first file Claude should read at the beginning of every session.
@@ -43,7 +43,8 @@ Progress
 
 31%
 
-(Canonical progress metric — 1 of 8 Beta Readiness slices COMPLETE: **B2 (E2E verification)**, plus
+(Canonical progress metric — 2 of 8 Beta Readiness slices COMPLETE: **B2 (E2E verification)** and
+**B5 (Reliability & DR, at verifiable scope)**, plus
 **3 of B4's 4 increments** — B4.1 telemetry seam, B4.2 EVT_* analytics sink, B4.3 server seam +
 release gate — plus **B5 ✅ COMPLETE** (runbooks + restore drill · §8.2 degradation policy · §8.4 operator
 resilience), giving (1 + 1 + ¾)/8 ≈ 34% by increments — but **B5 is reported as complete only at its
@@ -52,11 +53,12 @@ verifiable scope**: NFR-15 cannot be met without PITR, which is a purchase, so t
 **B4 cannot go further without a Sentry org + DSN.** The EVT_* instrumentation, the analytics RLS
 gate and the API contract gate do not move this number: they complete or restore work other slices
 began, and the percentage counts increments, not commits.)
-B1 ~85%, B3 ~80%. B2 is now DONE: the bundle gate plus all three in-scope Maestro flows
-(FLOW_RETURNING, FLOW_MORNING_RITUAL, FLOW_SESSION_PERSISTENCE) are GREEN in CI on a real native
-Android build (run 30155737941, 2026-07-25). The three flows still not present — onboarding,
-household invite, live Ask Guru — are blocked on other slices / backends / a gated feature, not on
-B2's engineering. B1 and B3's remaining items are gated on money, a store account, or a later slice.
+B1 ~85%, B3 ~80%. B2 is now DONE: the bundle gate plus **four** Maestro flows (FLOW_RETURNING,
+FLOW_MORNING_RITUAL, FLOW_SESSION_PERSISTENCE, FLOW_ONBOARDING) are GREEN in CI on a real native
+Android build (run 30196966887 on `d56a4cb`, 2026-07-26). FLOW_ONBOARDING joined once PR #50 made the
+onboarding gate real. The two still absent — household invite, live Ask Guru — are blocked on other
+slices / backends / a gated feature, not on B2's engineering. B1 and B3's remaining items are gated
+on money, a store account, or a later slice.
 PROJECT_STATUS.md and CURRENT_MILESTONE.md must report this same number; DASHBOARD.md is
 authoritative if they diverge.)
 
@@ -78,6 +80,32 @@ CURRENT_MILESTONE.md
 ---
 
 # Current Task
+
+**The E2E gate is green, and the handoff that said otherwise was wrong.**
+
+The previous session closed with "⛔ MAIN'S E2E IS RED, AND THE FIX IS UNPROVEN — START HERE."
+Both halves were already false when written: main went **4/4 green including FLOW_ONBOARDING** on
+run 30171884650 (`0ca0906`) at 19:34, half an hour after the 19:01 failure the note was written
+from. **PR #53 is verified.** A written status is not a verified state — the same lesson the
+Execution Gap taught about CI and issue #30 taught about an ADR, now applied to our own notes.
+
+**The gate had a ~21% false-red rate, and it is fixed at the cause.** Reading the artifacts (not the
+run logs — logcat and hierarchies live only in the uploaded artifact) shows **3 of 4 recent failures
+were `Pixel Launcher isn't responding` dialogs** covering a healthy app, every one of them with
+`hide_error_dialogs 1` from PR #41 already active. The fourth was the one genuine red, the #50
+onboarding-gate breakage, correctly fixed by #53.
+
+**PR #55 (`d56a4cb`):** AVD `target: google_apis` → `default` (AOSP), which ships neither Pixel
+Launcher nor the Google app. Nothing under test needs Play Services — `expo-notifications` and
+`react-native-purchases` are both uninstalled, no Maps, no Play Billing. Verified 4/4 in 1m23s on
+run 30196467032 and again 4/4 in 1m21s on main (run 30196966887), image confirmed `system-images;android-34;default;x86_64`, **zero `Pixel Launcher`
+references anywhere in the artifacts.** The absence is structural: a process that is not installed
+cannot ANR. That is the claim; "stable over N runs" is not one green run's to make.
+
+Progress is **unchanged at 31%** — B2 was already complete, and repairing a flaky gate is not a new
+increment.
+
+---
 
 **B5 complete at its verifiable scope — and the onboarding gate was never a gate.**
 
@@ -252,6 +280,13 @@ Verified end-to-end. **PR #36 merged to main as `e1e10d4`**; the docs checkpoint
 
 # Today's Objective
 
+Session of 2026-07-26. Establish what the E2E gate is actually reporting, and make it trustworthy.
+Outcome: main was already green (the handoff was stale), PR #53 is verified, and the launcher-ANR
+false-red — 3 of the last 4 failures — is removed at its cause by moving the emulator to the AOSP
+system image (PR #55). No product scope. Next: **B6 — Security & Privacy**.
+
+---
+
 Session of 2026-07-25. Two things closed. First, the week-old question — does a ritual session
 survive a restart — is **answered: yes, now** (fix the E2E build, read the verdict it produced, ship
 the MMKV v2→v4 fix); **B2 is complete**. Second, **B4 opened** with its telemetry seam: errors now
@@ -282,7 +317,7 @@ No new product scope.
 | Mobile — Notifications | ✅ M7 |
 | Mobile — Subscription | ✅ M8 |
 | AI Platform | 🟡 adapters done; corpus + eval pending |
-| Testing | 🟢 366 unit/component/domain (289 mobile + 77 vitest) + 17 pgTAP + a monthly DR restore drill + **4 Maestro flows** (FLOW_ONBOARDING now writable) · bundle gate per PR · 🟢 **E2E green in CI** — 3/3 Maestro flows on a real native Android build incl. FLOW_SESSION_PERSISTENCE (run 30165186141, 2026-07-25); gate fails fast (PR #35) and no longer fails against emulator ANR dialogs (PR #41) · AI-eval + api-contract de-declared (owed: contract tests + §9.4 harness) |
+| Testing | 🟢 366 unit/component/domain (289 mobile + 77 vitest) + 17 pgTAP + a monthly DR restore drill + **4 Maestro flows, all green** · bundle gate per PR · 🟢 **E2E green in CI** — 4/4 on a real native Android build incl. FLOW_SESSION_PERSISTENCE and FLOW_ONBOARDING (`0ca0906` run 30171884650; AOSP image confirmed on run 30196467032); gate fails fast (PR #35) and the launcher-ANR false-red is removed at its cause (PR #55 — `hide_error_dialogs` alone had stopped being sufficient) · AI-eval de-declared (owed: §9.4 harness); api-contract restored |
 | Beta | 🚧 In progress — **B2 ✅**; **B5 ✅ at verifiable scope** (runbooks · drill · §8.2 · §8.4; **NFR-15 blocked on PITR — a purchase**); **B4 🟡 ~75%** (owner-gated on a Sentry org); B1/B3 owner-gated; B6–B8 pending |
 | Production | ⏳ |
 
@@ -292,7 +327,7 @@ No new product scope.
 
 1. **Owner: create a Sentry org + DSN (free tier)** — B4's remaining work (source-map upload, §7.2 dashboards/alerts) needs a real project to be verifiable. B4.1 ✅ · B4.2 ✅ · B4.3 ✅ to its credential-free limit · B4.4 blocked.
 2. **PDD owes approved copy for eleven ERR_* codes** (listed in `AWAITING_APPROVED_COPY`) — they currently show the calm generic message where §12 specifies something more useful.
-3. **Credential-free engineering:** `FLOW_ONBOARDING` is still unreachable (`app/index.tsx:16` hardcodes `ONBOARDED = true`), or finish **B5** (§8.4 single-founder mitigations).
+3. **Credential-free engineering: start B6 — Security & Privacy** (§5/§6) — OWASP Mobile review, CCPA export/delete verified end to end (F-3/F-10), store privacy labels. B5 is complete and `FLOW_ONBOARDING` is written and green, so this is the next unstarted slice.
 3. Owner decisions: prod Supabase (~$25/mo, closes B1) · Apple $99 (iOS) · Google Play $25 (internal track)
 3. ⛔ Canonical Panchang Engine decision (ADR-033) — unblocks Today panchang, Calendar markers, notifications
 3. AI corpus ingestion + eval readiness — unblocks live Ask Guru (GURU_LIVE)

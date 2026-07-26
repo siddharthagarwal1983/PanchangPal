@@ -110,17 +110,25 @@ green in CI on a real native build. Canonical progress 0% → 13% (1 of 8 Beta s
 # Current Task
 
 ## Title
-⛔ FIRST: get main's E2E green · then B6 (Security & Privacy)
+B6 — Security & Privacy (§5/§6)
 
-## Status — main's E2E is RED, and the fix for it is unproven
-Run 30170796356 (`4ea3f5f`) failed 4/4 **on the emulator's ANR dialog**, not on the flows: every
-hierarchy shows `"Pixel Launcher isn't responding"` over the app while logcat shows it running.
-PR #53 (which fixed the flows for the now-real onboarding gate) is therefore **untested**.
+## Status — the E2E gate is green; the previous "red main" task was based on a stale handoff
+**Closed 2026-07-26.** Main's E2E was already green when the previous session handed it off as the
+top ⛔ priority: run 30171884650 (`0ca0906`) passed **4/4 including FLOW_ONBOARDING** at 19:34, half
+an hour after the 19:01 failure the handoff was written from. **PR #53 is verified, not unproven.**
 
-`hide_error_dialogs 1` is applied (`e2e.yml:194`) and held for three green runs; it is no longer
-enough. **Next lever:** `target: google_apis` → `default` (AOSP, no Pixel Launcher, no Google app).
-The app needs no Play Services — `expo-notifications` is not installed — so no flow depends on them.
-One line, then one run on main settles both the ANR and #53.
+Reading the artifacts (not the run logs — logcat and hierarchies are only in the uploaded artifact)
+showed **3 of the 4 recent failures were Pixel Launcher ANR false-reds**, ~21% of runs, all of them
+with `hide_error_dialogs 1` already active. The one genuine red was the #50 onboarding-gate breakage,
+correctly diagnosed and correctly fixed by #53.
+
+**PR #55 (merged, `d56a4cb`)** removes the cause instead of the symptom: AVD `target: google_apis` →
+`default` (AOSP — no Pixel Launcher, no Google app). Nothing under test needs Play Services. Verified
+4/4 green in 1m23s on run 30196467032, with zero `Pixel Launcher` references anywhere in the
+artifacts and the image confirmed as `system-images;android-34;default;x86_64`.
+
+**Progress is unchanged at 31%** — B2 was already complete, and repairing a flaky gate is not a new
+increment.
 
 Status
 🟡 **B4.1 ✅ (PR #39, `25275ff`) · B4.2 ✅ (PR #40, `c099263`) · B4.3 ✅ to its credential-free limit
@@ -237,9 +245,9 @@ gate exits marking it, and **FLOW_ONBOARDING written** — B2's sixth flow, unwr
 1. **B6 — Security & Privacy** (§5/§6): OWASP Mobile review, CCPA export/delete verified end to end
    (F-3/F-10), store privacy labels. The next unstarted slice, and entirely credential-free.
 2. **AI eval harness** (§9.4) — the last de-declared gate, blocked on the reviewed corpus.
-2. **`FLOW_ONBOARDING`** is still unreachable: `app/index.tsx:16` hardcodes `ONBOARDED = true`, so
-   SCR_ONBOARDING_* has never rendered from launch and one of B2's six flows cannot be written.
-3. **AI eval harness** (§9.4) — the last de-declared gate, blocked on the reviewed corpus.
+
+(`FLOW_ONBOARDING` was listed here as unreachable while `app/index.tsx` hardcoded `ONBOARDED = true`.
+Both are resolved: PR #50 made the gate a persisted flag, and the flow now passes in CI.)
 
 Still owner-gated: a **Sentry org + DSN** (free tier) closes B4.3's source-map upload and unblocks
 B4.4; prod Supabase (~$25/mo) closes B1; Apple $99 + Google Play $25 close most of B3.
@@ -247,9 +255,9 @@ B4.4; prod Supabase (~$25/mo) closes B1; Apple $99 + Google Play $25 close most 
 B1/B3 remainders stay owner-gated (prod Supabase ~$25/mo closes B1; Apple $99 + Google Play $25 close
 most of B3).
 
-The remaining Maestro flows are still out of B2/engineering reach: `FLOW_ONBOARDING` unreachable while
-`ONBOARDED = true` (`app/index.tsx:16`); `FLOW_HOUSEHOLD_INVITE` needs SVC_household; `FLOW_ASK_GURU`
-only exercises the gated path (GURU_LIVE=false).
+The remaining Maestro flows are still out of B2/engineering reach: `FLOW_HOUSEHOLD_INVITE` needs
+SVC_household; `FLOW_ASK_GURU` only exercises the gated path (GURU_LIVE=false). `FLOW_ONBOARDING` is
+no longer among them — it is written and green (4 flows now run in CI, not 3).
 
 Everything else in B1/B2/B3 remains gated on money, a store account, or a later slice.
 
@@ -305,7 +313,7 @@ marked as such rather than asserted.
 - [ ] `promote-production` end-to-end — B7/B8 must implement the job first
 - [ ] Sentry source-map upload (§2.3) — depends on B4
 - [ ] `FLOW_HOUSEHOLD_INVITE` — needs SVC_household; subscription flow — needs
-      react-native-purchases; `FLOW_ONBOARDING` — unreachable while `ONBOARDED = true`
+      react-native-purchases. (`FLOW_ONBOARDING` was here; done and green since PR #50.)
 
 ---
 

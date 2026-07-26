@@ -2,8 +2,8 @@
 
 # PanchangPal — Current Session
 
-Version: 2.1.0
-Last Updated: 2026-07-26 (End Session — B2/B5 complete; MAIN'S E2E LEFT RED, cause diagnosed)
+Version: 2.2.0
+Last Updated: 2026-07-26 (main's E2E is GREEN; #53 verified; the ANR cause removed at the image)
 
 ---
 
@@ -36,29 +36,67 @@ dialogs failing flows against a healthy app · Supabase **filtering** rather tha
 unauthorised writes (a `throws_ok` assertion would have proven nothing) · `const ONBOARDED = true`,
 which blocked FLOW_ONBOARDING and hid an unbuilt screen set for two milestones.
 
+# E2E — resolved 2026-07-26 (the previous handoff was wrong)
+
+**Main's E2E is GREEN, and PR #53 is VERIFIED.** The previous handoff opened with "⛔ MAIN'S E2E IS
+RED, AND THE FIX IS UNPROVEN — START HERE." Both halves were false by the time they were written.
+
+**What actually happened.** Run 30170796356 (`4ea3f5f`, 19:01) did fail 4/4, and its ANR diagnosis was
+correct — every hierarchy shows `"Pixel Launcher isn't responding"` with `Close app` / `Wait` and
+nothing of our app on screen. But **two green runs followed the same evening**: 30170895237
+(`bbeee1a`, 19:04) and 30171884650 (`0ca0906`, 19:34) — the latter **4/4 including FLOW_ONBOARDING,
+in 1m50s**. The handoff was authored from the 19:01 failure and never revisited once the greens
+landed, so it shipped a resolved problem as the top priority for the next session.
+
+**The lesson, and it is the same one this repo keeps paying for:** *a written status is not a
+verified state.* The Execution Gap taught it about CI, issue #30 taught it about an ADR, and it now
+applies to our own handoff notes. Checking CI before acting on a status doc costs one command; not
+checking it cost a session's opening analysis and a fix written for a problem that had already
+resolved itself.
+
+## What the artifacts show, across all four recent failures
+
+Downloaded and read rather than inferred from run logs (logcat and hierarchies live only in the
+uploaded artifact — grepping the run log finds nothing and looks like absence of evidence):
+
+| Run | Commit | On screen at failure | Verdict |
+|---|---|---|---|
+| 30167565823 | `ae290ea` | `Pixel Launcher isn't responding` ×3 | ANR false-red |
+| 30169099087 | `262ac88` | `Pixel Launcher isn't responding` ×3 | ANR false-red |
+| 30170189932 | `bfa3ebe` | `Sign in` / `Continue with Apple` ×4 | **real red** — the #50 gate breakage |
+| 30170796356 | `4ea3f5f` | `Pixel Launcher isn't responding` ×4 | ANR false-red |
+
+**Three of four failures were false reds** — ~21% of recent runs failing for a cause outside the
+app — and `hide_error_dialogs 1` (PR #41) was active for every one of them. It suppresses the
+dialog; it does not stop the launcher ANRing.
+
+## PR #55 — the cause removed rather than the symptom suppressed
+
+`e2e.yml`'s AVD moves `target: google_apis` → `default` (AOSP), which ships neither Pixel Launcher
+nor the Google app. Nothing under test needs Play Services: `expo-notifications` is uninstalled (M7
+ships a NullNotificationAdapter), `react-native-purchases` likewise, and there is no Maps or Play
+Billing dependency. `hide_error_dialogs` stays as a second layer, commented so that a third
+occurrence is read as a *different* cause rather than obscured.
+
+Verified on run 30196467032 (dispatch on the branch): **4/4 green in 1m23s**, the system image
+confirmed as `system-images;android-34;default;x86_64`, **zero `Pixel Launcher` references anywhere
+in the artifacts**, and zero failure hierarchies. The absence is structural — a process that is not
+installed cannot ANR — which is the claim worth making. "Proven stable over N runs" is not; one green
+run does not retire a flake.
+
+Merged as `d56a4cb`, and **confirmed on main**: run 30196966887 passed **4/4 in 1m21s** on the AOSP
+image. Two independent green runs on it now (branch dispatch and main's tip), against a ~21% failure
+rate before — still not "proven stable", but the mechanism is removed rather than masked.
+
+**#50 → #53 remains an honest entry in the ledger.** Run 30170189932 is the one genuine red: making
+the onboarding gate real changed what a FRESH device does on first launch, so a CI emulator correctly
+opened SCR_AUTH_001 while three pre-existing flows asserted Today. The three now skip the gate
+conditionally, and FLOW_ONBOARDING's own assertion was wrong too (Maestro regex-matches the WHOLE
+element text). The lesson is mine: changing first-launch behaviour necessarily changes what every
+flow sees on a fresh emulator. Unit tests, typecheck, lint and the bundle gate all passed it through.
+
 # Open
 
-- **⛔ MAIN'S E2E IS RED, AND THE FIX IS UNPROVEN. START HERE NEXT SESSION.**
-  The last run (30170796356, on `4ea3f5f`) failed 4/4 — but on the emulator's ANR dialog, not on the
-  flows: every captured hierarchy shows `"Pixel Launcher isn't responding"` covering the screen while
-  logcat shows our app running (`Running "main"`). So PR #53's correctness is **untested**, not
-  disproven.
-  **`hide_error_dialogs 1` is no longer sufficient.** It is applied (`e2e.yml:194`) and it held for
-  three consecutive green runs; the launcher now ANRs through it.
-  **Recommended next lever:** the AVD is `target: google_apis`, which ships Pixel Launcher and the
-  Google app — the ANR source, and the origin of the `DiscoverPrecheckException` noise in every log.
-  Switching to the AOSP `default` image removes those processes. Our app needs no Play Services
-  (`expo-notifications` is not installed), so no flow depends on them. One line in `e2e.yml`, then a
-  run on main settles both the ANR and #53 together.
-- **I broke main's E2E with PR #50, and fixed it in #53 (fix unverified — see above).** Making the onboarding gate real changed
-  what a FRESH device does on first launch — a CI emulator has no stored state, so the app correctly
-  opened on SCR_AUTH_001 while all three pre-existing flows launched and asserted Today. 4/4 red,
-  with the app behaving correctly and the flows asserting the old behaviour. The three flows now skip
-  the gate conditionally; FLOW_ONBOARDING's own assertion was also wrong (Maestro regex-matches the
-  WHOLE element text, and the deferred-auth sentence is part of one subtitle string). **The lesson is
-  mine, not the gate's:** changing first-launch behaviour necessarily changes what every flow sees on
-  a fresh emulator, and I should have worked that through before merging rather than learning it from
-  a red main. Unit tests, typecheck, lint and the bundle gate all passed it straight through.
 - **A pending E2E run was cancelled by a later merge.** With `cancel-in-progress: false`, a
   concurrency group keeps only the most recent *pending* run, so three rapid merges (#49/#50/#51)
   displaced #50's queued run before it started — the same "a cancelled run reads as no signal"
@@ -76,9 +114,8 @@ which blocked FLOW_ONBOARDING and hid an unbuilt screen set for two milestones.
 
 # Recommended next task
 
-**First: get main's E2E green** (see the first Open item — switch the AVD to the AOSP `default`
-image). It is a one-line change, and leaving the gate red means every subsequent merge lands against
-a signal nobody can read.
+**B6 — Security & Privacy** (§5/§6): OWASP Mobile review, CCPA export/delete verified end to end
+(F-3/F-10), store privacy labels. The next unstarted slice, and entirely credential-free — nothing in
+it waits on the Sentry org, the paid Supabase plan, or the store accounts.
 
-**Then: B6 — Security & Privacy** (§5/§6): OWASP Mobile review, CCPA export/delete verified end to end
-(F-3/F-10), store privacy labels. The next unstarted slice, and entirely credential-free.
+The E2E gate is green and no longer a prerequisite for anything.
