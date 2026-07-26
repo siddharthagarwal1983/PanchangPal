@@ -24,7 +24,7 @@ jobs:
     environment: staging
 
     steps:
-      - uses: actions/checkout@v5
+      - uses: actions/checkout@v7
 
       - name: Install PostgreSQL client
         run: |
@@ -72,20 +72,20 @@ jobs:
     environment: staging
 
     steps:
-      - uses: actions/checkout@v5
+      - uses: actions/checkout@v7
 
       - name: Set up Supabase CLI
-        uses: supabase/setup-cli@v1
+        uses: supabase/setup-cli@v3
         with:
           version: 2.33.9
 
       # The Deno import map resolves @panchangpal/shared + /ai to their built dist
       # (Deno cannot rewrite the packages' TS-ESM '.js' specifiers to '.ts'), so build
       # them before deploy. dist/ is git-ignored, so this must run in CD.
-      - uses: pnpm/action-setup@v4
+      - uses: pnpm/action-setup@v6
         with:
           version: 9.6.0
-      - uses: actions/setup-node@v4
+      - uses: actions/setup-node@v7
         with:
           node-version: 20.11.0
           cache: pnpm
@@ -147,7 +147,7 @@ jobs:
     if: github.event_name == 'workflow_dispatch'
 
     steps:
-      - uses: actions/checkout@v5
+      - uses: actions/checkout@v7
 
       - name: Install PostgreSQL client
         run: |

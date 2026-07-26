@@ -31,7 +31,7 @@ jobs:
     runs-on: ubuntu-latest
     environment: ${{ inputs.channel }}
     steps:
-      - uses: actions/checkout@v4
+      - uses: actions/checkout@v7
       - name: Preflight (fail fast on missing config)
         run: bash scripts/preflight.sh "${{ inputs.channel }}"
         env:
