@@ -13,7 +13,7 @@
     "test": "jest --passWithNoTests"
   },
   "dependencies": {
-    "@babel/runtime": "^7.24.0",
+    "@babel/runtime": "^8.0.0",
     "@expo/metro-runtime": "~6.1.2",
     "@panchangpal/api": "workspace:*",
     "@panchangpal/design-tokens": "workspace:*",
