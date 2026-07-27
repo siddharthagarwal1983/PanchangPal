@@ -60,8 +60,14 @@ appId: com.panchangpal.app
 #
 # This is a suite-wide hazard, not a quirk of this flow: FLOW_MORNING_RITUAL and FLOW_RETURNING both
 # end without `stopApp` or `clearState`, so ANY flow opening with a cleared launch can draw it
-# depending on the order Maestro picks. The other three happen to follow flows that clean up. Fixed
-# locally rather than by editing flows that currently pass.
+# depending on the order Maestro picks.
+#
+# UPDATE 2026-07-28: it was drawn. FLOW_AUTH_SESSION_PERSISTENCE hit the race on run 30294996523 and
+# failed in the way that mimics the identity-loss defect it exists to catch. Every flow that opens
+# with a cleared launch — AUTH_SESSION_PERSISTENCE, ONBOARDING, SESSION_PERSISTENCE — now uses these
+# three discrete steps. The original note said this was "fixed locally rather than by editing flows
+# that currently pass"; a flow that currently passes and is one scheduling decision away from a
+# false red is not a flow to leave alone.
 - stopApp
 - clearState
 

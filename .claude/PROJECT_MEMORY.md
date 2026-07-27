@@ -562,6 +562,13 @@ Stable, cross-cutting facts (permanent until an approved decision changes them):
   deliberately excluded — it references the reviewed corpus, not anything the user wrote.
 - **Writing a Maestro flow: three facts that cost four CI cycles to learn** (established 2026-07-27
   while adding `FLOW_OFFLINE_SYNC`).
+  **Rule 1 was proven suite-wide on 2026-07-28 and every flow now complies.** It fired on
+  FLOW_AUTH_SESSION_PERSISTENCE, whose failure mimics identity loss exactly, and it cost a real
+  investigation because a `@supabase/auth-js` bump had landed the same hour. **Discriminating a
+  harness race from a regression takes one re-run of the identical commit**: a deterministic break
+  cannot pass on attempt 2. That is the cheapest experiment available and should be the first move
+  whenever a red follows a dependency change — but it rules out only a deterministic cause, never a
+  probabilistic one.
   1. **Never open a flow with `launchApp: clearState: true`.** Fusing the clear and the launch races
      the previous flow's TASK teardown: Android's `Destroy timeout of remove-task` fires ~1.1s into
      the launch and kills the process it has just created (`failed to attach`), the app never

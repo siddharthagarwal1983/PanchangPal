@@ -29,8 +29,24 @@
 # passes while navigating nowhere.
 appId: com.panchangpal.app
 ---
-- launchApp:
-    clearState: true
+# THREE DISCRETE STEPS, not `launchApp: clearState: true` — see FLOW_OFFLINE_SYNC for the full
+# diagnosis. Fusing the clear and the launch races the previous flow's TASK teardown: Android's
+# `Destroy timeout of remove-task` fires ~1.1s into the launch and kills the process it has just
+# created. `stopApp` alone does NOT fix it; what lingers is the task, not the process.
+#
+# THIS FLOW DREW IT ON 2026-07-28 (run 30294996523, attempt 1) and it was the most expensive place
+# in the suite for it to happen. The launch was disturbed 130ms in —
+# `Destroy timeout of remove-task, attempt to kill Task{...#13}` — and the flow went on to fail its
+# final assertion with the tradition reverted to Generic. That is IDENTICAL to the signature of the
+# identity-loss defect this flow exists to catch, so a harness race presented as the one product
+# defect nobody may dismiss. The same commit passed 6/6 on re-run, which is how it was identified as
+# a race rather than a regression in the `@supabase/auth-js` bump that had landed hours earlier.
+#
+# A false red costs what a false green costs, and this flow's false red costs more than most.
+- stopApp
+- clearState
+
+- launchApp
 
 # Pass the onboarding gate if showing. A CI emulator has no stored state, so a fresh device
 # correctly opens SCR_AUTH_001 (PR #50). Conditional, so it is a no-op after the first pass.

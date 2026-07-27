@@ -30,8 +30,15 @@
 # passes while navigating nowhere.
 appId: com.panchangpal.app
 ---
-- launchApp:
-    clearState: true
+# THREE DISCRETE STEPS rather than `launchApp: clearState: true` — see FLOW_OFFLINE_SYNC for the
+# diagnosis. Fusing the clear and the launch races the previous flow's TASK teardown, and Android
+# kills the process it has just created. FLOW_AUTH_SESSION_PERSISTENCE drew it on 2026-07-28; this
+# flow opens the same way and could draw it next, since which flow is exposed depends only on
+# Maestro's ordering.
+- stopApp
+- clearState
+
+- launchApp
 
 # Pass the onboarding gate if it is showing. Making the gate real (PR #50) changed what a
 # FRESH DEVICE does on first launch: a CI emulator has no stored state, so the app correctly

@@ -2,8 +2,8 @@
 
 # PanchangPal — Current Task
 
-Version: 3.16.0
-Last Updated: 2026-07-27 (owed follow-ups closed; E2E runs 6 flows; next: split #61)
+Version: 3.17.0
+Last Updated: 2026-07-28 (#61 split and merged; next: the SDK-upgrade increment)
 
 Purpose: the current implementation task. Stay focused; avoid unrelated work unless instructed.
 
@@ -110,7 +110,89 @@ green in CI on a real native build. Canonical progress 0% → 13% (1 of 8 Beta s
 # Current Task
 
 ## Title
-✅ THE THREE OWED FOLLOW-UPS ARE CLOSED · E2E RUNS 6 FLOWS · NEXT: SPLIT #61
+✅ #61 IS SPLIT AND MERGED (PR #74) · NEXT: THE SDK-UPGRADE INCREMENT
+
+**Progress unchanged at 47%.** Dependency hygiene advances no Beta slice.
+
+## What shipped (PR #74, `0185ea9`)
+
+Seven non-SDK bumps, landed on their own with all five CI gates green:
+
+| Package | From | To |
+|---|---|---|
+| `@typescript-eslint/eslint-plugin` · `parser` | 8.63.0 | 8.65.0 |
+| `prettier` | 3.9.5 | 3.9.6 |
+| `turbo` | 2.10.4 | 2.10.7 |
+| `@supabase/supabase-js` | 2.110.2 | **2.110.9** |
+| `@tanstack/query-async-storage-persister` · `react-query` | 5.101.2 | 5.101.4 |
+
+`@supabase/supabase-js` resolves to 2.110.9 rather than the 2.110.8 #61 names — a further patch
+shipped after Dependabot opened it, inside the declared `^2.110.8` range.
+
+**`react`, `@types/react` and the lockfile's `react@19.1.0` peer keys are deliberately untouched.**
+Bumping `react` 19.1.0 → 19.2.8 past the exactly-pinned SDK 54 baseline while `react-test-renderer`
+stays at 19.1.0 is the **single** reason the group was red — `Incorrect version of
+"react-test-renderer" detected` — and the earlier triage had guessed the wrong cause (jest, which
+stays at 29.7.0).
+
+**Verified:** eslint 0 errors / 16 warnings (its baseline), tsc clean across 11 projects, 102 vitest
++ 33 ui + 350 mobile, `expo export --platform all` green for both platforms — locally and again on
+CI's clean checkout. The lockfile diff is confined to the seven plus the peer-key rewrites the
+parser bump forces through `eslint-plugin-import` and `eslint-module-utils`; no transitive drift.
+
+## The E2E red after the merge — the harness, proven rather than assumed
+
+Main went red on E2E immediately after the merge: 5/6 passed, **FLOW_AUTH_SESSION_PERSISTENCE failed
+at step 21** with the tradition reverted to `generic`. That flow's own header documents that result
+as **identity loss** — the defect `secureSessionStorage.ts` exists to prevent.
+
+It was not dismissed as a flake, because the merge was a genuine suspect: `@supabase/supabase-js`
+carries its sub-packages in lockstep, so the bump moved **`@supabase/auth-js` 2.110.2 → 2.110.9**,
+which owns `persistSession` and the custom `storage` adapter that flow guards. Both hypotheses
+predicted the same screenshot.
+
+**Re-running the identical commit went 6/6 green**, which a deterministic regression cannot do. The
+cause was the launch race this repo had already documented: logcat shows
+`Destroy timeout of remove-task` 130ms into the flow's own cleared launch. **Fixed in all three
+flows that opened with a fused `launchApp: clearState: true`** — AUTH_SESSION_PERSISTENCE,
+ONBOARDING, SESSION_PERSISTENCE — matching FLOW_OFFLINE_SYNC's three discrete steps.
+
+Stated precisely: this clears a **deterministic** auth-js regression, not a probabilistic one. If
+that flow fails again, auth-js goes back on the suspect list rather than being treated as settled.
+
+## Two incidental findings
+
+1. **`pnpm` is no longer on PATH on the dev Mac.** Node 26 dropped corepack from the Homebrew
+   install. `npx --yes pnpm@9.6.0 …` (the version in `packageManager`) works and is what every
+   command here used. Expect a bare `pnpm install` to fail with `command not found` and do not read
+   that as a repository problem.
+2. **`pnpm format:check` fails on 248 files, and the prettier bump did not cause it.** Verified by
+   running 3.9.5 and 3.9.6 against the tree: identical, 248 either way. Pre-existing, not a CI gate.
+   Reformatting 248 files behind a dependency bump would have buried the diff — but it is worth
+   deciding deliberately whether the repo adopts `format:check` or drops the script.
+
+## Next task — the SDK-upgrade increment
+
+**#61's `react` remainder + #64 (`@expo/metro-runtime` 6.1.2→57.0.7) + #65 (`@babel/runtime` 7→8),
+as one increment.** All three cross the exactly-pinned SDK 54 baseline, which is why they are three
+red PRs rather than three merges.
+
+It is **not** a lockfile exercise. `react-test-renderer` has to move with `react`, and the result
+must be validated by a **native build plus the six Maestro flows**, because that is the only method
+that has ever caught this class of change here: the SDK 54 re-baseline was verified by bundling and
+Expo Go alone, and a native build later found that mmkv v2 was silently degrading to memory under
+the New Architecture. Local Android builds now work on the dev Mac (AVD `ppal_aosp34`), so it is
+iterable without 20-minute CI cycles. `@babel/runtime` 7→8 deserves particular care: it is one of
+the two undeclared-transitive-dependency defects that broke bundling during the Execution Gap.
+
+#62 (i18next 23→26) and #63 (jest 29→30) are red for their own unrelated reasons and are separate
+work.
+
+---
+
+## Superseded — the three owed follow-ups
+
+## ✅ THE THREE OWED FOLLOW-UPS ARE CLOSED · E2E RUNS 6 FLOWS
 
 **Progress unchanged at 47%.** None of this advances a Beta slice; it closes owed items and a
 defect inside B6.
