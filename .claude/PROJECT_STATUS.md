@@ -2,9 +2,9 @@
 
 # PanchangPal — Project Status Dashboard
 
-Version: 1.8.0
+Version: 1.9.0
 
-Last Updated: 2026-07-26 (offline sync implemented — queue drain + §6.1 persisted read cache)
+Last Updated: 2026-07-27 (B6.3 — privacy inventory, policy draft, store labels; B6 complete at verifiable scope)
 
 Purpose:
 This document provides a high-level snapshot of the overall project.
@@ -39,7 +39,7 @@ Overall Progress
 
 ░░░░░░░░░░░░░░░░░░░░
 
-**Mobile MVP — Phase 1: ✅ 100% (all 8 slices, merged)** · **Beta Readiness & Platform Hardening: 🚧 44% (2 of 8 slices — B2, B5 — plus ¾ of B6 and ¾ of B4)**
+**Mobile MVP — Phase 1: ✅ 100% (all 8 slices, merged)** · **Beta Readiness & Platform Hardening: 🚧 47% (3 of 8 slices — B2, B5, B6 — plus ¾ of B4)**
 
 Project Health
 
@@ -73,8 +73,8 @@ TBD
 | Backend Foundation (SVC_*) | ✅ Complete | 100% (panchang compute blocked by ADR-033) |
 | Mobile Development (feature slices) | ✅ Complete | 100% (M1–M8 done) |
 | AI Platform | 🟡 In Progress | Adapters + RAG pipeline done; corpus + eval pending |
-| Testing | 🟢 Healthy | 321 green (244 mobile jest + 77 vitest) + 17 pgTAP RLS/DB assertions; bundle gate per PR; **4 Maestro FLOW_* green on main**; the emulator-ANR false-red is now fixed at its cause (AOSP image, PR #55) after PR #41's `hide_error_dialogs` proved a symptom patch — 3 of the last 4 failures were launcher ANRs; API contract gate restored and proven to fail; AI eval harness still owed |
-| Beta | 🚧 In progress | 44% (B2 ✅; B5 ✅ at verifiable scope — NFR-15 still needs PITR; **B6 🟡 ~75%** — OWASP review + 2 critical fixes + CCPA export + §5.2 controls, B6.3 pending; B4 🟡 ~75% owner-gated on a Sentry org; B1/B3 owner-gated; B7–B8 pending) |
+| Testing | 🟢 Healthy | 438 green (350 mobile jest + 88 vitest, +6 for the data-inventory conformance gate) + 17 pgTAP RLS/DB assertions; bundle gate per PR; **4 Maestro FLOW_* green on main**; the emulator-ANR false-red is now fixed at its cause (AOSP image, PR #55) after PR #41's `hide_error_dialogs` proved a symptom patch — 3 of the last 4 failures were launcher ANRs; API contract gate restored and proven to fail; AI eval harness still owed |
+| Beta | 🚧 In progress | 47% (B2 ✅; B5 ✅ at verifiable scope — NFR-15 still needs PITR; **B6 ✅ at verifiable scope** — OWASP review + 2 critical fixes + CCPA export + B6.3 inventory/policy/labels + §5.2 controls, ⛔ **but deletion is never executed**; B4 🟡 ~75% owner-gated on a Sentry org; B1/B3 owner-gated; B7–B8 pending) |
 | Production Launch | ⏳ Pending | 0% |
 
 ---
@@ -91,9 +91,17 @@ product scope. Sliced B1–B8; see CURRENT_MILESTONE.md.
 
 Current Focus
 
+- **B6 — Security & Privacy — ✅ complete at verifiable scope (2026-07-27).** B6.3 delivered the
+  data-collection inventory, the privacy policy draft and the store Data Safety / App Privacy
+  answers (`docs/devops/`), each derived from the one before it and the inventory pinned to the
+  schema and the emitted `EVT_*` set by a conformance test proven to fail four ways.
+  ⛔ **It found that account deletion is never executed** — the request is written to
+  `account_deletion` and no code ever reads it back; `pg_cron` is commented out and no job runner
+  exists, so nothing scheduled runs at all. That blocks the policy, both store forms and Apple
+  5.1.1(v), and is the cause of every unimplemented retention sweep. Next: **the deletion executor**.
 - **Offline sync (TDD Part 4 §6) — ✅ complete at engineering scope (2026-07-26).** Mutation queue
   persisted and drained to SVC_sync; §6.1 read cache persisted. Never run against a live backend
-  and not covered by a Maestro flow. Next: **B6.3** (data inventory → privacy policy → store labels).
+  and not covered by a Maestro flow.
 - M7 Notifications — ✅ complete (reviewed/approved 2026-07-18).
 - M8 Subscription — ✅ complete (3 increments):
   - Increment 1 (household-grain entitlement read + gating) — ✅ complete, approved.
@@ -255,6 +263,21 @@ Implementation: Mobile MVP Phase 1 is feature-complete (M1–M8).
 
 Priority 1
 
+⛔ **Build the account-deletion executor.** Found by B6.3 on 2026-07-27: `POST /account/delete`
+records the request in `account_deletion` with a 30-day grace and **nothing ever carries it out** —
+no Edge Function reads the table, no runner processes `job`, `pg_cron` is commented out, and
+`executed_at` is never set. TDD Part 5 §6.2's "hard-deletes owned rows" does not exist in the
+repository, so the system accepts a deletion request and keeps the data indefinitely.
+
+It blocks more than itself: the privacy policy, both stores' Data Safety answers, and **Apple
+5.1.1(v)** (which requires *in-app* account deletion, so this also needs a PDD screen and
+SVC_household for ownership transfer). And because the root cause is that **no scheduled execution
+exists in this project at all**, the same fix restores every retention sweep — analytics rollup and
+prune, personal-date tombstone removal, `panchang_cache` TTL. It is ordinary engineering, with no
+purchase involved, which makes it the highest-value credential-free work remaining.
+
+Priority 2
+
 **Owner action: create a Sentry org + DSN (free tier).** B4.1–B4.3 are in — client and server
 telemetry seams, the EVT_* sink, `SENTRY_*` required at preflight's production tier, and a release
 gate that blocks a production build with Sentry unconfigured. What remains (the source-map upload and
@@ -266,23 +289,26 @@ insert-only contract is gated in CI and verified against hosted staging, and the
 B1 de-declared is restored as a real one** — proven to fail by three deliberate perturbations. Of
 B1's two hollow gates, only the AI eval harness remains owed, and it is blocked on the corpus.
 
-Priority 2
+Priority 3
 
 ⛔ Ratify ADR-033 (Canonical Panchang Engine) — unblocks Today panchang, Calendar markers, notifications
 
-Priority 3
+Priority 4
 
 AI corpus ingestion + eval readiness — unblocks live Ask Guru (GURU_LIVE)
 
-Priority 4
-
-Backend Edge Functions — SVC_household, SVC_notify_scheduler, SVC_revenuecat_webhook (client contracts already coded)
-
 Priority 5
+
+Backend Edge Functions — SVC_household, SVC_notify_scheduler, SVC_revenuecat_webhook (client
+contracts already coded). **SVC_household is now on the deletion critical path**: F-3 requires a
+household owner to transfer ownership before deletion, so in-app account deletion cannot ship
+without it.
+
+Priority 6
 
 Apply migrations to a live Supabase project + integration run
 
-Priority 6
+Priority 7
 
 E2E (Maestro FLOW_*) + first live CI run
 
@@ -319,6 +345,25 @@ prefs work today, so gating and prefs are real before the SDKs are wired.
 
 # Recently Completed
 
+- **B6.3 — the privacy inventory, and the deletion right that was never executed (2026-07-27).**
+  Three documents in `docs/devops/`, each derived from the one before it: `DATA_INVENTORY.md`
+  (all 32 tables classified, the nine `EVT_*` ids actually emitted with their props, six device
+  storage keys, six third-party processors, permissions), `PRIVACY_POLICY_DRAFT.md` and
+  `STORE_PRIVACY_LABELS.md`. Built from the migrations and the mobile source rather than from the
+  documentation — reading the claim against the implementation is what has worked every time this
+  milestone.
+  **The inventory is pinned by a conformance test** (`apps/backend/tests/privacy/`), which parses
+  `create table` from the migrations and quoted `'EVT_*'` literals from `apps/mobile/{app,src}` and
+  compares both against the document in **both** directions: an unclassified table is undisclosed
+  collection, and a classified table the schema lacks is a disclosure for data the product does not
+  hold. Four perturbations each failed the right test. Same pattern as `SYNCABLE_KINDS` reading
+  SVC_sync's source.
+  ⛔ **It found that account deletion is scheduled and never executed** — `account_deletion` rows
+  are written and never read back, `pg_cron` is commented out, no runner processes `job`, and
+  `executed_at` is never set. Also found: the export omits `message` rows; no in-app affordance
+  exists for export or deletion (Apple 5.1.1(v) makes one mandatory); a user-deleted personal date
+  is a tombstone, not an erasure; and `packages/database`'s `TABLES` registry had drifted from the
+  schema (29 against 32). **With this B6 is complete at verifiable scope; 44% → 47%.**
 - **Offline sync — implemented (2026-07-26).** The launch blocker B6 surfaced. `STORE_offlineQueue`
   was an in-memory zustand slice beneath a header claiming MMKV persistence — never written to
   disk, never drained, never dequeued — and **nothing in `src/data` bound API_POST_SYNC at all**,
@@ -494,9 +539,20 @@ The Mobile MVP Phase 1 feature-slice milestone is **complete (100%)** and merged
 slices — App Shell, Today, Guided Ritual, Calendar Shell, Ask Guru Client, Profile/Household,
 Notifications, and Subscription (M1–M8) — are implemented, tsc/eslint clean, and green in CI.
 
-The project is now in **Beta Readiness & Platform Hardening** (TDD Part 5), sliced B1–B8, at **44%
-(2 of 8 — B2 and B5 complete at verifiable scope — plus ¾ of B6 and ¾ of B4)**. The milestone opened
+The project is now in **Beta Readiness & Platform Hardening** (TDD Part 5), sliced B1–B8, at **47%
+(3 of 8 — B2, B5 and B6, the latter two at verifiable scope — plus ¾ of B4)**. The milestone opened
 on a known gap: CD reported green while its Maestro E2E and EAS build jobs were placeholders.
+
+**B6 closed on 2026-07-27, and closing it found a launch blocker.** B6.3's data-collection
+inventory — built from the migrations and the mobile source rather than from the documentation, and
+pinned to both by a conformance test — established that **account deletion is recorded and never
+executed**. The request is written to `account_deletion` with a 30-day grace and no code ever reads
+it back; `pg_cron` is commented out and no job runner exists, so nothing scheduled runs in this
+project at all. That single absence blocks the privacy policy, both stores' Data Safety answers and
+Apple's in-app-deletion requirement, and is also why no retention sweep exists. It is the fourth
+instance of the milestone's signature defect — a documented control, never implemented, with nothing
+asserting it — and the most consequential, because the row it writes makes the system look like the
+request is being honoured.
 
 **B6's security review found the two most serious defects of the milestone** — the auth session that
 never persisted (so every restart minted a new anonymous identity and orphaned the user's data), and

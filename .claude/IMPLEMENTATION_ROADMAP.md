@@ -2,8 +2,8 @@
 
 # PanchangPal — Implementation Roadmap
 
-Version: 2.0.0
-Last Updated: 2026-07-26 (B6 3 of 4; two critical security defects; next: offline sync)
+Version: 2.1.0
+Last Updated: 2026-07-27 (B6 complete at verifiable scope; deletion is never executed)
 
 Purpose: the forward plan from the current state. Complements PROJECT_STATUS.md (snapshot) and
 CURRENT_MILESTONE.md (active milestone). Updated when scope or sequencing changes — and at every
@@ -11,10 +11,26 @@ increment/milestone boundary per the Increment & Milestone Completion Checkpoint
 
 ---
 
-## Where we are (2026-07-26)
+## Where we are (2026-07-27)
 
-**Beta Readiness & Platform Hardening, 44%** — B2 ✅ and B5 ✅ (at verifiable scope), plus ¾ of B6
-and ¾ of B4. B1 ~85%, B3 ~80%, all remainders owner-gated on money or a store account.
+**Beta Readiness & Platform Hardening, 47%** — B2 ✅, B5 ✅ and B6 ✅ (the latter two at verifiable
+scope), plus ¾ of B4. B1 ~85%, B3 ~80%, all remainders owner-gated on money or a store account.
+
+**B6 closed on 2026-07-27 with B6.3** — the data-collection inventory, the privacy policy draft and
+the store Data Safety / App Privacy answers, all in `docs/devops/`, each derived from the one before
+it. The inventory was built from the migrations and the mobile source rather than from the
+documentation, and §2/§4 are pinned to both by a conformance test proven to fail four ways.
+
+⛔ **It found a launch blocker: account deletion is recorded and never executed.**
+`account_deletion` rows are written with a 30-day grace and nothing ever reads them back — no
+executor, no job runner, `pg_cron` commented out, `executed_at` never set. The same absence explains
+every missing retention sweep, because **no scheduled execution exists in this project at all**.
+Engineering-closable; no purchase involved.
+
+**Next: the account-deletion executor** — it unblocks the privacy policy, both store forms, Apple
+5.1.1(v), and every retention sweep at once, which makes it the highest-value credential-free work
+left in the milestone. Its in-app half additionally needs a PDD screen and SVC_household (F-3
+requires a household owner to transfer ownership before deleting).
 
 **Offline sync (TDD Part 4 §6) was implemented and merged on 2026-07-26** (`86b3843`, PR #66),
 closing a launch blocker B6's OWASP review surfaced: the mutation queue was in memory beneath a header claiming persistence, was never
@@ -28,8 +44,9 @@ AOSP arm64 emulator, prebuild + Gradle build, installed and launched. Maestro fl
 iterable locally rather than only through CI, which is what makes the owed `FLOW_OFFLINE_SYNC`
 practical to write.
 
-Next: **B6.3** (data-collection inventory → draft privacy policy → store Data Safety labels), the
-last credential-free slice work.
+(B6.3 — the data-collection inventory, draft privacy policy and store Data Safety labels — was the
+last credential-free *slice* work, and is now done. The deletion executor above is not slice work:
+it is a defect B6.3 exposed in a deliverable B6 had already been counting.)
 
 ---
 

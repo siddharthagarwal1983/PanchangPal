@@ -2,9 +2,9 @@
 
 # PanchangPal — Project Memory
 
-Version: 2.0.0
+Version: 2.1.0
 
-Last Updated: 2026-07-26 (offline sync + persisted query cache seams recorded)
+Last Updated: 2026-07-27 (privacy-documentation seam; no scheduled execution exists in this project)
 
 Current Phase:
 Beta Readiness & Platform Hardening (TDD Part 5)
@@ -509,6 +509,34 @@ Stable, cross-cutting facts (permanent until an approved decision changes them):
   scripts, which should be reverted). **iOS is unchanged — still unbuilt, still needs an Apple
   membership.** This matters mainly because Maestro flows can now be iterated locally instead of
   through 20-minute CI runs.
+- **NOTHING SCHEDULED RUNS IN THIS PROJECT** (established 2026-07-27, B6.3). `pg_cron` is
+  **commented out** in `20260712000001_extensions.sql`, no job runner processes the `job` table
+  (`analytics_rollup`, `notify_schedule` and the rest are enum values with no consumer), and no
+  Edge Function is invoked on a timer. Anything the documentation describes as happening "after N
+  days", "periodically", or "in the background" **does not happen**. The known consequences:
+  account deletion is recorded and never executed (see below), analytics never roll up or prune,
+  personal-date tombstones are never removed, and `panchang_cache` has no TTL sweep. Treat this as
+  the first thing to check before believing any claim about deferred or recurring work.
+- **The CCPA deletion right is scheduled, not performed** (established 2026-07-27, B6.3).
+  `POST /account/delete` gates correctly per F-3 and writes an `account_deletion` row with a 30-day
+  `execute_after`; **no code ever reads that row back** and `executed_at` is never set. TDD Part 5
+  §6.2's "hard-deletes owned rows" is unimplemented. This is a launch blocker: a privacy policy
+  promising deletion and a store answer of "users can request deletion" would each be a false
+  statement, and CCPA §1798.105 grants a right to deletion rather than a right to have a request
+  logged. **Apple 5.1.1(v) additionally requires in-app account deletion**, so closing it needs the
+  executor, a PDD-specified screen, and SVC_household for the ownership transfer F-3 requires.
+- **Privacy documentation is DERIVED, and the inventory is pinned to the code** —
+  `docs/devops/DATA_INVENTORY.md` is built from `apps/backend/migrations` and `apps/mobile/{app,src}`,
+  and `PRIVACY_POLICY_DRAFT.md` and `STORE_PRIVACY_LABELS.md` are derived from it. None of the three
+  is written independently, because a store privacy label that overstates or understates collection
+  is an inaccurate legal disclosure rather than a stale document.
+  `apps/backend/tests/privacy/data-inventory.test.ts` enforces the first link: it parses `create
+  table` out of the migrations and quoted `'EVT_*'` literals out of the mobile source and compares
+  both against the document **in both directions**, so a new table cannot enter the schema without a
+  privacy classification and a removed one cannot linger as a disclosure. It deliberately does NOT
+  read `packages/database`'s `TABLES` registry, which had already drifted (29 names against 32
+  tables). The test cannot reach the policy or the labels — those still need a human to decide what
+  a newly classified table means.
 - **MockPanchangProvider** is DEV/TEST ONLY and must never be imported by production code.
 - **Backend Edge Functions pending** — SVC_household (member/invite), SVC_notify_scheduler
   (notify/schedule), and SVC_revenuecat_webhook are pending backend deliverables; the corresponding

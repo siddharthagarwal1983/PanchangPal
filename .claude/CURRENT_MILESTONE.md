@@ -2,9 +2,9 @@
 
 # PanchangPal — Current Milestone
 
-Version: 4.1.0
+Version: 4.2.0
 
-Last Updated: 2026-07-26 (offline sync implemented — the §6 gap B6 surfaced)
+Last Updated: 2026-07-27 (B6.3 — B6 complete at verifiable scope; deletion is never executed)
 
 Purpose:
 This document defines the current milestone. Unlike SESSION.md (daily work) or TASK.md (current
@@ -23,8 +23,32 @@ Status
 
 Overall Progress
 
-44% (2 of 8 slices COMPLETE — **B2 ✅**, **B5 ✅ at verifiable scope** — plus **¾ of B6** and ¾ of B4;
-B1 ~85%, B3 ~80%)
+47% (3 of 8 slices COMPLETE — **B2 ✅**, **B5 ✅**, **B6 ✅**, the latter two at verifiable scope —
+plus ¾ of B4; B1 ~85%, B3 ~80%)
+
+**B6 closed on 2026-07-27 with B6.3**, and closing it found a launch blocker. The data-collection
+inventory, the privacy policy draft and the store Data Safety / App Privacy answers now exist in
+`docs/devops/`, each derived from the one before it, and §2/§4 of the inventory are **pinned to the
+schema and to the emitted `EVT_*` set by a conformance test** — an unclassified new table is
+undisclosed collection, and a classified table the schema no longer has is a disclosure for data the
+product does not hold. Both directions fail. Four perturbations proved it.
+
+⛔ **The finding: the CCPA deletion right is recorded and never carried out.**
+`POST /account/delete` gates correctly (F-3) and writes `account_deletion` with a 30-day
+`execute_after`. Nothing reads that row back — no Edge Function queries the table, no runner
+processes `job`, `pg_cron` is **commented out**, and `executed_at` is never set. TDD Part 5 §6.2
+specifies deletion that "hard-deletes owned rows"; that code does not exist. Like B5's missing PITR
+this is recorded as a launch blocker rather than counted as done — but unlike PITR it is ordinary
+engineering, not a purchase.
+
+**It is the fourth instance of this milestone's signature defect** — a documented control, never
+implemented, with nothing asserting it — and the most consequential, because the row it writes makes
+the system *look* like it is honouring the request. A privacy policy promising deletion and a store
+answer of "users can request deletion" would each be a false statement backed by a paper trail.
+
+**The same absence explains every retention gap**: no analytics rollup or prune, no removal of
+personal-date tombstones, no `panchang_cache` TTL. There is no scheduled execution in this project
+at all. One fix, not five.
 
 **Offline sync was implemented on 2026-07-26 and does NOT move this number.** TDD Part 4 §6 is a
 Mobile MVP deliverable that B6's review found unbuilt, not one of the eight Beta slices. It closes
@@ -344,7 +368,7 @@ possible fix and would have caught defects 1–3 at M1.
 | B3 | Build & distribution | eas.json profiles, Hermes, signing, source maps, TestFlight / Play Internal (§2.3) | 🟡 ~80% — automated builds work; store accounts + Sentry (B4) remain |
 | B4 | Observability | Sentry, telemetry, SLO dashboards + alerts (§7) | 🟡 ~75% — B4.1 seam ✅ · B4.2 sink ✅ · B4.3 server seam + prod release gate ✅ · EVT_* daily-habit funnel now emitting (§11.4, incl. the North Star input EVT_017); **upload + B4.4 owner-gated on a Sentry org (free tier)** |
 | B5 | Reliability & DR | backups, restore drill, runbooks, graceful degradation (§8) | ✅ COMPLETE at verifiable scope — runbooks (§8.3) · mechanised restore drill · §8.2 degradation policy · §8.4 operator resilience. **One deliverable is NOT engineering-closable: NFR-15 needs PITR, which is a purchase.** Recorded as a launch blocker rather than counted as done. |
-| B6 | Security & privacy | OWASP Mobile review, CCPA export/delete verification, store privacy labels (§5, §6) | 🟡 ~75% — OWASP review ✅ (2 critical defects found + fixed, each proven by reintroducing it) · CCPA export + SVC_account authz ✅ · §5.2 SBOM/Dependabot/pinning ✅ · **B6.3 inventory + privacy policy + store labels pending**. CCPA export/delete is counted at VERIFIABLE scope: unit-tested and proven-to-fail, not yet exercised against a live backend |
+| B6 | Security & privacy | OWASP Mobile review, CCPA export/delete verification, store privacy labels (§5, §6) | ✅ COMPLETE at verifiable scope — OWASP review ✅ (2 critical defects found + fixed, each proven by reintroducing it) · CCPA export + SVC_account authz ✅ · **B6.3 data inventory + privacy policy draft + store labels ✅**, the inventory pinned to the schema and the emitted `EVT_*` set by a conformance test proven to fail four ways · §5.2 SBOM/Dependabot/pinning ✅. **Two deliverables are NOT engineering-closed and are recorded rather than counted: (a) ⛔ deletion is never EXECUTED** — the request is written to `account_deletion` and nothing carries it out, which is ordinary engineering and a launch blocker; **(b)** nothing is legally reviewed, and no policy or label is publishable until (a) is fixed. Export remains at verifiable scope: unit-tested and proven-to-fail, never run against a live backend |
 | B7 | Release management | versioning/trains, OTA policy + channels, staged rollout, rollback verification (§3) | ⏳ |
 | B8 | Go/no-go & launch | §10.1 checklist execution, internal → beta cohort, sign-off | ⏳ |
 
@@ -385,6 +409,16 @@ One slice per session, same cadence as M1–M8: implemented, self-verified, revi
             handover would need.
 - [ ] **B6** — OWASP Mobile review completed; CCPA export/delete verified end-to-end (F-3/F-10);
       privacy policy + store privacy labels accurate.
+      - [x] **B6.1 OWASP Mobile Top 10 review** against the app as built, with file:line evidence.
+            Two launch-blocking defects found and each proven by reintroducing it.
+      - [x] **B6.2 CCPA export** to the §6.4 row set behind a versioned envelope, plus the
+            SVC_account authorization fix (identity from the JWT, never the body).
+      - [x] **B6.3 data-collection inventory → privacy policy draft → store privacy labels**, all
+            three in `docs/devops/`, derived from the code and pinned by a conformance test.
+      - [x] **B6.4 §5.2 supply-chain controls** — SBOM, Dependabot, `eas-cli` pinning.
+      - [ ] ⛔ **Deletion is not verifiable end-to-end because it is not implemented** — see the risk
+            register. The blocker, not the verification, is what is outstanding.
+      - [ ] Legal review of the policy draft and the store answers (owner-held).
 - [ ] **B7** — version trains, OTA channels (`staging`/`prod`) with runtime-version binding and
       crash-spike auto-rollback; rollback paths verified (§3.4).
 - [ ] **B8** — the §10.1 checklist walked; internal smoke on TestFlight/Play Internal; beta cohort.
@@ -522,6 +556,29 @@ testers' hands.
   read cache so a cold start offline is not empty. **Residual risk, stated:** it has never run
   against a live backend, and there is no `FLOW_OFFLINE_SYNC` Maestro flow — which is exactly the
   class of gap a real flow caught for MMKV and unit tests structurally cannot.
+- **⛔ ACCOUNT DELETION IS NEVER EXECUTED, AND NOTHING SCHEDULED RUNS AT ALL (found 2026-07-27,
+  B6.3).** `POST /account/delete` gates the request per F-3 and writes `account_deletion` with a
+  30-day `execute_after`. **No code ever reads that row back.** No Edge Function queries the table;
+  no runner processes `job` (its enum values — `analytics_rollup`, `notify_schedule` — have no
+  consumer); `pg_cron` is **commented out** in `20260712000001_extensions.sql`;
+  `account_deletion.executed_at` is never set. TDD Part 5 §6.2's "hard-deletes owned rows" does not
+  exist in the repository.
+  **Why it is worse than an unimplemented feature:** the row it writes makes the system look like
+  the request is being honoured, and it is the basis on which a privacy policy and two store forms
+  would claim a deletion capability. CCPA §1798.105 gives a right to deletion, not a right to have a
+  request logged. **Apple 5.1.1(v) additionally requires in-app account deletion**, so closing this
+  is a three-part dependency: the executor (engineering), a deletion screen (PDD specifies none), and
+  SVC_household for the ownership transfer F-3 requires.
+  **The same absence is the cause of every retention gap** — no analytics rollup or prune, no removal
+  of personal-date tombstones, no `panchang_cache` TTL sweep. One fix, not five. Fully
+  engineering-closable; no purchase involved.
+- **The CCPA export omits `message` rows (found 2026-07-27, B6.3).** `EXPORT_TABLES` returns the
+  `conversation` header without the messages in it, so the export becomes incomplete the day
+  `GURU_LIVE` is enabled — the moment the text actually exists. Cheap to fix, easy to forget,
+  recorded so it is not discovered by a data-rights request.
+- **No in-app affordance exists for export or deletion (B6.3).** Both endpoints work; no screen calls
+  either. PDD specifies no screen, so building one would invent UX — the affordance is owed by the
+  PDD, and Apple's guideline makes it mandatory rather than a nicety.
 - **Deferred vendor deps** — `react-native-purchases` and `expo-notifications` are still uninstalled;
   purchase and push flows cannot be verified end-to-end until they land on the Mac with keys. Their
   Null adapters keep the app honest but leave those paths E2E-untested.

@@ -2,9 +2,9 @@
 
 # PanchangPal Dashboard
 
-Version: 1.21.0
+Version: 1.22.0
 
-Last Updated: 2026-07-26 (offline sync implemented — the app is offline-first in practice, not just on paper)
+Last Updated: 2026-07-27 (B6.3 — the privacy inventory, and the deletion right that was never executed)
 
 Purpose:
 This is the first file Claude should read at the beginning of every session.
@@ -41,13 +41,15 @@ PanchangPal
 
 Progress
 
-44%
+47%
 
-(Canonical progress metric — 2 of 8 Beta Readiness slices COMPLETE plus **¾ of B6** and **¾ of B4**:
-(2 + ¾ + ¾)/8 ≈ 44%. B6.1 OWASP review · B6.2 CCPA export + the SVC_account authorization fix ·
-B6.4 §5.2 supply-chain controls are done; **B6.3** (data inventory, privacy policy, store labels)
-remains. B6.2 is counted at its VERIFIABLE scope, as B5 was: the delete/export path is unit-tested
-and proven-to-fail, but not exercised end-to-end against a live backend, which needs a redeploy.
+(Canonical progress metric — 3 of 8 Beta Readiness slices COMPLETE plus **¾ of B4**:
+(3 + ¾)/8 ≈ 47%. **B6 is the third**, and like B2 and B5 it is counted at its VERIFIABLE scope:
+all four increments are delivered — B6.1 OWASP review · B6.2 CCPA export + the SVC_account
+authorization fix · B6.3 data inventory + privacy policy + store labels · B6.4 §5.2 supply-chain
+controls — while **§6.2's delete half is not merely unverified but UNBUILT**, found by B6.3 (see
+Current Task). That is recorded as a launch blocker rather than counted as done, exactly as B5's
+missing PITR was. The difference is that this one is ordinary engineering, not a purchase.
 Prior detail — 2 of 8 slices COMPLETE: **B2 (E2E verification)** and
 **B5 (Reliability & DR, at verifiable scope)**, plus
 **3 of B4's 4 increments** — B4.1 telemetry seam, B4.2 EVT_* analytics sink, B4.3 server seam +
@@ -90,8 +92,60 @@ CURRENT_MILESTONE.md
 
 # Current Task
 
-**Offline sync — MERGED as `86b3843` (PR #66). The launch blocker B6 found is closed at engineering
-scope.** Verified before merge: five CI gates green, and E2E dispatched on the branch (run
+**B6.3 — the data inventory, the privacy policy draft, and the store labels. B6 is complete at its
+verifiable scope. The inventory found that the CCPA deletion right is never carried out.**
+
+Three documents, each derived from the one above it, and the first pinned by a test:
+
+- **`docs/devops/DATA_INVENTORY.md`** — all 32 tables classified (Identifying / Personal /
+  Pseudonymous / Non-personal), the nine `EVT_*` ids the app actually emits with their props, the
+  six on-device storage keys, the six third-party processors, and the permissions. Built from the
+  migrations and the mobile source, **not** from the documentation, because that is the third time
+  this milestone that reading the claim against the implementation was the thing that worked.
+- **`docs/devops/PRIVACY_POLICY_DRAFT.md`** — user-facing draft, `[LEGAL REVIEW REQUIRED]`, with
+  `[UNBUILT]` markers where a normal policy sentence would be false today.
+- **`docs/devops/STORE_PRIVACY_LABELS.md`** — Play Data Safety + Apple App Privacy answers, with
+  the ⚠️ triggers that change each answer when a deferred dependency lands.
+
+**The inventory is machine-checked** (`apps/backend/tests/privacy/data-inventory.test.ts`): it parses
+`create table` out of the migrations and quoted `'EVT_*'` literals out of `apps/mobile/{app,src}`,
+and compares both against the document **in both directions** — an unclassified new table is
+undisclosed collection, and a classified missing table is a disclosure for data that no longer
+exists. Same pattern as `SYNCABLE_KINDS` reading SVC_sync's source. Proven by four perturbations
+(new table · deleted table row · new emitted event · deleted event row), each failing the right test.
+
+⛔ **THE FINDING: account deletion is scheduled and never executed.** `POST /account/delete` gates
+the request correctly and writes `account_deletion` with a 30-day `execute_after`. **Nothing ever
+reads that row back.** No Edge Function queries the table, no job runner processes `job`, `pg_cron`
+is **commented out** in `20260712000001_extensions.sql`, and `executed_at` is never set by any code
+path. TDD Part 5 §6.2 specifies that deletion "hard-deletes owned rows"; that hard delete does not
+exist anywhere in the repository. The system records an intention to delete and keeps the data
+indefinitely — and the row it writes makes it *look* like the request is being honoured.
+
+This is the fourth instance of the milestone's signature defect, and the most pointed: a privacy
+policy promising deletion and a store answer of "users can request deletion" would both be false
+statements, with a paper trail saying they were checked. CCPA §1798.105 gives a right to deletion,
+not a right to have a request logged.
+
+**The same root cause explains every retention gap**: there is **no scheduled execution in this
+project at all**, so analytics never roll up or prune, personal-date tombstones are never removed,
+and `panchang_cache` has no TTL sweep. One fix, not five.
+
+**Also found:** the CCPA export omits `message` rows, so it becomes incomplete the day Ask Guru goes
+live; there is no in-app affordance for export or deletion (**Apple 5.1.1(v) requires in-app account
+deletion** — a three-part dependency: executor + screen + SVC_household for ownership transfer); a
+user-deleted personal date is a tombstone rather than an erasure and must be disclosed; and
+`packages/database`'s `TABLES` registry had already drifted from the schema (29 names against 32).
+
+**Verified:** 88 vitest (+6), eslint 0 errors, four perturbations each failing the right test.
+
+**Not done, and stated:** nothing here is legally reviewed, and no document is publishable until the
+deletion executor exists.
+
+---
+
+**Previously — offline sync — MERGED as `86b3843` (PR #66). The launch blocker B6 found is closed at
+engineering scope.** Verified before merge: five CI gates green, and E2E dispatched on the branch (run
 30207484940, `a05760d`) passed **5/5 Maestro flows** — FLOW_ONBOARDING and FLOW_RETURNING included,
 which is what proves the two new startup effects did not disturb a fresh launch.
 
@@ -367,6 +421,16 @@ Verified end-to-end. **PR #36 merged to main as `e1e10d4`**; the docs checkpoint
 
 # Today's Objective
 
+Session of 2026-07-27. **B6.3 — data inventory, privacy policy, store labels.** Build the
+data-collection inventory from the code rather than the docs, then derive the policy draft and the
+store answers from it. Outcome: three documents, the inventory pinned to the schema and the emitted
+event set by a conformance test proven to fail four ways — and one launch blocker found, the
+deletion right that records a request and never carries it out. **B6 complete at verifiable scope;
+44% → 47%.** Next: **the account-deletion executor**, which is now the highest-value credential-free
+engineering work in the milestone.
+
+---
+
 Session of 2026-07-26 (part 3). **Offline sync.** Close the launch blocker B6 surfaced: make the
 mutation queue durable, drain it to SVC_sync, and persist the read cache so the daily loop is
 genuinely usable offline rather than only documented as such. Outcome: implemented across six
@@ -420,19 +484,27 @@ No new product scope.
 | Mobile — Notifications | ✅ M7 |
 | Mobile — Subscription | ✅ M8 |
 | AI Platform | 🟡 adapters done; corpus + eval pending |
-| Testing | 🟢 432 unit/component/domain (350 mobile + 82 vitest) + 17 pgTAP + a monthly DR restore drill + **5 Maestro flows, all green** · bundle gate per PR · 🟢 **E2E green in CI** — **5/5** on a real native Android build (RETURNING · MORNING_RITUAL · SESSION_PERSISTENCE · AUTH_SESSION_PERSISTENCE · ONBOARDING) in 5m16s, run 30207484940 on `a05760d`, 2026-07-26. (The count read "4" until this session: FLOW_AUTH_SESSION_PERSISTENCE was added in B6 and never counted. `e2e.yml`'s step-summary echo still lists only four names — a workflow fix that is owed.); gate fails fast (PR #35) and the launcher-ANR false-red is removed at its cause (PR #55 — `hide_error_dialogs` alone had stopped being sufficient) · AI-eval de-declared (owed: §9.4 harness); api-contract restored |
-| Beta | 🚧 In progress — **B2 ✅**; **B5 ✅ at verifiable scope** (NFR-15 blocked on PITR — a purchase); **B6 🟡 ~75%** (OWASP review ✅ · CCPA export + SVC_account authz ✅ · §5.2 controls ✅ · B6.3 inventory/policy/labels pending); **B4 🟡 ~75%** (owner-gated on a Sentry org); B1/B3 owner-gated; B7–B8 pending |
+| Testing | 🟢 438 unit/component/domain (350 mobile + 88 vitest, +6 for the data-inventory conformance gate) + 17 pgTAP + a monthly DR restore drill + **5 Maestro flows, all green** · bundle gate per PR · 🟢 **E2E green in CI** — **5/5** on a real native Android build (RETURNING · MORNING_RITUAL · SESSION_PERSISTENCE · AUTH_SESSION_PERSISTENCE · ONBOARDING) in 5m16s, run 30207484940 on `a05760d`, 2026-07-26. (The count read "4" until this session: FLOW_AUTH_SESSION_PERSISTENCE was added in B6 and never counted. `e2e.yml`'s step-summary echo still lists only four names — a workflow fix that is owed.); gate fails fast (PR #35) and the launcher-ANR false-red is removed at its cause (PR #55 — `hide_error_dialogs` alone had stopped being sufficient) · AI-eval de-declared (owed: §9.4 harness); api-contract restored |
+| Beta | 🚧 In progress — **B2 ✅**; **B5 ✅ at verifiable scope** (NFR-15 blocked on PITR — a purchase); **B6 ✅ at verifiable scope** (OWASP review ✅ · CCPA export + SVC_account authz ✅ · B6.3 inventory/policy/labels ✅ · §5.2 controls ✅ — ⛔ **but deletion is never executed**, an engineering-closable launch blocker); **B4 🟡 ~75%** (owner-gated on a Sentry org); B1/B3 owner-gated; B7–B8 pending |
 | Production | ⏳ |
 
 ---
 
 # Current Priorities
 
-1. ~~**⛔ Offline sync is not implemented**~~ — **CLOSED 2026-07-26.** The queue is persisted,
+1. **⛔ Account deletion is never executed** (found 2026-07-27, B6.3). The request is recorded in
+   `account_deletion` and nothing carries it out — no executor, no job runner, `pg_cron` commented
+   out. The privacy policy and both stores' Data Safety answers are unpublishable until it exists,
+   and **Apple 5.1.1(v) additionally requires an in-app deletion screen**, which needs a PDD
+   affordance and SVC_household for ownership transfer. Ordinary engineering, not a purchase — and
+   the same fix restores every retention sweep, which today also does not run.
+2. ~~**B6.3 — data inventory, privacy policy, store labels**~~ — **DONE 2026-07-27.** Three
+   documents in `docs/devops/`, the inventory pinned to the schema and the emitted `EVT_*` set by a
+   conformance test. Nothing is legally reviewed; that is owner/legal work.
+3. ~~**⛔ Offline sync is not implemented**~~ — **CLOSED 2026-07-26.** The queue is persisted,
    drained and dequeued; the §6.1 read cache is persisted too. Residual, and honest: it has never
    run against a live backend, and there is no `FLOW_OFFLINE_SYNC` Maestro flow — the class of gap
    a real flow caught for MMKV and unit tests cannot.
-2. **B6.3 — data inventory, privacy policy, store labels.** The last credential-free slice work.
 3. **Owner: create a Sentry org + DSN (free tier)** — B4's remaining work (source-map upload, §7.2 dashboards/alerts) needs a real project to be verifiable. B4.1 ✅ · B4.2 ✅ · B4.3 ✅ to its credential-free limit · B4.4 blocked.
 2. **PDD owes approved copy for eleven ERR_* codes** (listed in `AWAITING_APPROVED_COPY`) — they currently show the calm generic message where §12 specifies something more useful.
 3. **Credential-free engineering: start B6 — Security & Privacy** (§5/§6) — OWASP Mobile review, CCPA export/delete verified end to end (F-3/F-10), store privacy labels. B5 is complete and `FLOW_ONBOARDING` is written and green, so this is the next unstarted slice.
@@ -452,6 +524,11 @@ main
 ---
 
 # Blockers
+
+⛔ **Account deletion is never executed** (B6.3, 2026-07-27). `account_deletion` rows are written and
+never read back; there is no job runner and `pg_cron` is not enabled, so no scheduled work of any
+kind runs. Blocks the privacy policy, both stores' Data Safety answers, and Apple 5.1.1(v). Also the
+cause of every unimplemented retention sweep. Engineering-closable.
 
 ⛔ Canonical Panchang Engine (ADR-033, Proposed): astronomical algorithm undocumented — panchang
 compute, Calendar/festival markers, and sunrise/tithi notifications stay unavailable until Part B
@@ -481,11 +558,15 @@ resolved (PR #14).
 
 # Next Deliverable
 
-Two owner purchases now gate reliability itself, not just convenience: **a Sentry org + DSN** (free
+**The account-deletion executor** — the highest-value credential-free engineering left. It closes a
+launch blocker, makes the privacy policy and both store forms publishable, and restores every
+retention sweep, because all of them are blocked on the same absent capability: this project has no
+scheduled execution at all.
+
+Two owner purchases still gate reliability itself, not just convenience: **a Sentry org + DSN** (free
 tier) closes B4, and **a paid Supabase plan** (~$25/mo) closes B1 *and* makes NFR-15 achievable — no
-PITR means no recovery of user data. Credential-free meanwhile: B5's remaining increments (§8.2
-graceful degradation, §8.4) or making onboarding reachable. B1/B3 remainders stay owner-gated: prod Supabase (~$25/mo) closes B1; Apple
-($99) + Google Play ($25) close most of B3.
+PITR means no recovery of user data. B1/B3 remainders stay owner-gated: prod Supabase (~$25/mo)
+closes B1; Apple ($99) + Google Play ($25) close most of B3.
 
 ---
 

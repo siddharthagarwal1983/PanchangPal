@@ -2,93 +2,98 @@
 
 # PanchangPal — Current Session
 
-Version: 2.6.0
-Last Updated: 2026-07-26 (End Session — offline sync + docs + actions bump merged; deps triaged)
+Version: 2.7.0
+Last Updated: 2026-07-27 (B6.3 — privacy inventory, policy draft, store labels; B6 closed at
+verifiable scope)
 
-**Main is at `d3218f9`, clean and green.** Merged this session: `86b3843` offline sync (#66) ·
-`21e24f9` session docs (#67) · `d3218f9` the Dependabot actions group (#60, verified by dispatching
-E2E on its branch first, since it edits `e2e.yml` and E2E never runs on PRs — 5/5 flows on
-`bf66e42`).
+**Main is at `44b402a`.** Merged at the start of this session: PR #68, the dependency-triage handoff
+doc the previous session wrote and left open with all five gates green.
+
+Working branch: `feat/b6-3-privacy-inventory`.
 
 ---
 
 # Completed
 
-**Offline sync — implemented, verified, merged as `86b3843` (PR #66).** The launch blocker B6's
-review surfaced. `STORE_offlineQueue` was an in-memory zustand slice beneath a header claiming MMKV
-persistence — never written to disk, never drained, never dequeued — and **nothing in `src/data`
-bound API_POST_SYNC at all**, so SVC_sync (implemented server-side since the Backend Foundation
-milestone) was unreachable from the app. Offline, a completion was lost on app kill; online it
-worked only because every hook also called its API directly, and the successful entry then leaked.
+**B6.3 — the last B6 increment. Three documents, each derived from the one above it.**
 
-Shipped in layers, decisions pure and effects thin:
+- **`docs/devops/DATA_INVENTORY.md`** — all 32 tables classified (Identifying / Personal /
+  Pseudonymous / Non-personal) with what each holds, who writes it, and whether it is collected
+  **today**; the nine `EVT_*` ids the app actually emits with their props; six on-device storage
+  keys; six third-party processors; permissions (none requested today). Built from
+  `apps/backend/migrations` and `apps/mobile/{app,src}`, **not** from the documentation.
+- **`docs/devops/PRIVACY_POLICY_DRAFT.md`** — user-facing draft, `[LEGAL REVIEW REQUIRED]`, with
+  `[UNBUILT]` markers wherever a normal policy sentence would be false today.
+- **`docs/devops/STORE_PRIVACY_LABELS.md`** — Play Data Safety + Apple App Privacy answers, each
+  with the ⚠️ trigger that changes it when a deferred dependency lands.
 
-- **`domain/sync`** — FIFO batching, exponential backoff with half-range jitter, capped attempts,
-  reconciliation. A conflict counts as ACKNOWLEDGED (§6.3 resolves by rule); anything returned in
-  neither `applied` nor `conflicts` is retried. Attempts cap to stop silent retrying, **never to
-  discard a completion**.
-- **`STORE_offlineQueue`** persisted through the shared `KeyValueStore` seam · **`syncRepository`**
-  (the missing binding) · **`syncService`** (single-flight drain) · **`useOfflineSync`** (§6.4's
-  three triggers) · **`queryPersistence`** (§6.1 read cache — without it a cold start offline is
-  empty and §6.2's `[MANDATORY]` daily loop cannot hold).
+**The inventory is machine-checked**, which is the part that will still be true in six months.
+`apps/backend/tests/privacy/data-inventory.test.ts` parses `create table` out of the migrations and
+quoted `'EVT_*'` literals out of the mobile source, then compares both against the document **in
+both directions**: an unclassified new table is collection nobody disclosed, and a classified table
+the schema no longer has is a disclosure for data the product does not hold. Same pattern as
+`SYNCABLE_KINDS` reading SVC_sync's source.
 
-**Verification.** Four perturbations each failed the right tests. 350 mobile tests (+51), 82
-vitest, tsc clean, eslint 0 errors, bundle gate green. **E2E dispatched on the branch before merge**
-(run 30207484940, `a05760d`): **5/5 Maestro flows passed**, FLOW_ONBOARDING and FLOW_RETURNING
-included — the ones that would have caught the two new startup effects disturbing a fresh launch.
-
-**The app now runs natively on this machine, for the first time.** Android SDK cmdline-tools + an
-AOSP arm64 API-34 system image installed, AVD `ppal_aosp34` created, `expo prebuild` + Gradle
-`assembleDebug` run locally, app installed and launched. Today renders; panchang correctly shows
-"temporarily unavailable" (ADR-033) and the streak reads 0 (no `.env`, so no backend — repositories
-degrade rather than crash, the PR #14 fix working).
+**Verified:** four perturbations, each failing the right test — a new table in a migration, a table
+row deleted from the doc, a newly emitted `EVT_029`, an event row deleted from the doc. 88 vitest
+(+6), eslint 0 errors.
 
 # Defects found
 
-1. **The client queued five mutation kinds; SVC_sync accepts three.** `preferences`/`notif_prefs`
-   hit the handler's `default:` branch, returned in neither list, so nothing could ever retire
-   them. `SYNCABLE_KINDS` narrows the type so those hooks cannot compile, and a test reads the
-   kinds out of the handler's SOURCE so the two cannot drift.
-2. **Enqueuing before hydration wiped the persisted queue** — a write against an un-hydrated store
-   overwrote the previous launch's pending mutations. Caught by a test that failed on first run.
+1. ⛔ **Account deletion is scheduled and never executed.** `POST /account/delete` gates the request
+   per F-3 and writes `account_deletion` with a 30-day `execute_after`. **Nothing reads that row
+   back** — no Edge Function queries the table, no runner processes `job`, `pg_cron` is *commented
+   out* in `20260712000001_extensions.sql`, `executed_at` is never set. TDD Part 5 §6.2's
+   "hard-deletes owned rows" does not exist in the repository. The system accepts a deletion request
+   and keeps the data indefinitely, and the row it writes makes it look like the request is being
+   honoured. **The same absence is why no retention sweep exists** — no analytics rollup or prune, no
+   personal-date tombstone removal, no `panchang_cache` TTL. One fix, not five.
+2. **The CCPA export omits `message` rows** — `EXPORT_TABLES` returns the `conversation` header
+   without its messages, so the export goes incomplete the day `GURU_LIVE` is enabled.
+3. **No in-app affordance for export or deletion.** Both endpoints work; no screen calls either.
+   **Apple 5.1.1(v) requires in-app account deletion**, making this mandatory rather than a nicety —
+   and it needs SVC_household too, since F-3 requires ownership transfer first.
+4. **A user-deleted personal date is a tombstone, not an erasure** (`deleted_at`, for offline
+   reconcile). Must be disclosed; "delete" reasonably implies erasure.
+5. **`packages/database`'s `TABLES` registry had drifted** — 29 names against 32 tables; the three
+   `ai_operational` tables were never registered. Which is why the test parses the migrations.
 
 # Open
 
-- **Offline sync has never run against a live backend**, and there is **no `FLOW_OFFLINE_SYNC`
-  Maestro flow** — the class of gap a real flow caught for MMKV and unit tests structurally cannot.
-- **`STORE_syncStatus` has no UI surface** — PDD specifies none; rendering one would invent UX.
-- **Doc/workflow drift: E2E runs 5 flows, not 4.** `FLOW_AUTH_SESSION_PERSISTENCE` was added in B6
-  and never counted; `e2e.yml`'s step-summary echo also still lists only four names. Corrected in
-  the tracking docs this session; **the workflow echo is still owed** (a code change, not a doc).
-- §6.4 wants EVT_* on sync confirm; B4.5 fires them from view-model transitions. Flagged, unchanged.
+- ⛔ **The deletion executor is unbuilt** — the top priority, and fully engineering-closable.
+- Nothing in B6.3 is legally reviewed. No policy or label is publishable until (a) the executor
+  exists and (b) a qualified reviewer has approved the text. Open items are listed in the draft's
+  appendix and `STORE_PRIVACY_LABELS.md` §4.
+- Offline sync has never run against a live backend; no `FLOW_OFFLINE_SYNC` flow exists.
+- **Doc/workflow drift: E2E runs 5 flows, not 4.** `e2e.yml`'s step-summary echo still lists four
+  names. Still owed (a code change, not a doc).
+- §6.4 wants EVT_* on sync confirm; B4.5 fires them from view-model transitions. Unchanged.
 - PDD owes approved copy for 11 of 24 ERR_* codes; SCR_ONBOARDING_* slides remain unbuilt.
-- **Five Dependabot PRs are open and deliberately NOT merged.** Triaged at session close; main is
-  unaffected by all of them. Do not merge these without reading why:
-  - **Red — merging puts main red.** #63 jest 29.7.0→30.4.2 (`this._moduleMocker.clearMocksOnScope
-    is not a function` — all five `@panchangpal/ui` suites fail to *run*, 0 tests execute) · #62
-    i18next 23→26 · #61 the production-minor group of 9, whose single failure is most likely the
-    same jest break arriving transitively — worth confirming, because a *minor* group failing is
-    the odd one.
-  - **Green but crossing a pinned boundary.** #64 `@expo/metro-runtime` 6.1.2→**57.0.7** against a
-    manifest pinning `~6.1.2` and an installed copy peer-bound to `expo@54.0.36` (57 belongs to a
-    much later SDK) · #65 `@babel/runtime` 7.29.7→**8.0.0** against `@babel/core@7.29.7`, an
-    unsupported pairing — and `@babel/runtime` is the package whose absence broke every bundle
-    (Execution Gap defect #2). **Their green is weaker than it looks**: the bundle gate is
-    `expo export`, which can pass while the runtime breaks, and **no dependency PR has ever been
-    exercised on a device**, because E2E does not run on PRs. Both belong in a deliberate SDK
-    upgrade increment where a native build and the flows actually validate them.
+- **Five Dependabot PRs (#61–#65) remain open and deliberately unmerged.** Three red (#63 jest
+  29→30 stops all five `@panchangpal/ui` suites from *running*; #62 i18next 23→26; #61 the
+  production-minor group, likely the same jest break transitively). Two green but crossing the SDK
+  54 pin (#64 `@expo/metro-runtime` → 57, #65 `@babel/runtime` → 8). Their green is weak: the bundle
+  gate is `expo export`, and no dependency PR has ever been exercised on a device. Full reasoning in
+  `44b402a`.
 
-# Blockers (all owner purchases)
+# Blockers
 
-1. **Paid Supabase (~$25/mo)** — no PITR; user data unrecoverable. NFR-15 unmet, launch blocker.
-2. **Sentry org + DSN** (free tier) — the only thing between B4 and done.
-3. Apple $99 · Google Play $25 → most of B3.
+1. ⛔ **The account-deletion executor** (engineering, no purchase) — blocks the privacy policy, both
+   store forms, Apple 5.1.1(v), and every retention sweep.
+2. **Paid Supabase (~$25/mo)** — no PITR; user data unrecoverable. NFR-15 unmet, launch blocker.
+3. **Sentry org + DSN** (free tier) — the only thing between B4 and done.
+4. Apple $99 · Google Play $25 → most of B3.
 
 # Recommended next task
 
-**B6.3 — the rest of B6**: a data-collection inventory built from the code (every table, field and
-`EVT_*` the app actually writes), then a draft privacy policy and store Data Safety / App Privacy
-answers derived from it, marked as requiring legal review. The last credential-free slice work.
+**Build the account-deletion executor.** An Edge Function (or a `pg_cron`-invoked routine) that
+reads `account_deletion` rows past `execute_after`, hard-deletes the `OWNED_TABLES` set, sets
+`executed_at`, and removes the `auth.users` row — plus something to invoke it, since this project
+currently has no scheduled execution of any kind. That last part is the wider fix: it is also what
+every retention sweep is waiting on.
 
-Cheap follow-ups worth folding in: correct `e2e.yml`'s flow-name echo, and write
-`FLOW_OFFLINE_SYNC` now that a local emulator makes iterating on it fast.
+Prove it the way this repo proves things: a test that fails with the executor removed, and a check
+that a deleted user's rows are genuinely gone rather than orphaned.
+
+Cheap follow-ups still worth folding in: correct `e2e.yml`'s flow-name echo, add `message` rows to
+the CCPA export, and write `FLOW_OFFLINE_SYNC` now that a local emulator makes iterating fast.

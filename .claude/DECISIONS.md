@@ -1073,3 +1073,50 @@ runtime behaviour left to assert, which is precisely why no existing test could 
 regression test greps `app/index.tsx`, anchored to a line start so the explanatory comment quoting
 the old constant does not trip it — its first draft did exactly that, which is fair evidence the
 assertion is looking at something real.
+
+---
+
+# 2026-07-27 — Privacy documentation is derived, and the inventory is pinned to the code
+
+**A store privacy label is not documentation; it is a legal disclosure.** Google Play treats an
+inaccurate Data Safety form as a policy violation independent of what the app does, and Apple
+measures the app against what it declared. That changes what "the inventory drifted" costs: a stale
+runbook is a stale runbook, whereas a stale inventory becomes a false statement filed under someone's
+name, with a paper trail saying it was checked.
+
+**So the three documents form a one-way chain.** `DATA_INVENTORY.md` is derived from the code;
+`PRIVACY_POLICY_DRAFT.md` and `STORE_PRIVACY_LABELS.md` are derived from the inventory. None is
+written independently, and neither downstream document may assert a collection the inventory does
+not record. The chain is stated at the top of each file so the next person does not update a label
+in isolation.
+
+**Only the first link is mechanised, and the limit is stated rather than glossed.**
+`apps/backend/tests/privacy/data-inventory.test.ts` parses `create table` out of the migrations and
+quoted `'EVT_*'` literals out of `apps/mobile/{app,src}`, and compares both against the inventory in
+**both** directions — an unclassified table is collection nobody disclosed, and a classified table
+the schema lacks is a disclosure for data the product does not hold. It cannot reach the policy or
+the labels: a newly classified table still needs a human to decide what it means for a store answer.
+Claiming otherwise would be the same false coverage this milestone spent B1 removing.
+
+**Parsed from the migrations, not from the `TABLES` registry, because the registry had already
+drifted** — 29 names against 32 tables, the three `ai_operational` tables never registered. A
+hand-maintained list of tables fell behind the schema inside a single milestone. That is the argument
+for the test, already worked, in the repo.
+
+**Quoted literals only, for the emitted event set.** `EVT_041`, `EVT_045` and `EVT_049`–`EVT_052`
+appear in `//` comments beside call sites that were never written. An inventory records collection,
+not intent, so a commented intention must not read as a declared event — and equally must not be
+silently dropped, so they are listed as explicitly not emitted.
+
+**The document answers "collected today", not "collectable by the schema".** Several tables are
+migrated and permanently empty because the feature that would write to them is deferred, blocked or
+gated. Declaring that collection would be as wrong as omitting a real one, so every row carries the
+answer as of the built app, plus the trigger that changes it. `expo-location` is not installed and
+no coordinate is ever written, so **the app does not collect location** — a sentence that would have
+been easy to get wrong from the schema, where `user_profile.lat`/`lng` sit in plain view.
+
+**When a policy sentence would be false, the draft says so instead of drafting around it.**
+`[UNBUILT]` markers sit where deletion, retention and backups would normally be described. The
+alternative — softer wording that technically survives scrutiny — would have hidden that the CCPA
+deletion right is recorded and never executed, which is the single most important thing B6.3 found.
+A draft that cannot be published yet is more useful than one that can be published and is untrue.
