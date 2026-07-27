@@ -2,8 +2,8 @@
 
 # PanchangPal — Current Task
 
-Version: 3.13.0
-Last Updated: 2026-07-26 (offline sync COMPLETE; next: B6.3)
+Version: 3.14.0
+Last Updated: 2026-07-27 (B6.3 COMPLETE, B6 closed; next: the account-deletion executor)
 
 Purpose: the current implementation task. Stay focused; avoid unrelated work unless instructed.
 
@@ -110,7 +110,86 @@ green in CI on a real native build. Canonical progress 0% → 13% (1 of 8 Beta s
 # Current Task
 
 ## Title
-✅ OFFLINE SYNC MERGED (`86b3843`, PR #66) · NEXT: B6.3
+✅ B6.3 COMPLETE — B6 CLOSED AT VERIFIABLE SCOPE · NEXT: THE ACCOUNT-DELETION EXECUTOR
+
+**44% → 47%** (3 of 8 Beta slices: B2, B5, B6 — the latter two at verifiable scope — plus ¾ of B4).
+
+## What shipped
+
+Three documents in `docs/devops/`, each derived from the one before it, plus the test that keeps the
+first one honest:
+
+- **`DATA_INVENTORY.md`** — all 32 tables classified (Identifying / Personal / Pseudonymous /
+  Non-personal), with what each holds, who writes it, and whether it is collected **today** rather
+  than merely anticipated by the schema; the **nine** `EVT_*` ids actually emitted with their props
+  (the PDD §11 registry is the permitted vocabulary, not the emitted set); six on-device storage
+  keys; six third-party processors; permissions — **none requested today**.
+- **`PRIVACY_POLICY_DRAFT.md`** — `[LEGAL REVIEW REQUIRED]`, with `[UNBUILT]` markers wherever a
+  normal policy sentence would be false today, and a §7.2 that refuses to promise deletion.
+- **`STORE_PRIVACY_LABELS.md`** — Play Data Safety + Apple App Privacy answers, each carrying the
+  ⚠️ trigger that changes it when `expo-location`, `expo-notifications`, `react-native-purchases` or
+  `GURU_LIVE` lands.
+- **`apps/backend/tests/privacy/data-inventory.test.ts`** — parses `create table` out of the
+  migrations and quoted `'EVT_*'` literals out of `apps/mobile/{app,src}`, and compares both against
+  the document **in both directions**. An unclassified new table is collection nobody disclosed; a
+  classified table the schema lacks is a disclosure for data the product does not hold. The pattern
+  `SYNCABLE_KINDS` already uses against SVC_sync's handler source.
+
+**Deliberately parsed from the migrations rather than from `packages/database`'s `TABLES` registry —
+which had itself already drifted, 29 names against 32 tables.** A hand-maintained list of tables fell
+behind the schema inside one milestone; that is the failure this test exists to prevent, with a
+worked example already in the repo.
+
+**Verified:** four perturbations, each failing exactly the right test — a new table in a migration,
+a table row deleted from the doc, a newly emitted `EVT_029`, an event row deleted from the doc.
+88 vitest (+6), eslint 0 errors.
+
+## ⛔ The finding: deletion is recorded and never carried out
+
+`POST /account/delete` gates the request correctly (F-3: an owner with other members must transfer
+ownership first) and writes `account_deletion` with `requested_at` and a 30-day `execute_after`.
+
+**Nothing ever reads that row back.** No Edge Function queries the table; no runner processes `job`
+(`analytics_rollup`, `notify_schedule` are enum values with no consumer); `pg_cron` is **commented
+out** in `20260712000001_extensions.sql`; `executed_at` is never set by any code path. TDD Part 5
+§6.2 specifies deletion that "hard-deletes owned rows" — that code does not exist in this repository.
+
+**Why this is worse than an ordinary missing feature.** The row it writes makes the system *look*
+like the request is being honoured, and it is the basis on which a privacy policy and two store
+forms would claim a deletion capability. CCPA §1798.105 grants a right to deletion, not a right to
+have a request logged. It is the fourth instance of this milestone's signature defect — a documented
+control, never implemented, with nothing asserting it — and the most consequential of the four.
+
+**Same root cause, four more symptoms.** There is **no scheduled execution in this project at all**,
+so nothing rolls up or prunes analytics, nothing removes personal-date tombstones, and
+`panchang_cache` has no TTL sweep. One fix, not five.
+
+**Also found:** the CCPA export omits `message` rows (incomplete the day Ask Guru goes live); no
+in-app affordance exists for export or deletion, and **Apple 5.1.1(v) requires in-app account
+deletion**, making it mandatory rather than a nicety; a user-deleted personal date is a `deleted_at`
+tombstone rather than an erasure and must be disclosed.
+
+**Not done, and stated:** nothing here is legally reviewed, and no document is publishable until the
+executor exists.
+
+## Next task — the account-deletion executor
+
+An Edge Function (or `pg_cron`-invoked routine) that reads `account_deletion` rows past
+`execute_after`, hard-deletes the `OWNED_TABLES` set, sets `executed_at`, and removes the
+`auth.users` row — **plus something to invoke it**, which this project has never had. That second
+half is the wider fix: every retention sweep is waiting on the same capability.
+
+Its in-app half is a three-part dependency: the executor (engineering), a deletion screen (PDD
+specifies none), and **SVC_household** for the ownership transfer F-3 requires.
+
+Prove it as this repo proves things: a test that fails with the executor removed, and an assertion
+that a deleted user's rows are genuinely gone rather than orphaned.
+
+---
+
+## Superseded — the previous task framing
+
+## ✅ OFFLINE SYNC MERGED (`86b3843`, PR #66)
 
 **Merged 2026-07-26 after verification, not before it.** Five CI gates green, and E2E dispatched on
 the branch (run 30207484940 on `a05760d`) passed **5/5 Maestro flows** in 5m16s — FLOW_ONBOARDING
