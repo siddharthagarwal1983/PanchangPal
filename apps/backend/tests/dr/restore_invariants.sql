@@ -105,5 +105,31 @@ begin
     raise exception 'DR: enum types missing after restore: %', missing;
   end if;
 
+  -- ---- 7. The deletion executor survived the restore -----------------------
+  -- Both functions must exist, or a restored database silently stops honouring CCPA
+  -- deletion requests: `SVC_account.delete` keeps writing `account_deletion` rows and
+  -- nothing executes them. That is exactly the state the executor was written to fix, and
+  -- it is invisible — no error, no red, the data just stays.
+  select string_agg(t, ', ') into missing
+  from unnest(array[
+    'execute_account_deletion',
+    'sweep_due_account_deletions',
+    'account_deletion_sweep_is_scheduled'
+  ]) as t
+  where to_regproc(t) is null;
+
+  if missing is not null then
+    raise exception 'DR: account-deletion functions missing after restore: % (deletion requests would accumulate unexecuted)', missing;
+  end if;
+
+  -- The SCHEDULE is checked but not enforced here. pg_cron is absent from the CI Postgres
+  -- and from local stacks, so requiring it would fail every drill; and `cron.job` is not
+  -- part of a `pg_dump` of the application database, so a restored copy legitimately comes
+  -- back unscheduled. What matters is that an operator restoring production is told, rather
+  -- than discovering it from a data-subject complaint months later.
+  if not account_deletion_sweep_is_scheduled() then
+    raise warning 'DR: the account-deletion sweep is NOT scheduled in this database. Expected for CI/local; if this is a restored PRODUCTION database, re-run 20260727000120_account_deletion_schedule.sql or deletion requests will never execute.';
+  end if;
+
   raise notice 'DR invariants: OK';
 end $$;

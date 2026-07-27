@@ -2,8 +2,8 @@
 
 # PanchangPal — Current Task
 
-Version: 3.14.0
-Last Updated: 2026-07-27 (B6.3 COMPLETE, B6 closed; next: the account-deletion executor)
+Version: 3.15.0
+Last Updated: 2026-07-27 (deletion executor SHIPPED; next: owner enables pg_cron, then the job worker)
 
 Purpose: the current implementation task. Stay focused; avoid unrelated work unless instructed.
 
@@ -110,7 +110,91 @@ green in CI on a real native build. Canonical progress 0% → 13% (1 of 8 Beta s
 # Current Task
 
 ## Title
-✅ B6.3 COMPLETE — B6 CLOSED AT VERIFIABLE SCOPE · NEXT: THE ACCOUNT-DELETION EXECUTOR
+✅ THE ACCOUNT-DELETION EXECUTOR SHIPPED · NEXT: OWNER ENABLES pg_cron, THEN THE `job` WORKER
+
+**Progress unchanged at 47%** — this closes a defect inside B6, a slice already counted, exactly as
+offline sync closed a §6 gap without advancing one.
+
+## What shipped
+
+| Piece | Where |
+|---|---|
+| Atomic per-user erasure | `execute_account_deletion(uuid)` — `20260727000110_account_deletion_executor.sql` |
+| Due-row sweep, one subtransaction per user | `sweep_due_account_deletions()` — same migration |
+| pg_cron schedule, daily 03:15 UTC, idempotent | `20260727000120_account_deletion_schedule.sql` |
+| Assertable state | `account_deletion_sweep_is_scheduled()` |
+| Operator trigger (TDD §6.5's "scheduled SVC_account job") | `POST /account/sweep` |
+| Proof | `apps/backend/tests/integration/account_deletion.test.sql` — 17 pgTAP assertions |
+
+**SQL, not TypeScript.** The erasure spans nine tables and supabase-js has no transaction across
+calls, so a failure midway would leave an account half-erased with no way to tell how far it got.
+A function body is one transaction. The Edge action calls it and never reimplements it.
+
+**Six foreign keys needed explicit handling.** Four RESTRICT — `household.owner_id`,
+`invite.inviter_id`, `invite.accepted_by`, `referral.referred_user_id` — so a bare
+`delete from auth.users` errors outright. Two more, `household_member` and `support_ticket`, use
+**ON DELETE SET NULL**, which keeps the row and drops only the link: the deleted user's
+`display_name` stays in the household, their `email` and free-text `body` stay in the ticket. Both
+are deleted outright now. `referral.referred_user_id` is **nulled rather than deleted**, because
+that row belongs to the referrer and one user's erasure must not destroy another person's record.
+
+**Authorization.** The sweep is not authorized by identity: `withHandler` proves only that a bearer
+token is present, and anonymous sign-in means anyone can mint one. A provisioned
+`ACCOUNT_SWEEP_SECRET` authorizes it, compared in constant time, and **an unconfigured secret
+refuses everyone** — "not protected yet" is how an endpoint that deletes accounts ships open.
+Required at preflight's production tier (proven: exit 1 without, exit 0 with).
+
+## A perturbation caught a defect in my own test
+
+Removing the `support_ticket` delete did **not** fail the suite. The assertion counted rows
+`where user_id = ...` — the exact column `ON DELETE SET NULL` had just nulled — so it read zero
+while the email address sat in the table. The assertions now count by **content** (`email`,
+`display_name`) and the same perturbation fails. A test written against the identifier a deletion
+removes cannot detect a deletion that only removed the identifier.
+
+## Verified against a real Postgres 17, not asserted
+
+- Migrations applied from scratch: 32 tables, clean.
+- **17 pgTAP assertions**, checking the rows are gone table by table rather than that the function
+  returned without error.
+- **Five SQL perturbations**, each failing the right assertions: support_ticket, household_member,
+  referral-deleted-instead-of-nulled, the F-3 ownership gate, the grace window.
+- **Two TypeScript perturbations** on the sweep authorization, each failing at both the pure-rule
+  and handler layers.
+- **The pg_cron branch exercised with the extension actually installed** — schedules, stays at
+  exactly one job on re-run, and reports `false` when an operator disables it.
+- The DR restore invariant fails with the executor dropped.
+- 97 vitest (+9), eslint at its pre-existing baseline, RLS and DB suites still green.
+
+## ⚠️ Two residuals, stated rather than implied
+
+1. **pg_cron must be enabled on the hosted projects** — a Supabase dashboard action a migration
+   cannot perform. The migration schedules the sweep where the extension exists and raises a
+   **warning** where it does not. Until then, deletions execute only via the operator trigger.
+2. **`executed_at` cannot be written.** `account_deletion.user_id` cascades with `app_user`, so the
+   request row is erased along with its own subject and there is nothing left to stamp. This
+   contradicts TDD Part 2 §5.1, which names the table as the **deletion audit** mitigating
+   repudiation. Changing the foreign key would invent a privacy decision (the surviving row names a
+   uid), so the executor implements the schema as declared and **the TDD owes a resolution**. A
+   completed deletion currently leaves no record that it happened.
+
+## Next tasks, in order
+
+1. **Owner: enable `pg_cron`** (Dashboard → Database → Extensions) on dev/staging/prod, then re-run
+   `20260727000120`. Verify `select account_deletion_sweep_is_scheduled();` returns true. This is
+   the last step between the executor and a truthful store Data Safety answer.
+2. **The `job` table worker (ADR-025).** The deletion sweep proved the pg_cron half; nothing
+   consumes `job`, so `analytics_rollup`, `notify_schedule`, `winback_segment`, `content_ingest`
+   and `entitlement_reconcile` are enum values with no consumer. The analytics rollup and prune, the
+   personal-date tombstone sweep and the `panchang_cache` TTL are all waiting on it.
+3. **The in-app deletion screen** — Apple 5.1.1(v) requires in-app account deletion. Needs a PDD
+   affordance (none is specified) and SVC_household for the ownership transfer F-3 requires.
+
+---
+
+## Superseded — B6.3
+
+## ✅ B6.3 COMPLETE — B6 CLOSED AT VERIFIABLE SCOPE
 
 **44% → 47%** (3 of 8 Beta slices: B2, B5, B6 — the latter two at verifiable scope — plus ¾ of B4).
 

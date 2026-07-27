@@ -1120,3 +1120,61 @@ been easy to get wrong from the schema, where `user_profile.lat`/`lng` sit in pl
 alternative — softer wording that technically survives scrutiny — would have hidden that the CCPA
 deletion right is recorded and never executed, which is the single most important thing B6.3 found.
 A draft that cannot be published yet is more useful than one that can be published and is untrue.
+
+---
+
+# 2026-07-27 — The erasure is SQL, and the tests assert absence by content
+
+**A deletion that half-completes is the failure you cannot have**, so the erasure is a Postgres
+function rather than a sequence of supabase-js calls. It spans nine tables and there is no
+transaction across `.from(...).delete()` calls — a failure midway would leave an account with its
+profile gone, its auth row present, and no way to tell how far it got. A function body is one
+transaction. `SVC_account.sweep` calls it and deliberately does not reimplement it; the Edge
+Function's job is a schedule, a log line and a correlation id.
+
+**The routine schedule is pg_cron calling the SQL directly, not an HTTP hop.** No secret to leak, no
+dependency on the function being reachable, and one less thing between a due row and its erasure.
+The Edge action exists for the operator: run it now, or run it at all where pg_cron is unavailable.
+
+**An unconfigured sweep secret refuses everyone.** The tempting reading — "no secret set means not
+protected yet, so allow it" — is how an endpoint that deletes accounts ships open to the internet.
+`withHandler` proves only that *a* bearer token is present, and anonymous sign-in means anyone can
+mint one for free; a user JWT can never authorize erasing other people's accounts. This is B6.2's
+lesson applied before the defect rather than after it.
+
+**`referral.referred_user_id` is nulled, not deleted, and the asymmetry is the point.** That row
+belongs to the *referrer* — a different person. One user's erasure must not destroy another user's
+record, so the personal link goes and their activation credit stays. The same reasoning deletes
+`invite` rows outright: an invite naming a deleted user is unusable, and nulling `accepted_by`
+would misrepresent a consumed invite as open, which is a live credential to a household if the
+token has not expired.
+
+**ON DELETE SET NULL is a data-retention decision disguised as a foreign key.** `household_member`
+and `support_ticket` both use it, so the cascade keeps the row and drops only the link — the deleted
+user's `display_name` stays in a household, their `email` and free-text `body` stay in a support
+ticket. Both are now deleted outright. Two tables in this schema quietly opted out of erasure and
+nothing said so.
+
+**Assert absence by CONTENT, never by the foreign key.** A perturbation that removed the
+`support_ticket` delete did not fail the suite, because the assertion counted rows
+`where user_id = ...` — the very column SET NULL had just nulled. The test passed while the email
+address sat in the table. The assertions now count by `email` and by `display_name`, and the same
+perturbation fails. **A test written against the identifier a deletion removes cannot detect a
+deletion that only removed the identifier.**
+
+**One blocked account must not stop the sweep.** Each user is erased inside its own
+BEGIN/EXCEPTION block — a subtransaction — so a household owner who never transferred ownership
+rolls back alone and is retried next run, rather than aborting every other erasure. A sweep written
+as a single statement fails whole.
+
+**`account_deletion_sweep_is_scheduled()` exists because "did we enable it?" was otherwise
+unanswerable.** It returns false when pg_cron is absent, when the job is missing, **and when an
+operator has disabled it** — that third case looks identical to a healthy one from the migration's
+point of view, and is exactly how a sweep stops running without anyone noticing. Checked by the DR
+drill, because a restored database that comes back unscheduled has silently stopped honouring
+deletion requests.
+
+**The migration warns rather than failing where pg_cron is absent, and that asymmetry is
+deliberate.** CI and local stacks legitimately lack the extension and must still migrate;
+production must not, which is what the readiness check and the required `ACCOUNT_SWEEP_SECRET` are
+for. Failing the migration would make every CI run red for a condition that is correct in CI.

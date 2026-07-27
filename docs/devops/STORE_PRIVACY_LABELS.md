@@ -1,8 +1,8 @@
 # PanchangPal — Store Privacy Labels
 
-**Version:** 1.0.0
-**Last Updated:** 2026-07-27
-**Derived from:** `DATA_INVENTORY.md` v1.0.0
+**Version:** 1.1.0
+**Last Updated:** 2026-07-27 (deletion executor shipped)
+**Derived from:** `DATA_INVENTORY.md` v1.1.0
 **Covers:** Google Play Data Safety · Apple App Privacy (App Store Connect)
 **Slice:** B6.3 · TDD Part 5 §6.2 ("store privacy labels/Data Safety accurate to actual collection")
 
@@ -24,10 +24,16 @@ These are the answers to give at submission, derived from what the code actually
 Both stores require the label to be updated **before** the change reaches users, and Google Play
 treats an inaccurate Data Safety form as a policy violation independent of the app's behaviour.
 
-⛔ **Blocking dependency.** Both stores ask whether users can request deletion of their data. Today
-the honest answer is *no* — the request is recorded and never carried out (`DATA_INVENTORY.md` §8.2).
-The app must not be submitted until that is fixed, because the alternative is answering "yes" to a
-capability that does not exist.
+✅ **Previously blocking, now resolved at engineering scope.** Both stores ask whether users can
+request deletion of their data. Until 2026-07-27 the honest answer was *no* — the request was
+recorded and never carried out. The executor now exists and is proven by 17 pgTAP assertions
+(`DATA_INVENTORY.md` §8.2).
+
+⚠️ **But the answer is only "yes" where the sweep is actually scheduled.** The daily run needs
+`pg_cron` enabled on the hosted Supabase project — a dashboard action nobody has performed.
+Verify with `select account_deletion_sweep_is_scheduled();` against the production database
+**before** filing either form. A "yes" filed against an environment returning false is the same
+false statement as before, with more machinery behind it.
 
 ---
 
@@ -39,7 +45,7 @@ capability that does not exist.
 |---|---|---|
 | Does your app collect or share any of the required user data types? | **Yes** | App activity + app info/performance |
 | Is all of the user data collected by your app encrypted in transit? | **Yes** | HTTPS to Supabase and Expo only |
-| Do you provide a way for users to request that their data be deleted? | ⛔ **Cannot answer "Yes" yet** | See §0. Answer becomes **Yes** once the deletion executor ships. |
+| Do you provide a way for users to request that their data be deleted? | ✅ **Yes**, conditional | Executor shipped 2026-07-27. Confirm `account_deletion_sweep_is_scheduled()` is true in production first (§0). |
 | Do you have an account deletion mechanism (URL required)? | ⛔ Blocked | Play requires a **web URL** for account deletion requests; none exists. Owner + engineering. |
 | Have you committed to follow the Play Families policy? | N/A | Not a Families app — pending the §11 age decision in `PRIVACY_POLICY_DRAFT.md` |
 
@@ -166,7 +172,7 @@ where it is relevant, and it bears on the labels above:
 
 | # | Blocker | Owner | Blocks |
 |---|---|---|---|
-| 1 | Deletion is never executed | Engineering | Both stores' deletion answers |
+| 1 | ~~Deletion is never executed~~ — **CLOSED 2026-07-27**. Residual: enable `pg_cron` on the hosted project | Owner (dashboard) | Both stores' deletion answers |
 | 2 | No in-app account-deletion UI | PDD (screen) + Engineering | **Apple 5.1.1(v)** |
 | 3 | No account-deletion URL | Owner (hosting) | **Play** |
 | 4 | Privacy policy unreviewed and unhosted | Legal + Owner | Both stores |

@@ -2,9 +2,9 @@
 
 # PanchangPal Dashboard
 
-Version: 1.22.0
+Version: 1.23.0
 
-Last Updated: 2026-07-27 (B6.3 — the privacy inventory, and the deletion right that was never executed)
+Last Updated: 2026-07-27 (the account-deletion executor — the right is now actually carried out)
 
 Purpose:
 This is the first file Claude should read at the beginning of every session.
@@ -92,7 +92,55 @@ CURRENT_MILESTONE.md
 
 # Current Task
 
-**B6.3 — the data inventory, the privacy policy draft, and the store labels. B6 is complete at its
+**The account-deletion executor — the launch blocker B6.3 found is closed at engineering scope.**
+
+`SVC_account.delete` had written an `account_deletion` row with a 30-day grace window since the
+Backend Foundation milestone, and nothing had ever read it back. Now:
+
+- **`execute_account_deletion(uuid)`** — atomic per-user erasure. SQL, not TypeScript, because the
+  erasure spans nine tables and supabase-js has no transaction across calls: a failure midway would
+  leave an account half-erased with no way to tell how far it got.
+- **`sweep_due_account_deletions()`** — each user in its own subtransaction, so one blocked account
+  cannot stop every other erasure.
+- **pg_cron schedule** (daily 03:15 UTC), idempotent, warning loudly where the extension is absent.
+- **`POST /account/sweep`** — the operator trigger §6.5 names, authorized by a provisioned secret,
+  never by a user JWT. **An unconfigured secret refuses everyone**, because "not protected yet" is
+  how an endpoint that deletes accounts ships open.
+- **`account_deletion_sweep_is_scheduled()`** — makes "is it actually running?" answerable. False if
+  pg_cron is absent, the job is missing, **or an operator disabled it**. Checked by the DR drill;
+  `ACCOUNT_SWEEP_SECRET` required at preflight's production tier (proven: exit 1 without, 0 with).
+
+**Six foreign keys needed explicit handling.** Four RESTRICT (`household.owner_id`,
+`invite.inviter_id`, `invite.accepted_by`, `referral.referred_user_id`) so a naive
+`delete from auth.users` errors outright. Two more — `household_member` and `support_ticket` — use
+**ON DELETE SET NULL**, which keeps the row and only drops the link, leaving the deleted user's
+display name in a household and their email and free-text body in a support ticket.
+`referral.referred_user_id` is **nulled, not deleted**: that row belongs to the referrer, and one
+user's erasure must not destroy another's record.
+
+**A perturbation caught a defect in my own test.** Asserting `where user_id = ...` passed against
+the SET NULL leak, because that is exactly the column being nulled. The assertions now key on
+**content** — the email address, the display name — and the perturbation fails as it should.
+
+**Verified against a real Postgres 17**, not asserted: migrations applied from scratch (32 tables),
+**17 pgTAP assertions** checking the rows are gone table by table, **five SQL perturbations** each
+failing the right assertions (support_ticket, household_member, referral, the F-3 gate, the grace
+window), **two TypeScript perturbations** on the sweep authorization failing at both the pure-rule
+and handler layers, the pg_cron branch exercised with the extension actually installed (schedules,
+idempotent on re-run, reports false when disabled), and the DR invariant failing with the executor
+dropped. 97 vitest (+9), eslint at its pre-existing baseline.
+
+⚠️ **Two residuals, stated rather than implied.** (1) **pg_cron must be enabled on the hosted
+project** — a dashboard action, so until then the only execution path is the operator trigger.
+(2) **`executed_at` cannot be written**: `account_deletion` cascades with `app_user`, so the request
+row is erased with its own subject and there is no row left to stamp. That collides with TDD Part 2
+§5.1, which names the table as the *deletion audit* mitigating repudiation. Changing the foreign key
+would invent a schema decision with its own privacy cost, so the executor implements the schema as
+declared and **the TDD owes a resolution**. A completed deletion currently leaves no record.
+
+---
+
+**Previously — B6.3 — the data inventory, the privacy policy draft, and the store labels. B6 is complete at its
 verifiable scope. The inventory found that the CCPA deletion right is never carried out.**
 
 Three documents, each derived from the one above it, and the first pinned by a test:
@@ -484,7 +532,7 @@ No new product scope.
 | Mobile — Notifications | ✅ M7 |
 | Mobile — Subscription | ✅ M8 |
 | AI Platform | 🟡 adapters done; corpus + eval pending |
-| Testing | 🟢 438 unit/component/domain (350 mobile + 88 vitest, +6 for the data-inventory conformance gate) + 17 pgTAP + a monthly DR restore drill + **5 Maestro flows, all green** · bundle gate per PR · 🟢 **E2E green in CI** — **5/5** on a real native Android build (RETURNING · MORNING_RITUAL · SESSION_PERSISTENCE · AUTH_SESSION_PERSISTENCE · ONBOARDING) in 5m16s, run 30207484940 on `a05760d`, 2026-07-26. (The count read "4" until this session: FLOW_AUTH_SESSION_PERSISTENCE was added in B6 and never counted. `e2e.yml`'s step-summary echo still lists only four names — a workflow fix that is owed.); gate fails fast (PR #35) and the launcher-ANR false-red is removed at its cause (PR #55 — `hide_error_dialogs` alone had stopped being sufficient) · AI-eval de-declared (owed: §9.4 harness); api-contract restored |
+| Testing | 🟢 447 unit/component/domain (350 mobile + 97 vitest) + 34 pgTAP (17 RLS/DB + **17 for the F-3 deletion executor**) + a monthly DR restore drill + **5 Maestro flows, all green** · bundle gate per PR · 🟢 **E2E green in CI** — **5/5** on a real native Android build (RETURNING · MORNING_RITUAL · SESSION_PERSISTENCE · AUTH_SESSION_PERSISTENCE · ONBOARDING) in 5m16s, run 30207484940 on `a05760d`, 2026-07-26. (The count read "4" until this session: FLOW_AUTH_SESSION_PERSISTENCE was added in B6 and never counted. `e2e.yml`'s step-summary echo still lists only four names — a workflow fix that is owed.); gate fails fast (PR #35) and the launcher-ANR false-red is removed at its cause (PR #55 — `hide_error_dialogs` alone had stopped being sufficient) · AI-eval de-declared (owed: §9.4 harness); api-contract restored |
 | Beta | 🚧 In progress — **B2 ✅**; **B5 ✅ at verifiable scope** (NFR-15 blocked on PITR — a purchase); **B6 ✅ at verifiable scope** (OWASP review ✅ · CCPA export + SVC_account authz ✅ · B6.3 inventory/policy/labels ✅ · §5.2 controls ✅ — ⛔ **but deletion is never executed**, an engineering-closable launch blocker); **B4 🟡 ~75%** (owner-gated on a Sentry org); B1/B3 owner-gated; B7–B8 pending |
 | Production | ⏳ |
 
@@ -492,12 +540,13 @@ No new product scope.
 
 # Current Priorities
 
-1. **⛔ Account deletion is never executed** (found 2026-07-27, B6.3). The request is recorded in
-   `account_deletion` and nothing carries it out — no executor, no job runner, `pg_cron` commented
-   out. The privacy policy and both stores' Data Safety answers are unpublishable until it exists,
-   and **Apple 5.1.1(v) additionally requires an in-app deletion screen**, which needs a PDD
-   affordance and SVC_household for ownership transfer. Ordinary engineering, not a purchase — and
-   the same fix restores every retention sweep, which today also does not run.
+1. ~~**⛔ Account deletion is never executed**~~ — **CLOSED 2026-07-27 at engineering scope.** The
+   executor, the sweep, the schedule, the operator trigger and 17 pgTAP assertions all exist.
+   **Two residuals:** the owner must enable `pg_cron` on the hosted project (a dashboard action —
+   until then only the manual trigger runs), and `executed_at` is unwritable because the audit row
+   cascades with its own subject, which the TDD owes a resolution for.
+   Still open separately: **Apple 5.1.1(v) requires an in-app deletion screen**, which needs a PDD
+   affordance and SVC_household for ownership transfer.
 2. ~~**B6.3 — data inventory, privacy policy, store labels**~~ — **DONE 2026-07-27.** Three
    documents in `docs/devops/`, the inventory pinned to the schema and the emitted `EVT_*` set by a
    conformance test. Nothing is legally reviewed; that is owner/legal work.
@@ -525,10 +574,16 @@ main
 
 # Blockers
 
-⛔ **Account deletion is never executed** (B6.3, 2026-07-27). `account_deletion` rows are written and
-never read back; there is no job runner and `pg_cron` is not enabled, so no scheduled work of any
-kind runs. Blocks the privacy policy, both stores' Data Safety answers, and Apple 5.1.1(v). Also the
-cause of every unimplemented retention sweep. Engineering-closable.
+🟡 **Enable `pg_cron` on the hosted Supabase projects** (owner, dashboard action). The
+account-deletion executor ships with a migration that schedules the daily sweep wherever the
+extension exists and warns loudly where it does not; until it is enabled in production, deletions
+run only when an operator triggers `POST /account/sweep` by hand. Verify with
+`select account_deletion_sweep_is_scheduled();`.
+
+⛔ **No job runner processes the `job` table.** `analytics_rollup` and `notify_schedule` remain enum
+values with no consumer, so analytics never roll up or prune, personal-date tombstones are never
+removed, and `panchang_cache` has no TTL. The deletion sweep proved the scheduling mechanism; the
+general worker pattern ADR-025 describes is still unbuilt.
 
 ⛔ Canonical Panchang Engine (ADR-033, Proposed): astronomical algorithm undocumented — panchang
 compute, Calendar/festival markers, and sunrise/tithi notifications stay unavailable until Part B
@@ -558,10 +613,13 @@ resolved (PR #14).
 
 # Next Deliverable
 
-**The account-deletion executor** — the highest-value credential-free engineering left. It closes a
-launch blocker, makes the privacy policy and both store forms publishable, and restores every
-retention sweep, because all of them are blocked on the same absent capability: this project has no
-scheduled execution at all.
+**Owner: enable `pg_cron` on the hosted Supabase projects** — a dashboard toggle that turns the
+deletion sweep from a manual operator action into the daily schedule the migration already defines.
+It is the last step between the executor and a truthful store Data Safety answer.
+
+Then, credential-free: the **`job` table worker** ADR-025 specifies, which is what the analytics
+rollup, the tombstone sweep and the cache TTL are all still waiting on; and the **in-app deletion
+screen** Apple 5.1.1(v) requires, which needs a PDD affordance and SVC_household first.
 
 Two owner purchases still gate reliability itself, not just convenience: **a Sentry org + DSN** (free
 tier) closes B4, and **a paid Supabase plan** (~$25/mo) closes B1 *and* makes NFR-15 achievable — no
