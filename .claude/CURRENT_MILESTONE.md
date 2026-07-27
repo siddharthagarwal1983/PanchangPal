@@ -600,6 +600,29 @@ testers' hands.
   declared rather than changing a foreign key, because the surviving row would name a uid and that
   is a privacy decision, not an implementation detail. **The TDD owes a resolution.** Consequence
   today: a completed deletion leaves no record that it happened.
+- **⛔ SVC_notify_scheduler IS A SHELL (found 2026-07-27).** The Edge Function exists, is deployed,
+  and returns `200` — and its repository methods do nothing. `loadDueCandidates()` issues the query,
+  discards the result with `void data`, and returns `[]` **unconditionally**; `sendDue()` returns
+  `0` without sending. `suppressIfCompleted()` is implemented in `logic.ts` and **never called from
+  `index.ts`**. What IS real is the pure logic — `applyQuietHours` (with a correct midnight wrap)
+  and `withinFrequencyCap`.
+  **Why it is recorded here rather than fixed:** the send path needs `expo-notifications`, which is
+  deferred, so completing it now would be writing an unrunnable path. But nothing said the sweep
+  was hollow, and the shape is this milestone's signature defect — a function that returns success
+  while doing nothing. It was found while evaluating whether to schedule it on pg_cron; **doing so
+  would have made notification scheduling look live while provably sending nothing.** Do not
+  schedule it until the repository methods are real.
+- **Three Dependabot PRs cross the Expo SDK 54 pin, not two (corrected 2026-07-27).** The triage in
+  `44b402a` guessed #61's single failure was "most likely the same jest break arriving
+  transitively" and flagged it as worth confirming. **Confirmed, and the guess was wrong.** jest
+  stays at 29.7.0 in #61; the failure is
+  `Incorrect version of "react-test-renderer" detected. Expected "19.2.8", but found "19.1.0"`,
+  because the group bumps **`react` 19.1.0 → 19.2.8** while `react-test-renderer` stays behind.
+  `react` and `react-native` are **exactly pinned** in both `apps/mobile` and `packages/ui` — they
+  are the SDK 54 baseline — so #61 belongs with #64 and #65 in a deliberate SDK-upgrade increment,
+  not in the "red for its own reasons" bucket. The other seven bumps in the group
+  (`@supabase/supabase-js`, both `@tanstack/*`, `@typescript-eslint/*`, `prettier`, `turbo`) are not
+  SDK-coupled and could be split out and landed independently.
 - **⛔ No job runner processes the `job` table.** `analytics_rollup`, `notify_schedule`,
   `winback_segment`, `content_ingest` and `entitlement_reconcile` are enum values with no consumer.
   The deletion sweep proved the pg_cron half of ADR-025; the worker pattern is still unbuilt, and it

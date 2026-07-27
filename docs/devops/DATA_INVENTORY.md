@@ -1,6 +1,6 @@
 # PanchangPal — Data Collection Inventory
 
-**Version:** 1.1.0
+**Version:** 1.2.0
 **Last Updated:** 2026-07-27 (deletion executor shipped; §8.2 and §9 rewritten)
 **Owner:** Security / Privacy
 **Source of truth:** TDD Part 5 §6.1–§6.2 · ADR-031 (Privacy & Data-Minimization) · PDD §11.1
@@ -356,11 +356,20 @@ REQUIRED]` — whether that is sufficient for the launch markets.
 |---|---|---|
 | Account data on deletion request | hard delete after a 30-day grace window | ✅ **Implemented 2026-07-27** (§8.2). Runs on the pg_cron schedule where the extension is enabled; otherwise only via the operator trigger |
 | `personal_date` deleted by the user | tombstone for offline reconcile, then removal | Tombstone only; removed when the account is deleted, never before |
-| `analytics_event` | rollup then prune (ADR-025) | ⛔ No rollup job exists; rows accumulate |
+| `analytics_event` | ⚠️ **none specified** — see note | Rows accumulate indefinitely |
 | `ai_rate_limit` | window buckets, prunable | ⛔ No pruning; not written today |
 | `panchang_cache` | cache with TTL | ⛔ No sweep; not written today (ADR-033) |
 
-The first row is closed. **The remaining three share the cause the deletion work only partly
+**⚠️ Correction (2026-07-27).** v1.0 of this document recorded the intended retention for
+`analytics_event` as "rollup then prune (ADR-025)". **That attribution was wrong.** ADR-025 does not
+mention pruning at all — it names `analytics_rollup` as a *job type*, which is aggregation, not
+deletion. And TDD Part 2 §6.4 states the opposite of a prune: account deletion "leaves
+already-anonymized analytics intact." **No retention period is specified for `analytics_event`
+anywhere in the approved documents.** That is a documentation gap, not an unimplemented intent —
+and the distinction matters, because a privacy policy cannot promise a retention limit that no
+approved document defines. Recorded as a finding rather than resolved by picking a number.
+
+The first row is closed. **The remaining rows share the cause the deletion work only partly
 removed:** `pg_cron` is now used by a migration, but nothing processes the `job` table — its
 `analytics_rollup` and `notify_schedule` enum values still have no consumer — and the extension is
 not yet enabled on the hosted projects. So the scheduling *mechanism* now has one proven user, and
@@ -384,6 +393,8 @@ recorded in `DR_RUNBOOKS.md`). A privacy policy should not describe safeguards t
 | 5 | **A user-deleted personal date is a tombstone, not an erasure** — must be disclosed (§3.2) | 🟢 Disclosure | Policy |
 | 6 | **AU/NZ user data is stored in the US** — APP 8 / IPP 12 disclosure obligations | 🟢 Disclosure | `[LEGAL REVIEW]` |
 | 7 | `packages/database` `TABLES` registry has drifted from the schema (29 vs 32) (§2.1) | 🟢 Hygiene | Engineering |
+| 8 | **No retention period is specified for `analytics_event`** — ADR-025 names a rollup job, not a prune, and §6.4 leaves analytics intact on deletion. Rows accumulate with no defined limit (§9) | 🟡 Documentation owes a policy | TDD / Privacy |
+| 9 | **Rollup tables are gated on F-5** (TDD Part 1 §688: "KPI targets ratified (`F-5`) so analytics tables/rollups match"). F-5 is an open `[PRD FOLLOW-UP]` and a PM/business decision, so no rollup destination table can be designed yet | 🟡 Owner / PM decision | Product |
 
 Findings 1 and 2 are the same defect this milestone keeps finding, in its fourth instance: a control
 that is documented, has a table backing it, and was never implemented — with nothing asserting it.

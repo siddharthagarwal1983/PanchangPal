@@ -26,6 +26,9 @@ const OWNED_TABLES = [
  * DELIBERATELY NOT the same list as OWNED_TABLES. `push_token` is a device credential, `notification`
  * is delivery bookkeeping, and `referral` concerns another party as much as this user — reassigning
  * those on merge is right, handing them back as "your data" is not.
+ *
+ * `message` is absent from this list because it cannot be fetched the same way — it keys on
+ * `conversation_id`, not `user_id` — and is added by `exportOwnedRows` in a second query. See there.
  */
 const EXPORT_TABLES = [
   'user_profile',
@@ -81,6 +84,37 @@ export class AccountRepository {
       if (error) throw error;
       out[table] = data ?? [];
     }
+
+    // Messages are the one export row set that cannot be reached by `user_id` — `message` keys on
+    // `conversation_id`, so the loop above silently returned the conversation HEADERS with none of
+    // their content. §6.2 promises "the user's owned rows"; a thread's title without the question
+    // the user asked and the answer they were given is not that, and it is the single most
+    // personal text in the product.
+    //
+    // Harmless today (Ask Guru is gated off, so there are no messages) and wrong the day
+    // `GURU_LIVE` flips — which is exactly the kind of gap that gets discovered by a data-rights
+    // request rather than by a test.
+    const conversationIds = (out.conversation ?? [])
+      .map((row) => (row as { id?: string }).id)
+      .filter((id): id is string => typeof id === 'string');
+
+    if (conversationIds.length > 0) {
+      const { data, error } = await this.db
+        .from('message')
+        .select('*')
+        .in('conversation_id', conversationIds);
+      if (error) throw error;
+      out.message = data ?? [];
+    } else {
+      // Present and empty rather than absent: a consumer should not have to distinguish "no
+      // messages" from "this export predates message support".
+      out.message = [];
+    }
+
+    // `message_source` is deliberately NOT exported. It records which reviewed CORPUS chunk backed
+    // an answer — a reference into shared content, not anything the user wrote or that describes
+    // them. Including it would hand back the product's own library rows under the heading "your
+    // data", which is the mirror of the mistake this fix corrects.
     return out;
   }
 
