@@ -2,8 +2,8 @@
 
 # PanchangPal — Implementation Roadmap
 
-Version: 2.3.0
-Last Updated: 2026-07-27 (session close — executor shipped, pg_cron enabled, owed follow-ups closed)
+Version: 2.4.0
+Last Updated: 2026-07-28 (the #61 dependency split landed; the queue is now three SDK-crossing PRs)
 
 Purpose: the forward plan from the current state. Complements PROJECT_STATUS.md (snapshot) and
 CURRENT_MILESTONE.md (active milestone). Updated when scope or sequencing changes — and at every
@@ -46,10 +46,19 @@ ratified KPI targets — a PM decision), `notify_schedule` on SVC_notify_schedul
 Building it would have added a mechanism with nothing to process — the placeholder shape B1 spent
 its time removing.
 
-**Next, in order:** (1) split the seven non-SDK bumps out of **#61** — the group is red because it
-moves `react` past the exactly-pinned SDK 54 baseline, not because of jest as the earlier triage
-guessed; (2) the **TDD resolution** on the deletion audit; (3) the **in-app deletion screen** Apple
-5.1.1(v) requires, which needs a PDD affordance and SVC_household for ownership transfer.
+**The #61 split is DONE (2026-07-28, PR #74, `0185ea9`).** The seven non-SDK bumps —
+`@typescript-eslint/*`, `prettier`, `turbo`, `@supabase/supabase-js`, both `@tanstack/*` — are on
+main with all five CI gates green. `react`, `@types/react` and the lockfile's `react@19.1.0` peer
+keys were deliberately left behind: they are the exactly-pinned SDK 54 baseline, and moving them is
+what reds the group (`react-test-renderer` stays at 19.1.0). The open dependency queue is now the
+coherent set the split was for — **#61's remainder, #64 and #65 all cross the SDK pin** and belong in
+one deliberate upgrade increment validated by a native build and the Maestro flows, with #62
+(i18next) and #63 (jest 30) red for their own unrelated reasons.
+
+**Next, in order:** (1) the **SDK-upgrade increment** — #61's `react` remainder + #64 + #65 together,
+behind a native build and the flows, which is the only way that class of change has ever been proven
+in this repo; (2) the **TDD resolution** on the deletion audit; (3) the **in-app deletion screen**
+Apple 5.1.1(v) requires, which needs a PDD affordance and SVC_household for ownership transfer.
 
 **After that the credential-free engineering is largely exhausted.** What remains is owner-gated
 (paid Supabase, Sentry, store accounts), product-gated (F-5, PDD screens and ERR_* copy, the

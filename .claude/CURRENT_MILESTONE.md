@@ -2,9 +2,9 @@
 
 # PanchangPal — Current Milestone
 
-Version: 4.4.0
+Version: 4.5.0
 
-Last Updated: 2026-07-27 (deletion executor + the owed follow-ups; E2E runs 6 flows)
+Last Updated: 2026-07-28 (the #61 dependency split; progress unchanged at 47%)
 
 Purpose:
 This document defines the current milestone. Unlike SESSION.md (daily work) or TASK.md (current
@@ -616,6 +616,33 @@ testers' hands.
   while doing nothing. It was found while evaluating whether to schedule it on pg_cron; **doing so
   would have made notification scheduling look live while provably sending nothing.** Do not
   schedule it until the repository methods are real.
+- **The #61 group is split, and the queue is now coherent (2026-07-28, PR #74).** The seven
+  non-SDK bumps landed on main on their own — `@typescript-eslint/eslint-plugin` and `parser`
+  8.63.0→8.65.0, `prettier` 3.9.5→3.9.6, `turbo` 2.10.4→2.10.7, `@supabase/supabase-js`
+  2.110.2→**2.110.9** (a further patch shipped after Dependabot opened #61, inside the declared
+  `^2.110.8` range), and both `@tanstack/*` 5.101.2→5.101.4. All five CI gates green.
+  `react`, `@types/react` and the lockfile's `react@19.1.0` peer keys were deliberately NOT touched.
+  **What remains open is now three PRs that all cross the same pin** — #61's `react` remainder, #64
+  (`@expo/metro-runtime` 6.1.2→57.0.7) and #65 (`@babel/runtime` 7→8) — plus #62 and #63, red for
+  unrelated reasons. That set belongs in one deliberate SDK-upgrade increment behind a native build
+  and the Maestro flows: the last mobile re-baseline was verified only by bundling and Expo Go, and
+  a native build later found the MMKV/New-Architecture defect no unit test could see.
+  **The merge went red on E2E and the red was the harness, proven rather than assumed.**
+  FLOW_AUTH_SESSION_PERSISTENCE failed at the assertion that the tradition preference survives a
+  restart, reverting to `generic` — the flow's own header documents that as identity loss, the
+  defect `secureSessionStorage.ts` exists to prevent. It was NOT dismissed: `@supabase/supabase-js`
+  moves its sub-packages in lockstep, so the bump carried **`@supabase/auth-js` 2.110.2 → 2.110.9**,
+  the package owning `persistSession` and the custom `storage` adapter that flow guards. Re-running
+  the identical commit went **6/6 green**, which rules out a deterministic regression (not a
+  probabilistic one — if it recurs, auth-js returns to the suspect list). The real cause was the
+  documented launch race: logcat shows `Destroy timeout of remove-task` 130ms into the flow's own
+  cleared launch. **All three flows opening with a fused `launchApp: clearState: true` now use three
+  discrete steps**, so the hazard recorded below as latent is closed.
+  Two incidental findings worth keeping: `pnpm` is no longer on PATH on the dev Mac (Node 26 dropped
+  corepack from the Homebrew install — the pinned `pnpm@9.6.0` via `npx` works), and
+  **`pnpm format:check` fails on 248 files**, identically under prettier 3.9.5 and 3.9.6. It is a
+  pre-existing repository condition and not a CI gate; it was verified rather than assumed by
+  running both versions against the tree.
 - **Three Dependabot PRs cross the Expo SDK 54 pin, not two (corrected 2026-07-27).** The triage in
   `44b402a` guessed #61's single failure was "most likely the same jest break arriving
   transitively" and flagged it as worth confirming. **Confirmed, and the guess was wrong.** jest

@@ -2,9 +2,9 @@
 
 # PanchangPal Dashboard
 
-Version: 1.24.0
+Version: 1.25.0
 
-Last Updated: 2026-07-27 (deletion executor + the three owed follow-ups; E2E now runs 6 flows)
+Last Updated: 2026-07-28 (the #61 dependency split landed; progress unchanged at 47%)
 
 Purpose:
 This is the first file Claude should read at the beginning of every session.
@@ -92,7 +92,57 @@ CURRENT_MILESTONE.md
 
 # Current Task
 
-**The three owed follow-ups are closed, and E2E now runs six flows.**
+**The #61 dependency group is split, and the open queue is now coherent** (PR #74, `0185ea9`).
+
+**Progress unchanged at 47%.** This advances no Beta slice — it is dependency hygiene that unblocks
+seven bumps held hostage by two, exactly as offline sync and the deletion executor closed gaps
+without moving a slice.
+
+Dependabot's `production-minor` group was red for **one** reason, and the earlier triage had guessed
+the wrong one. It is not jest: the group bumps **`react` 19.1.0 → 19.2.8** past the **exactly
+pinned** Expo SDK 54 baseline while `react-test-renderer` stays at 19.1.0, so every jest suite fails
+with `Incorrect version of "react-test-renderer" detected`. The other seven bumps are not SDK-coupled
+and were simply stuck behind it.
+
+**Landed on their own:** `@typescript-eslint/eslint-plugin` + `parser` 8.63.0→8.65.0 · `prettier`
+3.9.5→3.9.6 · `turbo` 2.10.4→2.10.7 · `@supabase/supabase-js` 2.110.2→**2.110.9** (a further patch
+shipped after Dependabot opened #61; it is inside the declared `^2.110.8` range) · both
+`@tanstack/*` 5.101.2→5.101.4.
+
+**Deliberately left behind:** `react`, `@types/react`, and the lockfile's `react@19.1.0` peer keys.
+They belong with #64 and #65 in **one** SDK-upgrade increment validated by a native build and the
+Maestro flows — the last mobile re-baseline was verified only by bundling and Expo Go, and a native
+build later found the MMKV/New-Architecture defect no unit test could see. The open queue is now
+three PRs crossing the same pin (#61's remainder, #64, #65) plus #62/#63, red for their own reasons.
+
+**Verified:** all five CI gates green on the PR and locally — eslint 0 errors (16 warnings, its
+baseline), tsc clean across 11 projects, 102 vitest + 33 ui + 350 mobile, and `expo export
+--platform all` for both platforms. The lockfile diff is confined to the seven plus the peer-key
+rewrites the parser bump forces through `eslint-plugin-import`; no unrelated transitive drift.
+
+**The merge went red on E2E, and the red was the harness — proven, not assumed.**
+FLOW_AUTH_SESSION_PERSISTENCE failed at the assertion that the tradition preference survives a
+restart, reverting to `generic` — which that flow's header documents as **identity loss**, the exact
+defect `secureSessionStorage.ts` exists to prevent. It was not written off, because
+`@supabase/supabase-js` moves its sub-packages in lockstep and the bump therefore carried
+**`@supabase/auth-js` 2.110.2 → 2.110.9**, the package that owns `persistSession` and the custom
+`storage` adapter that flow guards. Re-running the **identical commit** went **6/6 green**, which a
+deterministic regression cannot do. Cause: the documented launch race — logcat shows
+`Destroy timeout of remove-task` 130ms into the flow's own cleared launch. **All three flows that
+opened with a fused `launchApp: clearState: true` now use three discrete steps**, closing a hazard
+the tracking docs had carried as latent since 2026-07-27. (Precisely: this clears a *deterministic*
+auth-js regression, not a probabilistic one. A recurrence puts it back on the list.)
+
+**Two incidental findings, recorded rather than left to be rediscovered.** `pnpm` is no longer on
+PATH on the dev Mac — Node 26 dropped corepack from the Homebrew install, and the pinned
+`pnpm@9.6.0` via `npx` is what works. And **`pnpm format:check` fails on 248 files** — *not* caused
+by the prettier bump: running 3.9.5 and 3.9.6 against the tree gives an identical 248 either way. It
+is a pre-existing repository condition, is not a CI gate, and reformatting 248 files behind a
+dependency bump would have buried the diff.
+
+---
+
+**Previously — the three owed follow-ups are closed, and E2E now runs six flows.**
 
 - **The CCPA export omitted every message.** `EXPORT_TABLES` fetches with `.eq('user_id', …)` but
   `message` keys on `conversation_id`, so the export returned conversation HEADERS with none of
@@ -506,6 +556,16 @@ Verified end-to-end. **PR #36 merged to main as `e1e10d4`**; the docs checkpoint
 
 # Today's Objective
 
+Session of 2026-07-28. **Split the seven non-SDK bumps out of #61.** Take the dependency queue from
+five PRs — one of them a nine-package group red for a single SDK-pin reason — down to a coherent
+set, without smuggling a React version bump past the SDK 54 baseline behind a linter update.
+Outcome: PR #74 merged with all five gates green, `react`/`@types/react` untouched, and the queue
+now three PRs that all cross the same pin and want one deliberate upgrade increment. **Progress
+unchanged at 47%** — no Beta slice advanced. Next: **the SDK-upgrade increment** (#61's remainder,
+#64, #65) behind a native build and the flows.
+
+---
+
 Session of 2026-07-27. **B6.3 — data inventory, privacy policy, store labels.** Build the
 data-collection inventory from the code rather than the docs, then derive the policy draft and the
 store answers from it. Outcome: three documents, the inventory pinned to the schema and the emitted
@@ -578,10 +638,10 @@ No new product scope.
 # Current Priorities
 
 1. ~~**⛔ Account deletion is never executed**~~ — **CLOSED 2026-07-27 at engineering scope.** The
-   executor, the sweep, the schedule, the operator trigger and 17 pgTAP assertions all exist.
-   **Two residuals:** the owner must enable `pg_cron` on the hosted project (a dashboard action —
-   until then only the manual trigger runs), and `executed_at` is unwritable because the audit row
-   cascades with its own subject, which the TDD owes a resolution for.
+   executor, the sweep, the schedule, the operator trigger and 17 pgTAP assertions all exist, and
+   **`pg_cron` is now enabled and confirmed on both hosted projects**, so the sweep runs daily
+   rather than only when an operator triggers it. **One residual:** `executed_at` is unwritable
+   because the audit row cascades with its own subject, which the TDD owes a resolution for.
    Still open separately: **Apple 5.1.1(v) requires an in-app deletion screen**, which needs a PDD
    affordance and SVC_household for ownership transfer.
 2. ~~**B6.3 — data inventory, privacy policy, store labels**~~ — **DONE 2026-07-27.** Three
@@ -611,11 +671,12 @@ main
 
 # Blockers
 
-🟡 **Enable `pg_cron` on the hosted Supabase projects** (owner, dashboard action). The
-account-deletion executor ships with a migration that schedules the daily sweep wherever the
-extension exists and warns loudly where it does not; until it is enabled in production, deletions
-run only when an operator triggers `POST /account/sweep` by hand. Verify with
-`select account_deletion_sweep_is_scheduled();`.
+✅ **Resolved (2026-07-27): `pg_cron` is enabled on both hosted projects and confirmed** — staging
+through CD (`account_deletion_sweep_is_scheduled()` returns true and the ⚠️ annotation is gone) and
+dev through a dispatched `dev-migrate`. It is the **first scheduled job that has ever run in this
+project**. (This entry read "🟡 owner action pending" until 2026-07-28; it had been done the day it
+was written. A blocker list is only useful if it is closed as promptly as it is opened.)
+There is no prod project to enable it on yet — the free tier allows two, and both are used.
 
 ⛔ **No job runner processes the `job` table.** `analytics_rollup` and `notify_schedule` remain enum
 values with no consumer, so analytics never roll up or prune, personal-date tombstones are never
@@ -650,13 +711,21 @@ resolved (PR #14).
 
 # Next Deliverable
 
-**Owner: enable `pg_cron` on the hosted Supabase projects** — a dashboard toggle that turns the
-deletion sweep from a manual operator action into the daily schedule the migration already defines.
-It is the last step between the executor and a truthful store Data Safety answer.
+**The SDK-upgrade increment** — #61's `react` remainder, #64 (`@expo/metro-runtime`) and #65
+(`@babel/runtime` 7→8) taken together, since all three cross the exactly-pinned Expo SDK 54
+baseline. It is not a lockfile exercise: `react-test-renderer` has to move with `react`, and the
+change must be validated by a **native build plus the six Maestro flows**, because that is the only
+way this repo has ever proven a mobile re-baseline. The SDK 54 upgrade itself was verified by
+bundling and Expo Go alone, and a native build later found the MMKV/New-Architecture defect.
 
-Then, credential-free: the **`job` table worker** ADR-025 specifies, which is what the analytics
-rollup, the tombstone sweep and the cache TTL are all still waiting on; and the **in-app deletion
-screen** Apple 5.1.1(v) requires, which needs a PDD affordance and SVC_household first.
+(`pg_cron` is no longer a blocker — it was enabled and confirmed on both hosted projects on
+2026-07-27, and is the first scheduled job that has ever run in this project.)
+
+Then, credential-free: the **`job` table worker** ADR-025 specifies — investigated on 2026-07-27 and
+deliberately not built, because every `job_type` is blocked on a product or vendor decision and it
+would be a mechanism with nothing to process; the **TDD resolution** the deletion audit owes; and
+the **in-app deletion screen** Apple 5.1.1(v) requires, which needs a PDD affordance and
+SVC_household first.
 
 Two owner purchases still gate reliability itself, not just convenience: **a Sentry org + DSN** (free
 tier) closes B4, and **a paid Supabase plan** (~$25/mo) closes B1 *and* makes NFR-15 achievable — no

@@ -2,80 +2,99 @@
 
 # PanchangPal — Current Session
 
-Version: 2.9.0
-Last Updated: 2026-07-27 (B6.3, the deletion executor, pg_cron enabled, and the three owed
-follow-ups — all merged)
+Version: 3.0.0
+Last Updated: 2026-07-28 (the #61 dependency split)
 
-**Main is at `6099267`, clean, with CD and E2E both green.** Merged this session, in order:
-`44b402a` #68 dependency triage · `603b5f5` #69 B6.3 · `de5ff14` #70 deletion executor ·
-`2e792dd` #71 CD sweep check · `c9f5f28` #72 export + echo · `6099267` #73 FLOW_OFFLINE_SYNC.
+**Main is at `0185ea9`, clean.** Merged this session: `0185ea9` #74 — the seven non-SDK bumps split
+out of Dependabot's `production-minor` group. **Progress unchanged at 47%**; dependency hygiene
+advances no Beta slice.
 
 ---
 
 # Completed
 
-**B6.3 — the privacy documents (#69).** `DATA_INVENTORY.md` classifies all 32 tables, the nine
-`EVT_*` ids actually emitted, six device-storage keys, six third-party processors and the
-permissions — built from the migrations and the mobile source, not the documentation.
-`PRIVACY_POLICY_DRAFT.md` and `STORE_PRIVACY_LABELS.md` derive from it. §2 and §4 are pinned by
-`apps/backend/tests/privacy/data-inventory.test.ts`, which compares the document against the schema
-and the emitted event set **in both directions**. Four perturbations proved it fails.
+**The #61 split (PR #74).** Seven bumps landed on their own: `@typescript-eslint/eslint-plugin` and
+`parser` 8.63.0→8.65.0, `prettier` 3.9.5→3.9.6, `turbo` 2.10.4→2.10.7, `@supabase/supabase-js`
+2.110.2→**2.110.9**, and both `@tanstack/*` 5.101.2→5.101.4.
 
-**The account-deletion executor (#70).** The launch blocker B6.3 found, closed the same day.
-`execute_account_deletion(uuid)` is an atomic per-user erasure; `sweep_due_account_deletions()`
-isolates each user in its own subtransaction; a pg_cron migration schedules it daily;
-`POST /account/sweep` is the operator trigger TDD §6.5 names, secret-authorized, refusing everyone
-when unconfigured. SQL rather than TypeScript because the erasure spans nine tables and supabase-js
-has no transaction across calls.
+`@supabase/supabase-js` resolves to 2.110.9, not the 2.110.8 #61 names — a further patch shipped
+after Dependabot opened it, inside the declared `^2.110.8` range.
 
-**pg_cron enabled on both hosted projects, and confirmed.** Staging via CD
-(`account_deletion_sweep_is_scheduled()` true, the ⚠️ annotation gone); dev via a dispatched
-`dev-migrate` (`NOTICE: Scheduled panchangpal_account_deletion_sweep (daily 03:15 UTC)`).
-**This is the first scheduled job that has ever run in this project.**
+**`react`, `@types/react` and the lockfile's `react@19.1.0` peer keys were deliberately left
+behind.** Bumping `react` 19.1.0→19.2.8 past the exactly-pinned SDK 54 baseline while
+`react-test-renderer` stays at 19.1.0 is the **single** cause of the group's red CI.
 
-**The three owed follow-ups (#72, #73).** The CCPA export's missing messages; `e2e.yml`'s flow echo
-now derived from the directory; and `FLOW_OFFLINE_SYNC`, green on main — **E2E runs 6 flows.**
+**Verified:** all five CI gates green on the PR and reproduced locally beforehand — eslint 0 errors
+(16 warnings, its baseline), tsc clean across 11 projects, 102 vitest + 33 ui + 350 mobile, and
+`expo export --platform all` for both platforms. The lockfile diff is confined to the seven plus the
+peer-key rewrites the parser bump forces through `eslint-plugin-import` and `eslint-module-utils`.
+Post-merge on main: CD green; **E2E red on attempt 1, green 6/6 on attempt 2 of the same commit.**
+See "The E2E red" below — it was the harness, and the bump was investigated before being cleared.
 
-# Defects found
+**The launch race is closed across the suite.** All three flows that opened with
+`launchApp: clearState: true` — AUTH_SESSION_PERSISTENCE, ONBOARDING, SESSION_PERSISTENCE — now use
+the three discrete `stopApp` / `clearState` / `launchApp` steps FLOW_OFFLINE_SYNC adopted. The
+tracked "latent E2E hazard" is no longer latent: it fired.
 
-1. ⛔ **Account deletion was recorded and never executed** (B6.3) — fixed in #70.
-2. **Six foreign keys a naive `delete from auth.users` gets wrong** — four RESTRICT, and two
-   (`household_member`, `support_ticket`) using ON DELETE SET NULL, which keeps the row and drops
-   only the link, leaving a display name in a household and an email in a support ticket.
-3. **A defect in my own test**, caught by perturbation: asserting `where user_id = ...` passes
-   against exactly that SET NULL leak. The assertions now key on content.
-4. **The CCPA export omitted every message** — `message` keys on `conversation_id`, not `user_id`.
-5. **SVC_notify_scheduler is a shell** — `loadDueCandidates()` discards its query and returns `[]`
-   unconditionally, `sendDue()` returns `0`, `suppressIfCompleted()` is never called. Found while
-   evaluating whether to schedule it; **doing so would have made notifications look live while
-   provably sending nothing.**
-6. **The #61 Dependabot theory was wrong** — jest stays at 29.7.0. The cause is
-   `Incorrect version of "react-test-renderer" … Expected "19.2.8", but found "19.1.0"`, because the
-   group bumps `react` past the exactly-pinned SDK 54 baseline. **Three** PRs cross that pin, not
-   two; the other seven bumps in the group are not SDK-coupled and could be split out.
-7. **Three E2E-harness defects, none in offline sync** — a launch race where a stale TASK's
-   destroy-timeout killed the newly started process; the flow breaking a neighbour because a
-   cleared offline banner proves the app *thinks* it is online rather than that it is; and both
-   being visible only in the uploaded artifact, never the run log.
-8. **`analytics_event` has no specified retention** — v1.0 of the inventory attributed a prune to
-   ADR-025, which mentions pruning zero times, while §6.4 says deletion leaves analytics intact.
-   Corrected; recorded as a documentation gap.
+**Also reconciled:** DASHBOARD and PROJECT_STATUS still carried "owner: enable `pg_cron`" as an open
+blocker. It was enabled and confirmed on both hosted projects on 2026-07-27 — the same day the entry
+was written. Both are corrected.
+
+# The E2E red, and why it was not written off
+
+Main went red immediately after the merge: 5/6 flows passed and
+**FLOW_AUTH_SESSION_PERSISTENCE failed at step 21**, the assertion that tradition is still Bengali
+after a restart. The hierarchy dump showed it reverted to `generic` — which the flow's own header
+documents as meaning **the identity was lost**, the exact defect `secureSessionStorage.ts` exists to
+prevent.
+
+**It was not dismissed as a flake, because the merge was a live suspect.** `@supabase/supabase-js`
+carries its sub-packages in lockstep, so the bump moved **`@supabase/auth-js` 2.110.2 → 2.110.9** —
+the package that owns `persistSession` and the custom `storage` adapter this flow guards. "A
+dependency bump broke session persistence" and "the known harness race fired" predict the same
+screenshot.
+
+**Re-running the identical commit settled it: 6/6 green.** A deterministic regression cannot pass on
+re-run, so the bump is cleared as the cause. Stated precisely: this rules out a *deterministic*
+break, not a probabilistic one. If that flow fails again, auth-js goes back on the suspect list.
+
+**The actual cause was the documented launch race**, in the flow that could least afford it: logcat
+shows `Destroy timeout of remove-task, attempt to kill Task{...#13}` 130ms into the flow's own
+cleared launch. Now fixed in all three flows that open that way.
+
+**The lesson this repeats:** the evidence was in the uploaded artifact — the hierarchy dump and
+`device-logcat.txt` — and appears nowhere in the run log. Third time.
+
+# Findings
+
+1. **The previous triage's cause was right and this session confirmed the mechanism** — jest stays
+   at 29.7.0; the break is `react` crossing the SDK pin. Worth restating because the triage *before*
+   that one guessed jest and was wrong.
+2. **`pnpm` is no longer on PATH on the dev Mac** — Node 26 dropped corepack from the Homebrew
+   install. `npx --yes pnpm@9.6.0` (the `packageManager` version) works. A bare `pnpm install` now
+   fails with `command not found`; that is the toolchain, not the repository.
+3. **`pnpm format:check` fails on 248 files, and prettier 3.9.6 did not cause it** — proven by
+   running 3.9.5 and 3.9.6 against the tree and getting an identical 248. Pre-existing; not a CI
+   gate. The repo should decide deliberately whether to adopt it or drop the script.
 
 # Open
 
 - ⚠️ **`executed_at` is unwritable** — `account_deletion` cascades with its own subject, so a
-  completed deletion leaves no record. Contradicts TDD Part 2 §5.1's deletion-audit claim.
-  **The TDD owes a resolution.**
-- ⛔ **No worker consumes the `job` table.** Every `job_type` is blocked: `analytics_rollup` on F-5
-  (TDD §688 gates rollup tables on ratified KPI targets), `notify_schedule` on the shell above,
-  `content_ingest` on the corpus, `winback_segment` post-v1, `entitlement_reconcile` on RevenueCat.
-  Building the worker now would add a mechanism with nothing to process.
+  completed deletion leaves no record. Contradicts TDD Part 2 §5.1. **The TDD owes a resolution.**
+- ⛔ **No worker consumes the `job` table** — investigated 2026-07-27 and deliberately not built;
+  every `job_type` is blocked on a product or vendor decision.
+- **⛔ SVC_notify_scheduler is a shell** — `loadDueCandidates()` returns `[]` unconditionally. Do not
+  schedule it.
 - **Apple 5.1.1(v) requires an in-app deletion screen** — needs a PDD affordance and SVC_household.
 - Nothing in the privacy documents is legally reviewed.
-- **A latent E2E hazard:** `FLOW_MORNING_RITUAL` and `FLOW_RETURNING` end without cleanup, so any
-  flow opening with a cleared launch can draw the launch race depending on Maestro's ordering.
+- ~~**A latent E2E hazard**~~ — **CLOSED 2026-07-28.** It stopped being latent: it fired on
+  FLOW_AUTH_SESSION_PERSISTENCE. All three flows opening with a cleared launch now use three
+  discrete steps. `FLOW_MORNING_RITUAL` and `FLOW_RETURNING` still end without cleanup — that is the
+  other half of the fix and is deliberately not done, because the discrete-step opening makes each
+  flow robust regardless of what its predecessor left behind, which is the more local guarantee.
 - PDD owes approved copy for 11 of 24 ERR_* codes; SCR_ONBOARDING_* slides unbuilt.
-- **Five Dependabot PRs (#61–#65) open and deliberately unmerged** — see defect 6.
+- **Four Dependabot PRs open** — #61 (react remainder), #64, #65 all cross the SDK 54 pin; #62
+  (i18next) and #63 (jest 30) are red for their own reasons.
 
 # Blockers
 
@@ -85,10 +104,7 @@ now derived from the directory; and `FLOW_OFFLINE_SYNC`, green on main — **E2E
 
 # Recommended next task
 
-**Split the seven non-SDK bumps out of #61** — `@supabase/supabase-js`, both `@tanstack/*`,
-`@typescript-eslint/*`, `prettier`, `turbo`. They are not SDK-coupled, and landing them shrinks the
-open dependency queue from five to a coherent three that all cross the SDK 54 pin and belong in one
-deliberate upgrade increment.
-
-After that the credential-free engineering is largely exhausted: what remains is owner-gated
-(purchases), product-gated (F-5, PDD screens and copy, the corpus), or the TDD resolution above.
+**The SDK-upgrade increment: #61's `react` remainder + #64 + #65 together.** All three cross the
+exactly-pinned SDK 54 baseline. `react-test-renderer` must move with `react`, and the result needs a
+**native build plus the six Maestro flows** — the only method that has caught this class of change
+here before. Local Android builds now work on the dev Mac, so it is iterable without CI round trips.

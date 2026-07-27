@@ -12,10 +12,18 @@
 # wrong twice in this project already (MMKV v2, and the gate itself).
 appId: com.panchangpal.app
 ---
-# clearState: TRUE is the whole point — this is a first install, not a returning user.
+# Clearing state IS the point here — this is a first install, not a returning user.
 # FLOW_RETURNING deliberately does the opposite.
-- launchApp:
-    clearState: true
+#
+# THREE DISCRETE STEPS rather than `launchApp: clearState: true` — see FLOW_OFFLINE_SYNC for the
+# diagnosis. Fusing the clear and the launch races the previous flow's TASK teardown, and Android
+# kills the process it has just created. FLOW_AUTH_SESSION_PERSISTENCE drew it on 2026-07-28; this
+# flow opens the same way and could draw it next, since which flow is exposed depends only on
+# Maestro's ordering.
+- stopApp
+- clearState
+
+- launchApp
 
 # The gate. Wait explicitly: launchApp returns before the JS bundle has rendered, and
 # anonymous sign-in (UX-2 / ADR-009) happens before any screen appears, so a bare
