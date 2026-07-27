@@ -2,8 +2,8 @@
 
 # PanchangPal — Current Task
 
-Version: 3.15.0
-Last Updated: 2026-07-27 (deletion executor SHIPPED; next: owner enables pg_cron, then the job worker)
+Version: 3.16.0
+Last Updated: 2026-07-27 (owed follow-ups closed; E2E runs 6 flows; next: split #61)
 
 Purpose: the current implementation task. Stay focused; avoid unrelated work unless instructed.
 
@@ -110,7 +110,51 @@ green in CI on a real native build. Canonical progress 0% → 13% (1 of 8 Beta s
 # Current Task
 
 ## Title
-✅ THE ACCOUNT-DELETION EXECUTOR SHIPPED · NEXT: OWNER ENABLES pg_cron, THEN THE `job` WORKER
+✅ THE THREE OWED FOLLOW-UPS ARE CLOSED · E2E RUNS 6 FLOWS · NEXT: SPLIT #61
+
+**Progress unchanged at 47%.** None of this advances a Beta slice; it closes owed items and a
+defect inside B6.
+
+## What shipped (#72, #73)
+
+- **The CCPA export omitted every message.** `EXPORT_TABLES` fetches with `.eq('user_id', …)` but
+  `message` keys on `conversation_id`, so the export returned conversation HEADERS with none of
+  their content — silently, because an empty row set and an unreachable one look identical. Fixed
+  with a scoped second query and five tests. The sharper perturbation: widening the `in` clause
+  past the caller's own conversations fails, because an unscoped fetch would turn a data-rights
+  feature into a data breach.
+- **`e2e.yml`'s flow echo** now derives from the directory Maestro runs, so it cannot drift again.
+- **`FLOW_OFFLINE_SYNC`** — the flow PR #66 shipped without. Green on main; **E2E runs 6 flows.**
+
+## Four E2E cycles, and none of the three defects were in offline sync
+
+1. **A launch race.** `launchApp: clearState: true` fuses the clear and the launch; the stale TASK —
+   not the process — was still being destroyed 1.1s in, so Android killed the process it had just
+   created. The app never started and the flow failed 60s later looking exactly like a product
+   defect. `stopApp` alone did not fix it; three discrete steps did.
+2. **The flow broke a neighbour.** FLOW_AUTH_SESSION_PERSISTENCE lost a server-written preference,
+   because a cleared offline banner proves the app *thinks* it is online, not that it is — NetInfo
+   reports `isConnected` from a link-level signal with no usable route. The flow now makes the app
+   prove connectivity with a cleared cold start before ending, so a dead radio fails the flow that
+   turned the radio off rather than poisoning the next one.
+3. **Both were visible only in the uploaded ARTIFACT** — the hierarchy holding nothing but the
+   status-bar clock, and the logcat kill sequence. Neither appears in the run log. The lesson this
+   project already paid for with the Pixel Launcher ANRs.
+
+## Next task — split the seven non-SDK bumps out of #61
+
+`@supabase/supabase-js`, both `@tanstack/*`, `@typescript-eslint/*`, `prettier`, `turbo`. The group
+is red for one reason and it is not jest: it bumps `react` 19.1.0 → 19.2.8 past the **exactly
+pinned** SDK 54 baseline, and `react-test-renderer` stays at 19.1.0 —
+`Incorrect version of "react-test-renderer" detected`. Landing the seven shrinks the open queue from
+five to a coherent three (#61's react half, #64, #65) that all cross the SDK pin and belong in one
+deliberate upgrade increment with a native build and the flows validating them.
+
+---
+
+## Superseded — the deletion executor
+
+## ✅ THE ACCOUNT-DELETION EXECUTOR SHIPPED
 
 **Progress unchanged at 47%** — this closes a defect inside B6, a slice already counted, exactly as
 offline sync closed a §6 gap without advancing one.

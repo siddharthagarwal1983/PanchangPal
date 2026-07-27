@@ -2,9 +2,9 @@
 
 # PanchangPal Dashboard
 
-Version: 1.23.0
+Version: 1.24.0
 
-Last Updated: 2026-07-27 (the account-deletion executor — the right is now actually carried out)
+Last Updated: 2026-07-27 (deletion executor + the three owed follow-ups; E2E now runs 6 flows)
 
 Purpose:
 This is the first file Claude should read at the beginning of every session.
@@ -92,7 +92,44 @@ CURRENT_MILESTONE.md
 
 # Current Task
 
-**The account-deletion executor — the launch blocker B6.3 found is closed at engineering scope.**
+**The three owed follow-ups are closed, and E2E now runs six flows.**
+
+- **The CCPA export omitted every message.** `EXPORT_TABLES` fetches with `.eq('user_id', …)` but
+  `message` keys on `conversation_id`, so the export returned conversation HEADERS with none of
+  their content — silently, because an empty row set and an unreachable one look identical. Fixed
+  with a scoped second query and five tests; two perturbations prove it, the sharper one being that
+  widening the `in` clause past the caller's own conversations fails, since an unscoped fetch would
+  turn a data-rights feature into a data breach.
+- **`e2e.yml`'s flow echo said four while five ran.** Now DERIVED from the directory Maestro
+  actually runs, so it cannot drift again.
+- **`FLOW_OFFLINE_SYNC` is written and green** — the flow PR #66 shipped without and said so. It
+  proves three things unit tests cover individually and never together: the queue reaches DISK, the
+  §6.1 persisted cache renders a cold start with no network, and the completion is not reverted by
+  the drain.
+
+**Four E2E cycles, and none of the three defects were in offline sync.** (1) A launch race:
+`launchApp: clearState: true` fuses the clear and the launch, and the stale TASK — not process —
+was still being destroyed 1.1s in, so Android killed the process it had just created; the app never
+started and the flow failed 60s later looking exactly like a product defect. `stopApp` alone did not
+fix it; three discrete steps did. (2) The flow then broke a NEIGHBOUR: FLOW_AUTH_SESSION_PERSISTENCE
+lost a server-written preference, because the offline banner clearing proves the app *thinks* it is
+online, not that it is — NetInfo reports `isConnected` from a link-level signal with no usable
+route. The flow now makes the app prove connectivity with a cleared cold start before ending, so a
+dead radio fails the flow that turned it off rather than poisoning the next one. (3) Both were found
+by reading the uploaded ARTIFACT — the hierarchy holding nothing but the status-bar clock, and the
+logcat kill sequence — neither of which appears in the run log. The lesson this project already paid
+for with the Pixel Launcher ANRs.
+
+**Also corrected:** `DATA_INVENTORY.md` v1.0 attributed an analytics prune to ADR-025, which
+mentions pruning zero times, while TDD §6.4 says deletion leaves analytics intact. **No retention
+period is specified for `analytics_event` anywhere** — a documentation gap, not an unimplemented
+intent.
+
+**Verified:** 6/6 flows green on main (run 30261926062), 102 vitest, 43 pgTAP, five CI gates green.
+
+---
+
+**Previously — the account-deletion executor — the launch blocker B6.3 found is closed at engineering scope.**
 
 `SVC_account.delete` had written an `account_deletion` row with a 30-day grace window since the
 Backend Foundation milestone, and nothing had ever read it back. Now:
@@ -532,7 +569,7 @@ No new product scope.
 | Mobile — Notifications | ✅ M7 |
 | Mobile — Subscription | ✅ M8 |
 | AI Platform | 🟡 adapters done; corpus + eval pending |
-| Testing | 🟢 447 unit/component/domain (350 mobile + 97 vitest) + 34 pgTAP (17 RLS/DB + **17 for the F-3 deletion executor**) + a monthly DR restore drill + **5 Maestro flows, all green** · bundle gate per PR · 🟢 **E2E green in CI** — **5/5** on a real native Android build (RETURNING · MORNING_RITUAL · SESSION_PERSISTENCE · AUTH_SESSION_PERSISTENCE · ONBOARDING) in 5m16s, run 30207484940 on `a05760d`, 2026-07-26. (The count read "4" until this session: FLOW_AUTH_SESSION_PERSISTENCE was added in B6 and never counted. `e2e.yml`'s step-summary echo still lists only four names — a workflow fix that is owed.); gate fails fast (PR #35) and the launcher-ANR false-red is removed at its cause (PR #55 — `hide_error_dialogs` alone had stopped being sufficient) · AI-eval de-declared (owed: §9.4 harness); api-contract restored |
+| Testing | 🟢 452 unit/component/domain (350 mobile + 102 vitest) + 43 pgTAP (17 RLS + 9 DB + **17 for the F-3 deletion executor**) + a monthly DR restore drill + **6 Maestro flows, all green** · bundle gate per PR · 🟢 **E2E green in CI** — **6/6** on a real native Android build (RETURNING · MORNING_RITUAL · SESSION_PERSISTENCE · AUTH_SESSION_PERSISTENCE · ONBOARDING · **OFFLINE_SYNC**) in 5m16s, run 30207484940 on `a05760d`, 2026-07-26. (The count read "4" until this session: FLOW_AUTH_SESSION_PERSISTENCE was added in B6 and never counted. `e2e.yml`'s echo is now DERIVED from the flows directory, so the count cannot drift again.); gate fails fast (PR #35) and the launcher-ANR false-red is removed at its cause (PR #55 — `hide_error_dialogs` alone had stopped being sufficient) · AI-eval de-declared (owed: §9.4 harness); api-contract restored |
 | Beta | 🚧 In progress — **B2 ✅**; **B5 ✅ at verifiable scope** (NFR-15 blocked on PITR — a purchase); **B6 ✅ at verifiable scope** (OWASP review ✅ · CCPA export + SVC_account authz ✅ · B6.3 inventory/policy/labels ✅ · §5.2 controls ✅ — ⛔ **but deletion is never executed**, an engineering-closable launch blocker); **B4 🟡 ~75%** (owner-gated on a Sentry org); B1/B3 owner-gated; B7–B8 pending |
 | Production | ⏳ |
 

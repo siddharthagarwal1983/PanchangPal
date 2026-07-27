@@ -2,9 +2,9 @@
 
 # PanchangPal — Current Milestone
 
-Version: 4.3.0
+Version: 4.4.0
 
-Last Updated: 2026-07-27 (the deletion executor — the blocker B6.3 found is closed at engineering scope)
+Last Updated: 2026-07-27 (deletion executor + the owed follow-ups; E2E runs 6 flows)
 
 Purpose:
 This document defines the current milestone. Unlike SESSION.md (daily work) or TASK.md (current
@@ -384,7 +384,7 @@ possible fix and would have caught defects 1–3 at M1.
 | # | Slice | Covers | Status |
 |---|---|---|---|
 | B1 | Environments & secrets | dev/staging/prod projects, per-env secrets, fail-closed preflight (§1, §4) | 🟡 ~85% — prod blocked on a paid plan |
-| B2 | E2E verification | bundle gate (done in B1) + Maestro FLOW_*; green in CI (§2.2, §10.1) | ✅ COMPLETE — bundle gate + **5 flows GREEN** on a native build (RETURNING · MORNING_RITUAL · SESSION_PERSISTENCE · AUTH_SESSION_PERSISTENCE · ONBOARDING), 5/5 in 5m16s on run 30207484940. The count was recorded as 4 until 2026-07-26: FLOW_AUTH_SESSION_PERSISTENCE arrived with B6 and was never added to the tally, and `e2e.yml`'s own step summary still echoes four names. Gate hardened at its cause: the launcher-ANR false-red is gone with the move to the AOSP image (PR #55). Remaining 2 flows blocked on other slices/backends/gated feature |
+| B2 | E2E verification | bundle gate (done in B1) + Maestro FLOW_*; green in CI (§2.2, §10.1) | ✅ COMPLETE — bundle gate + **6 flows GREEN** on a native build (RETURNING · MORNING_RITUAL · SESSION_PERSISTENCE · AUTH_SESSION_PERSISTENCE · ONBOARDING · **OFFLINE_SYNC**), 6/6 on run 30261926062 (2026-07-27). The count was recorded as 4 until 2026-07-26: FLOW_AUTH_SESSION_PERSISTENCE arrived with B6 and was never added to the tally, and `e2e.yml`'s echo is now DERIVED from the flows directory, so it cannot drift again. Gate hardened at its cause: the launcher-ANR false-red is gone with the move to the AOSP image (PR #55). Remaining 2 flows blocked on other slices/backends/gated feature |
 | B3 | Build & distribution | eas.json profiles, Hermes, signing, source maps, TestFlight / Play Internal (§2.3) | 🟡 ~80% — automated builds work; store accounts + Sentry (B4) remain |
 | B4 | Observability | Sentry, telemetry, SLO dashboards + alerts (§7) | 🟡 ~75% — B4.1 seam ✅ · B4.2 sink ✅ · B4.3 server seam + prod release gate ✅ · EVT_* daily-habit funnel now emitting (§11.4, incl. the North Star input EVT_017); **upload + B4.4 owner-gated on a Sentry org (free tier)** |
 | B5 | Reliability & DR | backups, restore drill, runbooks, graceful degradation (§8) | ✅ COMPLETE at verifiable scope — runbooks (§8.3) · mechanised restore drill · §8.2 degradation policy · §8.4 operator resilience. **One deliverable is NOT engineering-closable: NFR-15 needs PITR, which is a purchase.** Recorded as a launch blocker rather than counted as done. |
@@ -578,9 +578,13 @@ testers' hands.
   app worked only because every hook also called its API directly, leaving the queue to grow
   forever. Now: durable queue through the shared `KeyValueStore` seam, a single-flight drain with
   FIFO batching and jittered backoff, dequeue on server acknowledgement, and the §6.1 persisted
-  read cache so a cold start offline is not empty. **Residual risk, stated:** it has never run
-  against a live backend, and there is no `FLOW_OFFLINE_SYNC` Maestro flow — which is exactly the
-  class of gap a real flow caught for MMKV and unit tests structurally cannot.
+  read cache so a cold start offline is not empty. ~~**Residual risk:** never run against a live backend, and no `FLOW_OFFLINE_SYNC`.~~ **CLOSED
+  2026-07-27.** `FLOW_OFFLINE_SYNC` is written and green against staging on a native build, proving
+  the queue reaches disk, the §6.1 cache renders a cold start with no network, and the drain does
+  not revert the completion. Getting it green found three E2E-harness defects and none in offline
+  sync itself — a launch race where the stale TASK's destroy-timeout killed the newly started
+  process, the flow breaking a neighbour because a cleared offline banner is not proof of a usable
+  route, and both being visible only in the uploaded artifact rather than the run log.
 - ~~**⛔ ACCOUNT DELETION IS NEVER EXECUTED**~~ — **CLOSED 2026-07-27 at engineering scope.** The
   executor (`execute_account_deletion`), the sweep (`sweep_due_account_deletions`), the pg_cron
   schedule, the secret-authorized `POST /account/sweep` trigger, and 17 pgTAP assertions all exist

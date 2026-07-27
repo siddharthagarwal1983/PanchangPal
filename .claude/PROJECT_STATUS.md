@@ -2,9 +2,9 @@
 
 # PanchangPal — Project Status Dashboard
 
-Version: 1.10.0
+Version: 1.11.0
 
-Last Updated: 2026-07-27 (the account-deletion executor — the blocker B6.3 found is closed)
+Last Updated: 2026-07-27 (deletion executor + the owed follow-ups; E2E runs 6 flows)
 
 Purpose:
 This document provides a high-level snapshot of the overall project.
@@ -73,7 +73,7 @@ TBD
 | Backend Foundation (SVC_*) | ✅ Complete | 100% (panchang compute blocked by ADR-033) |
 | Mobile Development (feature slices) | ✅ Complete | 100% (M1–M8 done) |
 | AI Platform | 🟡 In Progress | Adapters + RAG pipeline done; corpus + eval pending |
-| Testing | 🟢 Healthy | 447 green (350 mobile jest + 97 vitest) + **17 pgTAP assertions on the F-3 deletion executor** + 17 pgTAP RLS/DB assertions; bundle gate per PR; **4 Maestro FLOW_* green on main**; the emulator-ANR false-red is now fixed at its cause (AOSP image, PR #55) after PR #41's `hide_error_dialogs` proved a symptom patch — 3 of the last 4 failures were launcher ANRs; API contract gate restored and proven to fail; AI eval harness still owed |
+| Testing | 🟢 Healthy | 452 green (350 mobile jest + 102 vitest) + 43 pgTAP (incl. **17 on the F-3 deletion executor**) + 17 pgTAP RLS/DB assertions; bundle gate per PR; **6 Maestro FLOW_* green on main** (incl. FLOW_OFFLINE_SYNC); the emulator-ANR false-red is now fixed at its cause (AOSP image, PR #55) after PR #41's `hide_error_dialogs` proved a symptom patch — 3 of the last 4 failures were launcher ANRs; API contract gate restored and proven to fail; AI eval harness still owed |
 | Beta | 🚧 In progress | 47% (B2 ✅; B5 ✅ at verifiable scope — NFR-15 still needs PITR; **B6 ✅ at verifiable scope** — OWASP review + 2 critical fixes + CCPA export + B6.3 inventory/policy/labels + §5.2 controls, ⛔ **but deletion is never executed**; B4 🟡 ~75% owner-gated on a Sentry org; B1/B3 owner-gated; B7–B8 pending) |
 | Production Launch | ⏳ Pending | 0% |
 
@@ -349,6 +349,20 @@ prefs work today, so gating and prefs are real before the SDKs are wired.
 
 # Recently Completed
 
+- **The three owed follow-ups (2026-07-27).** (a) The **CCPA export omitted every message** —
+  `EXPORT_TABLES` fetches with `.eq('user_id', …)` but `message` keys on `conversation_id`, so the
+  export returned conversation headers with none of their content, silently. Fixed and proven by two
+  perturbations. (b) `e2e.yml`'s flow echo said four while five ran; it is now derived from the
+  directory Maestro runs. (c) **`FLOW_OFFLINE_SYNC` is written and green** — the flow PR #66 shipped
+  without. It proves the queue reaches disk, the §6.1 cache renders a cold start with no network,
+  and the drain does not revert the completion.
+  **Four E2E cycles, and none of the three defects were in offline sync:** a launch race where a
+  stale task's destroy-timeout killed the newly started process; the flow breaking a neighbour
+  because a cleared offline banner proves the app *thinks* it is online rather than that it is; and
+  both being visible only in the uploaded artifact, never the run log. E2E now runs **6 flows**,
+  6/6 green on main.
+  Also corrected `DATA_INVENTORY.md`: v1.0 attributed an analytics prune to ADR-025, which mentions
+  pruning zero times. **No retention period is specified for `analytics_event` anywhere.**
 - **The account-deletion executor (2026-07-27).** The launch blocker B6.3 found, closed the same
   day. `execute_account_deletion(uuid)` performs an atomic per-user erasure — SQL rather than
   TypeScript, because it spans nine tables and supabase-js has no transaction across calls, so a
