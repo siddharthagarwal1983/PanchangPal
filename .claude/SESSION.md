@@ -2,8 +2,13 @@
 
 # PanchangPal — Current Session
 
-Version: 2.5.0
-Last Updated: 2026-07-26 (End Session — offline sync merged; first local native build)
+Version: 2.6.0
+Last Updated: 2026-07-26 (End Session — offline sync + docs + actions bump merged; deps triaged)
+
+**Main is at `d3218f9`, clean and green.** Merged this session: `86b3843` offline sync (#66) ·
+`21e24f9` session docs (#67) · `d3218f9` the Dependabot actions group (#60, verified by dispatching
+E2E on its branch first, since it edits `e2e.yml` and E2E never runs on PRs — 5/5 flows on
+`bf66e42`).
 
 ---
 
@@ -57,8 +62,21 @@ degrade rather than crash, the PR #14 fix working).
   the tracking docs this session; **the workflow echo is still owed** (a code change, not a doc).
 - §6.4 wants EVT_* on sync confirm; B4.5 fires them from view-model transitions. Flagged, unchanged.
 - PDD owes approved copy for 11 of 24 ERR_* codes; SCR_ONBOARDING_* slides remain unbuilt.
-- Three Dependabot PRs red on a jest 30.4.2 runtime/mock mismatch (`clearMocksOnScope`). Main is
-  unaffected.
+- **Five Dependabot PRs are open and deliberately NOT merged.** Triaged at session close; main is
+  unaffected by all of them. Do not merge these without reading why:
+  - **Red — merging puts main red.** #63 jest 29.7.0→30.4.2 (`this._moduleMocker.clearMocksOnScope
+    is not a function` — all five `@panchangpal/ui` suites fail to *run*, 0 tests execute) · #62
+    i18next 23→26 · #61 the production-minor group of 9, whose single failure is most likely the
+    same jest break arriving transitively — worth confirming, because a *minor* group failing is
+    the odd one.
+  - **Green but crossing a pinned boundary.** #64 `@expo/metro-runtime` 6.1.2→**57.0.7** against a
+    manifest pinning `~6.1.2` and an installed copy peer-bound to `expo@54.0.36` (57 belongs to a
+    much later SDK) · #65 `@babel/runtime` 7.29.7→**8.0.0** against `@babel/core@7.29.7`, an
+    unsupported pairing — and `@babel/runtime` is the package whose absence broke every bundle
+    (Execution Gap defect #2). **Their green is weaker than it looks**: the bundle gate is
+    `expo export`, which can pass while the runtime breaks, and **no dependency PR has ever been
+    exercised on a device**, because E2E does not run on PRs. Both belong in a deliberate SDK
+    upgrade increment where a native build and the flows actually validate them.
 
 # Blockers (all owner purchases)
 
