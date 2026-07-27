@@ -54,3 +54,30 @@ export function executeAfter(requestedAtIso: string, graceDays = 30): string {
   d.setUTCDate(d.getUTCDate() + graceDays);
   return d.toISOString();
 }
+
+/**
+ * May this caller run the deletion sweep?
+ *
+ * A pure rule so it can be tested exhaustively, because getting it wrong is unrecoverable: the
+ * sweep erases accounts, and `withHandler` proves only that SOME bearer token is present.
+ * Anonymous sign-in is enabled (config.toml), so anyone can mint a valid JWT for free — the exact
+ * gap B6.2 found when SVC_account trusted the request body for identity. A user JWT therefore
+ * cannot authorize this; a separately provisioned secret must.
+ *
+ * **An unconfigured secret refuses everyone.** The tempting alternative — treat "no secret set" as
+ * "not protected yet" and allow the call — is how an endpoint ships open. Refusing means an
+ * operator must provision `ACCOUNT_SWEEP_SECRET` before the sweep can be triggered over HTTP,
+ * while the scheduled path (pg_cron calling the SQL function directly) is unaffected either way.
+ *
+ * Comparison is constant-time: the caller controls the header and can otherwise measure their way
+ * to the secret one character at a time.
+ */
+export function isSweepAuthorized(
+  configuredSecret: string,
+  presentedSecret: string | null,
+  timingSafeEqual: (a: string, b: string) => boolean,
+): boolean {
+  if (!configuredSecret) return false;
+  if (!presentedSecret) return false;
+  return timingSafeEqual(configuredSecret, presentedSecret);
+}

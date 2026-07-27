@@ -22,7 +22,8 @@ import { AppError } from '../_shared/errors.ts';
 import { readEnv } from '../_shared/env.ts';
 import { serviceClient } from '../_shared/supabase.ts';
 import { AccountRepository } from '../_shared/db/accountRepo.ts';
-import { resolveMerge, canDeleteAccount, executeAfter } from './logic.ts';
+import { resolveMerge, canDeleteAccount, executeAfter, isSweepAuthorized } from './logic.ts';
+import { timingSafeEqual } from '../_shared/crypto.ts';
 
 // deno-lint-ignore no-explicit-any
 const getEnv = (k: string) => (globalThis as any).Deno?.env.get(k);
@@ -106,6 +107,31 @@ export const handler = withHandler('SVC_account', async (req, ctx) => {
         user_id: callerUid,
         data: rows,
       });
+    }
+    // The scheduled deletion job (TDD Part 2 §6.5: deletion is "executed by a scheduled
+    // SVC_account job"). The routine schedule is pg_cron calling sweep_due_account_deletions()
+    // directly — no HTTP hop, no secret to leak, and it keeps working if this function is
+    // unreachable. THIS action is the operator-facing trigger: run the sweep now, after enabling
+    // pg_cron, or where the schedule is unavailable.
+    //
+    // NOT authorized by the caller's identity. `withHandler` proves only that a bearer token is
+    // present and anonymous sign-in is enabled, so any attacker can hold one; a user JWT cannot
+    // authorize erasing other people's accounts. A separately provisioned secret does, and an
+    // unset secret refuses everyone (see isSweepAuthorized).
+    case 'sweep': {
+      const secret = getEnv('ACCOUNT_SWEEP_SECRET') ?? '';
+      const presented = req.headers.get('x-panchangpal-sweep-secret');
+      if (!isSweepAuthorized(secret, presented, timingSafeEqual)) {
+        // Logged without the presented value: it is a credential guess, and putting it in the
+        // logs turns a failed attempt into a stored secret.
+        ctx.log.warn('account_sweep_unauthorized', { configured: Boolean(secret) });
+        throw new AppError('ERR_UNKNOWN', 'Not authorized.', false, 401);
+      }
+      const { deleted, blocked } = await repo.sweepDueDeletions();
+      // Counts only — never which accounts. An erasure log that names its subjects keeps the
+      // data the erasure was supposed to remove.
+      ctx.log.info('account_deletion_sweep', { deleted, blocked });
+      return json({ deleted, blocked });
     }
     case 'transfer':
       ctx.log.info('household_transfer');

@@ -8,6 +8,12 @@ export interface ServerEnv {
   SUPABASE_ANON_KEY: string;
   OPENAI_API_KEY: string;
   REVENUECAT_WEBHOOK_SECRET: string;
+  /**
+   * Authorizes the SVC_account deletion sweep (F-3). Optional like the two above: absent, the
+   * sweep action refuses every caller, which is the correct failure — a deletion sweep that
+   * anyone can trigger is worse than one an operator has to configure before using.
+   */
+  ACCOUNT_SWEEP_SECRET: string;
 }
 
 const REQUIRED: (keyof ServerEnv)[] = [
@@ -28,5 +34,6 @@ export function readEnv(get: (k: string) => string | undefined): ServerEnv {
     SUPABASE_ANON_KEY: get('SUPABASE_ANON_KEY')!,
     OPENAI_API_KEY: get('OPENAI_API_KEY') ?? '',
     REVENUECAT_WEBHOOK_SECRET: get('REVENUECAT_WEBHOOK_SECRET') ?? '',
+    ACCOUNT_SWEEP_SECRET: get('ACCOUNT_SWEEP_SECRET') ?? '',
   };
 }

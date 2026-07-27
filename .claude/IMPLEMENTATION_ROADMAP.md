@@ -2,8 +2,8 @@
 
 # PanchangPal — Implementation Roadmap
 
-Version: 2.1.0
-Last Updated: 2026-07-27 (B6 complete at verifiable scope; deletion is never executed)
+Version: 2.2.0
+Last Updated: 2026-07-27 (the deletion executor shipped; pg_cron is now an owner action)
 
 Purpose: the forward plan from the current state. Complements PROJECT_STATUS.md (snapshot) and
 CURRENT_MILESTONE.md (active milestone). Updated when scope or sequencing changes — and at every
@@ -21,16 +21,21 @@ the store Data Safety / App Privacy answers, all in `docs/devops/`, each derived
 it. The inventory was built from the migrations and the mobile source rather than from the
 documentation, and §2/§4 are pinned to both by a conformance test proven to fail four ways.
 
-⛔ **It found a launch blocker: account deletion is recorded and never executed.**
-`account_deletion` rows are written with a 30-day grace and nothing ever reads them back — no
-executor, no job runner, `pg_cron` commented out, `executed_at` never set. The same absence explains
-every missing retention sweep, because **no scheduled execution exists in this project at all**.
-Engineering-closable; no purchase involved.
+It found a launch blocker — account deletion was recorded and never executed — **and that blocker
+was closed the same day.** The executor, the sweep, the pg_cron schedule, the secret-authorized
+operator trigger and 17 pgTAP assertions all exist, verified against a real Postgres 17 with five
+SQL and two TypeScript perturbations.
 
-**Next: the account-deletion executor** — it unblocks the privacy policy, both store forms, Apple
-5.1.1(v), and every retention sweep at once, which makes it the highest-value credential-free work
-left in the milestone. Its in-app half additionally needs a PDD screen and SVC_household (F-3
-requires a household owner to transfer ownership before deleting).
+**Two residuals, both now precise:** `pg_cron` must be enabled on the hosted projects (a Supabase
+dashboard action, so an owner task), and `executed_at` cannot be written because the audit row
+cascades with its own subject — a contradiction with TDD §5.1's deletion-audit claim that the TDD
+owes a resolution for.
+
+**Next, in order:** (1) owner enables pg_cron, turning the manual trigger into the daily schedule
+the migration already defines; (2) the **`job` table worker** ADR-025 specifies — the deletion sweep
+proved the scheduling half, and the analytics rollup and prune, the tombstone sweep and the
+`panchang_cache` TTL are all still waiting on the worker half; (3) the **in-app deletion screen**
+Apple 5.1.1(v) requires, which needs a PDD affordance and SVC_household for ownership transfer.
 
 **Offline sync (TDD Part 4 §6) was implemented and merged on 2026-07-26** (`86b3843`, PR #66),
 closing a launch blocker B6's OWASP review surfaced: the mutation queue was in memory beneath a header claiming persistence, was never

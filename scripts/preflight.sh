@@ -148,6 +148,12 @@ case "$TARGET" in
     require_var SENTRY_ORG         "$GH_SECRETS → Repository secrets"
     require_var SENTRY_PROJECT     "$GH_SECRETS → Repository secrets"
     require_var SENTRY_AUTH_TOKEN  "$GH_SECRETS → Repository secrets (source-map upload)"
+    # F-3 deletion sweep. Required in production for a compliance reason rather than a
+    # functional one: without it the SVC_account `sweep` action refuses every caller, so the
+    # only path that executes a deletion request is pg_cron — and if that is not enabled
+    # either, requests accumulate unexecuted while the privacy policy and both store forms
+    # claim a deletion capability. Absent, an operator has no way to run the sweep by hand.
+    require_var ACCOUNT_SWEEP_SECRET "$GH_SECRETS → Environment: production"
     optional_var SUPABASE_SERVICE_ROLE_KEY "set on the PROD Supabase project"
     optional_var OPENAI_API_KEY            "live Ask Guru stays dark without it (GURU_LIVE gate)"
     printf "  %sReminder: production requires manual approval on the 'production' Environment.%s\n" "$DIM" "$RST"

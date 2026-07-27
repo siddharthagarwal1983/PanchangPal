@@ -51,6 +51,28 @@ export class AccountRepository {
     return data.user.id;
   }
 
+  /**
+   * Execute every account deletion whose grace window has expired (F-3).
+   *
+   * Delegates to the `sweep_due_account_deletions()` SQL function rather than issuing the
+   * deletes from here, and that is the point: the erasure spans nine tables with four foreign
+   * keys that RESTRICT, and supabase-js has no transaction across calls — a failure midway
+   * through would leave an account half-erased with no way to tell how far it got. The function
+   * body is one transaction per user. This method exists to give the sweep a caller, a log line
+   * and a correlation id, not to reimplement it.
+   *
+   * `blocked` counts users the sweep refused: a household owner who never transferred ownership.
+   * Those rows stay in place and are retried, so a rising count means people are stuck behind a
+   * transfer nobody asked them to perform — worth surfacing rather than summing into a total.
+   */
+  async sweepDueDeletions(): Promise<{ deleted: number; blocked: number }> {
+    const { data, error } = await this.db.rpc('sweep_due_account_deletions');
+    if (error) throw error;
+    // Postgres returns a one-row set for a `returns table` function.
+    const row = (Array.isArray(data) ? data[0] : data) as { deleted?: number; blocked?: number } | null;
+    return { deleted: row?.deleted ?? 0, blocked: row?.blocked ?? 0 };
+  }
+
   /** Every row this user owns, keyed by table. Used only by the export action. */
   async exportOwnedRows(userId: string): Promise<Record<string, unknown[]>> {
     const out: Record<string, unknown[]> = {};

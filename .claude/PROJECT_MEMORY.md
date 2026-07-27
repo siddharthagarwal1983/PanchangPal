@@ -2,9 +2,9 @@
 
 # PanchangPal — Project Memory
 
-Version: 2.1.0
+Version: 2.2.0
 
-Last Updated: 2026-07-27 (privacy-documentation seam; no scheduled execution exists in this project)
+Last Updated: 2026-07-27 (the deletion executor seam; pg_cron has one real user)
 
 Current Phase:
 Beta Readiness & Platform Hardening (TDD Part 5)
@@ -509,22 +509,39 @@ Stable, cross-cutting facts (permanent until an approved decision changes them):
   scripts, which should be reverted). **iOS is unchanged — still unbuilt, still needs an Apple
   membership.** This matters mainly because Maestro flows can now be iterated locally instead of
   through 20-minute CI runs.
-- **NOTHING SCHEDULED RUNS IN THIS PROJECT** (established 2026-07-27, B6.3). `pg_cron` is
-  **commented out** in `20260712000001_extensions.sql`, no job runner processes the `job` table
-  (`analytics_rollup`, `notify_schedule` and the rest are enum values with no consumer), and no
-  Edge Function is invoked on a timer. Anything the documentation describes as happening "after N
-  days", "periodically", or "in the background" **does not happen**. The known consequences:
-  account deletion is recorded and never executed (see below), analytics never roll up or prune,
-  personal-date tombstones are never removed, and `panchang_cache` has no TTL sweep. Treat this as
-  the first thing to check before believing any claim about deferred or recurring work.
-- **The CCPA deletion right is scheduled, not performed** (established 2026-07-27, B6.3).
-  `POST /account/delete` gates correctly per F-3 and writes an `account_deletion` row with a 30-day
-  `execute_after`; **no code ever reads that row back** and `executed_at` is never set. TDD Part 5
-  §6.2's "hard-deletes owned rows" is unimplemented. This is a launch blocker: a privacy policy
-  promising deletion and a store answer of "users can request deletion" would each be a false
-  statement, and CCPA §1798.105 grants a right to deletion rather than a right to have a request
-  logged. **Apple 5.1.1(v) additionally requires in-app account deletion**, so closing it needs the
-  executor, a PDD-specified screen, and SVC_household for the ownership transfer F-3 requires.
+- **ALMOST NOTHING SCHEDULED RUNS IN THIS PROJECT** (established 2026-07-27). The deletion sweep is
+  the **only** scheduled work that exists, and only where `pg_cron` has been enabled — which is a
+  Supabase **dashboard** action a migration cannot perform. Nothing processes the `job` table:
+  `analytics_rollup`, `notify_schedule`, `winback_segment`, `content_ingest` and
+  `entitlement_reconcile` are enum values with no consumer, so ADR-025's worker pattern is unbuilt.
+  Anything the documentation describes as happening "periodically" or "in the background" — the
+  analytics rollup and prune, personal-date tombstone removal, `panchang_cache` TTL — **does not
+  happen.** Check this before believing any claim about deferred or recurring work.
+- **Account erasure goes through ONE seam, and it is SQL** — `execute_account_deletion(uuid)`
+  (atomic, per user) and `sweep_due_account_deletions()` (due rows, each in its own subtransaction),
+  in `20260727000110_account_deletion_executor.sql`. Deliberately not TypeScript: the erasure spans
+  nine tables and supabase-js has no transaction across calls, so a failure midway would leave an
+  account half-erased with no way to tell how far it got. `SVC_account.sweep` **calls** it and must
+  never reimplement it.
+  **Six foreign keys need explicit handling** and any rewrite must preserve all six:
+  `household.owner_id`, `invite.inviter_id`, `invite.accepted_by` and `referral.referred_user_id`
+  RESTRICT, so a bare `delete from auth.users` errors; `household_member` and `support_ticket` use
+  **ON DELETE SET NULL**, which keeps the row and drops only the link — leaving the deleted user's
+  `display_name` in a household and their `email` and free-text `body` in a support ticket.
+  `referral.referred_user_id` is **nulled, not deleted**, because that row belongs to the referrer
+  and one user's erasure must not destroy another person's record. Analytics are untouched by
+  design (§6.5: pseudonymous already, and deleting them would corrupt the household North Star).
+  **Tests must assert by CONTENT, not by `user_id`** — a `where user_id = ...` assertion passes
+  against the SET NULL leak, because that is precisely the column being nulled.
+  Established after `SVC_account.delete` spent the whole project writing `account_deletion` rows
+  that nothing ever read back (found by B6.3).
+- **`account_deletion.executed_at` is unwritable, and that is a documented contradiction, not an
+  oversight** (2026-07-27). The row cascades with `app_user`, so a successful erasure removes the
+  request row along with its subject and there is nothing left to stamp. TDD Part 2 §5.1 names
+  `TBL_ACCOUNT_DELETION` as the **deletion audit** mitigating repudiation, which requires the row to
+  survive; §3's schema declares the cascade, which requires it not to. The executor implements the
+  schema as declared — changing the foreign key would invent a privacy decision, since the surviving
+  row names a uid. **The TDD owes a resolution.** Today a completed deletion leaves no record.
 - **Privacy documentation is DERIVED, and the inventory is pinned to the code** —
   `docs/devops/DATA_INVENTORY.md` is built from `apps/backend/migrations` and `apps/mobile/{app,src}`,
   and `PRIVACY_POLICY_DRAFT.md` and `STORE_PRIVACY_LABELS.md` are derived from it. None of the three

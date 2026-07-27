@@ -2,9 +2,9 @@
 
 # PanchangPal — Current Milestone
 
-Version: 4.2.0
+Version: 4.3.0
 
-Last Updated: 2026-07-27 (B6.3 — B6 complete at verifiable scope; deletion is never executed)
+Last Updated: 2026-07-27 (the deletion executor — the blocker B6.3 found is closed at engineering scope)
 
 Purpose:
 This document defines the current milestone. Unlike SESSION.md (daily work) or TASK.md (current
@@ -33,7 +33,27 @@ schema and to the emitted `EVT_*` set by a conformance test** — an unclassifie
 undisclosed collection, and a classified table the schema no longer has is a disclosure for data the
 product does not hold. Both directions fail. Four perturbations proved it.
 
-⛔ **The finding: the CCPA deletion right is recorded and never carried out.**
+✅ **AND THE FINDING IS NOW CLOSED (same day).** The account-deletion executor exists: an atomic
+per-user erasure in SQL, a sweep that isolates each user in its own subtransaction, a pg_cron
+schedule, the operator-triggered `POST /account/sweep` action §6.5 names, and
+`account_deletion_sweep_is_scheduled()` so the state is assertable rather than assumed. Proven
+against a real Postgres 17 by **17 pgTAP assertions** checking the rows are gone table by table,
+**five SQL perturbations**, **two TypeScript perturbations** on the sweep authorization, and a DR
+invariant that fails with the executor dropped.
+
+Building it surfaced **six foreign keys** a naive `delete from auth.users` gets wrong — four that
+RESTRICT, and two using ON DELETE SET NULL that keep the row and drop only the link, leaving a
+deleted user's display name in a household and their email in a support ticket. It also caught a
+defect in the *test*: asserting `where user_id = ...` passes against exactly that leak, because
+that is the column being nulled. The assertions key on content instead.
+
+**Residual, and stated:** pg_cron must be enabled on the hosted project (an owner dashboard
+action), and `executed_at` cannot be written because the audit row cascades with its own subject —
+a collision with §5.1's deletion-audit claim that the TDD owes a resolution for.
+
+**The original finding, for the record:**
+
+⛔ **The CCPA deletion right was recorded and never carried out.**
 `POST /account/delete` gates correctly (F-3) and writes `account_deletion` with a 30-day
 `execute_after`. Nothing reads that row back — no Edge Function queries the table, no runner
 processes `job`, `pg_cron` is **commented out**, and `executed_at` is never set. TDD Part 5 §6.2
@@ -416,8 +436,13 @@ One slice per session, same cadence as M1–M8: implemented, self-verified, revi
       - [x] **B6.3 data-collection inventory → privacy policy draft → store privacy labels**, all
             three in `docs/devops/`, derived from the code and pinned by a conformance test.
       - [x] **B6.4 §5.2 supply-chain controls** — SBOM, Dependabot, `eas-cli` pinning.
-      - [ ] ⛔ **Deletion is not verifiable end-to-end because it is not implemented** — see the risk
-            register. The blocker, not the verification, is what is outstanding.
+      - [x] **Deletion executor built and proven** (2026-07-27) — atomic SQL erasure, sweep,
+            pg_cron schedule, secret-authorized operator trigger, 17 pgTAP assertions, five SQL
+            and two TypeScript perturbations.
+      - [ ] **Enable pg_cron on the hosted projects** (owner, dashboard) — until then deletions
+            execute only via the manual trigger.
+      - [ ] **TDD owes a resolution for the deletion audit** — `executed_at` is unwritable under
+            the declared cascade, contradicting §5.1's repudiation mitigation.
       - [ ] Legal review of the policy draft and the store answers (owner-held).
 - [ ] **B7** — version trains, OTA channels (`staging`/`prod`) with runtime-version binding and
       crash-spike auto-rollback; rollback paths verified (§3.4).
@@ -556,22 +581,30 @@ testers' hands.
   read cache so a cold start offline is not empty. **Residual risk, stated:** it has never run
   against a live backend, and there is no `FLOW_OFFLINE_SYNC` Maestro flow — which is exactly the
   class of gap a real flow caught for MMKV and unit tests structurally cannot.
-- **⛔ ACCOUNT DELETION IS NEVER EXECUTED, AND NOTHING SCHEDULED RUNS AT ALL (found 2026-07-27,
-  B6.3).** `POST /account/delete` gates the request per F-3 and writes `account_deletion` with a
-  30-day `execute_after`. **No code ever reads that row back.** No Edge Function queries the table;
-  no runner processes `job` (its enum values — `analytics_rollup`, `notify_schedule` — have no
-  consumer); `pg_cron` is **commented out** in `20260712000001_extensions.sql`;
-  `account_deletion.executed_at` is never set. TDD Part 5 §6.2's "hard-deletes owned rows" does not
-  exist in the repository.
-  **Why it is worse than an unimplemented feature:** the row it writes makes the system look like
-  the request is being honoured, and it is the basis on which a privacy policy and two store forms
-  would claim a deletion capability. CCPA §1798.105 gives a right to deletion, not a right to have a
-  request logged. **Apple 5.1.1(v) additionally requires in-app account deletion**, so closing this
-  is a three-part dependency: the executor (engineering), a deletion screen (PDD specifies none), and
-  SVC_household for the ownership transfer F-3 requires.
-  **The same absence is the cause of every retention gap** — no analytics rollup or prune, no removal
-  of personal-date tombstones, no `panchang_cache` TTL sweep. One fix, not five. Fully
-  engineering-closable; no purchase involved.
+- ~~**⛔ ACCOUNT DELETION IS NEVER EXECUTED**~~ — **CLOSED 2026-07-27 at engineering scope.** The
+  executor (`execute_account_deletion`), the sweep (`sweep_due_account_deletions`), the pg_cron
+  schedule, the secret-authorized `POST /account/sweep` trigger, and 17 pgTAP assertions all exist
+  and were verified against a real Postgres 17. **Two residuals:**
+  (a) **pg_cron must be enabled on the hosted projects** — a Supabase dashboard action a migration
+  cannot perform. The migration schedules the sweep where the extension exists and raises a
+  **warning** where it does not; `account_deletion_sweep_is_scheduled()` makes the state assertable
+  (false if the extension is absent, the job is missing, *or* an operator disabled it), it is
+  checked by the DR restore drill, and `ACCOUNT_SWEEP_SECRET` is required at preflight's production
+  tier. Until it is enabled, deletions run only when an operator triggers the sweep by hand.
+  (b) **`executed_at` cannot be written** — see the next entry.
+- **The deletion audit contradicts the schema (found 2026-07-27).** TDD Part 2 §5.1's threat model
+  names `TBL_ACCOUNT_DELETION` as the **deletion audit** mitigating repudiation, which requires the
+  row to survive the erasure. §3's schema declares `user_id ... on delete cascade`, which erases the
+  request row along with its own subject — so after a successful deletion there is nothing left to
+  stamp and `executed_at` is unreachable by construction. The executor implements the schema as
+  declared rather than changing a foreign key, because the surviving row would name a uid and that
+  is a privacy decision, not an implementation detail. **The TDD owes a resolution.** Consequence
+  today: a completed deletion leaves no record that it happened.
+- **⛔ No job runner processes the `job` table.** `analytics_rollup`, `notify_schedule`,
+  `winback_segment`, `content_ingest` and `entitlement_reconcile` are enum values with no consumer.
+  The deletion sweep proved the pg_cron half of ADR-025; the worker pattern is still unbuilt, and it
+  is what the analytics rollup and prune, the personal-date tombstone sweep and the
+  `panchang_cache` TTL are all waiting on.
 - **The CCPA export omits `message` rows (found 2026-07-27, B6.3).** `EXPORT_TABLES` returns the
   `conversation` header without the messages in it, so the export becomes incomplete the day
   `GURU_LIVE` is enabled — the moment the text actually exists. Cheap to fix, easy to forget,

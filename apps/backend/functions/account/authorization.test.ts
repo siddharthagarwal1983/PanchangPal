@@ -29,6 +29,7 @@ interface RepoCalls {
   scheduleDeletion: string[];
   reassign: Array<{ from: string; to: string }>;
   exported: string[];
+  sweeps: number;
 }
 
 function makeRepo(calls: RepoCalls, tokens: Record<string, string>) {
@@ -46,6 +47,10 @@ function makeRepo(calls: RepoCalls, tokens: Record<string, string>) {
     exportOwnedRows: vi.fn(async (userId: string) => {
       calls.exported.push(userId);
       return { user_profile: [{ user_id: userId }] };
+    }),
+    sweepDueDeletions: vi.fn(async () => {
+      calls.sweeps += 1;
+      return { deleted: 2, blocked: 1 };
     }),
   };
 }
@@ -66,6 +71,28 @@ vi.mock('../_shared/db/accountRepo.ts', () => ({
 
 const { handler } = await import('./index.ts');
 
+/**
+ * The handler reads ACCOUNT_SWEEP_SECRET through Deno.env, which does not exist under Vitest.
+ * Stubbing it here rather than mocking the module keeps the handler's own env lookup under test —
+ * including the case that matters most, where the variable is simply not set.
+ */
+const setSweepSecret = (v: string | undefined): void => {
+  (globalThis as unknown as { Deno?: { env: { get: () => string } } }).Deno =
+    v === undefined ? undefined : { env: { get: () => v } };
+};
+
+const postSweep = (secret?: string) =>
+  handler(
+    new Request('https://x/account/sweep', {
+      method: 'POST',
+      headers: {
+        authorization: 'Bearer caller-token',
+        ...(secret === undefined ? {} : { 'x-panchangpal-sweep-secret': secret }),
+      },
+      body: '{}',
+    }),
+  );
+
 const post = (action: string, body: unknown, jwt = 'caller-token') =>
   handler(
     new Request(`https://x/account/${action}`, {
@@ -76,7 +103,8 @@ const post = (action: string, body: unknown, jwt = 'caller-token') =>
   );
 
 beforeEach(() => {
-  calls = { scheduleDeletion: [], reassign: [], exported: [] };
+  calls = { scheduleDeletion: [], reassign: [], exported: [], sweeps: 0 };
+  setSweepSecret(undefined);
   repo = makeRepo(calls, { 'caller-token': CALLER, 'anon-token': ANON, 'victim-token': VICTIM });
 });
 
@@ -134,5 +162,50 @@ describe('SVC_account — the body can never choose the acting user', () => {
 
     expect(res.status).toBe(401);
     expect(calls.exported).toEqual([]);
+  });
+});
+
+/**
+ * The deletion sweep erases accounts, so its authorization is held to the same standard as the
+ * rest of this file: assume the caller is hostile and holds a valid token, because anonymous
+ * sign-in means they can always get one.
+ */
+describe('SVC_account sweep — a user token is never enough to erase accounts', () => {
+  it('refuses when no sweep secret is configured, even with a valid bearer token', async () => {
+    // The important one. An unconfigured secret must fail closed; treating it as "not protected
+    // yet" would leave a public endpoint that deletes accounts.
+    const res = await postSweep('anything');
+
+    expect(res.status).toBe(401);
+    expect(calls.sweeps).toBe(0);
+  });
+
+  it('refuses a valid bearer token with no sweep secret header', async () => {
+    setSweepSecret('right-secret');
+    const res = await postSweep(undefined);
+
+    expect(res.status).toBe(401);
+    expect(calls.sweeps).toBe(0);
+  });
+
+  it('refuses a wrong sweep secret', async () => {
+    setSweepSecret('right-secret');
+    const res = await postSweep('wrong-secret');
+
+    expect(res.status).toBe(401);
+    expect(calls.sweeps).toBe(0);
+  });
+
+  it('runs the sweep for a correct secret and reports counts, never subjects', async () => {
+    setSweepSecret('right-secret');
+    const res = await postSweep('right-secret');
+    const payload = (await res.json()) as Record<string, unknown>;
+
+    expect(res.status).toBe(200);
+    expect(calls.sweeps).toBe(1);
+    expect(payload).toEqual({ deleted: 2, blocked: 1 });
+    // No uid, no table name, no list of who was erased: an erasure record that names its subjects
+    // keeps exactly the data the erasure removed.
+    expect(JSON.stringify(payload)).not.toContain(CALLER);
   });
 });

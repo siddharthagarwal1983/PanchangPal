@@ -1,7 +1,7 @@
 # PanchangPal — Data Collection Inventory
 
-**Version:** 1.0.0
-**Last Updated:** 2026-07-27
+**Version:** 1.1.0
+**Last Updated:** 2026-07-27 (deletion executor shipped; §8.2 and §9 rewritten)
 **Owner:** Security / Privacy
 **Source of truth:** TDD Part 5 §6.1–§6.2 · ADR-031 (Privacy & Data-Minimization) · PDD §11.1
 **Slice:** B6.3 (Beta Readiness & Platform Hardening)
@@ -283,36 +283,64 @@ Reassigning those on an account merge is right; handing them back as "your data"
 - **No UI consumes this endpoint.** PDD specifies no screen, so building one would invent UX. The
   affordance is owed by the PDD; until it exists, a user cannot exercise the right in-app.
 
-### 8.2 ⛔ Deletion — scheduled, and never executed
+### 8.2 Deletion — implemented 2026-07-27
 
-**This is a launch blocker found while building this inventory.**
+**This section previously read "scheduled, and never executed."** That was the finding this
+inventory produced, and it is now closed at engineering scope.
 
 `POST /account/delete` gates the request (F-3: an owner with other members must transfer ownership
 first), then writes a row to `account_deletion` with `requested_at` and `execute_after`
-(now + 30 days) and returns the grace date.
+(now + 30 days) and returns the grace date. **Execution now exists:**
 
-**Nothing ever reads that row back.** Across the entire repository:
+| Piece | Where |
+|---|---|
+| Atomic per-user erasure | `execute_account_deletion(uuid)` — `20260727000110_account_deletion_executor.sql` |
+| Due-row sweep | `sweep_due_account_deletions()` — same migration |
+| Schedule | pg_cron, daily 03:15 UTC — `20260727000120_account_deletion_schedule.sql` |
+| Operator trigger | `POST /account/sweep`, secret-authorized |
+| Proof | `apps/backend/tests/integration/account_deletion.test.sql` — 17 pgTAP assertions |
 
-- no Edge Function queries `account_deletion`;
-- no job runner processes the `job` table — `analytics_rollup` and friends are enum values with no
-  consumer;
-- `pg_cron` is **commented out** in `20260712000001_extensions.sql`, so no scheduled work runs at
-  all;
-- `account_deletion.executed_at` is never set by any code path.
+**It is SQL, not TypeScript, and that is deliberate.** The erasure spans nine tables and
+supabase-js has no transaction across calls, so a failure midway would leave an account
+half-erased with no way to tell how far it got. A function body is one transaction.
 
-TDD Part 5 §6.2 specifies that deletion "hard-deletes owned rows". That hard delete **does not exist
-anywhere in the codebase.** The system records an intention to delete and then keeps the data
-indefinitely.
+**Six foreign keys needed explicit handling** — a naive `delete from auth.users` fails or leaks:
 
-This matters beyond the code: a privacy policy that promises deletion, and a store Data Safety
-answer of "users can request that their data be deleted", would both be inaccurate today. CCPA
-§1798.105 gives a right to deletion, not a right to have a deletion request logged.
+- `household.owner_id`, `invite.inviter_id`, `invite.accepted_by`, `referral.referred_user_id`
+  all **RESTRICT**, so the delete errors outright.
+- `household_member` and `support_ticket` use **ON DELETE SET NULL**, which keeps the row and only
+  drops the link — leaving the deleted user's `display_name` in a household and their `email` and
+  free-text `body` in a support ticket. Both are now deleted outright. A test asserting
+  `where user_id = ...` would have passed against this defect, because that is precisely the column
+  being nulled; the tests assert by **content** instead.
 
-**What closing it requires:** an executor for `account_deletion` rows past `execute_after` that hard-
-deletes the `OWNED_TABLES` set, sets `executed_at`, and deletes the `auth.users` row — plus something
-to invoke it (pg_cron, or a scheduled GitHub Action calling an Edge Function). It is ordinary
-engineering, not an owner purchase, but it is out of B6.3's documentation scope and is tracked as its
-own blocker.
+`referral.referred_user_id` is **nulled rather than deleted**: that row belongs to the referrer, a
+different person, and one user's erasure must not destroy another's record. The link goes; their
+activation credit stays.
+
+**Analytics are untouched**, per TDD Part 2 §6.5 ("anonymizes analytics (already PII-free)").
+`user_pseudo_id` is device-minted and never derived from the auth uid, so there is nothing to
+anonymize — and deleting those rows would corrupt the household-grain North Star for everyone else
+in the household without improving this user's position.
+
+⚠️ **Two residual gaps, stated rather than implied:**
+
+1. **`executed_at` is never written, and cannot be.** `account_deletion.user_id` cascades with
+   `app_user`, so the request row is erased along with its own subject — after a successful
+   deletion there is no row left to stamp. This collides with TDD Part 2 §5.1, whose threat model
+   names `TBL_ACCOUNT_DELETION` as the **deletion audit** mitigating repudiation, which requires
+   the row to survive. Changing the foreign key would be inventing a schema decision with its own
+   privacy consequence (the surviving row names a uid), so the executor implements the schema as
+   declared and **the TDD owes a resolution**. Consequence today: a completed deletion leaves no
+   record that it happened.
+2. **The schedule depends on pg_cron, which is a Supabase dashboard action.** The migration
+   schedules the sweep where pg_cron exists and raises a **warning** where it does not — it cannot
+   enable the extension itself. `account_deletion_sweep_is_scheduled()` makes the state assertable
+   (false if pg_cron is absent, the job is missing, *or* an operator disabled it), it is checked by
+   the DR restore drill, and `ACCOUNT_SWEEP_SECRET` is required at preflight's production tier.
+   **Until pg_cron is enabled on the hosted project, the only execution path is the operator
+   trigger.** That is an owner action, and it is the one thing standing between this section and
+   being fully true in production.
 
 ### 8.3 Correction / access
 
@@ -324,18 +352,19 @@ REQUIRED]` — whether that is sufficient for the launch markets.
 
 ## 9. Retention
 
-**There is no retention policy in force, because nothing deletes anything.**
-
 | Data | Intended retention | Actual |
 |---|---|---|
-| Account data on deletion request | hard delete after a 30-day grace window | **Never deleted** (§8.2) |
-| `personal_date` deleted by the user | tombstone for offline reconcile, then removal | Tombstone only; never removed |
-| `analytics_event` | rollup then prune (ADR-025) | No rollup job exists; rows accumulate |
-| `ai_rate_limit` | window buckets, prunable | No pruning; not written today |
-| `panchang_cache` | cache with TTL | Not written today (ADR-033) |
+| Account data on deletion request | hard delete after a 30-day grace window | ✅ **Implemented 2026-07-27** (§8.2). Runs on the pg_cron schedule where the extension is enabled; otherwise only via the operator trigger |
+| `personal_date` deleted by the user | tombstone for offline reconcile, then removal | Tombstone only; removed when the account is deleted, never before |
+| `analytics_event` | rollup then prune (ADR-025) | ⛔ No rollup job exists; rows accumulate |
+| `ai_rate_limit` | window buckets, prunable | ⛔ No pruning; not written today |
+| `panchang_cache` | cache with TTL | ⛔ No sweep; not written today (ADR-033) |
 
-All five gaps have the same root cause: **no scheduled execution exists in this project.** That is
-one fix, not five.
+The first row is closed. **The remaining three share the cause the deletion work only partly
+removed:** `pg_cron` is now used by a migration, but nothing processes the `job` table — its
+`analytics_rollup` and `notify_schedule` enum values still have no consumer — and the extension is
+not yet enabled on the hosted projects. So the scheduling *mechanism* now has one proven user, and
+the general worker pattern ADR-025 describes remains unbuilt.
 
 **Additionally: there is no point-in-time backup.** Supabase PITR is a paid-plan feature and both
 hosted projects are free-tier, so user data is not recoverable after an incident (NFR-15 unmet,
@@ -347,8 +376,9 @@ recorded in `DR_RUNBOOKS.md`). A privacy policy should not describe safeguards t
 
 | # | Finding | Severity | Owner |
 |---|---|---|---|
-| 1 | **Account deletion is never executed** — the request is recorded and the data is kept indefinitely (§8.2) | ⛔ Launch blocker | Engineering |
-| 2 | **No scheduled execution exists at all** — `pg_cron` commented out, no job runner; this is also the cause of finding 1 and of every retention gap (§9) | ⛔ Launch blocker | Engineering |
+| 1 | ~~Account deletion is never executed~~ — **CLOSED 2026-07-27** at engineering scope (§8.2). Residual: pg_cron must be enabled on the hosted project, an owner action | 🟡 Owner action | Owner |
+| 2 | **No scheduled execution exists at all** — `pg_cron` is now scheduled by migration where the extension is present, but is still **not enabled on the hosted projects**, and no job runner processes `job`. Analytics rollup/prune, tombstone removal and cache TTL remain unimplemented (§9) | ⛔ Launch blocker | Engineering + Owner |
+| 2b | **`executed_at` is unwritable** — the audit row cascades with its own subject, colliding with §5.1's deletion-audit claim (§8.2) | 🟡 TDD owes a resolution | Documentation |
 | 3 | **The CCPA export omits `message` rows**, so it is incomplete the moment Ask Guru goes live (§8.1) | 🟡 Before `GURU_LIVE` | Engineering |
 | 4 | **No in-app affordance for export or deletion** — the endpoints exist and no screen calls them (§8.1) | 🟡 Before launch | PDD (product) |
 | 5 | **A user-deleted personal date is a tombstone, not an erasure** — must be disclosed (§3.2) | 🟢 Disclosure | Policy |

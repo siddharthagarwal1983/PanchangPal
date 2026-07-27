@@ -8,15 +8,15 @@
 > or any store policy. Do not publish it, link it from a store listing, or present it to a user
 > until a qualified reviewer has approved it.
 >
-> **It also describes a product that is not finished.** Two of the commitments a privacy policy
-> normally makes — that deletion actually deletes, and that data is recoverable — are **not true of
-> the system today** (see §7 and `DATA_INVENTORY.md` §8.2 / §9). Those are engineering defects, not
-> drafting choices. Publishing this document before they are fixed would be publishing a false
-> statement.
+> **It also describes a product that is not finished.** Deletion now works (§7.2, shipped
+> 2026-07-27) but its daily schedule needs `pg_cron` enabled on the hosted project; and **data is
+> still not recoverable** — there is no point-in-time backup (§9). Those are an owner action and an
+> engineering/purchase gap respectively, not drafting choices. Check the appendix before
+> publishing: some sentences here are true of the code and not yet true of production.
 
-**Draft version:** 1.0.0
-**Drafted:** 2026-07-27
-**Derived from:** `DATA_INVENTORY.md` v1.0.0
+**Draft version:** 1.1.0
+**Drafted:** 2026-07-27 (§7.2 rewritten — the deletion executor shipped)
+**Derived from:** `DATA_INVENTORY.md` v1.1.0
 **Applies to:** PanchangPal mobile app (iOS, Android) — `com.panchangpal.app`
 
 ---
@@ -160,21 +160,30 @@ designated request method.
 
 ### 7.2 Deletion
 
-> **⛔ `[UNBUILT]` — DO NOT PUBLISH THIS SECTION UNTIL THE DEFECT BELOW IS FIXED.**
+> **Status: the executor shipped 2026-07-27.** This section previously carried a
+> DO-NOT-PUBLISH banner because the app recorded deletion requests and never carried them out.
+> The erasure now exists, is atomic, and is proven by 17 pgTAP assertions that check the rows are
+> **gone** table by table.
 >
-> The app can *record* a deletion request, and does: it is stored with a 30-day grace period, after
-> which the data is supposed to be permanently erased. **The erasure step does not exist in the
-> software.** No scheduled process runs, and nothing ever reads a deletion request back. In its
-> current state the system accepts a deletion request and keeps the data indefinitely.
->
-> This is documented in `DATA_INVENTORY.md` §8.2 and tracked as a launch blocker. A policy promising
-> deletion cannot be published against a system that does not perform it — CCPA §1798.105 gives a
-> right to deletion, not a right to have a request logged.
+> ⚠️ **One dependency remains before this is true in production:** the daily sweep runs on
+> `pg_cron`, which must be enabled on the hosted Supabase project (a dashboard action). Until it
+> is, deletions execute only when an operator triggers the sweep by hand. Do not publish this
+> section against an environment where `account_deletion_sweep_is_scheduled()` returns false.
 
-*Intended wording, once the executor is built:* You may ask us to delete your account and your data.
-We keep it for 30 days so that you can change your mind, and then permanently erase it. If you own a
-household with other members, you will be asked to transfer ownership first, so that the household
-is not deleted out from under them.
+You may ask us to delete your account and everything in it. We keep your data for 30 days so that
+you can change your mind, and then permanently erase it — your profile, your ritual and checklist
+history, your streak, your saved personal dates, and your conversations.
+
+If you own a household with other members, we will ask you to transfer ownership first, so that the
+household is not deleted out from under the people in it.
+
+Two things we will state precisely, because they are easy to imply loosely:
+
+- **What survives.** Usage statistics are not deleted, because they were never connected to you:
+  they carry a random identifier generated on your device and no way to trace back to your account
+  (§4). Nothing in them identifies you before or after deletion.
+- **Someone else's records.** If another user referred you, their referral record is kept — it is
+  theirs, not yours — but the link naming you is removed.
 
 ### 7.3 Correction
 
@@ -267,8 +276,9 @@ the store age rating) need a decision before submission.
 
 | # | Item | Type |
 |---|---|---|
-| 1 | Account deletion is not executed (§7.2) | ⛔ Engineering — launch blocker |
-| 2 | No retention or pruning runs (§8) | ⛔ Engineering — launch blocker |
+| 1 | ~~Account deletion is not executed~~ — **CLOSED 2026-07-27**; residual: enable pg_cron on the hosted project | 🟡 Owner action |
+| 2 | No retention or pruning for analytics (§8) | ⛔ Engineering |
+| 2b | A completed deletion leaves no audit record (`executed_at` cascades away with its subject) | 🟡 TDD owes a resolution |
 | 3 | No in-app export or deletion affordance (§7.1) | 🟡 Product — PDD owes the screen |
 | 4 | No point-in-time backup (§9) | ⛔ Owner purchase |
 | 5 | Legal entity, address, privacy contact (§1, §13) | Owner |

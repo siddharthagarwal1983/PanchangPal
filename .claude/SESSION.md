@@ -2,98 +2,101 @@
 
 # PanchangPal — Current Session
 
-Version: 2.7.0
-Last Updated: 2026-07-27 (B6.3 — privacy inventory, policy draft, store labels; B6 closed at
-verifiable scope)
+Version: 2.8.0
+Last Updated: 2026-07-27 (B6.3 merged; the account-deletion executor built and verified)
 
-**Main is at `44b402a`.** Merged at the start of this session: PR #68, the dependency-triage handoff
-doc the previous session wrote and left open with all five gates green.
+**Main is at `603b5f5`** — B6.3 merged as PR #69, all five gates green. Working branch:
+`feat/account-deletion-executor`.
 
-Working branch: `feat/b6-3-privacy-inventory`.
+Earlier this session: PR #68 (the previous session's dependency-triage handoff, left open and green)
+was merged as `44b402a`.
 
 ---
 
 # Completed
 
-**B6.3 — the last B6 increment. Three documents, each derived from the one above it.**
+**1. B6.3 — the privacy inventory, policy draft and store labels (PR #69, merged).**
+`docs/devops/DATA_INVENTORY.md` classifies all 32 tables, the nine `EVT_*` ids actually emitted,
+six device-storage keys, six third-party processors and the permissions — built from the migrations
+and the mobile source rather than the documentation. `PRIVACY_POLICY_DRAFT.md` and
+`STORE_PRIVACY_LABELS.md` derive from it. The inventory is pinned by
+`apps/backend/tests/privacy/data-inventory.test.ts`, which compares it against the schema and the
+emitted event set **in both directions**; four perturbations proved it fails.
 
-- **`docs/devops/DATA_INVENTORY.md`** — all 32 tables classified (Identifying / Personal /
-  Pseudonymous / Non-personal) with what each holds, who writes it, and whether it is collected
-  **today**; the nine `EVT_*` ids the app actually emits with their props; six on-device storage
-  keys; six third-party processors; permissions (none requested today). Built from
-  `apps/backend/migrations` and `apps/mobile/{app,src}`, **not** from the documentation.
-- **`docs/devops/PRIVACY_POLICY_DRAFT.md`** — user-facing draft, `[LEGAL REVIEW REQUIRED]`, with
-  `[UNBUILT]` markers wherever a normal policy sentence would be false today.
-- **`docs/devops/STORE_PRIVACY_LABELS.md`** — Play Data Safety + Apple App Privacy answers, each
-  with the ⚠️ trigger that changes it when a deferred dependency lands.
+**2. The account-deletion executor — the launch blocker B6.3 found, closed the same day.**
 
-**The inventory is machine-checked**, which is the part that will still be true in six months.
-`apps/backend/tests/privacy/data-inventory.test.ts` parses `create table` out of the migrations and
-quoted `'EVT_*'` literals out of the mobile source, then compares both against the document **in
-both directions**: an unclassified new table is collection nobody disclosed, and a classified table
-the schema no longer has is a disclosure for data the product does not hold. Same pattern as
-`SYNCABLE_KINDS` reading SVC_sync's source.
+| Piece | Where |
+|---|---|
+| Atomic per-user erasure | `execute_account_deletion(uuid)` — `20260727000110_…executor.sql` |
+| Due-row sweep, one subtransaction per user | `sweep_due_account_deletions()` |
+| pg_cron schedule, daily 03:15 UTC, idempotent | `20260727000120_…schedule.sql` |
+| Assertable state | `account_deletion_sweep_is_scheduled()` |
+| Operator trigger (TDD §6.5's scheduled SVC_account job) | `POST /account/sweep` |
+| Proof | 17 pgTAP assertions in `tests/integration/account_deletion.test.sql` |
 
-**Verified:** four perturbations, each failing the right test — a new table in a migration, a table
-row deleted from the doc, a newly emitted `EVT_029`, an event row deleted from the doc. 88 vitest
-(+6), eslint 0 errors.
+**SQL rather than TypeScript**: the erasure spans nine tables and supabase-js has no transaction
+across calls, so a failure midway would leave an account half-erased with no way to tell how far it
+got. The sweep secret is provisioned, never a user JWT, and **an unconfigured secret refuses
+everyone**; `ACCOUNT_SWEEP_SECRET` is required at preflight's production tier.
 
 # Defects found
 
-1. ⛔ **Account deletion is scheduled and never executed.** `POST /account/delete` gates the request
-   per F-3 and writes `account_deletion` with a 30-day `execute_after`. **Nothing reads that row
-   back** — no Edge Function queries the table, no runner processes `job`, `pg_cron` is *commented
-   out* in `20260712000001_extensions.sql`, `executed_at` is never set. TDD Part 5 §6.2's
-   "hard-deletes owned rows" does not exist in the repository. The system accepts a deletion request
-   and keeps the data indefinitely, and the row it writes makes it look like the request is being
-   honoured. **The same absence is why no retention sweep exists** — no analytics rollup or prune, no
-   personal-date tombstone removal, no `panchang_cache` TTL. One fix, not five.
-2. **The CCPA export omits `message` rows** — `EXPORT_TABLES` returns the `conversation` header
-   without its messages, so the export goes incomplete the day `GURU_LIVE` is enabled.
-3. **No in-app affordance for export or deletion.** Both endpoints work; no screen calls either.
-   **Apple 5.1.1(v) requires in-app account deletion**, making this mandatory rather than a nicety —
-   and it needs SVC_household too, since F-3 requires ownership transfer first.
-4. **A user-deleted personal date is a tombstone, not an erasure** (`deleted_at`, for offline
-   reconcile). Must be disclosed; "delete" reasonably implies erasure.
-5. **`packages/database`'s `TABLES` registry had drifted** — 29 names against 32 tables; the three
-   `ai_operational` tables were never registered. Which is why the test parses the migrations.
+1. **Six foreign keys a naive `delete from auth.users` gets wrong.** Four RESTRICT
+   (`household.owner_id`, `invite.inviter_id`, `invite.accepted_by`, `referral.referred_user_id`)
+   so the delete errors outright. Two use **ON DELETE SET NULL**, which keeps the row and drops only
+   the link — leaving the deleted user's `display_name` in a household and their `email` and
+   free-text `body` in a support ticket. Two tables had quietly opted out of erasure.
+2. **A defect in my own test, caught by perturbation.** Removing the `support_ticket` delete did not
+   fail the suite: the assertion counted `where user_id = ...`, the exact column SET NULL had just
+   nulled. It read zero while the email sat in the table. Assertions now key on **content**.
+3. **`executed_at` is unwritable** — `account_deletion` cascades with `app_user`, so the request row
+   is erased with its own subject. This contradicts TDD Part 2 §5.1, which names the table as the
+   **deletion audit** mitigating repudiation. The schema was implemented as declared rather than
+   changing a foreign key (the surviving row would name a uid — a privacy decision). **TDD owes a
+   resolution**; a completed deletion currently leaves no record.
+
+# Verification
+
+Against a real Postgres 17 in Docker, not asserted: migrations from scratch (32 tables) · **17
+pgTAP assertions** checking rows are gone table by table · **five SQL perturbations** each failing
+the right assertions · **two TypeScript perturbations** on the sweep authorization failing at both
+layers · the **pg_cron branch exercised with the extension installed** (schedules, idempotent on
+re-run, reports false when disabled) · the DR invariant failing with the executor dropped ·
+preflight exit 1 without `ACCOUNT_SWEEP_SECRET`, 0 with. 97 vitest (+9), eslint at baseline, RLS and
+DB suites green.
 
 # Open
 
-- ⛔ **The deletion executor is unbuilt** — the top priority, and fully engineering-closable.
-- Nothing in B6.3 is legally reviewed. No policy or label is publishable until (a) the executor
-  exists and (b) a qualified reviewer has approved the text. Open items are listed in the draft's
-  appendix and `STORE_PRIVACY_LABELS.md` §4.
-- Offline sync has never run against a live backend; no `FLOW_OFFLINE_SYNC` flow exists.
-- **Doc/workflow drift: E2E runs 5 flows, not 4.** `e2e.yml`'s step-summary echo still lists four
-  names. Still owed (a code change, not a doc).
-- §6.4 wants EVT_* on sync confirm; B4.5 fires them from view-model transitions. Unchanged.
-- PDD owes approved copy for 11 of 24 ERR_* codes; SCR_ONBOARDING_* slides remain unbuilt.
-- **Five Dependabot PRs (#61–#65) remain open and deliberately unmerged.** Three red (#63 jest
-  29→30 stops all five `@panchangpal/ui` suites from *running*; #62 i18next 23→26; #61 the
-  production-minor group, likely the same jest break transitively). Two green but crossing the SDK
-  54 pin (#64 `@expo/metro-runtime` → 57, #65 `@babel/runtime` → 8). Their green is weak: the bundle
-  gate is `expo export`, and no dependency PR has ever been exercised on a device. Full reasoning in
-  `44b402a`.
+- ⚠️ **pg_cron is not enabled on the hosted projects** — owner dashboard action. Until then
+  deletions execute only via the operator trigger, and both stores' Data Safety answers assume a
+  schedule. Verify with `select account_deletion_sweep_is_scheduled();`.
+- ⛔ **No worker consumes the `job` table** — `analytics_rollup`, `notify_schedule`,
+  `winback_segment`, `content_ingest`, `entitlement_reconcile` have no consumer. The analytics
+  rollup and prune, the personal-date tombstone sweep and the `panchang_cache` TTL all wait on it.
+- **Apple 5.1.1(v) requires an in-app deletion screen** — needs a PDD affordance (none specified)
+  and SVC_household for ownership transfer.
+- **The CCPA export omits `message` rows** — incomplete the day `GURU_LIVE` is enabled.
+- Nothing in the privacy documents is legally reviewed.
+- Offline sync has never run against a live backend; no `FLOW_OFFLINE_SYNC` flow.
+- `e2e.yml`'s step-summary echo still lists four flow names when five run.
+- PDD owes approved copy for 11 of 24 ERR_* codes; SCR_ONBOARDING_* slides unbuilt.
+- **Five Dependabot PRs (#61–#65) remain deliberately unmerged** — three red (jest 29→30 stops all
+  five `@panchangpal/ui` suites from running; i18next 23→26; the production-minor group), two green
+  but crossing the SDK 54 pin. Reasoning in `44b402a`.
 
 # Blockers
 
-1. ⛔ **The account-deletion executor** (engineering, no purchase) — blocks the privacy policy, both
-   store forms, Apple 5.1.1(v), and every retention sweep.
+1. **Owner: enable pg_cron** (free, dashboard) — turns the manual trigger into the daily schedule.
 2. **Paid Supabase (~$25/mo)** — no PITR; user data unrecoverable. NFR-15 unmet, launch blocker.
 3. **Sentry org + DSN** (free tier) — the only thing between B4 and done.
 4. Apple $99 · Google Play $25 → most of B3.
 
 # Recommended next task
 
-**Build the account-deletion executor.** An Edge Function (or a `pg_cron`-invoked routine) that
-reads `account_deletion` rows past `execute_after`, hard-deletes the `OWNED_TABLES` set, sets
-`executed_at`, and removes the `auth.users` row — plus something to invoke it, since this project
-currently has no scheduled execution of any kind. That last part is the wider fix: it is also what
-every retention sweep is waiting on.
+**The `job` table worker (ADR-025).** The deletion sweep proved the pg_cron half of that ADR; the
+worker half is unbuilt, and it is the last of "nothing scheduled runs in this project". Start with
+`analytics_rollup`, since ADR-013 already specifies service-side rollups and `analytics_event` is
+the one table accumulating rows today with no prune.
 
-Prove it the way this repo proves things: a test that fails with the executor removed, and a check
-that a deleted user's rows are genuinely gone rather than orphaned.
-
-Cheap follow-ups still worth folding in: correct `e2e.yml`'s flow-name echo, add `message` rows to
-the CCPA export, and write `FLOW_OFFLINE_SYNC` now that a local emulator makes iterating fast.
+Cheap follow-ups: add `message` rows to the CCPA export, correct `e2e.yml`'s flow-name echo, and
+write `FLOW_OFFLINE_SYNC` now that a local emulator makes iterating fast.
