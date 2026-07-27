@@ -2,8 +2,8 @@
 
 # PanchangPal — Implementation Roadmap
 
-Version: 2.2.0
-Last Updated: 2026-07-27 (the deletion executor shipped; pg_cron is now an owner action)
+Version: 2.3.0
+Last Updated: 2026-07-27 (session close — executor shipped, pg_cron enabled, owed follow-ups closed)
 
 Purpose: the forward plan from the current state. Complements PROJECT_STATUS.md (snapshot) and
 CURRENT_MILESTONE.md (active milestone). Updated when scope or sequencing changes — and at every
@@ -26,16 +26,34 @@ was closed the same day.** The executor, the sweep, the pg_cron schedule, the se
 operator trigger and 17 pgTAP assertions all exist, verified against a real Postgres 17 with five
 SQL and two TypeScript perturbations.
 
-**Two residuals, both now precise:** `pg_cron` must be enabled on the hosted projects (a Supabase
-dashboard action, so an owner task), and `executed_at` cannot be written because the audit row
-cascades with its own subject — a contradiction with TDD §5.1's deletion-audit claim that the TDD
-owes a resolution for.
+**`pg_cron` was then enabled on both hosted projects and confirmed** — staging through CD
+(`account_deletion_sweep_is_scheduled()` true, the warning annotation gone) and dev through a
+dispatched `dev-migrate`. **It is the first scheduled job that has ever run in this project.**
 
-**Next, in order:** (1) owner enables pg_cron, turning the manual trigger into the daily schedule
-the migration already defines; (2) the **`job` table worker** ADR-025 specifies — the deletion sweep
-proved the scheduling half, and the analytics rollup and prune, the tombstone sweep and the
-`panchang_cache` TTL are all still waiting on the worker half; (3) the **in-app deletion screen**
-Apple 5.1.1(v) requires, which needs a PDD affordance and SVC_household for ownership transfer.
+**One residual on the executor:** `executed_at` cannot be written, because the audit row cascades
+with its own subject — a contradiction with TDD §5.1's deletion-audit claim that the TDD owes a
+resolution for. A completed deletion currently leaves no record that it happened.
+
+**The three owed follow-ups also closed** (#72, #73): the CCPA export's missing `message` rows,
+`e2e.yml`'s flow echo (now derived from the directory, so it cannot drift again), and
+**`FLOW_OFFLINE_SYNC`** — which makes E2E **6 flows, 6/6 green on main**, and closes the residual
+risk PR #66 recorded against itself.
+
+**The `job` table worker was investigated and deliberately NOT built.** Nothing writes to `job`, and
+every `job_type` is blocked: `analytics_rollup` on **F-5** (TDD Part 1 §688 gates rollup tables on
+ratified KPI targets — a PM decision), `notify_schedule` on SVC_notify_scheduler being a shell,
+`content_ingest` on the corpus, `winback_segment` post-v1, `entitlement_reconcile` on RevenueCat.
+Building it would have added a mechanism with nothing to process — the placeholder shape B1 spent
+its time removing.
+
+**Next, in order:** (1) split the seven non-SDK bumps out of **#61** — the group is red because it
+moves `react` past the exactly-pinned SDK 54 baseline, not because of jest as the earlier triage
+guessed; (2) the **TDD resolution** on the deletion audit; (3) the **in-app deletion screen** Apple
+5.1.1(v) requires, which needs a PDD affordance and SVC_household for ownership transfer.
+
+**After that the credential-free engineering is largely exhausted.** What remains is owner-gated
+(paid Supabase, Sentry, store accounts), product-gated (F-5, PDD screens and ERR_* copy, the
+reviewed corpus), or documentation decisions.
 
 **Offline sync (TDD Part 4 §6) was implemented and merged on 2026-07-26** (`86b3843`, PR #66),
 closing a launch blocker B6's OWASP review surfaced: the mutation queue was in memory beneath a header claiming persistence, was never

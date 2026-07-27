@@ -1178,3 +1178,67 @@ deletion requests.
 deliberate.** CI and local stacks legitimately lack the extension and must still migrate;
 production must not, which is what the readiness check and the required `ACCOUNT_SWEEP_SECRET` are
 for. Failing the migration would make every CI run red for a condition that is correct in CI.
+
+---
+
+# 2026-07-27 — What a Maestro flow owes the flows that run after it
+
+**A test that breaks its neighbours is worse than one that fails.** `FLOW_OFFLINE_SYNC` passed while
+leaving the emulator's radio dead, and the next flow that needed a server write lost a preference —
+presenting as a defect in an unrelated feature, on a branch where the only change was a new test.
+The failure was three flows and several minutes removed from its cause, which is the most expensive
+shape a red gate can take.
+
+So a flow that changes device state restores it **and proves the restore**, inside the flow that
+changed it. `setAirplaneMode: disabled` followed by "the offline banner went away" is not proof:
+NetInfo reports `isConnected` from a link-level signal that can exist with no usable route, so the
+banner clearing establishes that the app *thinks* it is online. The proof is a cleared cold start
+that reaches Today — no persisted cache to fall back on, so the network had to work.
+
+**Never open a flow with `launchApp: clearState: true`.** Fusing the clear and the launch races the
+previous flow's task teardown; `Destroy timeout of remove-task` fires about a second into the launch
+and kills the process just created. The app never starts, and the flow fails on its first assertion
+sixty seconds later looking exactly like a product defect — twice, before the artifact was read.
+`stopApp` alone does not fix it, because what lingers is the **task**, not the process. Three
+discrete steps do: `stopApp`, `clearState`, `launchApp`.
+
+This is latent for the whole suite rather than a quirk of one flow: `FLOW_MORNING_RITUAL` and
+`FLOW_RETURNING` end without cleanup, so any flow opening with a cleared launch can draw it
+depending on the order Maestro picks. Fixed in the new flow rather than by editing flows that
+currently pass — but the hazard is recorded, because the next person to add a flow will meet it.
+
+**The evidence is in the uploaded artifact, not the run log.** The screen hierarchy and
+`device-logcat.txt` exist only in the artifact; grepping the run log finds nothing and reads as
+absence of evidence. Both defects above were diagnosed from the artifact — one from a hierarchy
+containing nothing but the status-bar clock, the other from a kill sequence in logcat. The same
+lesson the Pixel Launcher ANRs taught, now paid for a second time.
+
+**A selector may be a rendered glyph when nothing else is stable.** This suite's rule is testIDs,
+because text matching silently passes while navigating nowhere. `FLOW_OFFLINE_SYNC` asserts on ☑/☐
+anyway: the checklist row's testID embeds a seed-generated uuid that is not knowable from a flow
+file, and the glyph is the only stable rendered signal of the state under test. It is asserted
+alongside the item's label so a passing run cannot be some other row's tick. The rule stands; the
+exception is documented where it is taken.
+
+---
+
+# 2026-07-27 — Assert a deletion by content, never by the foreign key
+
+A perturbation that deleted the `support_ticket` erasure from the executor **did not fail the
+suite**. The assertion counted rows `where user_id = ...` — the exact column `ON DELETE SET NULL`
+had just nulled — so it read zero while the user's email address and free-text body sat in the
+table, intact.
+
+**A test written against the identifier a deletion removes cannot detect a deletion that only
+removed the identifier.** The assertions now count by `email` and by `display_name`, and the same
+perturbation fails.
+
+This generalises past the executor. `ON DELETE SET NULL` is a data-retention decision disguised as a
+foreign key: it keeps the row and drops only the link, so two tables in this schema had quietly
+opted out of erasure and nothing said so. Any future check that a record is *gone* has to name
+something the record itself contains.
+
+The same discipline applies one level up. `DATA_INVENTORY.md` §2 is pinned against the **migrations**
+rather than `packages/database`'s `TABLES` registry, because that registry had already drifted — 29
+names against 32 tables — inside a single milestone. Verify against the thing that is true, not
+against another hand-maintained list of it.

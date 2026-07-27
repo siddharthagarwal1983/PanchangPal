@@ -2,9 +2,9 @@
 
 # PanchangPal — Project Memory
 
-Version: 2.2.0
+Version: 2.3.0
 
-Last Updated: 2026-07-27 (the deletion executor seam; pg_cron has one real user)
+Last Updated: 2026-07-27 (deletion seam, pg_cron's one real user, and the E2E harness facts)
 
 Current Phase:
 Beta Readiness & Platform Hardening (TDD Part 5)
@@ -554,6 +554,37 @@ Stable, cross-cutting facts (permanent until an approved decision changes them):
   read `packages/database`'s `TABLES` registry, which had already drifted (29 names against 32
   tables). The test cannot reach the policy or the labels — those still need a human to decide what
   a newly classified table means.
+- **The CCPA export reaches `message` through `conversation_id`, never `user_id`** — it is the one
+  exported row set that cannot be fetched like the others, and omitting it returned conversation
+  headers with none of their content, silently, because an empty row set and an unreachable one look
+  identical in the output. The second query is scoped to the caller's own conversation ids; an
+  unscoped fetch would turn a data-rights feature into a data breach. `message_source` is
+  deliberately excluded — it references the reviewed corpus, not anything the user wrote.
+- **Writing a Maestro flow: three facts that cost four CI cycles to learn** (established 2026-07-27
+  while adding `FLOW_OFFLINE_SYNC`).
+  1. **Never open a flow with `launchApp: clearState: true`.** Fusing the clear and the launch races
+     the previous flow's TASK teardown: Android's `Destroy timeout of remove-task` fires ~1.1s into
+     the launch and kills the process it has just created (`failed to attach`), the app never
+     starts, and the flow fails 60s later on its first assertion looking exactly like a product
+     defect. `stopApp` alone does NOT fix it — what lingers is the task, not the process. Use three
+     discrete steps: `stopApp`, `clearState`, `launchApp`.
+     **This is latent for the whole suite**: `FLOW_MORNING_RITUAL` and `FLOW_RETURNING` end without
+     cleanup, so any flow opening with a cleared launch can draw it depending on Maestro's ordering.
+  2. **A cleared offline banner is not proof of connectivity.** NetInfo reports `isConnected` from a
+     link-level signal that can exist with no usable route, so a flow that toggles airplane mode
+     must make the app PROVE the network came back — a cleared cold start that reaches Today has no
+     cache to fall back on. Without it, `FLOW_OFFLINE_SYNC` left the radio dead and a later flow lost
+     a server-written preference, presenting as a defect in an unrelated feature. **A flow that
+     breaks its neighbours is worse than one that fails**: restore-and-verify inside the flow that
+     changed the device.
+  3. **The evidence is in the uploaded ARTIFACT, not the run log.** The screen hierarchy and
+     `device-logcat.txt` exist only there; grepping the run log finds nothing and reads as absence of
+     evidence. Both defects above were diagnosed from the artifact. Same lesson the Pixel Launcher
+     ANRs taught.
+- **Assert a deletion by CONTENT, never by the foreign key** — restated here because it generalises
+  past the deletion executor: a test written against the identifier a deletion removes cannot detect
+  a deletion that only removed the identifier. `ON DELETE SET NULL` keeps the row and drops the link,
+  so `where user_id = ...` reads zero either way.
 - **MockPanchangProvider** is DEV/TEST ONLY and must never be imported by production code.
 - **Backend Edge Functions pending** — SVC_household (member/invite), SVC_notify_scheduler
   (notify/schedule), and SVC_revenuecat_webhook are pending backend deliverables; the corresponding
