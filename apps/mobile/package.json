@@ -14,7 +14,7 @@
   },
   "dependencies": {
     "@babel/runtime": "^7.24.0",
-    "@expo/metro-runtime": "~6.1.2",
+    "@expo/metro-runtime": "~57.0.7",
     "@panchangpal/api": "workspace:*",
     "@panchangpal/design-tokens": "workspace:*",
     "@panchangpal/shared": "workspace:*",
