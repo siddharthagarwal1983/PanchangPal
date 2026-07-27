@@ -40,28 +40,32 @@
 # command rather than skipping it.
 appId: com.panchangpal.app
 ---
-# stopApp BEFORE the cleared launch, and this is not defensive noise — the first run of this flow
-# failed here for exactly this reason. FLOW_MORNING_RITUAL runs immediately before and ends without
-# cleanup, so the app was still live; `clearState: true` then force-stops and wipes data on a
-# RUNNING task, and the ActivityManager tore down the old task on top of the process it had just
-# started for the new one:
+# THREE DISCRETE STEPS, and the first two runs of this flow paid for that shape.
 #
-#   10:13:18.618  Start proc 2799:com.panchangpal.app for next-top-activity
-#   10:13:18.652  Killing 2799:com.panchangpal.app (adj -10000): remove task
-#   10:13:28.626  Process ProcessRecord{...2799...} failed to attach
+# `launchApp: clearState: true` fuses the clear and the launch, and on this emulator the stale task
+# from the previous flow is still being destroyed when the new process starts. Android then kills
+# the process it has just created:
 #
-# The app never started; the screen held nothing but the status-bar clock, and the flow failed on
-# its first assertion 60 seconds later, looking for all the world like an offline-sync defect.
-# Terminating first means the clear has nothing to race.
+#   10:28:00.191  Force stopping ...: clear data                    <- the clear
+#   10:28:01.089  Force stopping ...: from pid 2738                 <- the launch
+#   10:28:01.320  Destroy timeout of remove-task, kill Task{#8}     <- the OLD task, 1.1s later
+#   10:28:01.321  Killing 2747 (adj -10000): remove task            <- the NEW process
+#   10:28:11.185  Process ...2747... failed to attach
 #
-# This is a suite-wide hazard, not a quirk of this flow: FLOW_MORNING_RITUAL and FLOW_RETURNING
-# both end without `stopApp` or `clearState`, so ANY flow that opens with `clearState: true` can
-# draw this depending on the order Maestro picks. The other three cleared launches happen to have
-# run after flows that clean up. Fixed locally rather than by editing passing flows.
+# The app never starts, the captured hierarchy holds nothing but the status-bar clock, and the flow
+# fails 60s later on its first assertion — looking exactly like an offline-sync defect. Adding
+# `stopApp` alone did NOT fix it: what lingers is the TASK, not the process, and its destroy-timeout
+# is what fires. Separating the clear into its own command lets the teardown finish before the
+# launch begins.
+#
+# This is a suite-wide hazard, not a quirk of this flow: FLOW_MORNING_RITUAL and FLOW_RETURNING both
+# end without `stopApp` or `clearState`, so ANY flow opening with a cleared launch can draw it
+# depending on the order Maestro picks. The other three happen to follow flows that clean up. Fixed
+# locally rather than by editing flows that currently pass.
 - stopApp
+- clearState
 
-- launchApp:
-    clearState: true
+- launchApp
 
 # Same conditional gate as the other flows: a CI emulator has no stored state, so PR #50's real
 # onboarding flag correctly opens SCR_AUTH_001 on a fresh device.
