@@ -144,7 +144,46 @@ appId: com.panchangpal.app
 - assertVisible: 'Light the lamp'
 - takeScreenshot: offline-sync-05-after-drain
 
-# Leave the device as this flow found it. Airplane mode is already off; clearState stops the ticked
-# item and the drained queue from becoming the next flow's hidden precondition — the mistake
-# FLOW_SESSION_PERSISTENCE's closing comment warns about.
+# ---- Prove the network genuinely came back, before anything else depends on it --------------
+# THIS SECTION EXISTS BECAUSE OMITTING IT BROKE A DIFFERENT FLOW. On the run where this flow first
+# passed, FLOW_AUTH_SESSION_PERSISTENCE failed its final assertion — a tradition set, the app
+# restarted, and the preference gone. That preference is a SERVER write (`user_profile` via
+# profileRepository), so the failure means the device had no working route. It passes on main,
+# where this flow does not run.
+#
+# The banner clearing above was not sufficient evidence. NetInfo can report `isConnected` from a
+# link-level signal while there is no usable route, so `notVisible: offline banner` proves the app
+# THINKS it is online, not that it is. FLOW_SESSION_PERSISTENCE then ran for ~22s between the two —
+# ample settle time — and the next flow still failed, which says the network did not come back
+# slowly, it did not come back at all.
+#
+# So this flow now restores the radio and then makes the app prove it, with a cold start that has
+# to reach the backend. If connectivity is genuinely gone, THIS flow fails here — loudly, in the
+# flow that turned the radio off — instead of poisoning whatever runs next and being diagnosed as
+# a defect in some unrelated feature. A test that breaks its neighbours is worse than one that
+# fails.
+- stopApp
+- clearState
+- launchApp
+
+- runFlow:
+    when:
+      visible: 'Skip for now'
+    commands:
+      - tapOn:
+          id: 'auth-skip'
+
+- extendedWaitUntil:
+    visible: "Today's ritual"
+    timeout: 60000
+
+# A cold start with cleared state has no persisted cache to fall back on, so reaching Today at all
+# required the network. The banner's absence confirms the app agrees.
+- assertNotVisible: "You're offline — showing saved content."
+- takeScreenshot: offline-sync-06-network-restored
+
+# Leave the device as this flow found it: online, and with no state for the next flow to inherit.
+# The ticked item and the drained queue must not become someone else's hidden precondition — the
+# mistake FLOW_SESSION_PERSISTENCE's closing comment warns about.
+- stopApp
 - clearState
