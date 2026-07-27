@@ -238,4 +238,13 @@ jobs:
         if: always()
         run: |
           echo "### E2E (Maestro): ${{ job.status }}" >> "$GITHUB_STEP_SUMMARY"
-          echo "Flows: FLOW_RETURNING, FLOW_MORNING_RITUAL, FLOW_SESSION_PERSISTENCE, FLOW_ONBOARDING" >> "$GITHUB_STEP_SUMMARY"
+          # Derived from the directory `maestro test tests/flows/` actually runs, never hand-listed.
+          # The hardcoded list this replaces said four flows for the whole time five were running:
+          # FLOW_AUTH_SESSION_PERSISTENCE arrived with B6 and nobody remembered the echo. A summary
+          # that under-reports coverage is a small lie that the tracking docs then repeat — which is
+          # exactly what happened, until the count was corrected on 2026-07-26.
+          count=$(find tests/flows -name 'FLOW_*.yaml' | wc -l | tr -d ' ')
+          # `paste -sd', '` would NOT work here: -d takes a list of delimiters used cyclically, so
+          # it alternates "," and " " between entries rather than joining with ", ".
+          names=$(find tests/flows -name 'FLOW_*.yaml' -exec basename {} .yaml \; | sort | paste -sd, - | sed 's/,/, /g')
+          echo "Flows (${count}): ${names}" >> "$GITHUB_STEP_SUMMARY"
