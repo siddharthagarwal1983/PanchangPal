@@ -60,6 +60,38 @@ jobs:
         env:
           SUPABASE_STAGING_DB_URL: ${{ secrets.SUPABASE_STAGING_DB_URL }}
 
+      # The F-3 deletion sweep runs on pg_cron, and pg_cron is enabled per-project from the
+      # Supabase dashboard — a migration cannot turn it on, so 20260727000120 schedules the job
+      # where the extension exists and only WARNS where it does not. That warning scrolls past in
+      # a migration log nobody reads.
+      #
+      # This step makes the state visible on every deploy. It does NOT fail the job: staging can
+      # legitimately run without pg_cron, and failing CD for it would block unrelated deploys. But
+      # an unscheduled sweep means deletion requests are silently accumulating unexecuted, which is
+      # the exact defect the executor was written to fix — so it is reported loudly, in the step
+      # summary an operator actually sees, rather than left to be discovered from a data-subject
+      # complaint.
+      - name: Verify the account-deletion sweep is scheduled (F-3)
+        if: always()
+        run: |
+          scheduled=$(psql "$SUPABASE_STAGING_DB_URL" -tAc "select account_deletion_sweep_is_scheduled()" 2>/dev/null || echo "error")
+          if [ "$scheduled" = "t" ]; then
+            echo "✅ Account-deletion sweep is scheduled." >> "$GITHUB_STEP_SUMMARY"
+          else
+            {
+              echo "### ⚠️ The account-deletion sweep is NOT scheduled on staging"
+              echo ""
+              echo "\`account_deletion_sweep_is_scheduled()\` returned \`${scheduled}\`."
+              echo "CCPA deletion requests are being recorded and **not executed**."
+              echo ""
+              echo "Fix: Supabase Dashboard → Database → Extensions → enable **pg_cron**, then re-run this workflow"
+              echo "so \`20260727000120_account_deletion_schedule.sql\` can create the job."
+            } >> "$GITHUB_STEP_SUMMARY"
+            echo "::warning::Account-deletion sweep is not scheduled on staging — deletion requests will accumulate unexecuted."
+          fi
+        env:
+          SUPABASE_STAGING_DB_URL: ${{ secrets.SUPABASE_STAGING_DB_URL }}
+
       - name: Summary
         if: always()
         run: |
