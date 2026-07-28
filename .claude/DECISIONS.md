@@ -2,7 +2,7 @@
 
 # PanchangPal — AI Decision Summary
 
-Version: 1.1.0
+Version: 1.2.0
 
 Purpose:
 This file contains a condensed summary of permanent project decisions.
@@ -20,6 +20,42 @@ docs/architecture/adr/
 ---
 
 # Product Decisions
+
+## 2026-07-28 — An SDK-pinned dependency is never bumped alone, and CI greenness does not exempt it
+
+**Decision.** `react`, `@types/react`, `@expo/*` and `@babel/runtime` join `expo`, `expo-*`,
+`react-native` and `react-native-*` in `.github/dependabot.yml`'s ignore list. All eight move only
+with a deliberate Expo SDK upgrade, via `expo install --fix`, validated by a native build plus the
+six Maestro flows. A proposal to bump one of them individually is closed with its peer evidence, not
+evaluated on its CI result.
+
+**Why these four specifically.** The rule already existed and only its *patterns* were short, which
+is what produced PRs #64, #65 and #75 and the phantom "SDK-upgrade increment" the tracking docs had
+queued. `expo-*` does not match a scoped `@expo/` name, so `@expo/metro-runtime` — the one Expo
+package whose majors track SDK majors (`sdk-56`→56.x, `latest` 57.0.7→**SDK 57**) — slipped through
+against `expo-router@6.0.24`'s `^6.1.2` peer. `@babel/runtime` is pinned by
+`babel-preset-expo@54.0.12`'s `^7.20.0` peer. `react` is pinned by react-native shipping its **own
+Fabric renderer built against React `"19.1.0"`**, hardcoded in
+`Libraries/Renderer/implementations/ReactFabric-{dev,prod}.js`.
+
+**Why CI result is explicitly not the criterion.** #64 and #65 passed **all five gates, including
+the bundle gate**, while #75 — the only one that is peer-*legal* — was the sole red. `expo export`
+resolves what fails natively, so for this class of package green is anti-correlated with safety.
+That is the third instance here, after mmkv v2 under the New Architecture and the undeclared
+`babel-preset-expo`.
+
+**And the obvious fix can be the trap.** #75's red is
+`@testing-library/react-native`'s `build/helpers/ensure-peer-deps.js` asserting `react-test-renderer`
+=== `react` exactly. Moving `react-test-renderer` to 19.2.8 — which TASK.md had recorded as the
+required step — would have turned CI green while leaving the renderer at 19.1.0, i.e. silenced the
+one check that noticed the mismatch. **When a dependency bump fails a version assertion, satisfy the
+constraint the assertion is defending, not the assertion.**
+
+**Method, worth reusing.** The peer graph in `node_modules` answers this class of question in
+minutes; the saved plan called for a native build and six flows first. Read the installed peers and
+the package's dist-tags before scheduling an upgrade exercise.
+
+---
 
 ## 2026-07-26 — The offline queue carries only the mutation kinds SVC_sync reconciles
 

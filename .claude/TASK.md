@@ -110,7 +110,73 @@ green in CI on a real native build. Canonical progress 0% → 13% (1 of 8 Beta s
 # Current Task
 
 ## Title
-✅ #61 IS SPLIT AND MERGED (PR #74) · NEXT: THE SDK-UPGRADE INCREMENT
+✅ THE SDK-UPGRADE INCREMENT WAS INVESTIGATED AND DOES NOT EXIST · THREE PRs CLOSED (PR #77)
+
+**Progress unchanged at 47%.** Dependency hygiene advances no Beta slice.
+
+## What the investigation found
+
+The three PRs queued as "one deliberate SDK-upgrade increment" were checked against the **installed
+peer graph** rather than their release notes. None should land on SDK 54, and the reason is the same
+for all three: `.github/dependabot.yml` already carried the correct rule — *an SDK-pinned package is
+upgraded with the SDK via `expo install --fix`, never alone, because a lone bump produces a build
+that resolves and then fails natively* — and only its **patterns** were short.
+
+| PR | Verdict | Evidence |
+|---|---|---|
+| **#64** `@expo/metro-runtime` 6.1.2→57.0.7 | Closed | dist-tags map package majors to **SDK majors** (`sdk-55`→55.x, `sdk-56`→56.x, `latest` 57.0.7→**SDK 57**). This app is SDK 54 (the 6.1.x line); `expo-router@6.0.24` peer-requires `^6.1.2`. `expo-*` never matched a scoped `@expo/` name. |
+| **#65** `@babel/runtime` 7→8 | Closed | `babel-preset-expo@54.0.12` peer-requires `^7.20.0`. Also one of the two undeclared transitive deps that broke bundling during the Execution Gap. |
+| **#75** `react` 19.1.0→19.2.8 | Closed | RN 0.81.5's peer is `^19.1.0`, so 19.2.8 is peer-**LEGAL**. But react-native ships its own Fabric renderer built against React `"19.1.0"`, hardcoded in `Libraries/Renderer/implementations/ReactFabric-{dev,prod}.js`. |
+
+**#61 was closed and superseded by #75** — Dependabot regenerated the group after #74 landed. Every
+tracking document said "#61's react remainder"; all are corrected.
+
+## Two things the previous framing got wrong
+
+1. **"All three are red because they cross the SDK pin" was false.** #64 and #65 passed **all five CI
+   gates, including the bundle gate.** #75 — the only peer-legal one — was the sole red. Green is
+   anti-correlated with safety here: `expo export` resolves what fails natively. That is the third
+   time this repo has paid for the lesson, after mmkv v2 under the New Architecture and
+   `babel-preset-expo`.
+2. **The recorded fix for #75 would have hidden the defect.** Its red is
+   `Incorrect version of "react-test-renderer" detected`, thrown by
+   `@testing-library/react-native`'s `build/helpers/ensure-peer-deps.js`, which asserts
+   `react-test-renderer` === `react` **exactly**. Moving `react-test-renderer` to 19.2.8 — what
+   TASK.md recorded as the required step — would have turned CI green while leaving RN's renderer at
+   19.1.0, silencing the one assertion that noticed. There is nothing to gain either way: every
+   19.2.x release note is React Server Components, which React Native does not use.
+
+## What shipped (PR #77)
+
+`.github/dependabot.yml`'s ignore list extended to `react`, `@types/react`, `@expo/*` and
+`@babel/runtime`, with the per-package evidence recorded inline so the next session does not
+re-derive it. Config only — no dependency or source change; YAML validated, both `updates` blocks
+intact, `production-minor` group unchanged.
+
+**No native build or Maestro run was required.** The saved plan called for both; the peer graph
+answered the question first, which is the cheaper experiment and was available all along.
+
+## Open queue
+
+**#62** (i18next 23→26, red on lint/typecheck) and **#63** (jest 29→30, red on unit tests). Both are
+majors, red for their own unrelated reasons, and each is its own decision. The queue no longer
+contains an SDK-crossing PR.
+
+## Next task
+
+A **credential-free Beta item**. The strongest candidate is the **TDD resolution the deletion audit
+owes** — `account_deletion.executed_at` is unwritable because the row cascades with its own subject,
+contradicting TDD Part 2 §5.1's use of the table as the repudiation-mitigating deletion audit. It is
+a documentation decision rather than code, and it is the last thing between B6 and an honest privacy
+claim. The **in-app deletion screen** Apple 5.1.1(v) requires remains blocked on a PDD affordance and
+SVC_household; the **`job` table worker** remains deliberately unbuilt, because every `job_type` is
+blocked on a product or vendor decision.
+
+---
+
+## Superseded — the #61 split
+
+## ✅ #61 IS SPLIT AND MERGED (PR #74)
 
 **Progress unchanged at 47%.** Dependency hygiene advances no Beta slice.
 
@@ -172,6 +238,12 @@ that flow fails again, auth-js goes back on the suspect list rather than being t
    deciding deliberately whether the repo adopts `format:check` or drops the script.
 
 ## Next task — the SDK-upgrade increment
+
+> ⚠️ **Superseded and partly WRONG — do not act on this section.** Investigated 2026-07-28 (see
+> Current Task): there is no increment here, and the claim below that "all three are red" is false.
+> **#64 and #65 passed all five CI gates**, including the bundle gate; only #75 (which replaced #61)
+> was red, and for a symptom. All three are closed, and `.github/dependabot.yml` now covers the four
+> SDK-pinned packages so they are not regenerated.
 
 **#61's `react` remainder + #64 (`@expo/metro-runtime` 6.1.2→57.0.7) + #65 (`@babel/runtime` 7→8),
 as one increment.** All three cross the exactly-pinned SDK 54 baseline, which is why they are three

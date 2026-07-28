@@ -2,9 +2,9 @@
 
 # PanchangPal — Current Milestone
 
-Version: 4.5.0
+Version: 4.6.0
 
-Last Updated: 2026-07-28 (the #61 dependency split; progress unchanged at 47%)
+Last Updated: 2026-07-28 (the SDK-pinned dependency rule; three PRs closed; progress unchanged at 47%)
 
 Purpose:
 This document defines the current milestone. Unlike SESSION.md (daily work) or TASK.md (current
@@ -616,6 +616,33 @@ testers' hands.
   while doing nothing. It was found while evaluating whether to schedule it on pg_cron; **doing so
   would have made notification scheduling look live while provably sending nothing.** Do not
   schedule it until the repository methods are real.
+- **The "SDK-upgrade increment" does not exist, and the three PRs are closed (2026-07-28, PR #77).**
+  The set queued below as one deliberate upgrade was checked against the **installed peer graph**
+  rather than release notes, and none of it belongs on SDK 54. The cause is single:
+  `.github/dependabot.yml` already carried the right rule — *an SDK-pinned package is upgraded with
+  the SDK via `expo install --fix`, never alone, because a lone bump produces a build that resolves
+  and then fails natively* — and only its **patterns** were short. `expo-*` never matched a scoped
+  `@expo/` name, and nothing covered `react`, `@types/react` or `@babel/runtime`.
+  **#64** `@expo/metro-runtime` 6.1.2→57.0.7: the package's dist-tags map majors to **SDK majors**
+  (`sdk-55`→55.x, `sdk-56`→56.x, `latest` 57.0.7→**SDK 57**), and `expo-router@6.0.24` peer-requires
+  `^6.1.2`. **#65** `@babel/runtime` 7→8: `babel-preset-expo@54.0.12` peer-requires `^7.20.0`.
+  **#75** (which superseded #61 after #74 landed) `react` 19.1.0→19.2.8: peer-**LEGAL** under RN's
+  `^19.1.0` and therefore the most dangerous of the three, because react-native ships its own Fabric
+  renderer built against React `"19.1.0"`, hardcoded in
+  `Libraries/Renderer/implementations/ReactFabric-{dev,prod}.js`.
+  **Two claims in the entry below are now known to be wrong.** (1) "All three are red because they
+  cross the SDK pin": **#64 and #65 passed all five CI gates, including the bundle gate**, and #75 —
+  the peer-legal one — was the only red. **Green is anti-correlated with safety for an SDK-pinned
+  package**, because `expo export` resolves what fails natively; that is the third instance after
+  mmkv v2 under the New Architecture and `babel-preset-expo`. (2) "`react-test-renderer` has to move
+  with `react`": that is the assertion in
+  `@testing-library/react-native`'s `build/helpers/ensure-peer-deps.js`, which compares
+  `react-test-renderer` to `react` **exactly** — so satisfying it would have turned CI green while
+  leaving the renderer at 19.1.0, silencing the one check that noticed. Every 19.2.x release note is
+  React Server Components, so there was nothing to gain either way.
+  **No native build or Maestro run was needed**; the peer graph was the cheaper experiment and was
+  available from the start. A genuine Expo SDK upgrade remains future work, is not a milestone
+  deliverable, and when it happens must still be validated by a native build plus the six flows.
 - **The #61 group is split, and the queue is now coherent (2026-07-28, PR #74).** The seven
   non-SDK bumps landed on main on their own — `@typescript-eslint/eslint-plugin` and `parser`
   8.63.0→8.65.0, `prettier` 3.9.5→3.9.6, `turbo` 2.10.4→2.10.7, `@supabase/supabase-js`

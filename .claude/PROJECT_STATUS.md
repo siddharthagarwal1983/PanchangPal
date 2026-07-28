@@ -2,9 +2,9 @@
 
 # PanchangPal — Project Status Dashboard
 
-Version: 1.12.0
+Version: 1.13.0
 
-Last Updated: 2026-07-28 (the #61 dependency split; progress unchanged at 47%)
+Last Updated: 2026-07-28 (the SDK-pinned dependency rule; three PRs closed; progress unchanged at 47%)
 
 Purpose:
 This document provides a high-level snapshot of the overall project.
@@ -91,12 +91,20 @@ product scope. Sliced B1–B8; see CURRENT_MILESTONE.md.
 
 Current Focus
 
-- **Dependency queue — the #61 group is split (2026-07-28, PR #74).** Seven non-SDK bumps landed on
-  main with all five CI gates green; `react`, `@types/react` and the lockfile's `react@19.1.0` peer
-  keys were deliberately left behind, because moving `react` past the exactly-pinned SDK 54 baseline
-  while `react-test-renderer` stays at 19.1.0 is the single reason the group was red. The open queue
-  is now three PRs crossing that one pin (#61's remainder, #64, #65) and belongs in a single
-  SDK-upgrade increment behind a native build and the Maestro flows. **No Beta slice advanced;
+- **Dependency queue — clean, and the SDK-upgrade increment turned out not to exist (2026-07-28,
+  PR #77).** The three PRs queued as that increment were checked against the **installed peer graph**
+  and all three closed: **#64** (`@expo/metro-runtime` 6.1.2→57.0.7 — dist-tags map majors to SDK
+  majors, `latest` 57.0.7 is **SDK 57**, and `expo-router@6.0.24` peer-requires `^6.1.2`); **#65**
+  (`@babel/runtime` 7→8 — `babel-preset-expo@54.0.12` peer-requires `^7.20.0`); **#75**, which
+  superseded #61 (`react` 19.1.0→19.2.8 — peer-**legal** under RN's `^19.1.0`, but react-native ships
+  a Fabric renderer hardcoded to React `"19.1.0"`). The cause was single:
+  `.github/dependabot.yml` held the right rule and short **patterns** — `expo-*` never matched a
+  scoped `@expo/` name. PR #77 extends the ignore list to `react`, `@types/react`, `@expo/*` and
+  `@babel/runtime`. **Two corrections worth keeping: #64 and #65 passed all five gates including the
+  bundle gate** (green is anti-correlated with safety for an SDK-pinned package — `expo export`
+  resolves what fails natively), and the previously recorded fix for #75 — move `react-test-renderer`
+  to match — would have turned CI green while leaving the renderer mismatched. Remaining queue: **#62**
+  (i18next) and **#63** (jest 30), red for their own unrelated reasons. **No Beta slice advanced;
   progress stays 47%.**
 - **B6 — Security & Privacy — ✅ complete at verifiable scope (2026-07-27).** B6.3 delivered the
   data-collection inventory, the privacy policy draft and the store Data Safety / App Privacy
@@ -272,17 +280,20 @@ Implementation: Mobile MVP Phase 1 is feature-complete (M1–M8).
 
 Priority 1
 
-**The SDK-upgrade increment — #61's `react` remainder, #64 and #65 together.** All three cross the
-**exactly pinned** Expo SDK 54 baseline, which is the single reason #61 has been red: bumping
-`react` 19.1.0 → 19.2.8 while `react-test-renderer` stays behind fails every jest suite. The seven
-non-SDK bumps in that group were split out and landed on 2026-07-28 (PR #74), so the open queue is
-now exactly the set that shares one cause, plus #62/#63 which are red for their own reasons.
+**A credential-free Beta item — the dependency queue is clean.** The strongest candidate is the
+**TDD resolution the deletion audit owes**: `account_deletion.executed_at` cannot be written because
+the row cascades with its own subject, contradicting TDD Part 2 §5.1's use of that table as the
+repudiation-mitigating deletion audit. It is a documentation decision, not code, and it is the last
+thing between B6 and an honest privacy claim.
 
-This is not a lockfile exercise. `react-test-renderer` must move with `react`, and the result has to
-be validated by a **native build plus the six Maestro flows** — the SDK 54 re-baseline was verified
-by bundling and Expo Go alone, and a native build later found the MMKV/New-Architecture defect that
-no unit test could see. Local Android builds now work on the dev Mac, so this is iterable without
-20-minute CI cycles.
+(~~The SDK-upgrade increment~~ — **retired 2026-07-28.** It was not an increment. #64, #65 and #75
+were checked against the installed peer graph, found to be three symptoms of one gap in
+`.github/dependabot.yml`'s ignore **patterns**, and closed; PR #77 covers `react`, `@types/react`,
+`@expo/*` and `@babel/runtime`. Two things the old framing had wrong: #64 and #65 passed **all five
+gates including the bundle gate**, and the prescribed fix for #75 — moving `react-test-renderer` with
+`react` — would have turned CI green while leaving RN's Fabric renderer at 19.1.0. A genuine Expo SDK
+upgrade is future work, is not a milestone deliverable, and still requires a native build plus the
+six Maestro flows when it happens.)
 
 (~~Owner: enable `pg_cron`~~ — **done 2026-07-27**, both hosted projects, confirmed via CD and a
 dispatched `dev-migrate`. The daily sweep is the first scheduled job that has ever run here.)
@@ -364,6 +375,18 @@ prefs work today, so gating and prefs are real before the SDKs are wired.
 
 # Recently Completed
 
+- **The SDK-pinned dependency rule (2026-07-28, PR #77).** The "SDK-upgrade increment" was
+  investigated and found not to exist: #64, #65 and #75 are three symptoms of one gap in
+  `.github/dependabot.yml`'s ignore **patterns**, not a coherent upgrade. All three closed with their
+  per-package evidence — `expo-router`'s `^6.1.2` peer and `@expo/metro-runtime`'s SDK-major
+  dist-tags for #64, `babel-preset-expo`'s `^7.20.0` peer for #65, and react-native's Fabric renderer
+  being hardcoded to React `"19.1.0"` for #75. The ignore list now covers `react`, `@types/react`,
+  `@expo/*` and `@babel/runtime`. **The finding worth keeping: #64 and #65 passed all five CI gates
+  including the bundle gate**, while the peer-legal #75 was the only red — and its previously
+  recorded fix would have turned CI green while leaving the renderer mismatched. Green is not
+  evidence of safety for an SDK-pinned package; `expo export` resolves what fails natively. No native
+  build or Maestro run was needed — the peer graph settled it, which was the cheaper experiment all
+  along. **Progress unchanged at 47%.**
 - **The #61 dependency split (2026-07-28, PR #74, `0185ea9`).** Seven non-SDK bumps landed on their
   own — `@typescript-eslint/*` 8.65.0, `prettier` 3.9.6, `turbo` 2.10.7, `@supabase/supabase-js`
   2.110.9, both `@tanstack/*` 5.101.4 — with `react` and `@types/react` deliberately untouched.

@@ -2,9 +2,9 @@
 
 # PanchangPal Dashboard
 
-Version: 1.25.0
+Version: 1.26.0
 
-Last Updated: 2026-07-28 (the #61 dependency split landed; progress unchanged at 47%)
+Last Updated: 2026-07-28 (the SDK-pinned dependency rule; three PRs closed; progress unchanged at 47%)
 
 Purpose:
 This is the first file Claude should read at the beginning of every session.
@@ -92,7 +92,47 @@ CURRENT_MILESTONE.md
 
 # Current Task
 
-**The #61 dependency group is split, and the open queue is now coherent** (PR #74, `0185ea9`).
+**The "SDK-upgrade increment" was investigated and does not exist. Three PRs closed; the rule that
+should have prevented them is fixed** (PR #77).
+
+**Progress unchanged at 47%.** Dependency hygiene advances no Beta slice.
+
+The three PRs queued as one deliberate SDK-upgrade increment were checked against the **installed
+peer graph** rather than their release notes. None should land on SDK 54, and the cause is single:
+`.github/dependabot.yml` already carried the correct rule — *an SDK-pinned package is upgraded with
+the SDK via `expo install --fix`, never alone, because a lone bump produces a build that resolves and
+then fails natively* — and only its **patterns** were short.
+
+- **#64** `@expo/metro-runtime` 6.1.2→57.0.7 — the package's dist-tags map majors to **SDK majors**
+  (`sdk-55`→55.x, `sdk-56`→56.x, `latest` 57.0.7→**SDK 57**). This app is SDK 54, the 6.1.x line, and
+  `expo-router@6.0.24` peer-requires `^6.1.2`. `expo-*` never matched a scoped `@expo/` name.
+- **#65** `@babel/runtime` 7→8 — `babel-preset-expo@54.0.12` peer-requires `^7.20.0`. Also one of the
+  two undeclared transitive dependencies that broke bundling during the Execution Gap.
+- **#75** `react` 19.1.0→19.2.8 (which **superseded #61**, regenerated after #74 landed) — RN 0.81.5's
+  peer is `^19.1.0`, so this is peer-**LEGAL** and looks routine. It is not: react-native ships its
+  own Fabric renderer built against React `"19.1.0"`, hardcoded in
+  `Libraries/Renderer/implementations/ReactFabric-{dev,prod}.js`.
+
+**Two things the previous framing had wrong.** (1) "All three are red because they cross the SDK pin"
+is false — **#64 and #65 passed all five CI gates, including the bundle gate**, and #75, the only
+peer-legal one, was the sole red. **Green is anti-correlated with safety for an SDK-pinned package**:
+`expo export` resolves what fails natively, the third instance after mmkv v2 under the New
+Architecture and `babel-preset-expo`. (2) The recorded fix for #75 would have **hidden** the defect —
+its red is `@testing-library/react-native`'s `ensure-peer-deps.js` asserting `react-test-renderer`
+=== `react` exactly, so moving `react-test-renderer` to 19.2.8 (what TASK.md prescribed) would have
+turned CI green while leaving the renderer at 19.1.0. There was nothing to gain regardless: every
+19.2.x release note is React Server Components, which React Native does not use.
+
+**PR #77** extends the ignore list to `react`, `@types/react`, `@expo/*` and `@babel/runtime` with
+the evidence recorded inline. **No native build or Maestro run was needed** — the saved plan called
+for both, and the peer graph answered it first, which was the cheaper experiment all along.
+
+The open queue is now **#62** (i18next 23→26) and **#63** (jest 29→30), red for their own unrelated
+reasons. No SDK-crossing PR remains.
+
+---
+
+**Previously — the #61 dependency group is split, and the open queue is now coherent** (PR #74, `0185ea9`).
 
 **Progress unchanged at 47%.** This advances no Beta slice — it is dependency hygiene that unblocks
 seven bumps held hostage by two, exactly as offline sync and the deletion executor closed gaps
@@ -556,7 +596,18 @@ Verified end-to-end. **PR #36 merged to main as `e1e10d4`**; the docs checkpoint
 
 # Today's Objective
 
-Session of 2026-07-28. **Split the seven non-SDK bumps out of #61.** Take the dependency queue from
+Session of 2026-07-28 (part 2). **Execute the SDK-upgrade increment — and establish first whether it
+is one.** Outcome: it is not. Checked against the installed peer graph, all three PRs are the same
+defect — `.github/dependabot.yml` held the right rule and the wrong patterns — so #64, #65 and #75
+are closed with their evidence and PR #77 extends the ignore list to the four SDK-pinned packages
+(`react`, `@types/react`, `@expo/*`, `@babel/runtime`). The sharpest finding: **#64 and #65 passed
+all five gates including the bundle gate**, while the peer-legal #75 was the only red — and its
+recorded fix would have turned CI green while leaving RN's renderer mismatched. **Progress unchanged
+at 47%.** Next: a credential-free Beta item — the **TDD resolution the deletion audit owes**.
+
+---
+
+Session of 2026-07-28 (part 1). **Split the seven non-SDK bumps out of #61.** Take the dependency queue from
 five PRs — one of them a nine-package group red for a single SDK-pin reason — down to a coherent
 set, without smuggling a React version bump past the SDK 54 baseline behind a linter update.
 Outcome: PR #74 merged with all five gates green, `react`/`@types/react` untouched, and the queue
@@ -711,12 +762,22 @@ resolved (PR #14).
 
 # Next Deliverable
 
-**The SDK-upgrade increment** — #61's `react` remainder, #64 (`@expo/metro-runtime`) and #65
-(`@babel/runtime` 7→8) taken together, since all three cross the exactly-pinned Expo SDK 54
-baseline. It is not a lockfile exercise: `react-test-renderer` has to move with `react`, and the
-change must be validated by a **native build plus the six Maestro flows**, because that is the only
-way this repo has ever proven a mobile re-baseline. The SDK 54 upgrade itself was verified by
-bundling and Expo Go alone, and a native build later found the MMKV/New-Architecture defect.
+**A credential-free Beta item — the dependency queue is now clean.** The strongest candidate is the
+**TDD resolution the deletion audit owes**: `account_deletion.executed_at` is unwritable because the
+row cascades with its own subject, which contradicts TDD Part 2 §5.1's use of that table as the
+repudiation-mitigating deletion audit. It is a documentation decision rather than code, and it is the
+last thing standing between B6 and an honest privacy claim.
+
+Still blocked, and deliberately so: the **in-app deletion screen** Apple 5.1.1(v) requires needs a
+PDD affordance and SVC_household; the **`job` table worker** stays unbuilt because every `job_type`
+is blocked on a product or vendor decision.
+
+(**The "SDK-upgrade increment" that stood here is retired.** Investigated 2026-07-28: the three PRs
+were not an increment but a gap in `.github/dependabot.yml`'s patterns, and none belonged on SDK 54.
+All three are closed and the ignore list now covers the four SDK-pinned packages — PR #77. A real
+Expo SDK upgrade remains future work, is not a milestone deliverable, and when it happens it must
+still be validated by a native build plus the six Maestro flows, because that is the only method that
+has ever caught this class of change here.)
 
 (`pg_cron` is no longer a blocker — it was enabled and confirmed on both hosted projects on
 2026-07-27, and is the first scheduled job that has ever run in this project.)

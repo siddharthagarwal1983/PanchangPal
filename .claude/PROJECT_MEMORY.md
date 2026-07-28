@@ -2,9 +2,9 @@
 
 # PanchangPal — Project Memory
 
-Version: 2.3.0
+Version: 2.4.0
 
-Last Updated: 2026-07-27 (deletion seam, pg_cron's one real user, and the E2E harness facts)
+Last Updated: 2026-07-28 (the SDK 54 pin as a seam; deletion seam; pg_cron's one real user; E2E harness facts)
 
 Current Phase:
 Beta Readiness & Platform Hardening (TDD Part 5)
@@ -509,6 +509,27 @@ Stable, cross-cutting facts (permanent until an approved decision changes them):
   scripts, which should be reverted). **iOS is unchanged — still unbuilt, still needs an Apple
   membership.** This matters mainly because Maestro flows can now be iterated locally instead of
   through 20-minute CI runs.
+- **THE EXPO SDK 54 PIN IS A SEAM, AND EIGHT PACKAGE PATTERNS ARE FROZEN BEHIND IT** (established
+  2026-07-28). `react`, `@types/react`, `@expo/*` and `@babel/runtime` are pinned by the SDK exactly
+  as `expo`, `expo-*`, `react-native` and `react-native-*` are; all eight are ignored in
+  `.github/dependabot.yml` and move ONLY with a deliberate SDK upgrade via `expo install --fix`,
+  validated by a native build plus the six Maestro flows. The four specific pins, each read out of
+  the installed peer graph rather than release notes: `expo-router@6.0.24` peer-requires
+  `@expo/metro-runtime ^6.1.2`, and that package's dist-tags map its majors to **SDK majors**
+  (`sdk-56`→56.x, `latest` 57.0.7→SDK 57), so a "6.1.2 → 57.0.7" bump is an SDK 57 package;
+  `babel-preset-expo@54.0.12` peer-requires `@babel/runtime ^7.20.0`; and **react-native ships its
+  own Fabric renderer built against React `"19.1.0"`**, hardcoded in
+  `Libraries/Renderer/implementations/ReactFabric-{dev,prod}.js`, which is why `react` is pinned
+  exactly even though RN's declared peer `^19.1.0` would accept 19.2.x.
+  **Two things make this worth remembering rather than rederiving.** First, **CI greenness is
+  anti-correlated with safety here**: PRs #64 and #65 passed all five gates *including the bundle
+  gate* while proposing SDK-crossing changes, and #75 — the only peer-legal one — was the sole red,
+  because `expo export` resolves what fails natively. Third instance, after mmkv v2 under the New
+  Architecture and the undeclared `babel-preset-expo`. Second, **the obvious fix was the trap**:
+  #75's red is `@testing-library/react-native`'s `ensure-peer-deps.js` asserting `react-test-renderer`
+  === `react` exactly, and satisfying it (the step TASK.md had recorded as required) would have
+  turned CI green while leaving the renderer mismatched. When a bump fails a version assertion,
+  satisfy the constraint the assertion defends, not the assertion.
 - **ALMOST NOTHING SCHEDULED RUNS IN THIS PROJECT** (established 2026-07-27). The deletion sweep is
   the **only** scheduled work that exists, and only where `pg_cron` has been enabled — which is a
   Supabase **dashboard** action a migration cannot perform. Nothing processes the `job` table:

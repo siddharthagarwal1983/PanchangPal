@@ -3,7 +3,7 @@
 # PanchangPal — Implementation Roadmap
 
 Version: 2.4.0
-Last Updated: 2026-07-28 (the #61 dependency split landed; the queue is now three SDK-crossing PRs)
+Last Updated: 2026-07-28 (the SDK-pinned dependency rule; the three SDK-crossing PRs are closed)
 
 Purpose: the forward plan from the current state. Complements PROJECT_STATUS.md (snapshot) and
 CURRENT_MILESTONE.md (active milestone). Updated when scope or sequencing changes — and at every
@@ -11,7 +11,7 @@ increment/milestone boundary per the Increment & Milestone Completion Checkpoint
 
 ---
 
-## Where we are (2026-07-27)
+## Where we are (2026-07-28)
 
 **Beta Readiness & Platform Hardening, 47%** — B2 ✅, B5 ✅ and B6 ✅ (the latter two at verifiable
 scope), plus ¾ of B4. B1 ~85%, B3 ~80%, all remainders owner-gated on money or a store account.
@@ -48,17 +48,32 @@ its time removing.
 
 **The #61 split is DONE (2026-07-28, PR #74, `0185ea9`).** The seven non-SDK bumps —
 `@typescript-eslint/*`, `prettier`, `turbo`, `@supabase/supabase-js`, both `@tanstack/*` — are on
-main with all five CI gates green. `react`, `@types/react` and the lockfile's `react@19.1.0` peer
-keys were deliberately left behind: they are the exactly-pinned SDK 54 baseline, and moving them is
-what reds the group (`react-test-renderer` stays at 19.1.0). The open dependency queue is now the
-coherent set the split was for — **#61's remainder, #64 and #65 all cross the SDK pin** and belong in
-one deliberate upgrade increment validated by a native build and the Maestro flows, with #62
-(i18next) and #63 (jest 30) red for their own unrelated reasons.
+main with all five CI gates green.
 
-**Next, in order:** (1) the **SDK-upgrade increment** — #61's `react` remainder + #64 + #65 together,
-behind a native build and the flows, which is the only way that class of change has ever been proven
-in this repo; (2) the **TDD resolution** on the deletion audit; (3) the **in-app deletion screen**
-Apple 5.1.1(v) requires, which needs a PDD affordance and SVC_household for ownership transfer.
+**And the "SDK-upgrade increment" the split was supposed to produce turned out not to exist
+(2026-07-28, PR #77).** The three PRs left in that queue were checked against the **installed peer
+graph** and all three closed: **#64** `@expo/metro-runtime` 6.1.2→57.0.7, whose dist-tags map majors
+to **SDK majors** (`latest` 57.0.7 is **SDK 57**) against `expo-router@6.0.24`'s `^6.1.2` peer;
+**#65** `@babel/runtime` 7→8 against `babel-preset-expo@54.0.12`'s `^7.20.0` peer; and **#75** —
+which superseded #61 after #74 landed — `react` 19.1.0→19.2.8, peer-**legal** under RN's `^19.1.0`
+but contradicted by react-native shipping a Fabric renderer hardcoded to React `"19.1.0"`. They were
+never an increment: `.github/dependabot.yml` held the correct rule and short **patterns** (`expo-*`
+does not match a scoped `@expo/` name), now extended to `react`, `@types/react`, `@expo/*` and
+`@babel/runtime`.
+
+**Two corrections to what this file previously said.** #64 and #65 were **not** red — they passed
+**all five gates including the bundle gate**, and only the peer-legal #75 was red. Green is
+anti-correlated with safety for an SDK-pinned package, because `expo export` resolves what fails
+natively. And "`react-test-renderer` must move with `react`" was the prescribed fix; satisfying that
+assertion (`@testing-library/react-native`'s `ensure-peer-deps.js`, which compares the two exactly)
+would have turned CI green while leaving the renderer mismatched.
+
+**Next, in order:** (1) the **TDD resolution** on the deletion audit — a documentation decision and
+the last thing between B6 and an honest privacy claim; (2) the **in-app deletion screen** Apple
+5.1.1(v) requires, which needs a PDD affordance and SVC_household for ownership transfer. A genuine
+Expo SDK upgrade is future work rather than a milestone deliverable, and when it happens it still
+needs a native build plus the six Maestro flows — the only method that has ever caught that class of
+change here.
 
 **After that the credential-free engineering is largely exhausted.** What remains is owner-gated
 (paid Supabase, Sentry, store accounts), product-gated (F-5, PDD screens and ERR_* copy, the
