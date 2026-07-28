@@ -2,8 +2,8 @@
 
 # PanchangPal — Current Task
 
-Version: 3.17.0
-Last Updated: 2026-07-28 (#61 split and merged; next: the SDK-upgrade increment)
+Version: 3.18.0
+Last Updated: 2026-07-28 (the SDK-upgrade increment does not exist; three PRs closed)
 
 Purpose: the current implementation task. Stay focused; avoid unrelated work unless instructed.
 

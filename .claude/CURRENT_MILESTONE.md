@@ -678,7 +678,10 @@ testers' hands.
   because the group bumps **`react` 19.1.0 → 19.2.8** while `react-test-renderer` stays behind.
   `react` and `react-native` are **exactly pinned** in both `apps/mobile` and `packages/ui` — they
   are the SDK 54 baseline — so #61 belongs with #64 and #65 in a deliberate SDK-upgrade increment,
-  not in the "red for its own reasons" bucket. The other seven bumps in the group
+  not in the "red for its own reasons" bucket. **(Superseded 2026-07-28: there is no such increment.
+  All three were closed against the peer graph and the ignore list now covers the four SDK-pinned
+  packages — see the top entry of this list. The diagnosis of #61's failure below is correct; the
+  conclusion that it implies an upgrade increment is not.)** The other seven bumps in the group
   (`@supabase/supabase-js`, both `@tanstack/*`, `@typescript-eslint/*`, `prettier`, `turbo`) are not
   SDK-coupled and could be split out and landed independently.
 - **⛔ No job runner processes the `job` table.** `analytics_rollup`, `notify_schedule`,
