@@ -27,7 +27,32 @@ const config: ExpoConfig = {
   // Config plugins required from SDK 54 — these packages now ship native config that must
   // be declared explicitly (previously autolinked). `expo install` cannot write to a
   // dynamic (.ts) config, so they are maintained here by hand.
-  plugins: ['expo-localization', 'expo-router', 'expo-secure-store'],
+  // `@sentry/react-native/expo` is what makes SOURCE MAPS work, and it is the reason B4.3 stopped
+  // short of wiring the upload by hand: Hermes maps must be uploaded from inside the build that
+  // produced the bundle. Maps from a separate `expo export` belong to a different bundle, so
+  // uploading those yields symbolication that is confidently wrong — worse than none. The plugin
+  // hooks the native build itself, which is the only place the correspondence holds.
+  //
+  // Upload requires SENTRY_ORG / SENTRY_PROJECT / SENTRY_AUTH_TOKEN in the build environment
+  // (already required at preflight's production tier and gated in release-build.yml). Without
+  // them the plugin builds normally and skips the upload — it does not fail the build, which is
+  // why the release workflow checks for them separately rather than trusting the plugin to.
+  plugins: [
+    'expo-localization',
+    'expo-router',
+    'expo-secure-store',
+    [
+      '@sentry/react-native/expo',
+      {
+        // Read from the build environment rather than hard-coded: no Sentry org exists yet, and
+        // an invented slug would make the upload fail at build time with a confusing 404 instead
+        // of the plugin's own clear "missing config" notice. Neither value is a secret (the slugs
+        // appear in every Sentry URL); SENTRY_AUTH_TOKEN is, and is never read here.
+        organization: process.env.SENTRY_ORG,
+        project: process.env.SENTRY_PROJECT,
+      },
+    ],
+  ],
   // OTA (TDD Part 5 §2.4 [MANDATORY]). `eas update:configure` cannot write to a dynamic
   // .ts config, so this is maintained by hand — as with `plugins` and the EAS project id.
   updates: {

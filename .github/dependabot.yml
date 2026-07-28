@@ -96,6 +96,12 @@ updates:
       - dependency-name: '@react-native-community/*'
       - dependency-name: jest-expo
       - dependency-name: jest
+
+      # Same rule, found the same way: Expo SDK 54's version map pins
+      # `@sentry/react-native` to ~7.2.0 (`expo/bundledNativeModules.json`), because the package
+      # ships native code AND an Expo config plugin that hooks the native build. `expo install
+      # --fix` moves it with the SDK; a lone bump is the mmkv-v2 shape again.
+      - dependency-name: '@sentry/react-native'
     labels: ['dependencies']
 
   # The workflows themselves are a supply chain. A compromised or abandoned action runs with

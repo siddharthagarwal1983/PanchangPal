@@ -8,11 +8,32 @@ import {
   toServerErrorReport,
   type ServerTelemetry,
 } from './telemetry.ts';
+import { SentryServerTelemetry } from './sentryServerTelemetry.ts';
 
-// Deferred Sentry client (TDD Part 5 §7.1); swapping this line is the whole change once a DSN
-// exists. Kept module-level rather than threaded through every handler: `errorResponse` is the one
-// place every ERR_* passes through, which is exactly why the report belongs here.
-let telemetry: ServerTelemetry = new NullServerTelemetry();
+/**
+ * The server telemetry client (TDD Part 5 §7.1). Module-level rather than threaded through every
+ * handler: `errorResponse` is the one place every ERR_* passes through, which is exactly why the
+ * report belongs here.
+ *
+ * Resolved from `SENTRY_DSN` at module load. With no DSN — the state today — this is
+ * `NullServerTelemetry` and the Sentry SDK is never even imported, so functions boot exactly as
+ * they did before (see `sentryServerTelemetry.ts` for why that matters when every function shares
+ * this module). `Deno` is read defensively so the module still loads under Vitest, where the pure
+ * logic beside it is tested.
+ */
+function resolveTelemetry(): ServerTelemetry {
+  const dsn = (globalThis as { Deno?: { env: { get(k: string): string | undefined } } }).Deno?.env
+    ?.get('SENTRY_DSN');
+  if (!dsn) return new NullServerTelemetry();
+
+  const environment =
+    (globalThis as { Deno?: { env: { get(k: string): string | undefined } } }).Deno?.env?.get(
+      'SENTRY_ENVIRONMENT',
+    ) ?? 'production';
+  return new SentryServerTelemetry(dsn, environment);
+}
+
+let telemetry: ServerTelemetry = resolveTelemetry();
 
 /** Test/DI seam — inject a spy, or the real client at composition time. */
 export function setServerTelemetry(next: ServerTelemetry): void {
