@@ -2,8 +2,8 @@
 
 # PanchangPal — Current Task
 
-Version: 3.18.0
-Last Updated: 2026-07-28 (the SDK-upgrade increment does not exist; three PRs closed)
+Version: 3.19.0
+Last Updated: 2026-07-28 (ADR-034 opens the deletion-audit decision the TDD owed)
 
 Purpose: the current implementation task. Stay focused; avoid unrelated work unless instructed.
 
@@ -110,7 +110,79 @@ green in CI on a real native build. Canonical progress 0% → 13% (1 of 8 Beta s
 # Current Task
 
 ## Title
-✅ THE SDK-UPGRADE INCREMENT WAS INVESTIGATED AND DOES NOT EXIST · THREE PRs CLOSED (PR #77)
+✅ ADR-034 OPENS THE DELETION-AUDIT DECISION THE TDD OWED (Proposed)
+
+**Progress unchanged at 47%.** A Proposed ADR surfaces a decision; it does not ratify one, so B6's
+open deliverable stays open — but it is now a decision with an owner and a deadline instead of a
+note in a migration comment.
+
+## The contradiction, stated precisely
+
+Two approved documents make incompatible demands of the same table:
+
+- **TDD Part 5 §5.1** (STRIDE threat model, `[MANDATORY]`) names `TBL_ACCOUNT_DELETION` as the
+  **deletion audit** mitigating repudiation. An audit must outlive the action it records.
+- **TDD Part 2 §3.15** declares `account_deletion(user_id uuid pk references app_user(id) on delete
+  cascade, …)`. The row is erased together with its own subject.
+
+**Neither document is wrong; the schema is under-specified for the role the threat model assigns
+it.** `account_deletion` is a good *request* table — pending intent, F-3 grace window,
+owner-readable, correctly cascading as operational state about a live account. It cannot also be the
+durable record of a completed erasure. **One row is being asked to have two lifetimes.**
+
+## What ADR-034 settles, and what it deliberately does not
+
+**Decided (engineering grounds):** the request and the audit are separate records; the audit is
+service-role-only (ADR-030 — `authenticated` includes anonymous users, and anyone can mint an
+anonymous JWT); the audit records the *fact* of erasure and never content recovered from the deleted
+rows; and **`executed_at` is retired**.
+
+**Referred to Security/Privacy with Legal sign-off:** *what identifies the subject of a completed
+erasure* — the raw `user_id`, a one-way digest of it, or nothing. That determines whether the system
+keeps a permanent list of identifiers belonging to people who asked to be forgotten, which is a
+privacy decision with legal weight, not an engineering preference. **Recommendation recorded: the
+digest form** — it verifies a specific claim without the table being a readable roster.
+**No schema change before ratification.**
+
+## Three findings while writing it
+
+1. **The citation was wrong everywhere.** Every tracking doc, `DATA_INVENTORY.md`, and the executor
+   migration's own header cited "TDD Part 2 §5.1". **Part 2 §5.1 is "Identity, Onboarding &
+   Profile"** — API contracts, no threat model. The real conflict is **Part 5 §5.1 vs Part 2 §3.15**,
+   across two Parts, which is plausibly why review of either alone never caught it. Seven citations
+   corrected; the unrelated (and correct) Part 2 §5.1 references in `openapi.yaml`,
+   `account/index.ts`, `accountRepository.ts` and `authRepository.ts` were left alone.
+2. **`executed_at` is dead schema, not merely unwritten.** Its only reader is
+   `sweep_due_account_deletions`'s `where executed_at is null` — a predicate that is unconditionally
+   true, because the column can never hold a value. A column exists to record an event that destroys
+   the row it lives on.
+3. **A retention rule agreed today would not be enforced.** The only scheduled job that runs in this
+   project is the deletion sweep; nothing consumes `job`. The ADR says so rather than specifying a
+   period nothing implements — which is the exact failure it exists to resolve.
+
+## Files
+
+`docs/architecture/adr/ADR-034-Account-Deletion-Audit-Record.md` (new) · `adr/README.md` index ·
+the executor migration's header comment (comment-only; `migrate.sh` replays idempotent SQL with no
+checksum, so this is safe) · `DATA_INVENTORY.md` · the seven corrected citations.
+6 vitest privacy tests still green.
+
+## Next task
+
+**Owner action: ratify ADR-034** (Security/Privacy, with Legal on the retention question). The
+implementation behind it is small and entirely blocked on that answer.
+
+Credential-free engineering meanwhile is thin, and the honest list is short: the **in-app deletion
+screen** Apple 5.1.1(v) requires is blocked on a PDD affordance and SVC_household; the **`job` table
+worker** stays deliberately unbuilt because every `job_type` is blocked on a product or vendor
+decision; **PDD owes approved copy for eleven ERR_* codes**. The remaining Beta work is owner-gated
+(Sentry org, paid Supabase, store accounts).
+
+---
+
+## Superseded — the dependency queue
+
+## ✅ THE SDK-UPGRADE INCREMENT WAS INVESTIGATED AND DOES NOT EXIST · THREE PRs CLOSED (PR #77)
 
 **Progress unchanged at 47%.** Dependency hygiene advances no Beta slice.
 
@@ -166,7 +238,7 @@ contains an SDK-crossing PR.
 
 A **credential-free Beta item**. The strongest candidate is the **TDD resolution the deletion audit
 owes** — `account_deletion.executed_at` is unwritable because the row cascades with its own subject,
-contradicting TDD Part 2 §5.1's use of the table as the repudiation-mitigating deletion audit. It is
+contradicting TDD Part 5 §5.1's use of the table as the repudiation-mitigating deletion audit. It is
 a documentation decision rather than code, and it is the last thing between B6 and an honest privacy
 claim. The **in-app deletion screen** Apple 5.1.1(v) requires remains blocked on a PDD affordance and
 SVC_household; the **`job` table worker** remains deliberately unbuilt, because every `job_type` is
@@ -371,7 +443,7 @@ removes cannot detect a deletion that only removed the identifier.
    **warning** where it does not. Until then, deletions execute only via the operator trigger.
 2. **`executed_at` cannot be written.** `account_deletion.user_id` cascades with `app_user`, so the
    request row is erased along with its own subject and there is nothing left to stamp. This
-   contradicts TDD Part 2 §5.1, which names the table as the **deletion audit** mitigating
+   contradicts TDD Part 5 §5.1, which names the table as the **deletion audit** mitigating
    repudiation. Changing the foreign key would invent a privacy decision (the surviving row names a
    uid), so the executor implements the schema as declared and **the TDD owes a resolution**. A
    completed deletion currently leaves no record that it happened.

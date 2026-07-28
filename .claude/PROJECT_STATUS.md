@@ -2,9 +2,9 @@
 
 # PanchangPal — Project Status Dashboard
 
-Version: 1.13.0
+Version: 1.14.0
 
-Last Updated: 2026-07-28 (the SDK-pinned dependency rule; three PRs closed; progress unchanged at 47%)
+Last Updated: 2026-07-28 (ADR-034 opens the deletion-audit decision; progress unchanged at 47%)
 
 Purpose:
 This document provides a high-level snapshot of the overall project.
@@ -74,7 +74,7 @@ TBD
 | Mobile Development (feature slices) | ✅ Complete | 100% (M1–M8 done) |
 | AI Platform | 🟡 In Progress | Adapters + RAG pipeline done; corpus + eval pending |
 | Testing | 🟢 Healthy | 452 green (350 mobile jest + 102 vitest) + 43 pgTAP (incl. **17 on the F-3 deletion executor**) + 17 pgTAP RLS/DB assertions; bundle gate per PR; **6 Maestro FLOW_* green on main** (incl. FLOW_OFFLINE_SYNC); the emulator-ANR false-red is now fixed at its cause (AOSP image, PR #55) after PR #41's `hide_error_dialogs` proved a symptom patch — 3 of the last 4 failures were launcher ANRs; API contract gate restored and proven to fail; AI eval harness still owed |
-| Beta | 🚧 In progress | 47% (B2 ✅; B5 ✅ at verifiable scope — NFR-15 still needs PITR; **B6 ✅ at verifiable scope** — OWASP review + 2 critical fixes + CCPA export + B6.3 inventory/policy/labels + §5.2 controls, and ✅ **deletion is now executed** — the executor, sweep and pg_cron schedule shipped 2026-07-27 and the extension is enabled on both hosted projects; residual: `executed_at` is unwritable, which the TDD owes a resolution for; B4 🟡 ~75% owner-gated on a Sentry org; B1/B3 owner-gated; B7–B8 pending) |
+| Beta | 🚧 In progress | 47% (B2 ✅; B5 ✅ at verifiable scope — NFR-15 still needs PITR; **B6 ✅ at verifiable scope** — OWASP review + 2 critical fixes + CCPA export + B6.3 inventory/policy/labels + §5.2 controls, and ✅ **deletion is now executed** — the executor, sweep and pg_cron schedule shipped 2026-07-27 and the extension is enabled on both hosted projects; residual: `executed_at` is unwritable — now opened as **ADR-034** (Proposed), awaiting owner ratification; B4 🟡 ~75% owner-gated on a Sentry org; B1/B3 owner-gated; B7–B8 pending) |
 | Production Launch | ⏳ Pending | 0% |
 
 ---
@@ -114,8 +114,10 @@ Current Focus
   the sweep, the pg_cron schedule, the secret-authorized operator trigger and 17 pgTAP assertions
   all exist, verified against a real Postgres 17. Residual: **pg_cron must be enabled on the hosted
   project** (owner, dashboard), and `executed_at` is unwritable because the audit row cascades with
-  its own subject — a TDD contradiction now recorded. Next: **the `job` table worker** (ADR-025),
-  which the analytics rollup, tombstone sweep and cache TTL are all waiting on.
+  its own subject — now opened as **ADR-034** (Proposed, 2026-07-28) and blocked on owner
+  ratification. Next: **owner sign-off on ADR-034**; the `job` table worker (ADR-025) stays
+  deliberately unbuilt, since every `job_type` is blocked on a product or vendor decision — it is
+  what the analytics rollup, the tombstone sweep and the cache TTL are all waiting on.
 - **Offline sync (TDD Part 4 §6) — ✅ complete at engineering scope (2026-07-26).** Mutation queue
   persisted and drained to SVC_sync; §6.1 read cache persisted. Never run against a live backend
   and not covered by a Maestro flow.
@@ -280,11 +282,17 @@ Implementation: Mobile MVP Phase 1 is feature-complete (M1–M8).
 
 Priority 1
 
-**A credential-free Beta item — the dependency queue is clean.** The strongest candidate is the
-**TDD resolution the deletion audit owes**: `account_deletion.executed_at` cannot be written because
-the row cascades with its own subject, contradicting TDD Part 2 §5.1's use of that table as the
-repudiation-mitigating deletion audit. It is a documentation decision, not code, and it is the last
-thing between B6 and an honest privacy claim.
+**Owner: ratify ADR-034 — Account-Deletion Audit Record** (Proposed, 2026-07-28). Security/Privacy
+decides what identifies the subject of a completed erasure — the raw `user_id`, a one-way digest of
+it, or nothing — and Legal confirms whether a records-of-request retention obligation applies and
+for how long. The engineering behind it is small and entirely blocked on that answer; building the
+recommended option first would be inventing the privacy decision the ADR exists to surface.
+
+The ADR already settles what is decidable without them: a deletion *request* and a deletion *audit*
+have opposite lifetimes and cannot be the same row, the audit is service-role-only, it records the
+fact of erasure and never content recovered from deleted rows, and the unwritable `executed_at` is
+retired. **This is the last thing between B6 and an honest privacy claim, and it is no longer an
+engineering task.**
 
 (~~The SDK-upgrade increment~~ — **retired 2026-07-28.** It was not an increment. #64, #65 and #75
 were checked against the installed peer graph, found to be three symptoms of one gap in
@@ -375,6 +383,16 @@ prefs work today, so gating and prefs are real before the SDKs are wired.
 
 # Recently Completed
 
+- **ADR-034 — Account-Deletion Audit Record (2026-07-28, Proposed).** Opens the decision the TDD
+  owed. **TDD Part 5 §5.1**'s `[MANDATORY]` threat model requires the deletion audit to outlive the
+  erasure; **Part 2 §3.15**'s schema erases it with its own subject. Neither is wrong — one row is
+  being asked to have two lifetimes. The ADR separates the request from the audit, makes the audit
+  service-role-only, confines it to the fact of erasure, and retires the unwritable `executed_at`;
+  it refers **what identifies the subject of a completed erasure** to Security/Privacy with Legal
+  sign-off, recommending the digest form without choosing it. **Progress unchanged at 47%** — a
+  Proposed ADR opens a decision, it does not close one. Also corrected: the contradiction was
+  mis-cited in **seven places** as "TDD Part 2 §5.1", which is actually *Identity, Onboarding &
+  Profile* — API contracts with no threat model.
 - **The SDK-pinned dependency rule (2026-07-28, PR #77).** The "SDK-upgrade increment" was
   investigated and found not to exist: #64, #65 and #75 are three symptoms of one gap in
   `.github/dependabot.yml`'s ignore **patterns**, not a coherent upgrade. All three closed with their

@@ -2,8 +2,8 @@
 
 # PanchangPal — Implementation Roadmap
 
-Version: 2.4.0
-Last Updated: 2026-07-28 (the SDK-pinned dependency rule; the three SDK-crossing PRs are closed)
+Version: 2.5.0
+Last Updated: 2026-07-28 (ADR-034 opens the deletion-audit decision; the SDK-crossing PRs are closed)
 
 Purpose: the forward plan from the current state. Complements PROJECT_STATUS.md (snapshot) and
 CURRENT_MILESTONE.md (active milestone). Updated when scope or sequencing changes — and at every
@@ -31,8 +31,8 @@ SQL and two TypeScript perturbations.
 dispatched `dev-migrate`. **It is the first scheduled job that has ever run in this project.**
 
 **One residual on the executor:** `executed_at` cannot be written, because the audit row cascades
-with its own subject — a contradiction with TDD §5.1's deletion-audit claim that the TDD owes a
-resolution for. A completed deletion currently leaves no record that it happened.
+with its own subject — a contradiction with TDD **Part 5** §5.1's deletion-audit claim. A completed
+deletion currently leaves no record that it happened. **Now opened as ADR-034 (see below).**
 
 **The three owed follow-ups also closed** (#72, #73): the CCPA export's missing `message` rows,
 `e2e.yml`'s flow echo (now derived from the directory, so it cannot drift again), and
@@ -68,12 +68,21 @@ natively. And "`react-test-renderer` must move with `react`" was the prescribed 
 assertion (`@testing-library/react-native`'s `ensure-peer-deps.js`, which compares the two exactly)
 would have turned CI green while leaving the renderer mismatched.
 
-**Next, in order:** (1) the **TDD resolution** on the deletion audit — a documentation decision and
-the last thing between B6 and an honest privacy claim; (2) the **in-app deletion screen** Apple
-5.1.1(v) requires, which needs a PDD affordance and SVC_household for ownership transfer. A genuine
-Expo SDK upgrade is future work rather than a milestone deliverable, and when it happens it still
-needs a native build plus the six Maestro flows — the only method that has ever caught that class of
-change here.
+**The deletion-audit resolution is now open as ADR-034 (Proposed, 2026-07-28).** **TDD Part 5 §5.1**
+requires the audit to outlive the erasure; **Part 2 §3.15**'s schema erases it with its own subject.
+Neither is wrong — one row is being asked to have two lifetimes, because `account_deletion` is a
+correct *request* table and cannot also be the durable record of a completed erasure. The ADR
+separates them, makes the audit service-role-only, confines it to the fact of erasure, and retires
+the unwritable `executed_at`; it refers **what identifies the subject of a completed erasure** to
+Security/Privacy with Legal sign-off, recommending a one-way digest without choosing it. (The
+contradiction was mis-cited in seven places as "TDD Part 2 §5.1", which is *Identity, Onboarding &
+Profile* — API contracts with no threat model. All corrected.)
+
+**Next, in order:** (1) **owner ratification of ADR-034** — the engineering behind it is small and
+entirely blocked on that answer; (2) the **in-app deletion screen** Apple 5.1.1(v) requires, which
+needs a PDD affordance and SVC_household for ownership transfer. A genuine Expo SDK upgrade is future
+work rather than a milestone deliverable, and when it happens it still needs a native build plus the
+six Maestro flows — the only method that has ever caught that class of change here.
 
 **After that the credential-free engineering is largely exhausted.** What remains is owner-gated
 (paid Supabase, Sentry, store accounts), product-gated (F-5, PDD screens and ERR_* copy, the

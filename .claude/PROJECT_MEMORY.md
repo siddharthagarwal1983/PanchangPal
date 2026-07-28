@@ -2,9 +2,9 @@
 
 # PanchangPal — Project Memory
 
-Version: 2.4.0
+Version: 2.5.0
 
-Last Updated: 2026-07-28 (the SDK 54 pin as a seam; deletion seam; pg_cron's one real user; E2E harness facts)
+Last Updated: 2026-07-28 (ADR-034 on the deletion audit; the SDK 54 pin as a seam; deletion seam; E2E harness facts)
 
 Current Phase:
 Beta Readiness & Platform Hardening (TDD Part 5)
@@ -557,12 +557,24 @@ Stable, cross-cutting facts (permanent until an approved decision changes them):
   Established after `SVC_account.delete` spent the whole project writing `account_deletion` rows
   that nothing ever read back (found by B6.3).
 - **`account_deletion.executed_at` is unwritable, and that is a documented contradiction, not an
-  oversight** (2026-07-27). The row cascades with `app_user`, so a successful erasure removes the
-  request row along with its subject and there is nothing left to stamp. TDD Part 2 §5.1 names
-  `TBL_ACCOUNT_DELETION` as the **deletion audit** mitigating repudiation, which requires the row to
-  survive; §3's schema declares the cascade, which requires it not to. The executor implements the
-  schema as declared — changing the foreign key would invent a privacy decision, since the surviving
-  row names a uid. **The TDD owes a resolution.** Today a completed deletion leaves no record.
+  oversight** (2026-07-27; opened as **ADR-034**, Proposed, 2026-07-28). The row cascades with
+  `app_user`, so a successful erasure removes the request row along with its subject and there is
+  nothing left to stamp. **TDD Part 5 §5.1** names `TBL_ACCOUNT_DELETION` as the **deletion audit**
+  mitigating repudiation, which requires the row to survive; **TDD Part 2 §3.15**'s schema declares
+  the cascade, which requires it not to. **The conflict spans two Parts** — and was mis-cited as
+  "Part 2 §5.1" in seven places until 2026-07-28, which is *Identity, Onboarding & Profile*, API
+  contracts with no threat model. Reviewing either Part alone cannot surface it.
+  **The resolution, so far as engineering can settle it:** a deletion *request* and a deletion
+  *audit* have **opposite lifetimes and cannot be the same row**. `account_deletion` is a correct
+  request table (pending intent, F-3 grace window, owner-readable, cascading as state about a live
+  account); the audit must be a separate service-role-only record that no cascade reaches, holding
+  the *fact* of erasure and never content recovered from the deleted rows. `executed_at` is dead
+  schema — its only reader is a `where executed_at is null` predicate that is unconditionally true.
+  **What is NOT engineering's to decide, and is owed:** what identifies the subject of a completed
+  erasure — raw `user_id`, a one-way digest, or nothing. That determines whether the system keeps a
+  permanent list of identifiers belonging to people who asked to be forgotten. Security/Privacy owns
+  it, Legal confirms the retention obligation, the digest form is recommended. **No schema change
+  before ratification.** Today a completed deletion still leaves no record.
 - **Privacy documentation is DERIVED, and the inventory is pinned to the code** —
   `docs/devops/DATA_INVENTORY.md` is built from `apps/backend/migrations` and `apps/mobile/{app,src}`,
   and `PRIVACY_POLICY_DRAFT.md` and `STORE_PRIVACY_LABELS.md` are derived from it. None of the three

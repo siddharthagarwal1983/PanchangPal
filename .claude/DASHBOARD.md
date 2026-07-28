@@ -2,9 +2,9 @@
 
 # PanchangPal Dashboard
 
-Version: 1.26.0
+Version: 1.27.0
 
-Last Updated: 2026-07-28 (the SDK-pinned dependency rule; three PRs closed; progress unchanged at 47%)
+Last Updated: 2026-07-28 (ADR-034 opens the deletion-audit decision; progress unchanged at 47%)
 
 Purpose:
 This is the first file Claude should read at the beginning of every session.
@@ -92,7 +92,48 @@ CURRENT_MILESTONE.md
 
 # Current Task
 
-**The "SDK-upgrade increment" was investigated and does not exist. Three PRs closed; the rule that
+**ADR-034 opens the deletion-audit decision the TDD owed — Proposed, and deliberately not decided
+here.**
+
+**Progress unchanged at 47%.** A Proposed ADR surfaces a decision; it does not ratify one, so B6's
+open deliverable stays open. What changed is that it is now a decision with a named owner rather
+than a note in a migration comment.
+
+**The contradiction, stated precisely.** **TDD Part 5 §5.1** (STRIDE, `[MANDATORY]`) names
+`TBL_ACCOUNT_DELETION` as the **deletion audit** mitigating repudiation — which requires the row to
+outlive the erasure. **TDD Part 2 §3.15** declares `user_id ... on delete cascade` — which erases it
+along with its own subject. **Neither document is wrong; the schema is under-specified for the role
+the threat model assigns it.** `account_deletion` is a correct *request* table — pending intent, F-3
+grace window, owner-readable, cascading as operational state about a live account — and cannot also
+be the durable record of a completed erasure. **One row is being asked to have two lifetimes.**
+
+**Decided on engineering grounds:** the request and the audit are separate records; the audit is
+service-role-only (ADR-030 — `authenticated` includes anonymous users, and anyone can mint an
+anonymous JWT for free); it records the *fact* of erasure and never content recovered from the
+deleted rows; and **`executed_at` is retired**.
+
+**Referred to Security/Privacy, with Legal sign-off:** *what identifies the subject of a completed
+erasure* — the raw `user_id`, a one-way digest of it, or nothing at all. That determines whether the
+system keeps a permanent list of identifiers belonging to people who asked to be forgotten, which is
+a privacy decision with legal weight rather than an engineering preference. **The digest form is
+recommended, not chosen** — it verifies a specific claim without the table being a readable roster.
+**No schema change before ratification.**
+
+**Three findings while writing it.** (1) **The citation was wrong everywhere** — every tracking
+document, `DATA_INVENTORY.md`, and the executor migration's own header cited "TDD Part 2 §5.1", but
+**Part 2 §5.1 is "Identity, Onboarding & Profile"**: API contracts, no threat model. The real
+conflict spans **two Parts**, which is plausibly why reviewing either alone never caught it. Seven
+citations corrected; the unrelated and correct Part 2 §5.1 references in `openapi.yaml` and three
+source files were left alone. (2) **`executed_at` is dead schema, not merely unwritten** — its only
+reader is `where executed_at is null`, a predicate that is unconditionally true because the column
+can never hold a value. A column exists to record an event that destroys the row it lives on.
+(3) **A retention rule agreed today would not be enforced**: the deletion sweep is still the only
+scheduled job that runs. The ADR says so rather than specifying a period nothing implements — the
+exact failure it exists to resolve.
+
+---
+
+**Previously — the "SDK-upgrade increment" was investigated and does not exist. Three PRs closed; the rule that
 should have prevented them is fixed** (PR #77).
 
 **Progress unchanged at 47%.** Dependency hygiene advances no Beta slice.
@@ -596,6 +637,17 @@ Verified end-to-end. **PR #36 merged to main as `e1e10d4`**; the docs checkpoint
 
 # Today's Objective
 
+Session of 2026-07-28 (part 3). **Resolve the deletion audit the TDD owes.** Outcome: **ADR-034,
+Proposed** — the request record and the audit record have opposite lifetimes and cannot be one row,
+so the ADR separates them, retires the unwritable `executed_at`, and refers the one genuinely
+undecidable question (what identifies the subject of a completed erasure) to Security/Privacy with
+Legal sign-off, recommending the digest form without choosing it. Also found: the contradiction was
+**mis-cited in seven places** as "TDD Part 2 §5.1", which is actually Identity/Onboarding API
+contracts — the real conflict is Part 5 §5.1 vs Part 2 §3.15, across two Parts. **Progress unchanged
+at 47%**: a Proposed ADR opens a decision, it does not close one. Next: **owner ratification**.
+
+---
+
 Session of 2026-07-28 (part 2). **Execute the SDK-upgrade increment — and establish first whether it
 is one.** Outcome: it is not. Checked against the installed peer graph, all three PRs are the same
 defect — `.github/dependabot.yml` held the right rule and the wrong patterns — so #64, #65 and #75
@@ -692,7 +744,9 @@ No new product scope.
    executor, the sweep, the schedule, the operator trigger and 17 pgTAP assertions all exist, and
    **`pg_cron` is now enabled and confirmed on both hosted projects**, so the sweep runs daily
    rather than only when an operator triggers it. **One residual:** `executed_at` is unwritable
-   because the audit row cascades with its own subject, which the TDD owes a resolution for.
+   because the audit row cascades with its own subject. **Now opened as ADR-034 (Proposed,
+   2026-07-28)** and awaiting owner ratification — Security/Privacy on what identifies the subject
+   of a completed erasure, Legal on the retention obligation. No schema change until then.
    Still open separately: **Apple 5.1.1(v) requires an in-app deletion screen**, which needs a PDD
    affordance and SVC_household for ownership transfer.
 2. ~~**B6.3 — data inventory, privacy policy, store labels**~~ — **DONE 2026-07-27.** Three
@@ -762,15 +816,18 @@ resolved (PR #14).
 
 # Next Deliverable
 
-**A credential-free Beta item — the dependency queue is now clean.** The strongest candidate is the
-**TDD resolution the deletion audit owes**: `account_deletion.executed_at` is unwritable because the
-row cascades with its own subject, which contradicts TDD Part 2 §5.1's use of that table as the
-repudiation-mitigating deletion audit. It is a documentation decision rather than code, and it is the
-last thing standing between B6 and an honest privacy claim.
+**Owner action: ratify ADR-034** — Security/Privacy on what identifies the subject of a completed
+erasure, Legal on whether a records-of-request retention obligation applies and for how long. The
+implementation behind it is small and entirely blocked on that answer; building the recommended
+option first would be inventing the privacy decision the ADR exists to surface.
 
-Still blocked, and deliberately so: the **in-app deletion screen** Apple 5.1.1(v) requires needs a
-PDD affordance and SVC_household; the **`job` table worker** stays unbuilt because every `job_type`
-is blocked on a product or vendor decision.
+**Credential-free engineering is now genuinely thin, and that is worth stating plainly rather than
+filling with hygiene work.** Still blocked, deliberately: the **in-app deletion screen** Apple
+5.1.1(v) requires needs a PDD affordance and SVC_household; the **`job` table worker** stays unbuilt
+because every `job_type` is blocked on a product or vendor decision; **PDD owes approved copy for
+eleven ERR_* codes**. What remains in the milestone is largely owner-gated — a Sentry org (free
+tier) closes B4, a paid Supabase plan (~$25/mo) closes B1 *and* makes NFR-15 achievable, and Apple
+($99) + Google Play ($25) close most of B3.
 
 (**The "SDK-upgrade increment" that stood here is retired.** Investigated 2026-07-28: the three PRs
 were not an increment but a gap in `.github/dependabot.yml`'s patterns, and none belonged on SDK 54.
