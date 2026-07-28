@@ -72,18 +72,15 @@ export interface ServerTelemetryStatus {
 /**
  * Describe what will actually happen to a server error report.
  *
- * The backend is `'none'` in both branches today — that is the point. A DSN configured with no
- * client to consume it is the dangerous case, because it means an operator believes Edge Function
- * errors are reported when they are not, so it produces a warning rather than passing quietly.
+ * Until `SentryServerTelemetry` existed, both branches returned `'none'` and a configured DSN
+ * produced a WARNING — the dangerous case being an operator who believes Edge Function errors are
+ * reported when they are not. A DSN now resolves a real client, so the warning is gone and the
+ * answer is simply which of the two states holds.
+ *
+ * `'sentry'` means reports are being SENT, which is not the same as being DELIVERED: the client
+ * loads the SDK lazily and drops reports if that load fails, and nothing here has been observed
+ * against a real DSN. See `sentryServerTelemetry.ts`.
  */
 export function describeServerTelemetry(dsn: string | undefined): ServerTelemetryStatus {
-  if (dsn) {
-    return {
-      backend: 'none',
-      warning:
-        'SENTRY_DSN is set but no Edge Function Sentry client is wired — server errors are NOT ' +
-        'being reported (they are still logged). See TDD Part 5 §7.1.',
-    };
-  }
-  return { backend: 'none' };
+  return { backend: dsn ? 'sentry' : 'none' };
 }

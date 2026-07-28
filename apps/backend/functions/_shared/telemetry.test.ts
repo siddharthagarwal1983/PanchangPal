@@ -55,10 +55,13 @@ describe('describeServerTelemetry', () => {
     expect(describeServerTelemetry('')).toEqual({ backend: 'none' });
   });
 
-  it('warns when a DSN is configured but no client can consume it', () => {
+  // This test previously asserted a WARNING for "DSN configured, no client to consume it". That
+  // state no longer exists — `SentryServerTelemetry` is wired — so the warning is gone and what
+  // remains to assert is that the status tells the truth about which client is in use.
+  it("reports 'sentry' when a DSN is configured, with nothing left to warn about", () => {
     const status = describeServerTelemetry('https://public@o0.ingest.sentry.io/0');
-    expect(status.backend).toBe('none');
-    expect(status.warning).toMatch(/NOT.*reported/);
+    expect(status.backend).toBe('sentry');
+    expect(status.warning).toBeUndefined();
   });
 });
 

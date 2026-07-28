@@ -93,18 +93,27 @@ describe('telemetry adapter resolution', () => {
     expect(getTelemetryAdapter()).toBe(getTelemetryAdapter());
   });
 
-  it('warns when a DSN is configured but no adapter can consume it', () => {
+  // Until @sentry/react-native was installed, a configured DSN with no adapter to consume it was
+  // the dangerous state, and this file WARNED about it. That state no longer exists: a DSN now
+  // resolves the real reporter. These two tests replace that warning with the property it was
+  // standing in for — `getTelemetryBackend()` tells the truth about where reports go.
+  it('resolves the Sentry reporter when a DSN is configured', () => {
     const warn = jest.spyOn(console, 'warn').mockImplementation(() => undefined);
     process.env.EXPO_PUBLIC_SENTRY_DSN = 'https://public@o0.ingest.sentry.io/0';
 
     getTelemetryAdapter();
 
-    expect(warn).toHaveBeenCalledWith(expect.stringContaining('NOT being reported'));
+    expect(getTelemetryBackend()).toBe('sentry');
+    // Nothing to warn about any more — the DSN and the capability now agree.
+    expect(warn).not.toHaveBeenCalled();
   });
 
-  it('stays quiet when no DSN is configured — the deferral is expected, not a fault', () => {
+  it('reports `none` and stays quiet with no DSN — a local or CI build is not a fault', () => {
     const warn = jest.spyOn(console, 'warn').mockImplementation(() => undefined);
+
     getTelemetryAdapter();
+
+    expect(getTelemetryBackend()).toBe('none');
     expect(warn).not.toHaveBeenCalled();
   });
 
