@@ -141,6 +141,16 @@ jobs:
         #   lintVitalRelease / lintVitalAnalyzeRelease — release lint; release-build.yml owns that gate.
         #   mergeReleaseNativeDebugMetadata — crash-symbolication metadata bundled into the AAB, unused
         #     by an APK, and the task that actually FAILED under the single-ABI build.
+        #
+        # SENTRY_DISABLE_AUTO_UPLOAD: the Sentry config plugin adds a source-map upload task to every
+        # release build, and that task FAILS the build when it cannot run — it does not skip. There
+        # are no Sentry credentials here and an emulator throwaway APK has nothing worth
+        # symbolicating, so the upload is switched off explicitly (sentry.gradle gates it with
+        # `onlyIf`). Found the hard way: the first native build after adding the plugin died on
+        # `:app:createBundleReleaseJsAndAssets_SentryUpload_*`. release-build.yml keeps its own
+        # credential gate and does NOT set this, because a shipped build must upload its maps.
+        env:
+          SENTRY_DISABLE_AUTO_UPLOAD: 'true'
         run: |
           timeout --kill-after=2m 40m ./gradlew assembleRelease --no-daemon --stacktrace \
             -PreactNativeArchitectures=x86_64 \
