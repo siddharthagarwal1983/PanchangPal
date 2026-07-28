@@ -2,8 +2,8 @@
 
 # PanchangPal — Current Session
 
-Version: 3.2.0
-Last Updated: 2026-07-28 (ADR-034 — the deletion-audit decision; the SDK-pinned dependency rule)
+Version: 3.3.0
+Last Updated: 2026-07-28 (Sentry wired; ADR-034; the SDK-pinned dependency rule)
 
 **Main is at `6b5fc0d`, clean, all workflows green** — CD ✅ and **E2E (Maestro) ✅**, so #76's
 launch-race fix is verified on main rather than merely merged. **Progress unchanged at 47%**;
@@ -12,6 +12,42 @@ dependency hygiene advances no Beta slice.
 ---
 
 # Completed
+
+**Sentry is wired behind both telemetry ports.** `@sentry/react-native` at the SDK 54
+version-mapped **~7.2.0**, filling the Null implementations B4.1 and B4.3 left in place. Client
+reporter in `apps/mobile/src/data/sentryTelemetry.ts` (the only module allowed to import the SDK),
+server client in `apps/backend/functions/_shared/sentryServerTelemetry.ts` — §7.1 is "client **+**
+Edge Functions" — and `@sentry/react-native/expo` in `app.config.ts` plugins, which is what makes
+**source-map upload** possible from inside the build that produced the bundle (the thing B4.3
+deliberately stopped short of).
+
+**`enableAutoSessionTracking` is the point:** crash-free sessions (NFR-06, §7.2) become measurable,
+which is the metric §10.1 gates the launch on.
+
+**No PII is structural** (§7.1 `[MANDATORY]`): `beforeSend` rewrites every exception message to its
+ERR_* code while **keeping the stack** — a stack is our own file/line/function names and is the
+whole diagnostic value; the message is the leak vector. Automatic breadcrumbs are dropped (console
+carries whatever was logged; network carries URLs with `local_date`, household id, invite token),
+`request`/`extra` are stripped, user identity is reduced to the pseudonymous id, and events are
+fingerprinted by code. **Sentry's own `ReactNativeErrorHandlers` integration is removed** — it hooks
+the same `ErrorUtils` global as `installGlobalErrorHandler`, so both active would report every crash
+twice, with the duplicate bypassing the scrubbing. Native crash capture stays on.
+
+**The server SDK is imported dynamically, only when `SENTRY_DSN` is set** — `_shared/http.ts` is
+imported by every Edge Function, so a top-level SDK import would sit on the critical path of every
+deploy and cold start. With no DSN the blast radius is zero. It also never hands the thrown value to
+the SDK, unlike the mobile adapter: a server stack's frames sit inside Postgres or a fetch library
+and carry query text.
+
+**Verified:** 378 mobile jest (+22), 109 vitest (+7), tsc clean, eslint 0 errors, `expo export` green
+both platforms, and prebuild confirms `sentry.gradle` + `sentry.properties` land in the native
+project. **Three perturbations** each failed the right tests.
+
+**⚠️ Not verified:** nothing has been observed reaching Sentry — no DSN, no org — so the adapter
+resolves to Null at runtime and §7.2 stays unmeasurable. This converts an engineering blocker into a
+five-minute owner action; it does not remove it.
+
+---
 
 **ADR-034 opens the deletion-audit decision the TDD owed (Proposed).** Two approved documents make
 incompatible demands of one table: **TDD Part 5 §5.1**'s `[MANDATORY]` threat model names
@@ -90,12 +126,25 @@ graph settles it.
 # Blockers
 
 1. **Paid Supabase (~$25/mo)** — no PITR; user data unrecoverable. NFR-15 unmet, launch blocker.
-2. **Sentry org + DSN** (free tier) — the only thing between B4 and done.
+2. **Sentry org + DSN** (free tier) — the only thing between B4 and done, and now a **five-minute
+   paste** rather than an engineering task: the SDK, both adapters, the scrubbing and the
+   source-map plugin are all in place and resolve the moment a DSN exists. Needs `SENTRY_DSN`
+   (per-environment), plus `SENTRY_ORG` / `SENTRY_PROJECT` / `SENTRY_AUTH_TOKEN` as repo secrets
+   for the source-map upload.
 3. Apple $99 · Google Play $25 → most of B3.
 
 # Recommended next task
 
-**Owner action: ratify ADR-034** (Security/Privacy, with Legal on the retention question). The
+**Owner action: create a Sentry org + project (free tier) and place the four secrets.** That closes
+B4.3's upload for real, unblocks **B4.4** (SLO dashboards + alerts) — the last increment in B4 — and
+makes crash-free sessions measurable for the first time in the project's history.
+
+**A local toolchain regression to fix when convenient:** only **JDK 26** is installed on the dev Mac
+and Kotlin's version parser rejects `"26.0.1"`, so `./gradlew` fails before compiling. The note that
+"Gradle auto-provisions JDK 17" is out of date. Installing a JDK 17 restores local native builds and
+local Maestro iteration; until then native verification goes through CI.
+
+**Also still owed: ratify ADR-034** (Security/Privacy, with Legal on the retention question). The
 implementation behind it is small and entirely blocked on that answer, and implementing the
 recommended option first would be inventing the privacy decision the ADR exists to surface.
 

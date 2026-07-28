@@ -2,9 +2,9 @@
 
 # PanchangPal — Project Status Dashboard
 
-Version: 1.14.0
+Version: 1.15.0
 
-Last Updated: 2026-07-28 (ADR-034 opens the deletion-audit decision; progress unchanged at 47%)
+Last Updated: 2026-07-28 (Sentry wired behind both ports; ADR-034; progress unchanged at 47%)
 
 Purpose:
 This document provides a high-level snapshot of the overall project.
@@ -282,6 +282,15 @@ Implementation: Mobile MVP Phase 1 is feature-complete (M1–M8).
 
 Priority 1
 
+**Owner: create a Sentry org + project (free tier) and place four secrets** — `SENTRY_DSN` per
+environment, plus `SENTRY_ORG` / `SENTRY_PROJECT` / `SENTRY_AUTH_TOKEN` as repo secrets for the
+source-map upload. Every engineering piece is now built and resolves the moment a DSN exists: the
+SDK, the client and Edge Function adapters, the PII scrubbing, and the Expo config plugin. This
+unblocks **B4.4** (SLO dashboards + alerts), **closes B4**, and makes crash-free sessions (NFR-06)
+measurable for the first time in the project's history.
+
+Priority 2
+
 **Owner: ratify ADR-034 — Account-Deletion Audit Record** (Proposed, 2026-07-28). Security/Privacy
 decides what identifies the subject of a completed erasure — the raw `user_id`, a one-way digest of
 it, or nothing — and Legal confirms whether a records-of-request retention obligation applies and
@@ -383,6 +392,20 @@ prefs work today, so gating and prefs are real before the SDKs are wired.
 
 # Recently Completed
 
+- **Sentry wired behind both telemetry ports (2026-07-28).** `@sentry/react-native` at the SDK 54
+  version-mapped ~7.2.0, filling the Null implementations B4.1 and B4.3 left behind: client
+  reporter, Edge Function client (§7.1 is "client **+** Edge Functions"), and the Expo config plugin
+  that makes source-map upload happen inside the build that produced the bundle — the item B4.3
+  deliberately refused to fake. `enableAutoSessionTracking` makes **crash-free sessions (NFR-06,
+  §7.2)** measurable. **No PII is structural**: exception messages are rewritten to their ERR_* code
+  while the stack survives, automatic breadcrumbs are dropped, `request`/`extra` are stripped, and
+  identity is reduced to the pseudonymous id. Sentry's own JS error handler is removed because it
+  duplicates `installGlobalErrorHandler` and the duplicate would bypass the scrubbing. The server
+  SDK is imported dynamically and only when a DSN exists, so with none the blast radius across every
+  Edge Function is zero. **Verified:** 378 mobile jest (+22), 109 vitest (+7), tsc clean, eslint 0
+  errors, bundle green both platforms, three perturbations each failing the right tests.
+  **⚠️ Nothing has been observed reaching Sentry** — no DSN, no org — so §7.2 stays unmeasurable and
+  **B4.4 remains the open increment**. **Progress unchanged at 47%.**
 - **ADR-034 — Account-Deletion Audit Record (2026-07-28, Proposed).** Opens the decision the TDD
   owed. **TDD Part 5 §5.1**'s `[MANDATORY]` threat model requires the deletion audit to outlive the
   erasure; **Part 2 §3.15**'s schema erases it with its own subject. Neither is wrong — one row is

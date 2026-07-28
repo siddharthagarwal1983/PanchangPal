@@ -2,9 +2,9 @@
 
 # PanchangPal — Current Milestone
 
-Version: 4.7.0
+Version: 4.8.0
 
-Last Updated: 2026-07-28 (ADR-034 opens the deletion-audit decision; progress unchanged at 47%)
+Last Updated: 2026-07-28 (Sentry wired behind both ports; ADR-034; progress unchanged at 47%)
 
 Purpose:
 This document defines the current milestone. Unlike SESSION.md (daily work) or TASK.md (current
@@ -110,11 +110,13 @@ EAS build that produced the bundle, so maps from a separate `expo export` would 
 confidently wrong — the gate says so instead of pretending.
 
 **What is now measurable, and what is not.** B4.2 gives EVT_054 a working destination, so error
-*rates* land in `analytics_event` today — that half of §7.1 is real. Crash *reporting* is not: the
-concrete Sentry adapter stays deferred (`@sentry/react-native` uninstalled, no DSN), so
-`NullTelemetryAdapter` drops the diagnostic copy, crash-free sessions (NFR-06, §7.2) cannot be
-measured, and B4 cannot close. `getTelemetryBackend()` reports `'none'` so that status is
-inspectable rather than assumed.
+*rates* land in `analytics_event` today — that half of §7.1 is real. **Crash reporting is now BUILT
+but still not OBSERVED (updated 2026-07-28):** `@sentry/react-native` is installed and the concrete
+adapters exist on both client and server, with session tracking on so crash-free sessions become
+measurable — but **no DSN and no org are provisioned**, so the composition root still resolves
+`NullTelemetryAdapter`, `getTelemetryBackend()` still reports `'none'`, and NFR-06 / §7.2 remain
+unmet. The difference from before is where the blocker sits: it was engineering, and it is now a
+five-minute owner action.
 
 **Privacy decisions this forced, recorded in DECISIONS.md rather than left implicit:**
 `user_pseudo_id` is a device-minted random UUID never derived from an identity (a reinstall mints a
@@ -387,7 +389,7 @@ possible fix and would have caught defects 1–3 at M1.
 | B1 | Environments & secrets | dev/staging/prod projects, per-env secrets, fail-closed preflight (§1, §4) | 🟡 ~85% — prod blocked on a paid plan |
 | B2 | E2E verification | bundle gate (done in B1) + Maestro FLOW_*; green in CI (§2.2, §10.1) | ✅ COMPLETE — bundle gate + **6 flows GREEN** on a native build (RETURNING · MORNING_RITUAL · SESSION_PERSISTENCE · AUTH_SESSION_PERSISTENCE · ONBOARDING · **OFFLINE_SYNC**), 6/6 on run 30261926062 (2026-07-27). The count was recorded as 4 until 2026-07-26: FLOW_AUTH_SESSION_PERSISTENCE arrived with B6 and was never added to the tally, and `e2e.yml`'s echo is now DERIVED from the flows directory, so it cannot drift again. Gate hardened at its cause: the launcher-ANR false-red is gone with the move to the AOSP image (PR #55). Remaining 2 flows blocked on other slices/backends/gated feature |
 | B3 | Build & distribution | eas.json profiles, Hermes, signing, source maps, TestFlight / Play Internal (§2.3) | 🟡 ~80% — automated builds work; store accounts + Sentry (B4) remain |
-| B4 | Observability | Sentry, telemetry, SLO dashboards + alerts (§7) | 🟡 ~75% — B4.1 seam ✅ · B4.2 sink ✅ · B4.3 server seam + prod release gate ✅ · EVT_* daily-habit funnel now emitting (§11.4, incl. the North Star input EVT_017); **upload + B4.4 owner-gated on a Sentry org (free tier)** |
+| B4 | Observability | Sentry, telemetry, SLO dashboards + alerts (§7) | 🟡 ~75% — B4.1 seam ✅ · B4.2 sink ✅ · B4.3 server seam + prod release gate ✅ · EVT_* daily-habit funnel emitting (§11.4, incl. the North Star input EVT_017) · **Sentry now WIRED behind both ports (2026-07-28)** — client + Edge Function clients, PII scrubbing structural, and the Expo config plugin so source maps upload from inside the build. **B4.4 (SLO dashboards + alerts) is the one open increment, and the blocker is now a five-minute owner action** — create a free-tier Sentry org and place `SENTRY_DSN` / `SENTRY_ORG` / `SENTRY_PROJECT` / `SENTRY_AUTH_TOKEN`. Until then the adapter resolves to Null and §7.2 stays unmeasurable |
 | B5 | Reliability & DR | backups, restore drill, runbooks, graceful degradation (§8) | ✅ COMPLETE at verifiable scope — runbooks (§8.3) · mechanised restore drill · §8.2 degradation policy · §8.4 operator resilience. **One deliverable is NOT engineering-closable: NFR-15 needs PITR, which is a purchase.** Recorded as a launch blocker rather than counted as done. |
 | B6 | Security & privacy | OWASP Mobile review, CCPA export/delete verification, store privacy labels (§5, §6) | ✅ COMPLETE at verifiable scope — OWASP review ✅ (2 critical defects found + fixed, each proven by reintroducing it) · CCPA export + SVC_account authz ✅ · **B6.3 data inventory + privacy policy draft + store labels ✅**, the inventory pinned to the schema and the emitted `EVT_*` set by a conformance test proven to fail four ways · §5.2 SBOM/Dependabot/pinning ✅. **Two deliverables are NOT engineering-closed and are recorded rather than counted: (a) ⛔ deletion is never EXECUTED** — the request is written to `account_deletion` and nothing carries it out, which is ordinary engineering and a launch blocker; **(b)** nothing is legally reviewed, and no policy or label is publishable until (a) is fixed. Export remains at verifiable scope: unit-tested and proven-to-fail, never run against a live backend |
 | B7 | Release management | versioning/trains, OTA policy + channels, staged rollout, rollback verification (§3) | ⏳ |
@@ -601,6 +603,31 @@ testers' hands.
   checked by the DR restore drill, and `ACCOUNT_SWEEP_SECRET` is required at preflight's production
   tier. Until it is enabled, deletions run only when an operator triggers the sweep by hand.
   (b) **`executed_at` cannot be written** — see the next entry.
+- **Crash reporting is no longer silent — Sentry is wired behind both ports (2026-07-28).**
+  `@sentry/react-native` at the SDK 54 version-mapped ~7.2.0 fills the Null implementations B4.1 and
+  B4.3 left behind, on the client, in Edge Functions (§7.1 is "client **+** Edge Functions"), and as
+  the Expo config plugin that makes source-map upload happen inside the build that produced the
+  bundle. `enableAutoSessionTracking` makes **crash-free sessions (NFR-06, §7.2)** measurable — the
+  metric §10.1 gates the launch on.
+  **No PII is structural**: `beforeSend` rewrites every exception message to its ERR_* code while
+  keeping the stack (the stack is our own code and is the diagnostic value; the message is the leak
+  vector), automatic breadcrumbs are dropped wholesale, `request`/`extra` are stripped, and identity
+  is reduced to the pseudonymous id. Sentry's own JS error handler is removed because it duplicates
+  `installGlobalErrorHandler` and the duplicate would bypass the scrubbing; native crash capture
+  stays on. The server SDK is imported dynamically and only when a DSN exists, so with none — today
+  — the blast radius across every Edge Function is zero.
+  **⚠️ Still not measurable, and this does not change that: no DSN and no org exist**, so the
+  adapter resolves to Null at runtime and §7.2 stays unmet. **B4.4 (SLO dashboards + alerts) remains
+  the open increment**, and the blocker is now a five-minute owner action rather than engineering.
+  **Progress unchanged at 47%** — B4.1–B4.3 were already counted; this makes their deferred half
+  real, which is the accounting the deletion executor got inside B6.
+- **⚠️ Local native builds are blocked by a JDK regression (found 2026-07-28).** Only **JDK 26** is
+  installed on the dev Mac, and Kotlin's version parser throws on `"26.0.1"`, so `./gradlew` fails
+  resolving `com.facebook.react.settings` before compiling anything. The 2026-07-26 note that
+  "Gradle auto-provisions JDK 17 regardless of `JAVA_HOME`" is **out of date** — the same class of
+  toolchain drift as pnpm losing corepack when Node 26 landed. Native verification goes through CI
+  (dispatch `e2e.yml` on the branch) until a JDK 17 is installed. This matters because local Maestro
+  iteration was the thing that made flows cheap to develop.
 - **The deletion audit contradicts the schema — now opened as ADR-034 (Proposed, 2026-07-28).**
   The conflict is real and is **across two Parts**, which is plausibly why review of either alone
   never caught it: **Part 5 §5.1**'s `[MANDATORY]` threat model requires the audit row to outlive the

@@ -2,9 +2,9 @@
 
 # PanchangPal Dashboard
 
-Version: 1.27.0
+Version: 1.28.0
 
-Last Updated: 2026-07-28 (ADR-034 opens the deletion-audit decision; progress unchanged at 47%)
+Last Updated: 2026-07-28 (Sentry wired behind both telemetry ports; progress unchanged at 47%)
 
 Purpose:
 This is the first file Claude should read at the beginning of every session.
@@ -92,7 +92,63 @@ CURRENT_MILESTONE.md
 
 # Current Task
 
-**ADR-034 opens the deletion-audit decision the TDD owed — Proposed, and deliberately not decided
+**Sentry is wired behind both telemetry ports — B4.1/B4.3's deferred half is built.**
+
+**Progress unchanged at 47%.** B4.1, B4.2 and B4.3 were already counted as increments; **B4.4** (SLO
+dashboards + alerts) is still blocked on a real Sentry project. What changed is that the deferred
+half of increments already counted as done is now real — the same accounting the deletion executor
+got when it closed a defect inside B6 without advancing a slice.
+
+`@sentry/react-native` at the Expo SDK 54 version-mapped **~7.2.0**, filling the Null
+implementations B4.1 and B4.3 left behind: the client reporter
+(`apps/mobile/src/data/sentryTelemetry.ts`, the only module allowed to import the SDK), the server
+client (`apps/backend/functions/_shared/sentryServerTelemetry.ts` — §7.1 is "client **+** Edge
+Functions"), and `@sentry/react-native/expo` in `app.config.ts` plugins, which is what makes
+**source-map upload** work from inside the build that produced the bundle. That last item is
+precisely what B4.3 deliberately refused to fake.
+
+**`enableAutoSessionTracking` is the point of the exercise:** crash-free sessions (NFR-06, §7.2)
+become measurable, which is the metric §10.1 gates the launch on and the specific reason B4 could
+not close on a seam alone.
+
+**No PII is structural, not aspirational** (§7.1 `[MANDATORY]`). `beforeSend` **rewrites every
+exception message to its ERR_* code and keeps the stack** — a stack is our own file, line and
+function names and is the entire diagnostic value of a crash reporter; the message is the leak
+vector, and this is the same rule `toErrorCode` and `toServerErrorReport` already apply. Automatic
+breadcrumbs are dropped wholesale (console breadcrumbs carry whatever was logged; network
+breadcrumbs carry URLs, which here means query strings holding a `local_date`, a household id or an
+invite token). `request` and `extra` are stripped, user identity is reduced to the pseudonymous id,
+and events are fingerprinted by code so rewritten messages cannot collapse unrelated failures.
+**Sentry's own `ReactNativeErrorHandlers` integration is removed** — it hooks the same `ErrorUtils`
+global as `installGlobalErrorHandler`, so leaving both active would report every crash twice, with
+the duplicate bypassing `captureError` and therefore the scrubbing. Native crash capture stays on: a
+Java/ObjC crash never reaches JS and is exactly what the crash-free SLO measures.
+
+**Two design decisions worth keeping.** The server SDK is imported **dynamically and only when
+`SENTRY_DSN` is set**, because `_shared/http.ts` is imported by every Edge Function and a top-level
+SDK import would sit on the critical path of every deploy and cold start, including endpoints with
+nothing to do with telemetry — with no DSN the blast radius is zero. And the server **never hands
+the thrown value to the SDK**, unlike the mobile adapter, because a server-side stack's frames sit
+inside Postgres or a fetch library and carry query text.
+
+**Verified:** 378 mobile jest (+22), 109 vitest (+7), tsc clean across 11 projects, eslint 0 errors,
+`expo export --platform all` green for both platforms, and prebuild confirms `sentry.gradle` is
+applied and `sentry.properties` generated. **Three perturbations** each failed the right tests —
+dropping the message rewrite, leaving Sentry's JS handler installed, and dropping the
+`request`/`extra` strip.
+
+**⚠️ Two things are NOT verified, and are stated rather than implied.** (1) **Nothing has been
+observed reaching Sentry** — no DSN and no org exist, so the adapter resolves to Null at runtime and
+§7.2 stays unmeasurable. This converts an engineering blocker into a five-minute owner action; it
+does not remove it. (2) **The local native build is blocked by a toolchain regression that this
+change did not cause**: only **JDK 26** is installed on the dev Mac and Kotlin's version parser
+rejects `"26.0.1"`, so Gradle fails before compiling. The standing note that "Gradle auto-provisions
+JDK 17" is out of date — the same class of drift as pnpm losing corepack. E2E was dispatched on the
+branch so CI performs the native build and the six Maestro flows.
+
+---
+
+**Previously — ADR-034 opens the deletion-audit decision the TDD owed — Proposed, and deliberately not decided
 here.**
 
 **Progress unchanged at 47%.** A Proposed ADR surfaces a decision; it does not ratify one, so B6's
@@ -637,6 +693,17 @@ Verified end-to-end. **PR #36 merged to main as `e1e10d4`**; the docs checkpoint
 
 # Today's Objective
 
+Session of 2026-07-28 (part 4). **Implement Sentry.** Outcome: `@sentry/react-native` ~7.2.0 wired
+behind both telemetry ports with the PII scrubbing made structural, the server client behind a
+dynamic import so its blast radius is zero without a DSN, and the Expo config plugin in place so
+source maps upload from inside the build that produced the bundle. **Progress unchanged at 47%** —
+B4.1–B4.3 were already counted and B4.4 still needs a real project. Two honest gaps: nothing has
+been seen reaching Sentry (no DSN), and the local native build is blocked by a **JDK 26** toolchain
+regression this change did not cause. Next: **owner creates a free-tier Sentry org**, which closes
+B4.
+
+---
+
 Session of 2026-07-28 (part 3). **Resolve the deletion audit the TDD owes.** Outcome: **ADR-034,
 Proposed** — the request record and the audit record have opposite lifetimes and cannot be one row,
 so the ADR separates them, retires the unwritable `executed_at`, and refers the one genuinely
@@ -816,7 +883,13 @@ resolved (PR #14).
 
 # Next Deliverable
 
-**Owner action: ratify ADR-034** — Security/Privacy on what identifies the subject of a completed
+**Owner action: create a Sentry org + project (free tier), then place four secrets** —
+`SENTRY_DSN` per environment, plus `SENTRY_ORG` / `SENTRY_PROJECT` / `SENTRY_AUTH_TOKEN` as repo
+secrets for the source-map upload. Everything else is built: the SDK, both adapters, the scrubbing,
+and the config plugin all resolve the moment a DSN exists. That unblocks **B4.4** (SLO dashboards +
+alerts), **closes B4**, and makes crash-free sessions measurable for the first time in the project.
+
+**Then: ratify ADR-034** — Security/Privacy on what identifies the subject of a completed
 erasure, Legal on whether a records-of-request retention obligation applies and for how long. The
 implementation behind it is small and entirely blocked on that answer; building the recommended
 option first would be inventing the privacy decision the ADR exists to surface.
