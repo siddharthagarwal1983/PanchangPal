@@ -2,9 +2,9 @@
 
 # PanchangPal Dashboard
 
-Version: 1.29.0
+Version: 1.30.0
 
-Last Updated: 2026-07-28 (session end — #78 merged; Sentry held back on #79; progress unchanged at 47%)
+Last Updated: 2026-07-29 (session end — an offline completion is lost on app kill; 47%)
 
 Purpose:
 This is the first file Claude should read at the beginning of every session.
@@ -92,7 +92,32 @@ CURRENT_MILESTONE.md
 
 # Current Task
 
-**Two things landed and one is deliberately held back. Main is at `4fdaf10` (#78).**
+⛔ **AN OFFLINE COMPLETION IS SOMETIMES LOST ON APP KILL — a §6 launch blocker, found while chasing
+Sentry's red E2E.**
+
+**Progress unchanged at 47%.** `FLOW_OFFLINE_SYNC` fails intermittently (~50%) at **line 131** — the
+`☑` assertion **after** the process kill, not before it. Proven by which screenshots exist:
+`offline-sync-03-offline-completed` is captured, `offline-sync-04-survived-restart-offline` is not.
+The optimistic tick appears and is gone once the process dies — the assertion the flow's own header
+calls "THE ASSERTION THIS FLOW EXISTS FOR".
+
+**A race, not a broken path**: the flow taps, asserts, screenshots, then kills immediately, so an
+asynchronous MMKV write of `STORE_offlineQueue` loses to the kill. A user completing a ritual
+offline whose app is reclaimed moments later hits the same window. **MMKV loads natively in every
+run**, so this is not the mmkv-v2 bug. §6 forbids losing a completion. **Do not fix it by adding
+settle time to the flow.**
+
+**One defect presented as three.** `FLOW_OFFLINE_SYNC` restores the radio as its LAST step, so any
+earlier failure leaves airplane mode on and takes SESSION_PERSISTENCE and RETURNING with it. That
+cascade is why this took most of a session to isolate, and why it looked like a Sentry regression:
+a new native module shifts timing and changes the odds of a latent race.
+
+**Baseline in flight:** three `e2e.yml` runs on main — `30390519585` (6/6 green), `30391501865`,
+`30391533413`. **Read them first next session**; they decide whether #79's E2E blocker dissolves.
+
+---
+
+**Previously — two things landed and one is deliberately held back. Main is at `4fdaf10` (#78).**
 
 **Progress unchanged at 47%.** Nothing this session advanced a Beta slice.
 

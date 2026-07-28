@@ -2,9 +2,9 @@
 
 # PanchangPal — Project Memory
 
-Version: 2.6.0
+Version: 2.7.0
 
-Last Updated: 2026-07-28 (JDK 26 breaks local Gradle; ADR-034; the SDK 54 pin as a seam; deletion seam)
+Last Updated: 2026-07-29 (offline completion lost on app kill; the re-run heuristic corrected; JDK 26; SDK 54 pin)
 
 Current Phase:
 Beta Readiness & Platform Hardening (TDD Part 5)
@@ -537,6 +537,35 @@ Stable, cross-cutting facts (permanent until an approved decision changes them):
   === `react` exactly, and satisfying it (the step TASK.md had recorded as required) would have
   turned CI green while leaving the renderer mismatched. When a bump fails a version assertion,
   satisfy the constraint the assertion defends, not the assertion.
+- **⛔ AN OFFLINE COMPLETION IS SOMETIMES LOST ON APP KILL** (found 2026-07-28/29, intermittent
+  ~50%). `FLOW_OFFLINE_SYNC` fails at **line 131** — the `☑` assertion AFTER `stopApp` /
+  `launchApp`, not the one before it. Proven by which screenshots exist in the artifact:
+  `offline-sync-03-offline-completed` (line 111) is captured, `offline-sync-04-survived-restart-offline`
+  is not. The optimistic tick appears correctly and is gone after the process dies. That is the
+  assertion the flow's own header calls "THE ASSERTION THIS FLOW EXISTS FOR", and losing a
+  completion is what **TDD Part 4 §6 forbids** — a launch blocker.
+  **It is a RACE, not a broken path**: the flow taps, asserts, screenshots, then kills the process
+  immediately, so an asynchronous or batched MMKV write of `STORE_offlineQueue` can be beaten by the
+  kill. A user who completes a ritual offline and has the app reclaimed moments later hits exactly
+  this. **MMKV loads natively in every run** (`Successfully loaded NitroMmkv C++ library!` in
+  logcat), so this is NOT the mmkv-v2 degradation bug — it is a narrower window.
+  **Do not fix it by adding settle time to the flow**; that hides a race real users can hit.
+  **It masqueraded as a Sentry regression** for most of a session, because adding a native module
+  shifts timing and changes the odds of a latent race.
+  **Related structural defect:** `FLOW_OFFLINE_SYNC` restores the radio as its LAST step, so ANY
+  earlier failure leaves airplane mode enabled and fails FLOW_SESSION_PERSISTENCE and FLOW_RETURNING
+  as collateral. One defect presents as three. The restore needs to be teardown that runs on
+  failure.
+- **A RE-RUN DISCRIMINATES FLAKE FROM DETERMINISM ONLY ACROSS ENOUGH SAMPLES TO BEAT THE FAILURE
+  RATE** (established 2026-07-29, correcting the rule recorded on 2026-07-28). The earlier note said
+  "discriminating a harness race from a regression takes one re-run of the identical commit: a
+  deterministic break cannot pass on attempt 2." **That reasoning assumes the two runs are
+  independent trials, and they are not** — runs minutes apart share an emulator profile, a staging
+  backend and a timing environment. A ~50% race presents as two identical failures and reads as
+  determinism. The offline-persistence defect above went **3/6, 3/6, 6/6, 5/6, 6/6, 3/6** across six
+  runs on one commit; any single re-run would have "proved" whichever answer you happened to draw.
+  When a red follows a change, compare against a **baseline of the same flow count on main**, not
+  against one re-run.
 - **ALMOST NOTHING SCHEDULED RUNS IN THIS PROJECT** (established 2026-07-27). The deletion sweep is
   the **only** scheduled work that exists, and only where `pg_cron` has been enabled — which is a
   Supabase **dashboard** action a migration cannot perform. Nothing processes the `job` table:

@@ -2,8 +2,8 @@
 
 # PanchangPal — Current Task
 
-Version: 4.0.0
-Last Updated: 2026-07-28 (session end — Sentry built and blocked on PR #79; #78 merged)
+Version: 4.1.0
+Last Updated: 2026-07-29 (session end — offline completion lost on app kill; Sentry blocker 1 closed)
 
 Purpose: the current implementation task. Stay focused; avoid unrelated work unless instructed.
 
@@ -110,7 +110,48 @@ green in CI on a real native build. Canonical progress 0% → 13% (1 of 8 Beta s
 # Current Task
 
 ## Title
-🟡 SENTRY IS BUILT AND BLOCKED — PR #79, NOT MERGED · (#78 MERGED: SDK-pin rule + ADR-034)
+⛔ AN OFFLINE COMPLETION IS SOMETIMES LOST ON APP KILL — found while chasing Sentry's red E2E
+
+**Progress unchanged at 47%.** This is a §6 launch blocker found during other work, exactly as the
+offline-sync gap and the deletion executor were.
+
+## The defect
+
+`FLOW_OFFLINE_SYNC` fails intermittently (~50%) at **line 131** — the `☑` assertion **after**
+`stopApp` / `launchApp`, not the one before it. Proven by which screenshots the artifact holds:
+`offline-sync-03-offline-completed` (line 111) is captured, `offline-sync-04-survived-restart-offline`
+is not. The optimistic tick appears correctly and is **gone once the process dies** — the assertion
+the flow's own header calls "THE ASSERTION THIS FLOW EXISTS FOR".
+
+**It is a race.** The flow taps, asserts, screenshots, then kills the process immediately; an
+asynchronous or batched MMKV write of `STORE_offlineQueue` loses to the kill. A user completing a
+ritual offline whose app is reclaimed moments later hits the same window. **MMKV loads natively in
+every run**, so this is NOT the mmkv-v2 degradation bug.
+
+**TDD Part 4 §6 forbids losing a completion**, so this is launch-blocking. **Do not fix it by adding
+settle time to the flow** — that hides a race real users can hit. Fix the persistence.
+
+**Second, structural:** `FLOW_OFFLINE_SYNC` restores the radio as its LAST step, so any earlier
+failure leaves airplane mode on and fails FLOW_SESSION_PERSISTENCE and FLOW_RETURNING as collateral.
+**One defect presents as three**, which is why this took most of a session to isolate. The restore
+belongs in teardown that runs on failure.
+
+## Next task, in order
+
+1. **Read the three main baseline runs** — `30390519585` (6/6 green), `30391501865`, `30391533413`.
+   Dispatched on main with no Sentry code at all, to settle whether the race is pre-existing. If
+   main flakes the same way, **#79's E2E blocker dissolves**.
+2. **Fix the persistence race** (§6).
+3. **Make the flow's radio restore failure-proof.**
+
+## Superseded framing — Sentry
+
+## 🟡 SENTRY IS BUILT AND BLOCKED — PR #79, NOT MERGED · (#78 MERGED: SDK-pin rule + ADR-034)
+
+**Blocker 1 is now CLOSED**: the startup-init defect is fixed, guarded by a behavioural test proven
+to fail without it, and **verified on device** — `[telemetry] reporter=none` appears 11 times in the
+E2E artifact, once per launch, where previously nothing resolved at all. Blocker 2 is reattributed
+to the race above, pending the baseline.
 
 **Progress unchanged at 47%.** B4.1–B4.3 were already counted and B4.4 still needs a real Sentry
 project, so nothing here advances a slice.
