@@ -14,6 +14,7 @@ import { ErrorBoundary } from '../navigation/ErrorBoundary';
 import { useTimeZoneSync } from '../data/hooks/useTimeZoneSync';
 import { useOfflineSync } from '../data/hooks/useOfflineSync';
 import { installGlobalErrorHandler } from './installGlobalErrorHandler';
+import { getTelemetryAdapter } from '../data/telemetryAdapter';
 import { installAnalyticsFlushOnBackground } from '../data/analyticsAdapter';
 import '../i18n';
 
@@ -45,6 +46,20 @@ export function AppProviders({ children }: { children: ReactNode }) {
   // init deferred past first paint). Render-phase errors are the ErrorBoundary's job regardless,
   // and installGlobalErrorHandler is idempotent, so installing a tick late costs nothing.
   useEffect(() => {
+    // Resolve the telemetry adapter HERE, at startup, not lazily on the first error.
+    //
+    // Both existing call sites — installGlobalErrorHandler and ErrorBoundary.componentDidCatch —
+    // call getTelemetryAdapter() from INSIDE an error path. With only those, `Sentry.init` runs
+    // for the first time after something has already gone wrong, and three things follow:
+    //   - `enableAutoSessionTracking` never starts a session in a healthy run, so crash-free
+    //     sessions (NFR-06, §7.2) — the metric §10.1 gates the launch on, and the whole reason
+    //     this adapter exists — cannot be measured;
+    //   - NATIVE crash capture is never installed, losing exactly the crashes that matter most
+    //     to that SLO, since a Java/ObjC crash never reaches JS at all;
+    //   - a crash during startup, before any handler has run, is reported by nobody.
+    // Ordered before installGlobalErrorHandler so the reporter exists before the handler that
+    // feeds it. Both are idempotent.
+    getTelemetryAdapter();
     installGlobalErrorHandler();
   }, []);
 
