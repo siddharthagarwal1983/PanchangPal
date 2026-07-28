@@ -2,9 +2,9 @@
 
 # PanchangPal — Current Milestone
 
-Version: 4.7.0
+Version: 4.9.0
 
-Last Updated: 2026-07-28 (ADR-034 opens the deletion-audit decision; progress unchanged at 47%)
+Last Updated: 2026-07-28 (session end — Sentry built but held back; ADR-034 merged; 47%)
 
 Purpose:
 This document defines the current milestone. Unlike SESSION.md (daily work) or TASK.md (current
@@ -387,7 +387,7 @@ possible fix and would have caught defects 1–3 at M1.
 | B1 | Environments & secrets | dev/staging/prod projects, per-env secrets, fail-closed preflight (§1, §4) | 🟡 ~85% — prod blocked on a paid plan |
 | B2 | E2E verification | bundle gate (done in B1) + Maestro FLOW_*; green in CI (§2.2, §10.1) | ✅ COMPLETE — bundle gate + **6 flows GREEN** on a native build (RETURNING · MORNING_RITUAL · SESSION_PERSISTENCE · AUTH_SESSION_PERSISTENCE · ONBOARDING · **OFFLINE_SYNC**), 6/6 on run 30261926062 (2026-07-27). The count was recorded as 4 until 2026-07-26: FLOW_AUTH_SESSION_PERSISTENCE arrived with B6 and was never added to the tally, and `e2e.yml`'s echo is now DERIVED from the flows directory, so it cannot drift again. Gate hardened at its cause: the launcher-ANR false-red is gone with the move to the AOSP image (PR #55). Remaining 2 flows blocked on other slices/backends/gated feature |
 | B3 | Build & distribution | eas.json profiles, Hermes, signing, source maps, TestFlight / Play Internal (§2.3) | 🟡 ~80% — automated builds work; store accounts + Sentry (B4) remain |
-| B4 | Observability | Sentry, telemetry, SLO dashboards + alerts (§7) | 🟡 ~75% — B4.1 seam ✅ · B4.2 sink ✅ · B4.3 server seam + prod release gate ✅ · EVT_* daily-habit funnel now emitting (§11.4, incl. the North Star input EVT_017); **upload + B4.4 owner-gated on a Sentry org (free tier)** |
+| B4 | Observability | Sentry, telemetry, SLO dashboards + alerts (§7) | 🟡 ~75% — B4.1 seam ✅ · B4.2 sink ✅ · B4.3 server seam + prod release gate ✅ · EVT_* daily-habit funnel emitting (§11.4, incl. the North Star input EVT_017). **A concrete Sentry implementation exists but is NOT merged (PR #79)**: it is not measurable as built (init runs only after the first error, so no session ever starts and native crash capture never installs) and it turned E2E deterministically red once. **B4.4 remains the open increment and B4 does not close**, still owner-gated on a free-tier Sentry org |
 | B5 | Reliability & DR | backups, restore drill, runbooks, graceful degradation (§8) | ✅ COMPLETE at verifiable scope — runbooks (§8.3) · mechanised restore drill · §8.2 degradation policy · §8.4 operator resilience. **One deliverable is NOT engineering-closable: NFR-15 needs PITR, which is a purchase.** Recorded as a launch blocker rather than counted as done. |
 | B6 | Security & privacy | OWASP Mobile review, CCPA export/delete verification, store privacy labels (§5, §6) | ✅ COMPLETE at verifiable scope — OWASP review ✅ (2 critical defects found + fixed, each proven by reintroducing it) · CCPA export + SVC_account authz ✅ · **B6.3 data inventory + privacy policy draft + store labels ✅**, the inventory pinned to the schema and the emitted `EVT_*` set by a conformance test proven to fail four ways · §5.2 SBOM/Dependabot/pinning ✅. **Two deliverables are NOT engineering-closed and are recorded rather than counted: (a) ⛔ deletion is never EXECUTED** — the request is written to `account_deletion` and nothing carries it out, which is ordinary engineering and a launch blocker; **(b)** nothing is legally reviewed, and no policy or label is publishable until (a) is fixed. Export remains at verifiable scope: unit-tested and proven-to-fail, never run against a live backend |
 | B7 | Release management | versioning/trains, OTA policy + channels, staged rollout, rollback verification (§3) | ⏳ |
@@ -601,6 +601,26 @@ testers' hands.
   checked by the DR restore drill, and `ACCOUNT_SWEEP_SECRET` is required at preflight's production
   tier. Until it is enabled, deletions run only when an operator triggers the sweep by hand.
   (b) **`executed_at` cannot be written** — see the next entry.
+- **⚠️ Sentry is built but NOT merged, and NOT measurable as built (2026-07-28, PR #79).**
+  `@sentry/react-native` ~7.2.0 is wired behind both telemetry ports with PII scrubbing made
+  structural and the Expo config plugin for source maps. It is held back for two reasons:
+  **(a)** `getTelemetryAdapter()` is called only from inside the two error handlers, so
+  `Sentry.init` runs only after the FIRST ERROR — a healthy session never starts one and native
+  crash capture never installs, leaving **NFR-06 / §7.2 unmeasurable**, which was the entire
+  justification for the work. The session claimed the opposite across five documents before catching
+  it. **(b)** Adding Sentry turned E2E deterministically red (three flows, twice, identical commit,
+  against a 6/6 green main); it went green once after `isUsableDsn()` rejected a placeholder DSN, but
+  **the mechanism is unconfirmed and one green run after a deterministic red is not a verdict**.
+  The two are not stacked deliberately: (a)'s fix changes *when* Sentry's network instrumentation
+  installs, which is the leading suspect for (b). **B4.4 remains the open increment; B4 does not
+  close.**
+- **⚠️ Local native builds are broken — a JDK regression (found 2026-07-28).** Only **JDK 26** is
+  installed on the dev Mac and Kotlin's version parser throws on `"26.0.1"`, so `./gradlew` fails
+  resolving `com.facebook.react.settings` before compiling anything. The 2026-07-26 note that
+  "Gradle auto-provisions JDK 17 regardless of `JAVA_HOME`" is **out of date** — the same class of
+  toolchain drift as pnpm losing corepack under Node 26. Native verification goes through CI
+  (dispatch `e2e.yml` on the branch) until a JDK 17 is installed, and that detour is what made this
+  session's two Sentry defects expensive rather than immediate.
 - **The deletion audit contradicts the schema — now opened as ADR-034 (Proposed, 2026-07-28).**
   The conflict is real and is **across two Parts**, which is plausibly why review of either alone
   never caught it: **Part 5 §5.1**'s `[MANDATORY]` threat model requires the audit row to outlive the
@@ -639,7 +659,7 @@ testers' hands.
   while doing nothing. It was found while evaluating whether to schedule it on pg_cron; **doing so
   would have made notification scheduling look live while provably sending nothing.** Do not
   schedule it until the repository methods are real.
-- **The "SDK-upgrade increment" does not exist, and the three PRs are closed (2026-07-28, PR #77).**
+- **The "SDK-upgrade increment" does not exist, and the three PRs are closed (2026-07-28, PR #78).**
   The set queued below as one deliberate upgrade was checked against the **installed peer graph**
   rather than release notes, and none of it belongs on SDK 54. The cause is single:
   `.github/dependabot.yml` already carried the right rule — *an SDK-pinned package is upgraded with

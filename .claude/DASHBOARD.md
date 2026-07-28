@@ -2,9 +2,9 @@
 
 # PanchangPal Dashboard
 
-Version: 1.27.0
+Version: 1.29.0
 
-Last Updated: 2026-07-28 (ADR-034 opens the deletion-audit decision; progress unchanged at 47%)
+Last Updated: 2026-07-28 (session end — #78 merged; Sentry held back on #79; progress unchanged at 47%)
 
 Purpose:
 This is the first file Claude should read at the beginning of every session.
@@ -92,7 +92,44 @@ CURRENT_MILESTONE.md
 
 # Current Task
 
-**ADR-034 opens the deletion-audit decision the TDD owed — Proposed, and deliberately not decided
+**Two things landed and one is deliberately held back. Main is at `4fdaf10` (#78).**
+
+**Progress unchanged at 47%.** Nothing this session advanced a Beta slice.
+
+**✅ MERGED — #78, all six gates green (incl. the DR drill).** The **SDK-pinned dependency rule**:
+the "SDK-upgrade increment" the tracking docs had queued **does not exist**. #64, #65 and #75 were
+three symptoms of one gap in `.github/dependabot.yml`'s ignore *patterns*, checked against the
+installed peer graph and closed with their evidence; the list now covers `react`, `@types/react`,
+`@expo/*`, `@babel/runtime`. Plus **ADR-034 — Account-Deletion Audit Record (Proposed)** and seven
+corrected "TDD Part 2 §5.1" mis-citations.
+
+**🟡 OPEN AND HELD BACK — PR #79 `feat/sentry-telemetry`.** Sentry is wired behind both ports with
+PII scrubbing structural and the Expo config plugin for source maps, but it is **not merged**, for
+two reasons found by verification rather than review:
+
+1. ⛔ **Crash-free sessions are NOT measurable as built** — and this session claimed they were,
+   across five documents, before catching it. `getTelemetryAdapter()` is called only from inside the
+   two error handlers, so `Sentry.init` runs only after the **first error**: a healthy session never
+   starts one and native crash capture never installs. NFR-06 / §7.2 stay unmeasurable, which was
+   the entire justification for the work. Fix is a one-line startup resolution plus a test that
+   fails without it.
+2. ⛔ **A deterministic red E2E whose mechanism is unconfirmed** — three flows failed twice on the
+   identical commit (main is 6/6 green), then went green once after `isUsableDsn()` rejected a
+   placeholder DSN. **One green run after a deterministic red is not a verdict**, and the diagnostic
+   that would have proven causation never logged — because of Blocker 1.
+
+The two are deliberately **not** stacked: fixing (1) changes *when* Sentry's network instrumentation
+installs, which is the leading suspect in (2), so they must be verified together.
+
+**Two defects already found and fixed inside #79**, both caught by the **native build** while the
+bundle gate, tsc, eslint and 487 unit tests all passed: `@sentry/cli` unresolvable under pnpm's
+nested layout (the **third** instance of the `@babel/runtime` / `babel-preset-expo` defect), and the
+source-map upload task failing the build rather than skipping — which a comment of mine had asserted
+the opposite of.
+
+---
+
+**Previously — ADR-034 opens the deletion-audit decision the TDD owed — Proposed, and deliberately not decided
 here.**
 
 **Progress unchanged at 47%.** A Proposed ADR surfaces a decision; it does not ratify one, so B6's
@@ -134,7 +171,7 @@ exact failure it exists to resolve.
 ---
 
 **Previously — the "SDK-upgrade increment" was investigated and does not exist. Three PRs closed; the rule that
-should have prevented them is fixed** (PR #77).
+should have prevented them is fixed** (PR #78).
 
 **Progress unchanged at 47%.** Dependency hygiene advances no Beta slice.
 
@@ -164,7 +201,7 @@ its red is `@testing-library/react-native`'s `ensure-peer-deps.js` asserting `re
 turned CI green while leaving the renderer at 19.1.0. There was nothing to gain regardless: every
 19.2.x release note is React Server Components, which React Native does not use.
 
-**PR #77** extends the ignore list to `react`, `@types/react`, `@expo/*` and `@babel/runtime` with
+**PR #78** extends the ignore list to `react`, `@types/react`, `@expo/*` and `@babel/runtime` with
 the evidence recorded inline. **No native build or Maestro run was needed** — the saved plan called
 for both, and the peer graph answered it first, which was the cheaper experiment all along.
 
@@ -637,6 +674,16 @@ Verified end-to-end. **PR #36 merged to main as `e1e10d4`**; the docs checkpoint
 
 # Today's Objective
 
+Session of 2026-07-28 (parts 3–4, session end). **Resolve the deletion audit, then implement
+Sentry.** Outcome: **ADR-034 (Proposed)** and the **SDK-pinned dependency rule** merged as #78 with
+all six gates green; **Sentry built but held back on PR #79** behind two blockers — it is not
+measurable as built (init happens only after the first error), and its one green E2E followed two
+deterministic reds, which is not a verdict. The branch was **split** so the verified half could land
+without the unverified half. **Progress unchanged at 47%.** Next: fix the startup-init defect and
+get two consecutive green E2E runs.
+
+---
+
 Session of 2026-07-28 (part 3). **Resolve the deletion audit the TDD owes.** Outcome: **ADR-034,
 Proposed** — the request record and the audit record have opposite lifetimes and cannot be one row,
 so the ADR separates them, retires the unwritable `executed_at`, and refers the one genuinely
@@ -651,7 +698,7 @@ at 47%**: a Proposed ADR opens a decision, it does not close one. Next: **owner 
 Session of 2026-07-28 (part 2). **Execute the SDK-upgrade increment — and establish first whether it
 is one.** Outcome: it is not. Checked against the installed peer graph, all three PRs are the same
 defect — `.github/dependabot.yml` held the right rule and the wrong patterns — so #64, #65 and #75
-are closed with their evidence and PR #77 extends the ignore list to the four SDK-pinned packages
+are closed with their evidence and PR #78 extends the ignore list to the four SDK-pinned packages
 (`react`, `@types/react`, `@expo/*`, `@babel/runtime`). The sharpest finding: **#64 and #65 passed
 all five gates including the bundle gate**, while the peer-legal #75 was the only red — and its
 recorded fix would have turned CI green while leaving RN's renderer mismatched. **Progress unchanged
@@ -816,7 +863,21 @@ resolved (PR #14).
 
 # Next Deliverable
 
-**Owner action: ratify ADR-034** — Security/Privacy on what identifies the subject of a completed
+**Engineering: close both Sentry blockers together on `feat/sentry-telemetry` (PR #79).** Resolve
+the telemetry adapter once at startup in AppProviders — with a test that fails when that resolution
+is removed — then re-run E2E for **two consecutive greens**. They are one task because the fix
+changes when Sentry's network instrumentation installs, which is the leading suspect for the
+deterministic red.
+
+**Then owner action: a free-tier Sentry org + DSN.** Everything else in B4 is built; without a DSN
+the adapter resolves to Null, nothing has been observed reaching Sentry, and B4.4 (SLO dashboards +
+alerts) cannot start.
+
+⚠️ **Also worth an hour: install a JDK 17.** Only JDK 26 is present and Kotlin's version parser
+rejects `"26.0.1"`, so local Gradle builds fail before compiling. That is why this session's two
+Sentry defects cost CI round trips instead of minutes.
+
+**Then: ratify ADR-034** — Security/Privacy on what identifies the subject of a completed
 erasure, Legal on whether a records-of-request retention obligation applies and for how long. The
 implementation behind it is small and entirely blocked on that answer; building the recommended
 option first would be inventing the privacy decision the ADR exists to surface.
@@ -831,7 +892,7 @@ tier) closes B4, a paid Supabase plan (~$25/mo) closes B1 *and* makes NFR-15 ach
 
 (**The "SDK-upgrade increment" that stood here is retired.** Investigated 2026-07-28: the three PRs
 were not an increment but a gap in `.github/dependabot.yml`'s patterns, and none belonged on SDK 54.
-All three are closed and the ignore list now covers the four SDK-pinned packages — PR #77. A real
+All three are closed and the ignore list now covers the four SDK-pinned packages — PR #78. A real
 Expo SDK upgrade remains future work, is not a milestone deliverable, and when it happens it must
 still be validated by a native build plus the six Maestro flows, because that is the only method that
 has ever caught this class of change here.)

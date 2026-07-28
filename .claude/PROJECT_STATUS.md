@@ -2,9 +2,9 @@
 
 # PanchangPal — Project Status Dashboard
 
-Version: 1.14.0
+Version: 1.16.0
 
-Last Updated: 2026-07-28 (ADR-034 opens the deletion-audit decision; progress unchanged at 47%)
+Last Updated: 2026-07-28 (session end — #78 merged; Sentry held back on #79; 47%)
 
 Purpose:
 This document provides a high-level snapshot of the overall project.
@@ -92,14 +92,14 @@ product scope. Sliced B1–B8; see CURRENT_MILESTONE.md.
 Current Focus
 
 - **Dependency queue — clean, and the SDK-upgrade increment turned out not to exist (2026-07-28,
-  PR #77).** The three PRs queued as that increment were checked against the **installed peer graph**
+  PR #78, merged as `4fdaf10`).** The three PRs queued as that increment were checked against the **installed peer graph**
   and all three closed: **#64** (`@expo/metro-runtime` 6.1.2→57.0.7 — dist-tags map majors to SDK
   majors, `latest` 57.0.7 is **SDK 57**, and `expo-router@6.0.24` peer-requires `^6.1.2`); **#65**
   (`@babel/runtime` 7→8 — `babel-preset-expo@54.0.12` peer-requires `^7.20.0`); **#75**, which
   superseded #61 (`react` 19.1.0→19.2.8 — peer-**legal** under RN's `^19.1.0`, but react-native ships
   a Fabric renderer hardcoded to React `"19.1.0"`). The cause was single:
   `.github/dependabot.yml` held the right rule and short **patterns** — `expo-*` never matched a
-  scoped `@expo/` name. PR #77 extends the ignore list to `react`, `@types/react`, `@expo/*` and
+  scoped `@expo/` name. PR #78 extends the ignore list to `react`, `@types/react`, `@expo/*` and
   `@babel/runtime`. **Two corrections worth keeping: #64 and #65 passed all five gates including the
   bundle gate** (green is anti-correlated with safety for an SDK-pinned package — `expo export`
   resolves what fails natively), and the previously recorded fix for #75 — move `react-test-renderer`
@@ -282,6 +282,19 @@ Implementation: Mobile MVP Phase 1 is feature-complete (M1–M8).
 
 Priority 1
 
+**Engineering: close both Sentry blockers together on PR #79.** Resolve the telemetry adapter once
+at startup (AppProviders), with a test that fails when that resolution is removed, then re-run E2E
+for **two consecutive greens**. They are a single task because the fix changes *when* Sentry's
+network instrumentation installs — the leading suspect for the deterministic red that PR carries.
+Until then Sentry stays unmerged and **B4 does not close**.
+
+Priority 2
+
+**Owner: a free-tier Sentry org + DSN.** Everything else in B4 is built; without a DSN the adapter
+resolves to Null, nothing has been observed reaching Sentry, and B4.4 cannot start.
+
+Priority 3
+
 **Owner: ratify ADR-034 — Account-Deletion Audit Record** (Proposed, 2026-07-28). Security/Privacy
 decides what identifies the subject of a completed erasure — the raw `user_id`, a one-way digest of
 it, or nothing — and Legal confirms whether a records-of-request retention obligation applies and
@@ -296,7 +309,7 @@ engineering task.**
 
 (~~The SDK-upgrade increment~~ — **retired 2026-07-28.** It was not an increment. #64, #65 and #75
 were checked against the installed peer graph, found to be three symptoms of one gap in
-`.github/dependabot.yml`'s ignore **patterns**, and closed; PR #77 covers `react`, `@types/react`,
+`.github/dependabot.yml`'s ignore **patterns**, and closed; PR #78 covers `react`, `@types/react`,
 `@expo/*` and `@babel/runtime`. Two things the old framing had wrong: #64 and #65 passed **all five
 gates including the bundle gate**, and the prescribed fix for #75 — moving `react-test-renderer` with
 `react` — would have turned CI green while leaving RN's Fabric renderer at 19.1.0. A genuine Expo SDK
@@ -383,6 +396,18 @@ prefs work today, so gating and prefs are real before the SDKs are wired.
 
 # Recently Completed
 
+- **The SDK-pinned dependency rule + ADR-034, merged as #78 (2026-07-28, `4fdaf10`).** All six gates
+  green including the DR drill. Split out of the Sentry branch precisely so the verified half could
+  land while the unverified half waits.
+- **⚠️ Sentry: BUILT, NOT MERGED (PR #79).** Wired behind both telemetry ports with PII scrubbing
+  structural and the source-map plugin, but held back on two blockers: **it is not measurable as
+  built** (`Sentry.init` runs only after the first error, so no session starts and native crash
+  capture never installs — the claim that crash-free sessions were now measurable was **wrong** and
+  was repeated across five documents before being caught), and **it turned E2E deterministically
+  red** once, with the green that followed a plausible fix falling short of proof. Two real defects
+  were found and fixed inside it — `@sentry/cli` unresolvable under pnpm (**third** instance of the
+  `@babel/runtime` / `babel-preset-expo` defect) and the upload task failing rather than skipping —
+  **both caught by the native build while every JS gate passed**. **Progress unchanged at 47%.**
 - **ADR-034 — Account-Deletion Audit Record (2026-07-28, Proposed).** Opens the decision the TDD
   owed. **TDD Part 5 §5.1**'s `[MANDATORY]` threat model requires the deletion audit to outlive the
   erasure; **Part 2 §3.15**'s schema erases it with its own subject. Neither is wrong — one row is
@@ -393,7 +418,7 @@ prefs work today, so gating and prefs are real before the SDKs are wired.
   Proposed ADR opens a decision, it does not close one. Also corrected: the contradiction was
   mis-cited in **seven places** as "TDD Part 2 §5.1", which is actually *Identity, Onboarding &
   Profile* — API contracts with no threat model.
-- **The SDK-pinned dependency rule (2026-07-28, PR #77).** The "SDK-upgrade increment" was
+- **The SDK-pinned dependency rule (2026-07-28, PR #78).** The "SDK-upgrade increment" was
   investigated and found not to exist: #64, #65 and #75 are three symptoms of one gap in
   `.github/dependabot.yml`'s ignore **patterns**, not a coherent upgrade. All three closed with their
   per-package evidence — `expo-router`'s `^6.1.2` peer and `@expo/metro-runtime`'s SDK-major

@@ -51,7 +51,7 @@ its time removing.
 main with all five CI gates green.
 
 **And the "SDK-upgrade increment" the split was supposed to produce turned out not to exist
-(2026-07-28, PR #77).** The three PRs left in that queue were checked against the **installed peer
+(2026-07-28, PR #78).** The three PRs left in that queue were checked against the **installed peer
 graph** and all three closed: **#64** `@expo/metro-runtime` 6.1.2→57.0.7, whose dist-tags map majors
 to **SDK majors** (`latest` 57.0.7 is **SDK 57**) against `expo-router@6.0.24`'s `^6.1.2` peer;
 **#65** `@babel/runtime` 7→8 against `babel-preset-expo@54.0.12`'s `^7.20.0` peer; and **#75** —
@@ -78,9 +78,25 @@ Security/Privacy with Legal sign-off, recommending a one-way digest without choo
 contradiction was mis-cited in seven places as "TDD Part 2 §5.1", which is *Identity, Onboarding &
 Profile* — API contracts with no threat model. All corrected.)
 
-**Next, in order:** (1) **owner ratification of ADR-034** — the engineering behind it is small and
-entirely blocked on that answer; (2) the **in-app deletion screen** Apple 5.1.1(v) requires, which
-needs a PDD affordance and SVC_household for ownership transfer. A genuine Expo SDK upgrade is future
+**Sentry is built and deliberately NOT merged (2026-07-28, PR #79).** `@sentry/react-native` ~7.2.0
+sits behind both telemetry ports with PII scrubbing structural and the source-map plugin wired, but
+it is held back on two blockers: **it is not measurable as built** — `Sentry.init` runs only after
+the first error, because nothing resolves the adapter at startup, so no session is ever started and
+native crash capture never installs (the claim that crash-free sessions were now measurable was
+**wrong**, and was repeated across five documents before being caught) — and **it turned E2E
+deterministically red** once, going green only after `isUsableDsn()` rejected a placeholder DSN,
+which is not proof. The two are not stacked deliberately: the first fix changes *when* Sentry's
+network instrumentation installs, the leading suspect for the second. **B4 does not close.**
+
+**Next, in order:** (1) **fix the Sentry startup-init defect and get two consecutive green E2E
+runs** — one task, since they must be verified together; (2) **owner: a free-tier Sentry org + DSN**,
+which closes B4; (3) **owner ratification of ADR-034** — the engineering behind it is small and
+entirely blocked on that answer; (4) the **in-app deletion screen** Apple 5.1.1(v) requires, which
+needs a PDD affordance and SVC_household for ownership transfer.
+
+⚠️ **Local native builds are broken** — only JDK 26 is installed and Kotlin's parser rejects
+`"26.0.1"`. A JDK 17 restores local Gradle and Maestro iteration; until then native verification is
+a CI round trip, which is what made this session's Sentry defects expensive. A genuine Expo SDK upgrade is future
 work rather than a milestone deliverable, and when it happens it still needs a native build plus the
 six Maestro flows — the only method that has ever caught that class of change here.
 

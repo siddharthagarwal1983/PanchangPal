@@ -2,8 +2,8 @@
 
 # PanchangPal — Current Task
 
-Version: 3.19.0
-Last Updated: 2026-07-28 (ADR-034 opens the deletion-audit decision the TDD owed)
+Version: 4.0.0
+Last Updated: 2026-07-28 (session end — Sentry built and blocked on PR #79; #78 merged)
 
 Purpose: the current implementation task. Stay focused; avoid unrelated work unless instructed.
 
@@ -110,7 +110,76 @@ green in CI on a real native build. Canonical progress 0% → 13% (1 of 8 Beta s
 # Current Task
 
 ## Title
-✅ ADR-034 OPENS THE DELETION-AUDIT DECISION THE TDD OWED (Proposed)
+🟡 SENTRY IS BUILT AND BLOCKED — PR #79, NOT MERGED · (#78 MERGED: SDK-pin rule + ADR-034)
+
+**Progress unchanged at 47%.** B4.1–B4.3 were already counted and B4.4 still needs a real Sentry
+project, so nothing here advances a slice.
+
+## Merged this session — #78 (`4fdaf10`), all six gates green
+
+The **SDK-pinned dependency rule** (`react`, `@types/react`, `@expo/*`, `@babel/runtime` added to
+the Dependabot ignore list, with per-package peer evidence inline; #64/#65/#75 closed) and
+**ADR-034 — Account-Deletion Audit Record (Proposed)**, plus seven corrected "TDD Part 2 §5.1"
+mis-citations. Both were split out of the Sentry branch precisely so they could land while Sentry
+stays behind its own verification.
+
+## Open — PR #79 `feat/sentry-telemetry`, deliberately NOT merged
+
+`@sentry/react-native` ~7.2.0 behind both ports: client reporter, Edge Function client (§7.1 is
+"client **+** Edge Functions"), the Expo config plugin for source maps, PII scrubbing made
+structural (messages rewritten to their ERR_* code while the stack survives; automatic breadcrumbs
+dropped; `request`/`extra` stripped; identity reduced to the pseudonymous id). 378 mobile jest,
+109 vitest, three perturbations each failing the right tests.
+
+### ⛔ Blocker 1 — crash-free sessions are NOT measurable as built
+
+**I claimed they were, across five documents, and it was wrong.** `Sentry.init` starts the session,
+but `getTelemetryAdapter()` is called from exactly two places — `installGlobalErrorHandler.ts:40`
+and `ErrorBoundary.tsx:39` — and **both are inside error handlers**. Nothing resolves the adapter at
+startup, so init runs only after the FIRST ERROR: a healthy session never starts one, and native
+crash capture never installs. NFR-06 / §7.2 remain unmeasurable — the entire justification for the
+work.
+
+**Fix:** resolve the adapter once at startup in AppProviders, plus a test that fails when that
+resolution is removed. Deliberately not yet done — it changes *when* Sentry's network
+instrumentation installs, which is the leading suspect in Blocker 2, and stacking them blind would
+make the next E2E result uninterpretable.
+
+### ⛔ Blocker 2 — a deterministic red E2E whose mechanism is unconfirmed
+
+FLOW_OFFLINE_SYNC, FLOW_SESSION_PERSISTENCE and FLOW_RETURNING failed **twice on the identical
+commit** where main is 6/6 green. Diagnosed from the artifact: no crash; **MMKV loads natively**
+(that hypothesis raised and disproved); two failures are **collateral** from FLOW_OFFLINE_SYNC dying
+at step 22 before its airplane-mode restore, leaving the radio dead — the documented "breaks its
+neighbours" pattern; root failure is an offline checklist tap producing no optimistic tick, that
+flow hanging **3m20s** against 31s on main.
+
+Green 6/6 after `isUsableDsn()` rejected the placeholder DSN — **but that is not proof.** The
+`[telemetry] reporter=` line added to settle it never logged, *because* of Blocker 1. The leading
+hypothesis (an offline error lazily running `Sentry.init` mid-flight, installing fetch/XHR
+instrumentation partway through a session) fits every observation and remains a hypothesis.
+
+### Two defects already found and fixed in #79
+
+1. **`@sentry/cli` unresolvable under pnpm** — `sentry.gradle` falls back to a flat-`node_modules`
+   path. **Third instance** of the `@babel/runtime` / `babel-preset-expo` defect; fixed by declaring
+   it, as precedent.
+2. **The upload task fails the build rather than skipping** — a comment of mine claimed otherwise.
+   `e2e.yml` now sets `SENTRY_DISABLE_AUTO_UPLOAD=true`; `release-build.yml` deliberately does not.
+
+Both were caught by the **native build** — the bundle gate, tsc, eslint and 487 unit tests all
+passed with them present.
+
+## Next task
+
+**Fix the startup-init defect, then get two consecutive green E2E runs.** That closes both blockers
+together. Then: owner creates a free-tier **Sentry org + DSN** (closes B4), and **ratifies ADR-034**.
+
+---
+
+## Superseded — ADR-034
+
+## ✅ ADR-034 OPENS THE DELETION-AUDIT DECISION THE TDD OWED (Proposed)
 
 **Progress unchanged at 47%.** A Proposed ADR surfaces a decision; it does not ratify one, so B6's
 open deliverable stays open — but it is now a decision with an owner and a deadline instead of a
@@ -182,7 +251,7 @@ decision; **PDD owes approved copy for eleven ERR_* codes**. The remaining Beta 
 
 ## Superseded — the dependency queue
 
-## ✅ THE SDK-UPGRADE INCREMENT WAS INVESTIGATED AND DOES NOT EXIST · THREE PRs CLOSED (PR #77)
+## ✅ THE SDK-UPGRADE INCREMENT WAS INVESTIGATED AND DOES NOT EXIST · THREE PRs CLOSED (PR #78)
 
 **Progress unchanged at 47%.** Dependency hygiene advances no Beta slice.
 
@@ -218,7 +287,7 @@ tracking document said "#61's react remainder"; all are corrected.
    19.1.0, silencing the one assertion that noticed. There is nothing to gain either way: every
    19.2.x release note is React Server Components, which React Native does not use.
 
-## What shipped (PR #77)
+## What shipped (PR #78)
 
 `.github/dependabot.yml`'s ignore list extended to `react`, `@types/react`, `@expo/*` and
 `@babel/runtime`, with the per-package evidence recorded inline so the next session does not

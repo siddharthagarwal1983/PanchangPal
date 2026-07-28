@@ -2,9 +2,9 @@
 
 # PanchangPal — Project Memory
 
-Version: 2.5.0
+Version: 2.6.0
 
-Last Updated: 2026-07-28 (ADR-034 on the deletion audit; the SDK 54 pin as a seam; deletion seam; E2E harness facts)
+Last Updated: 2026-07-28 (JDK 26 breaks local Gradle; ADR-034; the SDK 54 pin as a seam; deletion seam)
 
 Current Phase:
 Beta Readiness & Platform Hardening (TDD Part 5)
@@ -499,8 +499,15 @@ Stable, cross-cutting facts (permanent until an approved decision changes them):
 - **A local Android build + emulator now works on the dev Mac** (established 2026-07-26). The
   standing note that "no Android SDK, Java, or Xcode is available locally" — the reason B2 was
   scoped as depending on B3 — is out of date for Android. Present: SDK cmdline-tools, an AOSP
-  arm64 API-34 system image, AVD `ppal_aosp34`, and a working `expo prebuild` + Gradle build;
-  Gradle auto-provisions JDK 17 regardless of `JAVA_HOME`. Three facts worth not rediscovering:
+  arm64 API-34 system image, AVD `ppal_aosp34`, and a working `expo prebuild` + Gradle build.
+  ⛔ **BUT THE GRADLE BUILD IS BROKEN AGAIN AS OF 2026-07-28, AND THE JDK CLAIM BELOW IS FALSE.**
+  The note that "Gradle auto-provisions JDK 17 regardless of `JAVA_HOME`" no longer holds: only
+  **JDK 26** is installed (Homebrew), `/usr/libexec/java_home` finds no registered JVM, and Kotlin's
+  embedded `JavaVersion.parse` throws `IllegalArgumentException: 26.0.1`, so `./gradlew` dies
+  resolving `com.facebook.react.settings` before compiling anything. **Install a JDK 17 to restore
+  local builds.** This is the same class of toolchain drift as pnpm losing corepack under Node 26 —
+  the dev Mac moves underneath these notes, so verify a toolchain claim before relying on it.
+  Three further facts worth not rediscovering:
   build with `-PreactNativeArchitectures=arm64-v8a` (the default builds four ABIs and throws three
   away — the same waste PR #32 removed from CI); a **debug APK embeds no JS bundle**, so it needs
   Metro plus `adb reverse tcp:8081 tcp:8081`, while `assembleRelease` embeds the bundle, signs with
