@@ -107,9 +107,13 @@ Functions"), and `@sentry/react-native/expo` in `app.config.ts` plugins, which i
 **source-map upload** work from inside the build that produced the bundle. That last item is
 precisely what B4.3 deliberately refused to fake.
 
-**`enableAutoSessionTracking` is the point of the exercise:** crash-free sessions (NFR-06, §7.2)
-become measurable, which is the metric §10.1 gates the launch on and the specific reason B4 could
-not close on a seam alone.
+⛔ **CORRECTION: crash-free sessions are NOT measurable as built.** This entry previously claimed
+`enableAutoSessionTracking` delivered them. It does not, because `getTelemetryAdapter()` is only
+called from inside the two error handlers (`installGlobalErrorHandler:40`, `ErrorBoundary:39`) —
+nothing resolves it at startup, so `Sentry.init` runs only after the first error. A healthy session
+never starts one and native crash capture never installs. NFR-06 / §7.2 stay unmeasurable. The fix
+(resolve the adapter at startup) is small but is deliberately its own increment, because it changes
+when Sentry's network instrumentation installs — the prime suspect in the red E2E below.
 
 **No PII is structural, not aspirational** (§7.1 `[MANDATORY]`). `beforeSend` **rewrites every
 exception message to its ERR_* code and keeps the stack** — a stack is our own file, line and

@@ -131,9 +131,19 @@ and left holding Null implementations.
 | Source maps | `@sentry/react-native/expo` in `app.config.ts` plugins |
 | Tests | 22 client + 7 server, three perturbations |
 
-**`enableAutoSessionTracking` is the point.** It makes **crash-free sessions (NFR-06, §7.2)**
-measurable — the metric §10.1 gates the launch on, and the specific reason B4 could not close on a
-seam alone.
+⛔ **CORRECTION — crash-free sessions are NOT measurable as built.** The claim that
+`enableAutoSessionTracking` delivers them was **wrong**, and it was repeated across several
+documents before being caught. `Sentry.init` starts the session, but `getTelemetryAdapter()` is
+called from exactly two places — `installGlobalErrorHandler:40` and `ErrorBoundary:39` — and **both
+are inside error handlers**. Nothing resolves the adapter at startup, so init runs only after the
+FIRST ERROR: a healthy session never starts one, and native crash capture is never installed.
+NFR-06 / §7.2 remain unmeasurable, which was the entire justification for the work.
+
+**Fix (small, known, NOT yet done):** resolve the adapter once at startup — AppProviders already
+mounts `installGlobalErrorHandler` there, so it is a one-line addition — and assert it with a test
+that fails when the startup resolution is removed. It is deliberately deferred to its own increment
+because it changes *when* Sentry's network instrumentation installs, and that is the prime suspect
+in the red E2E below; the two must be verified together, not stacked blind.
 
 ## No PII is structural, not aspirational (§7.1 `[MANDATORY]`)
 

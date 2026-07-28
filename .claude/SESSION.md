@@ -21,8 +21,17 @@ Edge Functions" — and `@sentry/react-native/expo` in `app.config.ts` plugins, 
 **source-map upload** possible from inside the build that produced the bundle (the thing B4.3
 deliberately stopped short of).
 
-**`enableAutoSessionTracking` is the point:** crash-free sessions (NFR-06, §7.2) become measurable,
-which is the metric §10.1 gates the launch on.
+⛔ **CORRECTION (2026-07-28, found while investigating a red E2E): crash-free sessions are NOT
+measurable as built, and the claim that they are was wrong.** `enableAutoSessionTracking` starts a
+session inside `Sentry.init` — but `getTelemetryAdapter()` is called from exactly two places,
+`installGlobalErrorHandler:40` and `ErrorBoundary:39`, and **both are inside error handlers**.
+Nothing resolves the adapter at startup, so `Sentry.init` runs only after the FIRST ERROR. A healthy
+session therefore never starts one, native crash capture is never installed, and NFR-06 / §7.2 stay
+unmeasurable — which was the entire stated justification for the work.
+**The fix is small and known**: resolve the adapter once at startup (AppProviders already mounts
+`installGlobalErrorHandler` there), so init happens before anything can fail. It is NOT yet done,
+because it changes *when* Sentry's network instrumentation installs and therefore needs its own E2E
+verification — see the red-E2E entry below.
 
 **No PII is structural** (§7.1 `[MANDATORY]`): `beforeSend` rewrites every exception message to its
 ERR_* code while **keeping the stack** — a stack is our own file/line/function names and is the
@@ -46,6 +55,33 @@ project. **Three perturbations** each failed the right tests.
 **⚠️ Not verified:** nothing has been observed reaching Sentry — no DSN, no org — so the adapter
 resolves to Null at runtime and §7.2 stays unmeasurable. This converts an engineering blocker into a
 five-minute owner action; it does not remove it.
+
+# ⛔ The red E2E, and what is and is not known
+
+Adding Sentry turned E2E red: **FLOW_OFFLINE_SYNC, FLOW_SESSION_PERSISTENCE and FLOW_RETURNING
+failed, twice, on the identical commit** (main is 6/6 green). A deterministic break cannot pass on
+re-run, so it was not the harness.
+
+**Diagnosed from the artifact, not the run log:**
+- No crash, no JS exception. **MMKV loads natively**, so this is NOT the mmkv-degrades-to-memory
+  defect — hypothesised and then disproved rather than assumed.
+- **Two of the three failures are collateral.** FLOW_RETURNING failed with "You're offline — showing
+  saved content" still on screen. FLOW_OFFLINE_SYNC enables airplane mode and restores it at the
+  END; it failed at step 22, BEFORE its restore step, leaving the radio dead for everything after.
+  That is the documented "a flow that breaks its neighbours" pattern, recurring.
+- **The root failure is OFFLINE_SYNC step 22** — an offline checklist tap never produces the
+  optimistic tick. That flow hung **3m20s** against 31s on main.
+
+**It is now green 6/6** after adding `isUsableDsn()` (reject placeholder DSNs) — run 30383267214.
+
+**⚠️ THE MECHANISM IS NOT CONFIRMED, and "green after a plausible fix" is not proof.** The
+`[telemetry] reporter=` line added to settle it **never appeared in logcat** — because, as the
+correction above establishes, the adapter is only resolved inside an error handler, so in a healthy
+run nothing resolves it and nothing logs. The leading hypothesis is that in the red runs an offline
+network error triggered the handler, which lazily ran `Sentry.init` **mid-flight** against the
+placeholder DSN, installing fetch/XHR instrumentation partway through a session. That fits every
+observation and is still a hypothesis.
+**Do not merge the Sentry commits on the strength of one green run.**
 
 ---
 
