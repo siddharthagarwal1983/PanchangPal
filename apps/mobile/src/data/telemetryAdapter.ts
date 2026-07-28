@@ -51,6 +51,32 @@ function configuredDsn(): string {
 }
 
 /**
+ * Whether a DSN string is one we should actually initialise the SDK with.
+ *
+ * Every `.env.*.example` in this repo ships the literal placeholder
+ * `https://YOUR_KEY@oXXXX.ingest.sentry.io/XXXX`. A placeholder that reaches a build is worse than
+ * an absent value: `initSentry` would run, the SDK would install its network instrumentation, and
+ * every event would be addressed to a project that does not exist — telemetry that looks configured
+ * and reports nowhere, which is the precise failure mode this whole seam exists to make visible.
+ * So the shape is checked, not just the length.
+ */
+export function isUsableDsn(dsn: string): boolean {
+  if (!dsn) return false;
+  if (/YOUR_KEY|XXXX|example\.com/i.test(dsn)) return false;
+  try {
+    const url = new URL(dsn);
+    // A real DSN is `https://<publicKey>@<host>/<projectId>`.
+    return (
+      (url.protocol === 'https:' || url.protocol === 'http:') &&
+      url.username.length > 0 &&
+      url.pathname.replace(/^\//, '').length > 0
+    );
+  } catch {
+    return false;
+  }
+}
+
+/**
  * Which environment a report belongs to. Sentry filters and alerts on this, so a staging crash
  * must not be counted against the production crash-free SLO (§7.2). Derived from the release
  * channel rather than a separate variable, so it cannot disagree with the build it came from.
@@ -102,7 +128,7 @@ export function getTelemetryAdapter(): TelemetryAdapter {
   if (!adapter) {
     const dsn = configuredDsn();
 
-    if (dsn) {
+    if (isUsableDsn(dsn)) {
       // Initialise BEFORE constructing the adapter: a report captured against an uninitialised
       // client is dropped by the SDK, and the first thing to fail in a session is exactly the
       // thing worth reporting.
@@ -113,6 +139,12 @@ export function getTelemetryAdapter(): TelemetryAdapter {
       adapter = new ReportingTelemetryAdapter(new NullTelemetryAdapter());
       activeBackend = 'none';
     }
+
+    // Say which reporter won, once, at resolution. `getStorageBackend()` earns its keep the same
+    // way: when a native-backed seam degrades, the only thing worse than the degradation is not
+    // being able to tell from a device log whether it happened. This line is what makes an E2E
+    // artifact answer "was Sentry actually running in that build?" without a redeploy.
+    console.log(`[telemetry] reporter=${activeBackend}`);
   }
   return adapter;
 }
