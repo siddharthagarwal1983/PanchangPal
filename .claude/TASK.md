@@ -2,8 +2,8 @@
 
 # PanchangPal — Current Task
 
-Version: 3.17.0
-Last Updated: 2026-07-28 (#61 split and merged; next: the SDK-upgrade increment)
+Version: 3.19.0
+Last Updated: 2026-07-28 (ADR-034 opens the deletion-audit decision the TDD owed)
 
 Purpose: the current implementation task. Stay focused; avoid unrelated work unless instructed.
 
@@ -110,7 +110,145 @@ green in CI on a real native build. Canonical progress 0% → 13% (1 of 8 Beta s
 # Current Task
 
 ## Title
-✅ #61 IS SPLIT AND MERGED (PR #74) · NEXT: THE SDK-UPGRADE INCREMENT
+✅ ADR-034 OPENS THE DELETION-AUDIT DECISION THE TDD OWED (Proposed)
+
+**Progress unchanged at 47%.** A Proposed ADR surfaces a decision; it does not ratify one, so B6's
+open deliverable stays open — but it is now a decision with an owner and a deadline instead of a
+note in a migration comment.
+
+## The contradiction, stated precisely
+
+Two approved documents make incompatible demands of the same table:
+
+- **TDD Part 5 §5.1** (STRIDE threat model, `[MANDATORY]`) names `TBL_ACCOUNT_DELETION` as the
+  **deletion audit** mitigating repudiation. An audit must outlive the action it records.
+- **TDD Part 2 §3.15** declares `account_deletion(user_id uuid pk references app_user(id) on delete
+  cascade, …)`. The row is erased together with its own subject.
+
+**Neither document is wrong; the schema is under-specified for the role the threat model assigns
+it.** `account_deletion` is a good *request* table — pending intent, F-3 grace window,
+owner-readable, correctly cascading as operational state about a live account. It cannot also be the
+durable record of a completed erasure. **One row is being asked to have two lifetimes.**
+
+## What ADR-034 settles, and what it deliberately does not
+
+**Decided (engineering grounds):** the request and the audit are separate records; the audit is
+service-role-only (ADR-030 — `authenticated` includes anonymous users, and anyone can mint an
+anonymous JWT); the audit records the *fact* of erasure and never content recovered from the deleted
+rows; and **`executed_at` is retired**.
+
+**Referred to Security/Privacy with Legal sign-off:** *what identifies the subject of a completed
+erasure* — the raw `user_id`, a one-way digest of it, or nothing. That determines whether the system
+keeps a permanent list of identifiers belonging to people who asked to be forgotten, which is a
+privacy decision with legal weight, not an engineering preference. **Recommendation recorded: the
+digest form** — it verifies a specific claim without the table being a readable roster.
+**No schema change before ratification.**
+
+## Three findings while writing it
+
+1. **The citation was wrong everywhere.** Every tracking doc, `DATA_INVENTORY.md`, and the executor
+   migration's own header cited "TDD Part 2 §5.1". **Part 2 §5.1 is "Identity, Onboarding &
+   Profile"** — API contracts, no threat model. The real conflict is **Part 5 §5.1 vs Part 2 §3.15**,
+   across two Parts, which is plausibly why review of either alone never caught it. Seven citations
+   corrected; the unrelated (and correct) Part 2 §5.1 references in `openapi.yaml`,
+   `account/index.ts`, `accountRepository.ts` and `authRepository.ts` were left alone.
+2. **`executed_at` is dead schema, not merely unwritten.** Its only reader is
+   `sweep_due_account_deletions`'s `where executed_at is null` — a predicate that is unconditionally
+   true, because the column can never hold a value. A column exists to record an event that destroys
+   the row it lives on.
+3. **A retention rule agreed today would not be enforced.** The only scheduled job that runs in this
+   project is the deletion sweep; nothing consumes `job`. The ADR says so rather than specifying a
+   period nothing implements — which is the exact failure it exists to resolve.
+
+## Files
+
+`docs/architecture/adr/ADR-034-Account-Deletion-Audit-Record.md` (new) · `adr/README.md` index ·
+the executor migration's header comment (comment-only; `migrate.sh` replays idempotent SQL with no
+checksum, so this is safe) · `DATA_INVENTORY.md` · the seven corrected citations.
+6 vitest privacy tests still green.
+
+## Next task
+
+**Owner action: ratify ADR-034** (Security/Privacy, with Legal on the retention question). The
+implementation behind it is small and entirely blocked on that answer.
+
+Credential-free engineering meanwhile is thin, and the honest list is short: the **in-app deletion
+screen** Apple 5.1.1(v) requires is blocked on a PDD affordance and SVC_household; the **`job` table
+worker** stays deliberately unbuilt because every `job_type` is blocked on a product or vendor
+decision; **PDD owes approved copy for eleven ERR_* codes**. The remaining Beta work is owner-gated
+(Sentry org, paid Supabase, store accounts).
+
+---
+
+## Superseded — the dependency queue
+
+## ✅ THE SDK-UPGRADE INCREMENT WAS INVESTIGATED AND DOES NOT EXIST · THREE PRs CLOSED (PR #77)
+
+**Progress unchanged at 47%.** Dependency hygiene advances no Beta slice.
+
+## What the investigation found
+
+The three PRs queued as "one deliberate SDK-upgrade increment" were checked against the **installed
+peer graph** rather than their release notes. None should land on SDK 54, and the reason is the same
+for all three: `.github/dependabot.yml` already carried the correct rule — *an SDK-pinned package is
+upgraded with the SDK via `expo install --fix`, never alone, because a lone bump produces a build
+that resolves and then fails natively* — and only its **patterns** were short.
+
+| PR | Verdict | Evidence |
+|---|---|---|
+| **#64** `@expo/metro-runtime` 6.1.2→57.0.7 | Closed | dist-tags map package majors to **SDK majors** (`sdk-55`→55.x, `sdk-56`→56.x, `latest` 57.0.7→**SDK 57**). This app is SDK 54 (the 6.1.x line); `expo-router@6.0.24` peer-requires `^6.1.2`. `expo-*` never matched a scoped `@expo/` name. |
+| **#65** `@babel/runtime` 7→8 | Closed | `babel-preset-expo@54.0.12` peer-requires `^7.20.0`. Also one of the two undeclared transitive deps that broke bundling during the Execution Gap. |
+| **#75** `react` 19.1.0→19.2.8 | Closed | RN 0.81.5's peer is `^19.1.0`, so 19.2.8 is peer-**LEGAL**. But react-native ships its own Fabric renderer built against React `"19.1.0"`, hardcoded in `Libraries/Renderer/implementations/ReactFabric-{dev,prod}.js`. |
+
+**#61 was closed and superseded by #75** — Dependabot regenerated the group after #74 landed. Every
+tracking document said "#61's react remainder"; all are corrected.
+
+## Two things the previous framing got wrong
+
+1. **"All three are red because they cross the SDK pin" was false.** #64 and #65 passed **all five CI
+   gates, including the bundle gate.** #75 — the only peer-legal one — was the sole red. Green is
+   anti-correlated with safety here: `expo export` resolves what fails natively. That is the third
+   time this repo has paid for the lesson, after mmkv v2 under the New Architecture and
+   `babel-preset-expo`.
+2. **The recorded fix for #75 would have hidden the defect.** Its red is
+   `Incorrect version of "react-test-renderer" detected`, thrown by
+   `@testing-library/react-native`'s `build/helpers/ensure-peer-deps.js`, which asserts
+   `react-test-renderer` === `react` **exactly**. Moving `react-test-renderer` to 19.2.8 — what
+   TASK.md recorded as the required step — would have turned CI green while leaving RN's renderer at
+   19.1.0, silencing the one assertion that noticed. There is nothing to gain either way: every
+   19.2.x release note is React Server Components, which React Native does not use.
+
+## What shipped (PR #77)
+
+`.github/dependabot.yml`'s ignore list extended to `react`, `@types/react`, `@expo/*` and
+`@babel/runtime`, with the per-package evidence recorded inline so the next session does not
+re-derive it. Config only — no dependency or source change; YAML validated, both `updates` blocks
+intact, `production-minor` group unchanged.
+
+**No native build or Maestro run was required.** The saved plan called for both; the peer graph
+answered the question first, which is the cheaper experiment and was available all along.
+
+## Open queue
+
+**#62** (i18next 23→26, red on lint/typecheck) and **#63** (jest 29→30, red on unit tests). Both are
+majors, red for their own unrelated reasons, and each is its own decision. The queue no longer
+contains an SDK-crossing PR.
+
+## Next task
+
+A **credential-free Beta item**. The strongest candidate is the **TDD resolution the deletion audit
+owes** — `account_deletion.executed_at` is unwritable because the row cascades with its own subject,
+contradicting TDD Part 5 §5.1's use of the table as the repudiation-mitigating deletion audit. It is
+a documentation decision rather than code, and it is the last thing between B6 and an honest privacy
+claim. The **in-app deletion screen** Apple 5.1.1(v) requires remains blocked on a PDD affordance and
+SVC_household; the **`job` table worker** remains deliberately unbuilt, because every `job_type` is
+blocked on a product or vendor decision.
+
+---
+
+## Superseded — the #61 split
+
+## ✅ #61 IS SPLIT AND MERGED (PR #74)
 
 **Progress unchanged at 47%.** Dependency hygiene advances no Beta slice.
 
@@ -172,6 +310,12 @@ that flow fails again, auth-js goes back on the suspect list rather than being t
    deciding deliberately whether the repo adopts `format:check` or drops the script.
 
 ## Next task — the SDK-upgrade increment
+
+> ⚠️ **Superseded and partly WRONG — do not act on this section.** Investigated 2026-07-28 (see
+> Current Task): there is no increment here, and the claim below that "all three are red" is false.
+> **#64 and #65 passed all five CI gates**, including the bundle gate; only #75 (which replaced #61)
+> was red, and for a symptom. All three are closed, and `.github/dependabot.yml` now covers the four
+> SDK-pinned packages so they are not regenerated.
 
 **#61's `react` remainder + #64 (`@expo/metro-runtime` 6.1.2→57.0.7) + #65 (`@babel/runtime` 7→8),
 as one increment.** All three cross the exactly-pinned SDK 54 baseline, which is why they are three
@@ -299,7 +443,7 @@ removes cannot detect a deletion that only removed the identifier.
    **warning** where it does not. Until then, deletions execute only via the operator trigger.
 2. **`executed_at` cannot be written.** `account_deletion.user_id` cascades with `app_user`, so the
    request row is erased along with its own subject and there is nothing left to stamp. This
-   contradicts TDD Part 2 §5.1, which names the table as the **deletion audit** mitigating
+   contradicts TDD Part 5 §5.1, which names the table as the **deletion audit** mitigating
    repudiation. Changing the foreign key would invent a privacy decision (the surviving row names a
    uid), so the executor implements the schema as declared and **the TDD owes a resolution**. A
    completed deletion currently leaves no record that it happened.

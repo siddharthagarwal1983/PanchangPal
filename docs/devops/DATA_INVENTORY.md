@@ -327,12 +327,17 @@ in the household without improving this user's position.
 
 1. **`executed_at` is never written, and cannot be.** `account_deletion.user_id` cascades with
    `app_user`, so the request row is erased along with its own subject — after a successful
-   deletion there is no row left to stamp. This collides with TDD Part 2 §5.1, whose threat model
+   deletion there is no row left to stamp. This collides with TDD Part 5 §5.1, whose threat model
    names `TBL_ACCOUNT_DELETION` as the **deletion audit** mitigating repudiation, which requires
    the row to survive. Changing the foreign key would be inventing a schema decision with its own
    privacy consequence (the surviving row names a uid), so the executor implements the schema as
-   declared and **the TDD owes a resolution**. Consequence today: a completed deletion leaves no
-   record that it happened.
+   declared. Consequence today: a completed deletion leaves no record that it happened.
+   **Now tracked by ADR-034 — Account-Deletion Audit Record (Proposed, 2026-07-28)**, which settles
+   that a deletion *request* and a deletion *audit* have opposite lifetimes and cannot be one row,
+   and refers the remaining question — **what identifies the subject of a completed erasure** — to
+   Security/Privacy with Legal sign-off. The choice is between retaining the raw `user_id`, a
+   one-way digest of it, or no subject identifier at all, and it directly determines what this
+   inventory must classify. **Until it is ratified, no schema change is made and this gap stands.**
 2. **The schedule depends on pg_cron, which is a Supabase dashboard action.** The migration
    schedules the sweep where pg_cron exists and raises a **warning** where it does not — it cannot
    enable the extension itself. `account_deletion_sweep_is_scheduled()` makes the state assertable

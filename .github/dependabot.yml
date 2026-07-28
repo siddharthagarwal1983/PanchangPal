@@ -34,6 +34,38 @@ updates:
       - dependency-name: expo-*
       - dependency-name: react-native
       - dependency-name: react-native-*
+
+      # The four below are ALSO pinned by the SDK 54 baseline, and the patterns above miss all
+      # four. That gap produced PRs #64, #65 and #75 (2026-07-28), which the tracking docs had
+      # queued as one "SDK-upgrade increment" — they are not an increment, they are this rule
+      # leaking. Each was checked against the installed peer graph rather than assumed:
+      #
+      #   @expo/*        `expo-*` does NOT match a scoped `@expo/` name, so the one Expo package
+      #                  whose majors track SDK majors slipped through. `@expo/metro-runtime`
+      #                  dist-tags map sdk-55→55.x, sdk-56→56.x, latest 57.0.7→SDK 57; this app
+      #                  is SDK 54 (the 6.1.x line) and `expo-router@6.0.24` peer-requires
+      #                  `^6.1.2`. #64 proposed an SDK 57 package for an SDK 54 app.
+      #   @babel/runtime `babel-preset-expo@54.0.12` peer-requires `^7.20.0`; #65 proposed 8.0.0.
+      #                  It is also one of the two undeclared-transitive-dependency defects that
+      #                  broke bundling during the Execution Gap — it gets extra care, not less.
+      #   react          RN 0.81.5's peer is `^19.1.0`, so 19.2.8 is peer-LEGAL and looks safe.
+      #   @types/react   It is not: react-native 0.81.5 ships its own Fabric renderer built
+      #                  against React "19.1.0" (hardcoded in
+      #                  Libraries/Renderer/implementations/ReactFabric-{dev,prod}.js), and
+      #                  @testing-library/react-native asserts react-test-renderer === react
+      #                  EXACTLY (build/helpers/ensure-peer-deps.js). #75's red CI is that
+      #                  assertion — a symptom. Bumping react-test-renderer to match, the
+      #                  obvious fix, would turn CI green while leaving the renderer at 19.1.0.
+      #                  Every 19.2.x release note is React Server Components: no RN value at all.
+      #
+      # The asymmetry worth remembering: #64 and #65 passed ALL FIVE CI gates including the
+      # bundle gate, while #75 — the peer-legal one — was the only red. Green is not evidence
+      # of safety for an SDK-pinned package; `expo export` resolves what fails natively. That is
+      # the mmkv-v2 and babel-preset-expo lesson for the third time.
+      - dependency-name: react
+      - dependency-name: '@types/react'
+      - dependency-name: '@expo/*'
+      - dependency-name: '@babel/runtime'
     labels: ['dependencies']
 
   # The workflows themselves are a supply chain. A compromised or abandoned action runs with

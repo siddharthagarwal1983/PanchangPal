@@ -2,9 +2,9 @@
 
 # PanchangPal — Project Status Dashboard
 
-Version: 1.12.0
+Version: 1.14.0
 
-Last Updated: 2026-07-28 (the #61 dependency split; progress unchanged at 47%)
+Last Updated: 2026-07-28 (ADR-034 opens the deletion-audit decision; progress unchanged at 47%)
 
 Purpose:
 This document provides a high-level snapshot of the overall project.
@@ -74,7 +74,7 @@ TBD
 | Mobile Development (feature slices) | ✅ Complete | 100% (M1–M8 done) |
 | AI Platform | 🟡 In Progress | Adapters + RAG pipeline done; corpus + eval pending |
 | Testing | 🟢 Healthy | 452 green (350 mobile jest + 102 vitest) + 43 pgTAP (incl. **17 on the F-3 deletion executor**) + 17 pgTAP RLS/DB assertions; bundle gate per PR; **6 Maestro FLOW_* green on main** (incl. FLOW_OFFLINE_SYNC); the emulator-ANR false-red is now fixed at its cause (AOSP image, PR #55) after PR #41's `hide_error_dialogs` proved a symptom patch — 3 of the last 4 failures were launcher ANRs; API contract gate restored and proven to fail; AI eval harness still owed |
-| Beta | 🚧 In progress | 47% (B2 ✅; B5 ✅ at verifiable scope — NFR-15 still needs PITR; **B6 ✅ at verifiable scope** — OWASP review + 2 critical fixes + CCPA export + B6.3 inventory/policy/labels + §5.2 controls, and ✅ **deletion is now executed** — the executor, sweep and pg_cron schedule shipped 2026-07-27 and the extension is enabled on both hosted projects; residual: `executed_at` is unwritable, which the TDD owes a resolution for; B4 🟡 ~75% owner-gated on a Sentry org; B1/B3 owner-gated; B7–B8 pending) |
+| Beta | 🚧 In progress | 47% (B2 ✅; B5 ✅ at verifiable scope — NFR-15 still needs PITR; **B6 ✅ at verifiable scope** — OWASP review + 2 critical fixes + CCPA export + B6.3 inventory/policy/labels + §5.2 controls, and ✅ **deletion is now executed** — the executor, sweep and pg_cron schedule shipped 2026-07-27 and the extension is enabled on both hosted projects; residual: `executed_at` is unwritable — now opened as **ADR-034** (Proposed), awaiting owner ratification; B4 🟡 ~75% owner-gated on a Sentry org; B1/B3 owner-gated; B7–B8 pending) |
 | Production Launch | ⏳ Pending | 0% |
 
 ---
@@ -91,12 +91,20 @@ product scope. Sliced B1–B8; see CURRENT_MILESTONE.md.
 
 Current Focus
 
-- **Dependency queue — the #61 group is split (2026-07-28, PR #74).** Seven non-SDK bumps landed on
-  main with all five CI gates green; `react`, `@types/react` and the lockfile's `react@19.1.0` peer
-  keys were deliberately left behind, because moving `react` past the exactly-pinned SDK 54 baseline
-  while `react-test-renderer` stays at 19.1.0 is the single reason the group was red. The open queue
-  is now three PRs crossing that one pin (#61's remainder, #64, #65) and belongs in a single
-  SDK-upgrade increment behind a native build and the Maestro flows. **No Beta slice advanced;
+- **Dependency queue — clean, and the SDK-upgrade increment turned out not to exist (2026-07-28,
+  PR #77).** The three PRs queued as that increment were checked against the **installed peer graph**
+  and all three closed: **#64** (`@expo/metro-runtime` 6.1.2→57.0.7 — dist-tags map majors to SDK
+  majors, `latest` 57.0.7 is **SDK 57**, and `expo-router@6.0.24` peer-requires `^6.1.2`); **#65**
+  (`@babel/runtime` 7→8 — `babel-preset-expo@54.0.12` peer-requires `^7.20.0`); **#75**, which
+  superseded #61 (`react` 19.1.0→19.2.8 — peer-**legal** under RN's `^19.1.0`, but react-native ships
+  a Fabric renderer hardcoded to React `"19.1.0"`). The cause was single:
+  `.github/dependabot.yml` held the right rule and short **patterns** — `expo-*` never matched a
+  scoped `@expo/` name. PR #77 extends the ignore list to `react`, `@types/react`, `@expo/*` and
+  `@babel/runtime`. **Two corrections worth keeping: #64 and #65 passed all five gates including the
+  bundle gate** (green is anti-correlated with safety for an SDK-pinned package — `expo export`
+  resolves what fails natively), and the previously recorded fix for #75 — move `react-test-renderer`
+  to match — would have turned CI green while leaving the renderer mismatched. Remaining queue: **#62**
+  (i18next) and **#63** (jest 30), red for their own unrelated reasons. **No Beta slice advanced;
   progress stays 47%.**
 - **B6 — Security & Privacy — ✅ complete at verifiable scope (2026-07-27).** B6.3 delivered the
   data-collection inventory, the privacy policy draft and the store Data Safety / App Privacy
@@ -106,8 +114,10 @@ Current Focus
   the sweep, the pg_cron schedule, the secret-authorized operator trigger and 17 pgTAP assertions
   all exist, verified against a real Postgres 17. Residual: **pg_cron must be enabled on the hosted
   project** (owner, dashboard), and `executed_at` is unwritable because the audit row cascades with
-  its own subject — a TDD contradiction now recorded. Next: **the `job` table worker** (ADR-025),
-  which the analytics rollup, tombstone sweep and cache TTL are all waiting on.
+  its own subject — now opened as **ADR-034** (Proposed, 2026-07-28) and blocked on owner
+  ratification. Next: **owner sign-off on ADR-034**; the `job` table worker (ADR-025) stays
+  deliberately unbuilt, since every `job_type` is blocked on a product or vendor decision — it is
+  what the analytics rollup, the tombstone sweep and the cache TTL are all waiting on.
 - **Offline sync (TDD Part 4 §6) — ✅ complete at engineering scope (2026-07-26).** Mutation queue
   persisted and drained to SVC_sync; §6.1 read cache persisted. Never run against a live backend
   and not covered by a Maestro flow.
@@ -272,17 +282,26 @@ Implementation: Mobile MVP Phase 1 is feature-complete (M1–M8).
 
 Priority 1
 
-**The SDK-upgrade increment — #61's `react` remainder, #64 and #65 together.** All three cross the
-**exactly pinned** Expo SDK 54 baseline, which is the single reason #61 has been red: bumping
-`react` 19.1.0 → 19.2.8 while `react-test-renderer` stays behind fails every jest suite. The seven
-non-SDK bumps in that group were split out and landed on 2026-07-28 (PR #74), so the open queue is
-now exactly the set that shares one cause, plus #62/#63 which are red for their own reasons.
+**Owner: ratify ADR-034 — Account-Deletion Audit Record** (Proposed, 2026-07-28). Security/Privacy
+decides what identifies the subject of a completed erasure — the raw `user_id`, a one-way digest of
+it, or nothing — and Legal confirms whether a records-of-request retention obligation applies and
+for how long. The engineering behind it is small and entirely blocked on that answer; building the
+recommended option first would be inventing the privacy decision the ADR exists to surface.
 
-This is not a lockfile exercise. `react-test-renderer` must move with `react`, and the result has to
-be validated by a **native build plus the six Maestro flows** — the SDK 54 re-baseline was verified
-by bundling and Expo Go alone, and a native build later found the MMKV/New-Architecture defect that
-no unit test could see. Local Android builds now work on the dev Mac, so this is iterable without
-20-minute CI cycles.
+The ADR already settles what is decidable without them: a deletion *request* and a deletion *audit*
+have opposite lifetimes and cannot be the same row, the audit is service-role-only, it records the
+fact of erasure and never content recovered from deleted rows, and the unwritable `executed_at` is
+retired. **This is the last thing between B6 and an honest privacy claim, and it is no longer an
+engineering task.**
+
+(~~The SDK-upgrade increment~~ — **retired 2026-07-28.** It was not an increment. #64, #65 and #75
+were checked against the installed peer graph, found to be three symptoms of one gap in
+`.github/dependabot.yml`'s ignore **patterns**, and closed; PR #77 covers `react`, `@types/react`,
+`@expo/*` and `@babel/runtime`. Two things the old framing had wrong: #64 and #65 passed **all five
+gates including the bundle gate**, and the prescribed fix for #75 — moving `react-test-renderer` with
+`react` — would have turned CI green while leaving RN's Fabric renderer at 19.1.0. A genuine Expo SDK
+upgrade is future work, is not a milestone deliverable, and still requires a native build plus the
+six Maestro flows when it happens.)
 
 (~~Owner: enable `pg_cron`~~ — **done 2026-07-27**, both hosted projects, confirmed via CD and a
 dispatched `dev-migrate`. The daily sweep is the first scheduled job that has ever run here.)
@@ -364,6 +383,28 @@ prefs work today, so gating and prefs are real before the SDKs are wired.
 
 # Recently Completed
 
+- **ADR-034 — Account-Deletion Audit Record (2026-07-28, Proposed).** Opens the decision the TDD
+  owed. **TDD Part 5 §5.1**'s `[MANDATORY]` threat model requires the deletion audit to outlive the
+  erasure; **Part 2 §3.15**'s schema erases it with its own subject. Neither is wrong — one row is
+  being asked to have two lifetimes. The ADR separates the request from the audit, makes the audit
+  service-role-only, confines it to the fact of erasure, and retires the unwritable `executed_at`;
+  it refers **what identifies the subject of a completed erasure** to Security/Privacy with Legal
+  sign-off, recommending the digest form without choosing it. **Progress unchanged at 47%** — a
+  Proposed ADR opens a decision, it does not close one. Also corrected: the contradiction was
+  mis-cited in **seven places** as "TDD Part 2 §5.1", which is actually *Identity, Onboarding &
+  Profile* — API contracts with no threat model.
+- **The SDK-pinned dependency rule (2026-07-28, PR #77).** The "SDK-upgrade increment" was
+  investigated and found not to exist: #64, #65 and #75 are three symptoms of one gap in
+  `.github/dependabot.yml`'s ignore **patterns**, not a coherent upgrade. All three closed with their
+  per-package evidence — `expo-router`'s `^6.1.2` peer and `@expo/metro-runtime`'s SDK-major
+  dist-tags for #64, `babel-preset-expo`'s `^7.20.0` peer for #65, and react-native's Fabric renderer
+  being hardcoded to React `"19.1.0"` for #75. The ignore list now covers `react`, `@types/react`,
+  `@expo/*` and `@babel/runtime`. **The finding worth keeping: #64 and #65 passed all five CI gates
+  including the bundle gate**, while the peer-legal #75 was the only red — and its previously
+  recorded fix would have turned CI green while leaving the renderer mismatched. Green is not
+  evidence of safety for an SDK-pinned package; `expo export` resolves what fails natively. No native
+  build or Maestro run was needed — the peer graph settled it, which was the cheaper experiment all
+  along. **Progress unchanged at 47%.**
 - **The #61 dependency split (2026-07-28, PR #74, `0185ea9`).** Seven non-SDK bumps landed on their
   own — `@typescript-eslint/*` 8.65.0, `prettier` 3.9.6, `turbo` 2.10.7, `@supabase/supabase-js`
   2.110.9, both `@tanstack/*` 5.101.4 — with `react` and `@types/react` deliberately untouched.

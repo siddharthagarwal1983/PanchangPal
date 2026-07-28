@@ -2,8 +2,8 @@
 
 # PanchangPal — Implementation Roadmap
 
-Version: 2.4.0
-Last Updated: 2026-07-28 (the #61 dependency split landed; the queue is now three SDK-crossing PRs)
+Version: 2.5.0
+Last Updated: 2026-07-28 (ADR-034 opens the deletion-audit decision; the SDK-crossing PRs are closed)
 
 Purpose: the forward plan from the current state. Complements PROJECT_STATUS.md (snapshot) and
 CURRENT_MILESTONE.md (active milestone). Updated when scope or sequencing changes — and at every
@@ -11,7 +11,7 @@ increment/milestone boundary per the Increment & Milestone Completion Checkpoint
 
 ---
 
-## Where we are (2026-07-27)
+## Where we are (2026-07-28)
 
 **Beta Readiness & Platform Hardening, 47%** — B2 ✅, B5 ✅ and B6 ✅ (the latter two at verifiable
 scope), plus ¾ of B4. B1 ~85%, B3 ~80%, all remainders owner-gated on money or a store account.
@@ -31,8 +31,8 @@ SQL and two TypeScript perturbations.
 dispatched `dev-migrate`. **It is the first scheduled job that has ever run in this project.**
 
 **One residual on the executor:** `executed_at` cannot be written, because the audit row cascades
-with its own subject — a contradiction with TDD §5.1's deletion-audit claim that the TDD owes a
-resolution for. A completed deletion currently leaves no record that it happened.
+with its own subject — a contradiction with TDD **Part 5** §5.1's deletion-audit claim. A completed
+deletion currently leaves no record that it happened. **Now opened as ADR-034 (see below).**
 
 **The three owed follow-ups also closed** (#72, #73): the CCPA export's missing `message` rows,
 `e2e.yml`'s flow echo (now derived from the directory, so it cannot drift again), and
@@ -48,17 +48,41 @@ its time removing.
 
 **The #61 split is DONE (2026-07-28, PR #74, `0185ea9`).** The seven non-SDK bumps —
 `@typescript-eslint/*`, `prettier`, `turbo`, `@supabase/supabase-js`, both `@tanstack/*` — are on
-main with all five CI gates green. `react`, `@types/react` and the lockfile's `react@19.1.0` peer
-keys were deliberately left behind: they are the exactly-pinned SDK 54 baseline, and moving them is
-what reds the group (`react-test-renderer` stays at 19.1.0). The open dependency queue is now the
-coherent set the split was for — **#61's remainder, #64 and #65 all cross the SDK pin** and belong in
-one deliberate upgrade increment validated by a native build and the Maestro flows, with #62
-(i18next) and #63 (jest 30) red for their own unrelated reasons.
+main with all five CI gates green.
 
-**Next, in order:** (1) the **SDK-upgrade increment** — #61's `react` remainder + #64 + #65 together,
-behind a native build and the flows, which is the only way that class of change has ever been proven
-in this repo; (2) the **TDD resolution** on the deletion audit; (3) the **in-app deletion screen**
-Apple 5.1.1(v) requires, which needs a PDD affordance and SVC_household for ownership transfer.
+**And the "SDK-upgrade increment" the split was supposed to produce turned out not to exist
+(2026-07-28, PR #77).** The three PRs left in that queue were checked against the **installed peer
+graph** and all three closed: **#64** `@expo/metro-runtime` 6.1.2→57.0.7, whose dist-tags map majors
+to **SDK majors** (`latest` 57.0.7 is **SDK 57**) against `expo-router@6.0.24`'s `^6.1.2` peer;
+**#65** `@babel/runtime` 7→8 against `babel-preset-expo@54.0.12`'s `^7.20.0` peer; and **#75** —
+which superseded #61 after #74 landed — `react` 19.1.0→19.2.8, peer-**legal** under RN's `^19.1.0`
+but contradicted by react-native shipping a Fabric renderer hardcoded to React `"19.1.0"`. They were
+never an increment: `.github/dependabot.yml` held the correct rule and short **patterns** (`expo-*`
+does not match a scoped `@expo/` name), now extended to `react`, `@types/react`, `@expo/*` and
+`@babel/runtime`.
+
+**Two corrections to what this file previously said.** #64 and #65 were **not** red — they passed
+**all five gates including the bundle gate**, and only the peer-legal #75 was red. Green is
+anti-correlated with safety for an SDK-pinned package, because `expo export` resolves what fails
+natively. And "`react-test-renderer` must move with `react`" was the prescribed fix; satisfying that
+assertion (`@testing-library/react-native`'s `ensure-peer-deps.js`, which compares the two exactly)
+would have turned CI green while leaving the renderer mismatched.
+
+**The deletion-audit resolution is now open as ADR-034 (Proposed, 2026-07-28).** **TDD Part 5 §5.1**
+requires the audit to outlive the erasure; **Part 2 §3.15**'s schema erases it with its own subject.
+Neither is wrong — one row is being asked to have two lifetimes, because `account_deletion` is a
+correct *request* table and cannot also be the durable record of a completed erasure. The ADR
+separates them, makes the audit service-role-only, confines it to the fact of erasure, and retires
+the unwritable `executed_at`; it refers **what identifies the subject of a completed erasure** to
+Security/Privacy with Legal sign-off, recommending a one-way digest without choosing it. (The
+contradiction was mis-cited in seven places as "TDD Part 2 §5.1", which is *Identity, Onboarding &
+Profile* — API contracts with no threat model. All corrected.)
+
+**Next, in order:** (1) **owner ratification of ADR-034** — the engineering behind it is small and
+entirely blocked on that answer; (2) the **in-app deletion screen** Apple 5.1.1(v) requires, which
+needs a PDD affordance and SVC_household for ownership transfer. A genuine Expo SDK upgrade is future
+work rather than a milestone deliverable, and when it happens it still needs a native build plus the
+six Maestro flows — the only method that has ever caught that class of change here.
 
 **After that the credential-free engineering is largely exhausted.** What remains is owner-gated
 (paid Supabase, Sentry, store accounts), product-gated (F-5, PDD screens and ERR_* copy, the

@@ -2,9 +2,9 @@
 
 # PanchangPal — Current Milestone
 
-Version: 4.5.0
+Version: 4.7.0
 
-Last Updated: 2026-07-28 (the #61 dependency split; progress unchanged at 47%)
+Last Updated: 2026-07-28 (ADR-034 opens the deletion-audit decision; progress unchanged at 47%)
 
 Purpose:
 This document defines the current milestone. Unlike SESSION.md (daily work) or TASK.md (current
@@ -48,8 +48,9 @@ defect in the *test*: asserting `where user_id = ...` passes against exactly tha
 that is the column being nulled. The assertions key on content instead.
 
 **Residual, and stated:** pg_cron must be enabled on the hosted project (an owner dashboard
-action), and `executed_at` cannot be written because the audit row cascades with its own subject —
-a collision with §5.1's deletion-audit claim that the TDD owes a resolution for.
+action — done 2026-07-27), and `executed_at` cannot be written because the audit row cascades with
+its own subject — a collision with **Part 5** §5.1's deletion-audit claim, **now opened as ADR-034
+(Proposed, 2026-07-28)** and blocked on owner ratification rather than on engineering.
 
 **The original finding, for the record:**
 
@@ -441,8 +442,12 @@ One slice per session, same cadence as M1–M8: implemented, self-verified, revi
             and two TypeScript perturbations.
       - [ ] **Enable pg_cron on the hosted projects** (owner, dashboard) — until then deletions
             execute only via the manual trigger.
-      - [ ] **TDD owes a resolution for the deletion audit** — `executed_at` is unwritable under
-            the declared cascade, contradicting §5.1's repudiation mitigation.
+      - [ ] **The deletion audit — opened as ADR-034 (Proposed, 2026-07-28), awaiting ratification.**
+            `executed_at` is unwritable under the declared cascade, contradicting Part 5 §5.1's
+            repudiation mitigation. The ADR settles the engineering half (request and audit are
+            separate records; audit is service-role-only; `executed_at` retired) and refers the
+            privacy half — what identifies the subject of a completed erasure — to Security/Privacy
+            with Legal sign-off. Not closable by engineering alone.
       - [ ] Legal review of the policy draft and the store answers (owner-held).
 - [ ] **B7** — version trains, OTA channels (`staging`/`prod`) with runtime-version binding and
       crash-spike auto-rollback; rollback paths verified (§3.4).
@@ -596,7 +601,25 @@ testers' hands.
   checked by the DR restore drill, and `ACCOUNT_SWEEP_SECRET` is required at preflight's production
   tier. Until it is enabled, deletions run only when an operator triggers the sweep by hand.
   (b) **`executed_at` cannot be written** — see the next entry.
-- **The deletion audit contradicts the schema (found 2026-07-27).** TDD Part 2 §5.1's threat model
+- **The deletion audit contradicts the schema — now opened as ADR-034 (Proposed, 2026-07-28).**
+  The conflict is real and is **across two Parts**, which is plausibly why review of either alone
+  never caught it: **Part 5 §5.1**'s `[MANDATORY]` threat model requires the audit row to outlive the
+  erasure, and **Part 2 §3.15**'s schema erases it with its own subject. (Every prior record here,
+  in `DATA_INVENTORY.md` and in the executor migration's own header cited this as "Part 2 §5.1" —
+  which is *Identity, Onboarding & Profile*, API contracts with no threat model. Seven citations
+  corrected.)
+  **Neither document is wrong; the schema is under-specified for the role assigned it.**
+  `account_deletion` is a correct *request* table and cannot also be the durable record of a
+  completed erasure — one row with two lifetimes. ADR-034 separates them, makes the audit
+  service-role-only, confines it to the *fact* of erasure, and **retires `executed_at`** (dead
+  schema: its only reader is a predicate that is unconditionally true, because the column can never
+  hold a value).
+  **Still owed, and deliberately not decided:** what identifies the subject of a completed erasure —
+  raw `user_id`, a one-way digest, or nothing. That is a privacy decision with legal weight, referred
+  to Security/Privacy with Legal sign-off; the digest form is recommended, not chosen. **No schema
+  change before ratification**, and a retention period agreed now would not be enforced anyway, since
+  the deletion sweep remains the only scheduled job that runs.
+- **The original entry, for the record (found 2026-07-27).** TDD Part 5 §5.1's threat model
   names `TBL_ACCOUNT_DELETION` as the **deletion audit** mitigating repudiation, which requires the
   row to survive the erasure. §3's schema declares `user_id ... on delete cascade`, which erases the
   request row along with its own subject — so after a successful deletion there is nothing left to
@@ -616,6 +639,33 @@ testers' hands.
   while doing nothing. It was found while evaluating whether to schedule it on pg_cron; **doing so
   would have made notification scheduling look live while provably sending nothing.** Do not
   schedule it until the repository methods are real.
+- **The "SDK-upgrade increment" does not exist, and the three PRs are closed (2026-07-28, PR #77).**
+  The set queued below as one deliberate upgrade was checked against the **installed peer graph**
+  rather than release notes, and none of it belongs on SDK 54. The cause is single:
+  `.github/dependabot.yml` already carried the right rule — *an SDK-pinned package is upgraded with
+  the SDK via `expo install --fix`, never alone, because a lone bump produces a build that resolves
+  and then fails natively* — and only its **patterns** were short. `expo-*` never matched a scoped
+  `@expo/` name, and nothing covered `react`, `@types/react` or `@babel/runtime`.
+  **#64** `@expo/metro-runtime` 6.1.2→57.0.7: the package's dist-tags map majors to **SDK majors**
+  (`sdk-55`→55.x, `sdk-56`→56.x, `latest` 57.0.7→**SDK 57**), and `expo-router@6.0.24` peer-requires
+  `^6.1.2`. **#65** `@babel/runtime` 7→8: `babel-preset-expo@54.0.12` peer-requires `^7.20.0`.
+  **#75** (which superseded #61 after #74 landed) `react` 19.1.0→19.2.8: peer-**LEGAL** under RN's
+  `^19.1.0` and therefore the most dangerous of the three, because react-native ships its own Fabric
+  renderer built against React `"19.1.0"`, hardcoded in
+  `Libraries/Renderer/implementations/ReactFabric-{dev,prod}.js`.
+  **Two claims in the entry below are now known to be wrong.** (1) "All three are red because they
+  cross the SDK pin": **#64 and #65 passed all five CI gates, including the bundle gate**, and #75 —
+  the peer-legal one — was the only red. **Green is anti-correlated with safety for an SDK-pinned
+  package**, because `expo export` resolves what fails natively; that is the third instance after
+  mmkv v2 under the New Architecture and `babel-preset-expo`. (2) "`react-test-renderer` has to move
+  with `react`": that is the assertion in
+  `@testing-library/react-native`'s `build/helpers/ensure-peer-deps.js`, which compares
+  `react-test-renderer` to `react` **exactly** — so satisfying it would have turned CI green while
+  leaving the renderer at 19.1.0, silencing the one check that noticed. Every 19.2.x release note is
+  React Server Components, so there was nothing to gain either way.
+  **No native build or Maestro run was needed**; the peer graph was the cheaper experiment and was
+  available from the start. A genuine Expo SDK upgrade remains future work, is not a milestone
+  deliverable, and when it happens must still be validated by a native build plus the six flows.
 - **The #61 group is split, and the queue is now coherent (2026-07-28, PR #74).** The seven
   non-SDK bumps landed on main on their own — `@typescript-eslint/eslint-plugin` and `parser`
   8.63.0→8.65.0, `prettier` 3.9.5→3.9.6, `turbo` 2.10.4→2.10.7, `@supabase/supabase-js`
@@ -651,7 +701,10 @@ testers' hands.
   because the group bumps **`react` 19.1.0 → 19.2.8** while `react-test-renderer` stays behind.
   `react` and `react-native` are **exactly pinned** in both `apps/mobile` and `packages/ui` — they
   are the SDK 54 baseline — so #61 belongs with #64 and #65 in a deliberate SDK-upgrade increment,
-  not in the "red for its own reasons" bucket. The other seven bumps in the group
+  not in the "red for its own reasons" bucket. **(Superseded 2026-07-28: there is no such increment.
+  All three were closed against the peer graph and the ignore list now covers the four SDK-pinned
+  packages — see the top entry of this list. The diagnosis of #61's failure below is correct; the
+  conclusion that it implies an upgrade increment is not.)** The other seven bumps in the group
   (`@supabase/supabase-js`, both `@tanstack/*`, `@typescript-eslint/*`, `prettier`, `turbo`) are not
   SDK-coupled and could be split out and landed independently.
 - **⛔ No job runner processes the `job` table.** `analytics_rollup`, `notify_schedule`,

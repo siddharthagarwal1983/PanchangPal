@@ -139,13 +139,23 @@ comment on function execute_account_deletion(uuid) is
 -- stamp first — the obvious implementation — produces a value nothing can ever observe.
 --
 -- This is a real tension between two approved documents, and it is recorded rather than
--- resolved here. TDD Part 2 §5.1's threat model names `TBL_ACCOUNT_DELETION` as the
+-- resolved here. TDD **Part 5** §5.1's threat model names `TBL_ACCOUNT_DELETION` as the
 -- **deletion audit** mitigating repudiation, which requires the row to SURVIVE the
--- erasure; the schema in §3 declares a cascade, which requires it not to. Changing the
+-- erasure; the schema in **Part 2** §3.15 declares a cascade, which requires it not to.
+-- (Both were previously cited here as "Part 2 §5.1"; the conflict is across two Parts,
+-- which is plausibly why review of either one alone did not catch it.) Changing the
 -- foreign key would be inventing a schema decision with privacy consequences (the
 -- surviving row names a uid), so this function implements the schema as declared and the
 -- gap is logged for the TDD to settle. Consequence today: a completed deletion leaves no
 -- record that it happened.
+--
+-- ➜ NOW TRACKED BY **ADR-034 — Account-Deletion Audit Record** (Proposed, 2026-07-28).
+--   It settles what is decidable on engineering grounds — a deletion REQUEST and a
+--   deletion AUDIT have opposite lifetimes and cannot be the same row, so the audit
+--   becomes a separate service-role-only record that no cascade reaches, and `executed_at`
+--   is retired — and refers the remaining question, WHAT IDENTIFIES THE SUBJECT of a
+--   completed erasure, to Security/Privacy with Legal sign-off. **Do not change this
+--   schema before that ratification.**
 --
 -- Returns (deleted, blocked) so the caller can log both. A rising `blocked` count means
 -- users are stuck behind an ownership transfer they were never asked to perform.
