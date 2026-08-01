@@ -139,13 +139,44 @@ build. Rebuild — restarting the app cannot help.
 
 ### 5. Place in Supabase — the Edge Functions
 
+Get the project refs first: `supabase projects list`, or the dashboard URL segment
+`https://supabase.com/dashboard/project/<REF>` (also Project Settings → General → *Reference ID*).
+Use the **`panchangpal-edge`** DSN here, never the mobile one — crossing them sends server errors
+into the mobile project and corrupts the population crash-free sessions is computed over.
+
 ```bash
+# 1. Build the two workspace packages the functions import. NOT optional — see below.
+pnpm build --filter=@panchangpal/shared --filter=@panchangpal/ai
+
+# 2. Set the secret
 supabase secrets set SENTRY_DSN="<edge DSN>" --project-ref <PROJECT_REF>
-supabase functions deploy --project-ref <PROJECT_REF>
+
+# 3. Redeploy BY NAME, from the repo root
+supabase functions deploy \
+  account ask-guru content-ingest notify-scheduler panchang revenuecat-webhook sync \
+  --project-ref <PROJECT_REF>
 ```
 
-The deploy is not optional: `_shared/http.ts` resolves the DSN at **module load**, so already-warm
-instances keep the previous value.
+**Three things here are easy to get wrong, and each fails in a way that does not name its cause.**
+
+1. **Build `shared` and `ai` first.** `cd.yml` does this (its comment: *Deno cannot rewrite the
+   packages' TS-ESM '.js' specifiers to '.ts'*), and `packages/*/dist/` is git-ignored, so a fresh
+   clone has neither. Skipping it fails with
+   `ENOENT: … packages/ai/dist/index.js` **after** every asset has uploaded — it reads as a
+   corrupt repo rather than a missing build step, and it takes down exactly `ask-guru` and
+   `content-ingest`, the two functions that import that package.
+2. **Deploy BY NAME.** Sources live under `apps/backend/functions` with entrypoints declared in
+   `supabase/config.toml`; a bare `supabase functions deploy` looks in the (non-existent)
+   `supabase/functions/` default directory.
+3. **The redeploy is not tidiness.** `_shared/http.ts` resolves the DSN at **module load**, so
+   already-warm instances keep the previous value — absent — and the dashboard shows the secret
+   configured while the functions report nothing.
+
+`WARNING: Docker is not running` during deploy is harmless: bundling and upload go through the API,
+and Docker is only needed for `supabase start` / local `functions serve`.
+
+**There is no production project** — the free tier allows two per org and dev + staging use both.
+That is the same constraint blocking B1 and NFR-15.
 
 ### 6. GitHub — already placed, and gate-only
 
