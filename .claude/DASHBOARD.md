@@ -130,6 +130,22 @@ greens against a ~50% race is ~3% likely by chance, so this is a verdict rather 
 **Dispatch E2E runs SEQUENTIALLY**: the concurrency group permits one pending run per ref, so an
 initial batch of four left two cancelled.
 
+⚠️ **AND A SECOND DEFECT OF THE SAME CLASS, found by #79's red E2E: a preference write had no
+durable path at all.** `useUpdatePreferences` wrote straight to the server, so an app kill inside the
+request window silently reverted the setting — and because `FLOW_AUTH_SESSION_PERSISTENCE` reads the
+tradition back as its proof of identity, that loss presented as **identity loss** and was
+misattributed **four times** (twice to the launch race, once to Sentry, once to a flake). Fixed on
+`fix/durable-preference-writes`: `preferences` is a syncable kind again with a server branch and an
+**unratified** §6.6 rule (LWW, the nearest ratified precedent), the upsert behind a **column
+allowlist**, and **mutations stamped with the identity that made them** — without which durable
+preferences would create a **false green** on the suite's most important flow. My own run 1 failed on
+the read half (no `['preferences']` invalidation); run 2 is 6/6.
+
+**A durable queue guarantees DELIVERY, not DISPLAY** — the same lesson, twice in one day, from
+opposite directions.
+
+---
+
 ---
 
 **Previously — two things landed and one is deliberately held back. Main is at `4fdaf10` (#78).**

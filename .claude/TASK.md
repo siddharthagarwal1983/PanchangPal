@@ -175,6 +175,25 @@ two cancelled and yielded only two usable samples.
 **#84 → `45f00c7`** (this fix) and **#85 → `b8ab528`** (the SDK-pin rule's third leak; `#81` and
 `#63` closed with evidence, `bundledNativeModules.json` named as the authoritative source).
 
+## Open — `fix/durable-preference-writes`
+
+**A preference write had no durable path at all.** `useUpdatePreferences` called the server directly
+with an optimistic update, so an app kill inside the request window silently reverted the setting —
+and `FLOW_AUTH_SESSION_PERSISTENCE` reads the tradition back as its proof of identity, so the loss
+presented as IDENTITY LOSS. **Four misattributions**: twice to the launch race, once to Sentry, once
+to an unexplained flake.
+
+`preferences` is a syncable kind again, with the server branch and conflict rule it lacked.
+⚠️ **The §6.6 rule is UNRATIFIED** — it adopts `personal_date`'s last-writer-wins as the nearest
+ratified precedent, and `resolvePreferences` is the only place a different ruling lands.
+The upsert is behind a **column allowlist** (client-supplied payload + service role = the
+SVC_account defect in a new place), and **mutations carry the identity that made them** —
+without which durable preferences would create a **false green** on the suite's most important flow.
+
+**Run 1 failed on my own gap**, not a flake: the durable write path shipped without the read half
+(`onServerState` did not invalidate `['preferences']`). Fixed, plus a fourth drain trigger for
+identity resolving. **Run 2: 6/6 green.**
+
 ## Next task, in order
 
 1. **Merge #79** — rebased onto `45f00c7`, title corrected, sample 1 green 6/6 with
