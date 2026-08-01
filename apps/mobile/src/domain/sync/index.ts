@@ -9,6 +9,11 @@ export {
   type SyncResponse,
 } from './types';
 export {
+  applyPendingCompletions,
+  pendingChecklistDates,
+  pendingChecklistItemIds,
+} from './pendingProjection';
+export {
   MAX_SYNC_ATTEMPTS,
   SYNC_BATCH_LIMIT,
   backoffDelayMs,

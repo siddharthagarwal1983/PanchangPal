@@ -39,6 +39,27 @@
 # requires Maestro >= 1.37; the pinned CI install is 2.x, and an older binary fails loudly at the
 # command rather than skipping it.
 appId: com.panchangpal.app
+# TEARDOWN — RESTORE THE RADIO EVEN WHEN THIS FLOW FAILS.
+#
+# This flow turns airplane mode ON in its middle and OFF as one of its LAST steps, so until now any
+# earlier failure left the emulator with no network for whatever Maestro ran next. FLOW_RETURNING
+# and FLOW_SESSION_PERSISTENCE then failed on assertions about seeded content and a restored
+# session — both looking like defects in features that were working perfectly.
+#
+# ONE DEFECT PRESENTED AS THREE, and that is what made the offline-persistence race take most of a
+# session to isolate: the run log showed three red flows and the causal one was not obviously the
+# root. Baseline run 30391501865 on main shows the same triple exactly.
+#
+# `onFlowComplete` runs whether the flow passed or failed, which is the property the in-flow restore
+# below structurally cannot have. The two are not redundant: this guarantees the DEVICE is left
+# usable, while the section at the end of the flow additionally proves connectivity genuinely came
+# back by making the app reach the backend on a cleared cold start. A teardown cannot assert that,
+# because a failing assertion inside a teardown fails the flow it is trying to clean up after.
+#
+# Idempotent: disabling airplane mode that is already disabled is a no-op, so the success path is
+# unaffected.
+onFlowComplete:
+  - setAirplaneMode: disabled
 ---
 # THREE DISCRETE STEPS, and the first two runs of this flow paid for that shape.
 #

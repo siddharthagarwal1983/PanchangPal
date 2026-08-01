@@ -20,6 +20,13 @@
  */
 import { dehydrate, hydrate, type QueryClient } from '@tanstack/react-query';
 import { createDeviceStore, type KeyValueStore } from './keyValueStore';
+import {
+  applyPendingCompletions,
+  pendingChecklistDates,
+  pendingChecklistItemIds,
+  type QueuedMutation,
+} from '../domain/sync';
+import { hydrateOfflineQueue, useOfflineQueueStore } from '../store/offlineQueue';
 
 /**
  * Query key roots written to disk.
@@ -140,6 +147,35 @@ export function saveQueryCache(
 }
 
 /**
+ * Re-apply the durable queue's pending mutations onto the restored cache.
+ *
+ * THE RESTORED CACHE IS NOT ENOUGH ON ITS OWN. It is written on a `WRITE_THROTTLE_MS` trailing
+ * throttle and flushed from `installQueryPersistence`'s teardown, which a process kill never runs.
+ * A completion made offline and then killed within that window is absent from the snapshot even
+ * though `STORE_offlineQueue` wrote it to disk synchronously — the queue is durable, the cache is
+ * a cache, and only the cache was ever rendered. That gap is what `FLOW_OFFLINE_SYNC` fails on at
+ * ~50%, and it is a TDD Part 4 §6 violation: a completion the user made is not shown back to them.
+ *
+ * Only ever writes to keys already present in the cache. Seeding an entry for a query that has
+ * never loaded would invent a checklist with no labels, and the screen would render a completion
+ * against rows it cannot name.
+ */
+export function reapplyPendingMutations(
+  queryClient: QueryClient,
+  queue: readonly QueuedMutation[],
+): void {
+  for (const localDate of pendingChecklistDates(queue)) {
+    const key = ['checklist', localDate] as const;
+    const cached = queryClient.getQueryData<{ id: string; complete: boolean }[]>(key);
+    if (!cached) continue;
+    const next = applyPendingCompletions(cached, pendingChecklistItemIds(queue, localDate));
+    // `applyPendingCompletions` returns the same reference when nothing changed, so an unchanged
+    // cache costs no write and wakes no subscriber.
+    if (next !== cached) queryClient.setQueryData(key, next);
+  }
+}
+
+/**
  * Restore, then keep the cache in sync. Returns an unsubscribe handle.
  *
  * Called from an effect, never at module scope — resolving device storage during module evaluation
@@ -150,6 +186,13 @@ export function installQueryPersistence(
   store: KeyValueStore = createDeviceStore(),
 ): () => void {
   restoreQueryCache(queryClient, store);
+
+  // Correct the restored snapshot from the durable queue before anything renders. Hydration is
+  // idempotent and `useOfflineSync` has usually run it already; calling it here removes the
+  // dependence on effect ordering between the two, which is not a guarantee worth resting a
+  // launch-blocking invariant on.
+  hydrateOfflineQueue();
+  reapplyPendingMutations(queryClient, useOfflineQueueStore.getState().queue);
 
   let timer: ReturnType<typeof setTimeout> | null = null;
   const unsubscribe = queryClient.getQueryCache().subscribe(() => {
