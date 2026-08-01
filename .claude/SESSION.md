@@ -54,13 +54,23 @@ presenting as three.
 **Verified:** 367 mobile jest (+17), 102 vitest, tsc across 11 projects, eslint 0 errors, `expo
 export` both platforms, flow YAML parses. **Two perturbations each failed exactly the right test.**
 
-⚠️ **NOT device-verified.** Four E2E runs were dispatched; the concurrency group
-(`e2e-${{ github.ref }}`) allows one pending run per ref, so two were cancelled — **dispatch
-sequentially, not in a batch.** A ~50% race needs enough samples to beat the failure rate.
+# 4. Device-verified — 5/5 green, 30/30 flows
+
+| Branch run | Result |
+|---|---|
+| `30706341043` · `30706351403` · `30707302407` · `30707760317` · `30708217181` | **6/6 green, all five** |
+
+Against main's **3 green / 3 red** on the same suite. If the ~50% race persisted, five consecutive
+greens would occur ~3% of the time — so this is a verdict rather than a lucky draw, which is exactly
+the distinction the corrected re-run heuristic exists to enforce.
+
+⚠️ **Dispatch E2E runs SEQUENTIALLY.** `e2e.yml`'s concurrency group is `e2e-${{ github.ref }}` with
+`cancel-in-progress: false`, which permits one *pending* run per ref — an initial batch of four left
+two cancelled and yielded two usable samples.
 
 # Recommended next task
 
-1. **Read the branch E2E runs and compare against main's 3/3.** Dispatch more, sequentially.
-2. If green across enough samples, **open the PR**; then **merge #79**, whose blocker is now closed.
+1. **Review and merge the PR** on `fix/offline-completion-lost-on-kill`.
+2. **Merge #79** — its E2E blocker is closed (never Sentry) and its startup-init defect is fixed.
 3. Owner: `EXPO_PUBLIC_SENTRY_DSN` into EAS + `SENTRY_DSN` into Supabase Edge secrets; ratify
    ADR-034. Still open: #62, #63, #80–#82 (**#81 is the SDK-pin defect again**).

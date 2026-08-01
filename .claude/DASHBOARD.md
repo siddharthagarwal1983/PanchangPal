@@ -92,7 +92,7 @@ CURRENT_MILESTONE.md
 
 # Current Task
 
-✅ **THE OFFLINE-COMPLETION RACE IS DIAGNOSED CORRECTLY AND FIXED — awaiting device verification.**
+✅ **THE OFFLINE-COMPLETION RACE IS DIAGNOSED CORRECTLY, FIXED, AND VERIFIED ON DEVICE (5/5 green).**
 Branch `fix/offline-completion-lost-on-kill` (`dd26ef1`), pushed.
 
 **Progress unchanged at 47%.** This closes a TDD Part 4 §6 launch blocker inside a slice already
@@ -121,9 +121,11 @@ and `FLOW_OFFLINE_SYNC` restores the radio in an `onFlowComplete` teardown so on
 presenting as three.
 
 **Verified:** 367 mobile jest (+17), 102 vitest, tsc across 11 projects, eslint 0 errors, bundle
-gate both platforms, two perturbations each failing exactly the right test. **NOT device-verified** —
-the race only reproduces on hardware. **Dispatch E2E runs SEQUENTIALLY**: the concurrency group
-permits one pending run per ref, so a batch of four left two cancelled.
+gate both platforms, two perturbations each failing exactly the right test — **and device-verified
+5/5 green, 30/30 flows** against main's **3 green / 3 red** on the same suite. Five consecutive
+greens against a ~50% race is ~3% likely by chance, so this is a verdict rather than a lucky draw.
+**Dispatch E2E runs SEQUENTIALLY**: the concurrency group permits one pending run per ref, so an
+initial batch of four left two cancelled.
 
 ---
 

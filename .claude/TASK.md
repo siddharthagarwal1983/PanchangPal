@@ -2,8 +2,8 @@
 
 # PanchangPal — Current Task
 
-Version: 4.1.0
-Last Updated: 2026-07-29 (session end — offline completion lost on app kill; Sentry blocker 1 closed)
+Version: 4.2.0
+Last Updated: 2026-08-01 (offline-completion race diagnosed correctly, fixed, verified 5/5; #79 unblocked)
 
 Purpose: the current implementation task. Stay focused; avoid unrelated work unless instructed.
 
@@ -110,7 +110,7 @@ green in CI on a real native build. Canonical progress 0% → 13% (1 of 8 Beta s
 # Current Task
 
 ## Title
-✅ THE OFFLINE-COMPLETION RACE IS DIAGNOSED AND FIXED — awaiting device verification
+✅ THE OFFLINE-COMPLETION RACE IS DIAGNOSED, FIXED, AND VERIFIED ON DEVICE (5/5 green)
 (branch `fix/offline-completion-lost-on-kill`, `dd26ef1`)
 
 **Progress unchanged at 47%.** This closes a TDD Part 4 §6 launch blocker inside a slice already
@@ -159,19 +159,23 @@ export` both platforms, flow YAML parses with the hook. **Two perturbations, eac
 the right test** — removing the reapply wiring failed only the launch-correction test; removing the
 revert guard failed only the still-queued test, with both controls still green.
 
-## ⚠️ Not done, and stated
+## ✅ Device-verified — 5/5 green, 30/30 flows
 
-**No device verification yet.** The race only reproduces on hardware.
+`30706341043` · `30706351403` · `30707302407` · `30707760317` · `30708217181`, all **6/6**, against
+main's **3 green / 3 red** on the same suite. If the ~50% race persisted, five consecutive greens
+would occur ~3% of the time — a verdict rather than a lucky draw, which is the distinction the
+corrected re-run heuristic exists to enforce.
 
-**Dispatch E2E runs SEQUENTIALLY.** `e2e.yml`'s concurrency group is `e2e-${{ github.ref }}` with
-`cancel-in-progress: false`, which permits one *pending* run per ref — a batch of four left two
-cancelled. A ~50% race needs enough samples to beat the failure rate; compare against main's 3/3.
+⚠️ **Dispatch E2E runs SEQUENTIALLY.** `e2e.yml`'s concurrency group is `e2e-${{ github.ref }}` with
+`cancel-in-progress: false`, which permits one *pending* run per ref — an initial batch of four left
+two cancelled and yielded only two usable samples.
 
 ## Next task, in order
 
-1. **Read the branch runs, dispatch more sequentially, compare against main's 3 green / 3 red.**
-2. **Open the PR** once green across enough samples.
-3. **Merge #79** — its E2E blocker is closed and its startup-init defect was already fixed.
+1. **Review and merge the PR.**
+2. **Merge #79** — its E2E blocker is closed and its startup-init defect was already fixed.
+3. Owner: `EXPO_PUBLIC_SENTRY_DSN` into EAS + `SENTRY_DSN` into Supabase Edge secrets; ratify
+   ADR-034.
 
 ## Superseded framing — Sentry
 

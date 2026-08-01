@@ -597,7 +597,8 @@ testers' hands.
   **The rule this establishes: a durable queue guarantees DELIVERY, not DISPLAY.** Fixed on
   `fix/offline-completion-lost-on-kill` (pure projection + startup correction + a revert guard
   keyed on the queue rather than on a vendor's error text), with two perturbations each failing
-  exactly the right test. **Not device-verified yet.** Getting it green found three E2E-harness defects and none in offline
+  exactly the right test. **Device-verified: 5/5 green, 30/30 flows**, against main's 3 green / 3 red
+  on the same suite — ~3% likely by chance if the race persisted. Getting it green found three E2E-harness defects and none in offline
   sync itself — a launch race where the stale TASK's destroy-timeout killed the newly started
   process, the flow breaking a neighbour because a cleared offline banner is not proof of a usable
   route, and both being visible only in the uploaded artifact rather than the run log.

@@ -92,7 +92,7 @@ product scope. Sliced B1–B8; see CURRENT_MILESTONE.md.
 Current Focus
 
 - **⛔→✅ The offline-completion race, diagnosed correctly and fixed (2026-08-01, branch
-  `fix/offline-completion-lost-on-kill`, `dd26ef1`, awaiting device verification).** A completion
+  `fix/offline-completion-lost-on-kill`, `dd26ef1`, **verified 5/5 green, 30/30 flows**).** A completion
   made offline was not SHOWN after an app kill — `FLOW_OFFLINE_SYNC` failing ~50% on the assertion
   its own header calls the reason the flow exists. **The recorded cause was wrong.** "An
   asynchronous MMKV write loses to the kill" is refuted: `keyValueStore.set` is MMKV's synchronous
