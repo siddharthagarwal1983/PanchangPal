@@ -2,11 +2,18 @@ import { QueryClient } from '@tanstack/react-query';
 import {
   PERSISTED_QUERY_ROOTS,
   QUERY_CACHE_MAX_AGE_MS,
+  installQueryPersistence,
+  reapplyPendingMutations,
   restoreQueryCache,
   saveQueryCache,
   shouldPersistQuery,
 } from '../queryPersistence';
 import type { KeyValueStore } from '../keyValueStore';
+import type { QueuedMutation } from '../../domain/sync';
+import {
+  resetOfflineQueueForTests,
+  setOfflineQueueStorageForTests,
+} from '../../store/offlineQueue';
 
 class MemoryStorage implements KeyValueStore {
   readonly values = new Map<string, string>();
@@ -149,5 +156,95 @@ describe('query cache persistence', () => {
     saveQueryCache(clientWith([[['today'], {}]]), disk);
     const raw = JSON.parse(disk.getString('query-cache:v1') as string);
     expect(raw.state.mutations).toEqual([]);
+  });
+});
+
+/**
+ * The launch blocker `FLOW_OFFLINE_SYNC` catches at ~50%: a completion made offline is still shown
+ * after the process is killed.
+ *
+ * These assert the SEAM, not the pure rule — `pendingProjection.test.ts` covers the rule. What is
+ * proven here is that a cache restored WITHOUT the completion (because the write throttle lost the
+ * race to the kill, which is the real-device case) is corrected from the durable queue.
+ */
+describe('reapplyPendingMutations', () => {
+  const localDate = '2026-07-28';
+  const serverTruth = [
+    { id: 'item-1', label: 'Light the lamp', complete: false },
+    { id: 'item-2', label: 'Offer water', complete: false },
+  ];
+
+  function pendingChecklist(itemId: string, day = localDate): QueuedMutation {
+    return {
+      id: `m-${itemId}`,
+      kind: 'checklist',
+      payload: { item_id: itemId, local_date: day },
+      client_id: `m-${itemId}`,
+      local_ts: '2026-07-28T07:30:00.000Z',
+      attempts: 0,
+    };
+  }
+
+  it('shows a completion the throttled snapshot never captured', () => {
+    // The exact failure: disk holds the UNCHECKED server state, the queue holds the completion.
+    const qc = clientWith([[['checklist', localDate], serverTruth]]);
+
+    reapplyPendingMutations(qc, [pendingChecklist('item-1')]);
+
+    expect(qc.getQueryData(['checklist', localDate])).toEqual([
+      { id: 'item-1', label: 'Light the lamp', complete: true },
+      { id: 'item-2', label: 'Offer water', complete: false },
+    ]);
+  });
+
+  it('does not invent a cache entry for a checklist that has never loaded', () => {
+    // Seeding one would render a completion against rows the screen cannot name.
+    const qc = newClient();
+    reapplyPendingMutations(qc, [pendingChecklist('item-1')]);
+    expect(qc.getQueryData(['checklist', localDate])).toBeUndefined();
+  });
+
+  it('leaves another day’s cached list untouched', () => {
+    const qc = clientWith([[['checklist', localDate], serverTruth]]);
+    reapplyPendingMutations(qc, [pendingChecklist('item-1', '2026-07-27')]);
+    expect(qc.getQueryData(['checklist', localDate])).toEqual(serverTruth);
+  });
+
+  it('is idempotent, so a second launch does not churn subscribers', () => {
+    const qc = clientWith([[['checklist', localDate], serverTruth]]);
+    reapplyPendingMutations(qc, [pendingChecklist('item-1')]);
+    const first = qc.getQueryData(['checklist', localDate]);
+    reapplyPendingMutations(qc, [pendingChecklist('item-1')]);
+    expect(qc.getQueryData(['checklist', localDate])).toBe(first);
+  });
+
+  /**
+   * The WIRING, which is the part a regression would actually remove. The test above proves the
+   * projection; this one proves `installQueryPersistence` performs it, by reconstructing the real
+   * device situation: a snapshot on disk taken BEFORE the tap (the throttle lost the race to the
+   * kill) and a queue on disk written synchronously during it.
+   *
+   * Delete the `reapplyPendingMutations` call from `installQueryPersistence` and this fails.
+   */
+  it('corrects the restored cache from the durable queue on launch', () => {
+    const disk = new MemoryStorage();
+    saveQueryCache(clientWith([[['checklist', localDate], serverTruth]]), disk);
+
+    const queueDisk = new MemoryStorage();
+    queueDisk.set('offline-queue:v1', JSON.stringify([pendingChecklist('item-1')]));
+    setOfflineQueueStorageForTests(queueDisk);
+    resetOfflineQueueForTests();
+
+    const relaunched = newClient();
+    const uninstall = installQueryPersistence(relaunched, disk);
+
+    expect(relaunched.getQueryData(['checklist', localDate])).toEqual([
+      { id: 'item-1', label: 'Light the lamp', complete: true },
+      { id: 'item-2', label: 'Offer water', complete: false },
+    ]);
+
+    uninstall();
+    setOfflineQueueStorageForTests(null);
+    resetOfflineQueueForTests();
   });
 });

@@ -2,8 +2,8 @@
 
 # PanchangPal — Current Task
 
-Version: 4.1.0
-Last Updated: 2026-07-29 (session end — offline completion lost on app kill; Sentry blocker 1 closed)
+Version: 4.2.0
+Last Updated: 2026-08-01 (offline-completion race diagnosed correctly, fixed, verified 5/5; #79 unblocked)
 
 Purpose: the current implementation task. Stay focused; avoid unrelated work unless instructed.
 
@@ -110,39 +110,72 @@ green in CI on a real native build. Canonical progress 0% → 13% (1 of 8 Beta s
 # Current Task
 
 ## Title
-⛔ AN OFFLINE COMPLETION IS SOMETIMES LOST ON APP KILL — found while chasing Sentry's red E2E
+✅ THE OFFLINE-COMPLETION RACE IS DIAGNOSED, FIXED, AND VERIFIED ON DEVICE (5/5 green)
+(branch `fix/offline-completion-lost-on-kill`, `dd26ef1`)
 
-**Progress unchanged at 47%.** This is a §6 launch blocker found during other work, exactly as the
-offline-sync gap and the deletion executor were.
+**Progress unchanged at 47%.** This closes a TDD Part 4 §6 launch blocker inside a slice already
+counted, exactly as offline sync and the deletion executor did.
 
-## The defect
+## 1. The baseline settles #79
 
-`FLOW_OFFLINE_SYNC` fails intermittently (~50%) at **line 131** — the `☑` assertion **after**
-`stopApp` / `launchApp`, not the one before it. Proven by which screenshots the artifact holds:
-`offline-sync-03-offline-completed` (line 111) is captured, `offline-sync-04-survived-restart-offline`
-is not. The optimistic tick appears correctly and is **gone once the process dies** — the assertion
-the flow's own header calls "THE ASSERTION THIS FLOW EXISTS FOR".
+Main flakes identically **without any Sentry code**: 3 green / 3 red across 2026-07-28, every red
+the same three-flow signature (OFFLINE_SYNC `☑`, then SESSION_PERSISTENCE and RETURNING as
+airplane-mode collateral). One red is `4fdaf10` (#78), which changed **only**
+`.github/dependabot.yml` and ADR markdown and therefore cannot have introduced a runtime race.
+**PR #79's Blocker 2 is closed** — it was never Sentry.
 
-**It is a race.** The flow taps, asserts, screenshots, then kills the process immediately; an
-asynchronous or batched MMKV write of `STORE_offlineQueue` loses to the kill. A user completing a
-ritual offline whose app is reclaimed moments later hits the same window. **MMKV loads natively in
-every run**, so this is NOT the mmkv-v2 degradation bug.
+## 2. The recorded root cause was wrong
 
-**TDD Part 4 §6 forbids losing a completion**, so this is launch-blocking. **Do not fix it by adding
-settle time to the flow** — that hides a race real users can hit. Fix the persistence.
+"An asynchronous or batched MMKV write loses to the kill" is refuted: `keyValueStore.set` is MMKV's
+**synchronous** JSI call made inside the tap handler, the library loads natively in every launch,
+and no `[sync]` warning is ever emitted. **The queue reached disk every time.**
 
-**Second, structural:** `FLOW_OFFLINE_SYNC` restores the radio as its LAST step, so any earlier
-failure leaves airplane mode on and fails FLOW_SESSION_PERSISTENCE and FLOW_RETURNING as collateral.
-**One defect presents as three**, which is why this took most of a session to isolate. The restore
-belongs in teardown that runs on failure.
+The defect is that **nothing rendered it**. `STORE_offlineQueue` was read only by the drain, so the
+tick after a cold start came solely from the persisted query cache — written on a **1 s trailing
+throttle** and flushed from an unsubscribe handler **a process kill never runs**. Offline it was
+additionally poisoned: the direct write always fails with no network, and `useChecklist.onError`
+reverted the optimistic tick although the mutation was durably queued. The ~50% was whether the
+process died before or after that revert-plus-throttle write landed. **The passing runs passed by
+luck of timing.**
+
+**The rule this establishes: a durable queue guarantees DELIVERY, not DISPLAY.**
+
+## 3. What shipped
+
+| Piece | Where |
+|---|---|
+| Pure projection of the queue onto a read model | `src/domain/sync/pendingProjection.ts` |
+| Correction of the restored snapshot at launch | `reapplyPendingMutations` in `queryPersistence.ts` |
+| Revert only when nothing is left to deliver it | `src/data/hooks/useChecklist.ts` |
+| Radio restore that survives failure | `onFlowComplete` in `FLOW_OFFLINE_SYNC.yaml` |
+
+Completion-only, matching §6.6's union rule — the payload carries no desired state, so
+un-completing is not expressible in the queue. Writes only to keys already cached; seeding one
+would render a completion against rows the screen cannot name. Server truth still wins the moment
+the drain invalidates `['checklist']`.
+
+**Verified:** 367 mobile jest (+17), 102 vitest, tsc across 11 projects, eslint 0 errors, `expo
+export` both platforms, flow YAML parses with the hook. **Two perturbations, each failing exactly
+the right test** — removing the reapply wiring failed only the launch-correction test; removing the
+revert guard failed only the still-queued test, with both controls still green.
+
+## ✅ Device-verified — 5/5 green, 30/30 flows
+
+`30706341043` · `30706351403` · `30707302407` · `30707760317` · `30708217181`, all **6/6**, against
+main's **3 green / 3 red** on the same suite. If the ~50% race persisted, five consecutive greens
+would occur ~3% of the time — a verdict rather than a lucky draw, which is the distinction the
+corrected re-run heuristic exists to enforce.
+
+⚠️ **Dispatch E2E runs SEQUENTIALLY.** `e2e.yml`'s concurrency group is `e2e-${{ github.ref }}` with
+`cancel-in-progress: false`, which permits one *pending* run per ref — an initial batch of four left
+two cancelled and yielded only two usable samples.
 
 ## Next task, in order
 
-1. **Read the three main baseline runs** — `30390519585` (6/6 green), `30391501865`, `30391533413`.
-   Dispatched on main with no Sentry code at all, to settle whether the race is pre-existing. If
-   main flakes the same way, **#79's E2E blocker dissolves**.
-2. **Fix the persistence race** (§6).
-3. **Make the flow's radio restore failure-proof.**
+1. **Review and merge the PR.**
+2. **Merge #79** — its E2E blocker is closed and its startup-init defect was already fixed.
+3. Owner: `EXPO_PUBLIC_SENTRY_DSN` into EAS + `SENTRY_DSN` into Supabase Edge secrets; ratify
+   ADR-034.
 
 ## Superseded framing — Sentry
 

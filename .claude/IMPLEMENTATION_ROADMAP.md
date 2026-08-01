@@ -2,8 +2,8 @@
 
 # PanchangPal — Implementation Roadmap
 
-Version: 2.5.0
-Last Updated: 2026-07-28 (ADR-034 opens the deletion-audit decision; the SDK-crossing PRs are closed)
+Version: 2.6.0
+Last Updated: 2026-08-01 (the offline-completion race diagnosed correctly and fixed; #79 unblocked)
 
 Purpose: the forward plan from the current state. Complements PROJECT_STATUS.md (snapshot) and
 CURRENT_MILESTONE.md (active milestone). Updated when scope or sequencing changes — and at every
@@ -11,10 +11,19 @@ increment/milestone boundary per the Increment & Milestone Completion Checkpoint
 
 ---
 
-## Where we are (2026-07-28)
+## Where we are (2026-08-01)
 
 **Beta Readiness & Platform Hardening, 47%** — B2 ✅, B5 ✅ and B6 ✅ (the latter two at verifiable
 scope), plus ¾ of B4. B1 ~85%, B3 ~80%, all remainders owner-gated on money or a store account.
+
+**Two things moved on 2026-08-01, neither advancing a slice.** The **offline-completion race** — a
+completion made offline not being SHOWN after an app kill, a TDD Part 4 §6 launch blocker — is
+diagnosed and fixed on `fix/offline-completion-lost-on-kill`, **verified 5/5 green on device**. Its
+recorded cause was wrong: MMKV writes synchronously and the queue always reached disk, while nothing
+re-derived it onto the rendered read model, which a throttled cache snapshot and an `onError` revert
+then raced. **A durable queue guarantees DELIVERY, not DISPLAY.** And **PR #79 (Sentry) is
+unblocked** — the main baseline shows main flaking identically with no Sentry code, so the red that
+held it back was this same race. B4 still does not close: B4.4 needs a real Sentry org + DSN.
 
 **B6 closed on 2026-07-27 with B6.3** — the data-collection inventory, the privacy policy draft and
 the store Data Safety / App Privacy answers, all in `docs/devops/`, each derived from the one before
@@ -80,17 +89,20 @@ Profile* — API contracts with no threat model. All corrected.)
 
 **Sentry is built and deliberately NOT merged (2026-07-28, PR #79).** `@sentry/react-native` ~7.2.0
 sits behind both telemetry ports with PII scrubbing structural and the source-map plugin wired, but
-it is held back on two blockers: **it is not measurable as built** — `Sentry.init` runs only after
-the first error, because nothing resolves the adapter at startup, so no session is ever started and
-native crash capture never installs (the claim that crash-free sessions were now measurable was
-**wrong**, and was repeated across five documents before being caught) — and **it turned E2E
-deterministically red** once, going green only after `isUsableDsn()` rejected a placeholder DSN,
-which is not proof. The two are not stacked deliberately: the first fix changes *when* Sentry's
-network instrumentation installs, the leading suspect for the second. **B4 does not close.**
+it was held back on two blockers. **Both are now closed (2026-08-01).** The first — **it was not
+measurable as built**, because `Sentry.init` ran only after the first error, so no session was ever
+started and native crash capture never installed (a claim repeated across five documents before
+being caught) — was fixed by resolving the adapter in AppProviders' mount effect, guarded by a
+behavioural test proven to fail without it. The second — **it turned E2E red** — **was never
+Sentry**: main flakes identically with no Sentry code (3 green / 3 red across 2026-07-28, same
+three-flow signature, one red on a commit touching only `dependabot.yml` and ADR markdown). The
+cause was the offline-completion race, now fixed and verified 5/5. **#79 is ready to merge.**
+**B4 still does not close: B4.4 needs a real Sentry org + DSN.**
 
-**Next, in order:** (1) **fix the Sentry startup-init defect and get two consecutive green E2E
-runs** — one task, since they must be verified together; (2) **owner: a free-tier Sentry org + DSN**,
-which closes B4; (3) **owner ratification of ADR-034** — the engineering behind it is small and
+**Next, in order:** (1) **merge the offline-completion fix**, then **merge #79**; (2) **owner: a
+free-tier Sentry org + DSN**, which closes B4 — and the owner must place `EXPO_PUBLIC_SENTRY_DSN`
+into EAS and `SENTRY_DSN` into Supabase Edge secrets, since GitHub is not where the app or the
+functions read theirs; (3) **owner ratification of ADR-034** — the engineering behind it is small and
 entirely blocked on that answer; (4) the **in-app deletion screen** Apple 5.1.1(v) requires, which
 needs a PDD affordance and SVC_household for ownership transfer.
 

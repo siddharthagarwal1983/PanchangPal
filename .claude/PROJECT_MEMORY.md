@@ -496,6 +496,13 @@ Stable, cross-cutting facts (permanent until an approved decision changes them):
   `@tanstack/react-query`, NOT `persistQueryClient` — that lives in an undeclared package, and
   reaching into the pnpm store is the defect `@babel/runtime` and `babel-preset-expo` already cost
   this repo twice.
+  **The restored snapshot is CORRECTED from the durable queue before anything renders**
+  (`reapplyPendingMutations`, 2026-08-01). On its own the snapshot is a stale read model that races
+  the user's own action: it is written on a 1 s trailing throttle and flushed from an unsubscribe
+  handler a process kill never runs, so a completion made offline and then killed inside that
+  window is simply absent. The projection writes only to keys already in the cache — seeding one
+  would render a completion against rows the screen cannot name — and server truth still wins the
+  moment the drain invalidates. See the offline-completion entry below for what this cost to find.
 - **A local Android build + emulator now works on the dev Mac** (established 2026-07-26). The
   standing note that "no Android SDK, Java, or Xcode is available locally" — the reason B2 was
   scoped as depending on B3 — is out of date for Android. Present: SDK cmdline-tools, an AOSP
@@ -537,25 +544,40 @@ Stable, cross-cutting facts (permanent until an approved decision changes them):
   === `react` exactly, and satisfying it (the step TASK.md had recorded as required) would have
   turned CI green while leaving the renderer mismatched. When a bump fails a version assertion,
   satisfy the constraint the assertion defends, not the assertion.
-- **⛔ AN OFFLINE COMPLETION IS SOMETIMES LOST ON APP KILL** (found 2026-07-28/29, intermittent
-  ~50%). `FLOW_OFFLINE_SYNC` fails at **line 131** — the `☑` assertion AFTER `stopApp` /
-  `launchApp`, not the one before it. Proven by which screenshots exist in the artifact:
-  `offline-sync-03-offline-completed` (line 111) is captured, `offline-sync-04-survived-restart-offline`
-  is not. The optimistic tick appears correctly and is gone after the process dies. That is the
-  assertion the flow's own header calls "THE ASSERTION THIS FLOW EXISTS FOR", and losing a
-  completion is what **TDD Part 4 §6 forbids** — a launch blocker.
-  **It is a RACE, not a broken path**: the flow taps, asserts, screenshots, then kills the process
-  immediately, so an asynchronous or batched MMKV write of `STORE_offlineQueue` can be beaten by the
-  kill. A user who completes a ritual offline and has the app reclaimed moments later hits exactly
-  this. **MMKV loads natively in every run** (`Successfully loaded NitroMmkv C++ library!` in
-  logcat), so this is NOT the mmkv-v2 degradation bug — it is a narrower window.
+- **⛔ AN OFFLINE COMPLETION WAS LOST ON APP KILL — AND THE QUEUE WAS NEVER THE PROBLEM** (found
+  2026-07-28/29, root cause corrected 2026-08-01; fix implemented, **not yet device-verified**).
+  `FLOW_OFFLINE_SYNC` failed ~50% at **line 131** — the `☑` assertion AFTER `stopApp` / `launchApp`,
+  the one its own header calls "THE ASSERTION THIS FLOW EXISTS FOR". Losing a completion is what
+  **TDD Part 4 §6 forbids**, so it is a launch blocker.
+  **THE RECORDED CAUSE WAS WRONG.** This entry previously said "an asynchronous or batched MMKV
+  write of `STORE_offlineQueue` can be beaten by the kill". It cannot: `keyValueStore`'s `set` maps
+  straight onto MMKV's **synchronous** JSI call and runs inside the tap handler, logcat shows the
+  library loading natively in every launch, and no `[sync]` persistence warning is ever emitted.
+  **The pending mutation reached disk every time.**
+  **The real defect is that nothing RENDERED it.** `STORE_offlineQueue` was consumed by exactly two
+  things — `enqueue` calls and the drain in `syncService` — so the checklist tick after a cold start
+  came *only* from the persisted query cache, which is written on a **1 s trailing throttle**
+  (`queryPersistence`'s `WRITE_THROTTLE_MS`) and flushed from an unsubscribe handler **a process
+  kill never runs**. Offline it was additionally poisoned: the direct write always fails with no
+  network, and `useChecklist`'s `onError` reverted the optimistic tick even though the mutation was
+  durably queued. The ~50% was simply whether the process died before or after the revert-plus-
+  throttle write landed — **the passing runs passed by luck of timing.**
+  **The rule this establishes: a durable queue guarantees DELIVERY, not DISPLAY.** Pending state
+  must be re-derived from the queue onto the read model at startup, or the user is shown a snapshot
+  that races their own action. Now done by `domain/sync/pendingProjection.ts` +
+  `reapplyPendingMutations`, with `onError` reverting only when nothing is left in the queue to
+  deliver the completion (keyed on the app's own state, never on a vendor's network message, which
+  changes between supabase-js releases).
   **Do not fix it by adding settle time to the flow**; that hides a race real users can hit.
-  **It masqueraded as a Sentry regression** for most of a session, because adding a native module
-  shifts timing and changes the odds of a latent race.
-  **Related structural defect:** `FLOW_OFFLINE_SYNC` restores the radio as its LAST step, so ANY
-  earlier failure leaves airplane mode enabled and fails FLOW_SESSION_PERSISTENCE and FLOW_RETURNING
-  as collateral. One defect presents as three. The restore needs to be teardown that runs on
-  failure.
+  **It masqueraded as a Sentry regression** for most of a session. It was never Sentry: main flaked
+  **3 green / 3 red on 2026-07-28** with an identical three-flow signature, and one of the reds was
+  `4fdaf10` (#78), a commit that changed **only** `.github/dependabot.yml` and ADR markdown and
+  therefore cannot have introduced a runtime race.
+  **Related structural defect, now fixed:** `FLOW_OFFLINE_SYNC` restored the radio as its LAST step,
+  so ANY earlier failure left airplane mode enabled and failed FLOW_SESSION_PERSISTENCE and
+  FLOW_RETURNING as collateral — **one defect presenting as three**, which is why it took most of a
+  session to isolate. The restore is now an `onFlowComplete` teardown, which Maestro runs whether
+  the flow passed or failed.
 - **A RE-RUN DISCRIMINATES FLAKE FROM DETERMINISM ONLY ACROSS ENOUGH SAMPLES TO BEAT THE FAILURE
   RATE** (established 2026-07-29, correcting the rule recorded on 2026-07-28). The earlier note said
   "discriminating a harness race from a regression takes one re-run of the identical commit: a

@@ -2,9 +2,9 @@
 
 # PanchangPal — Project Status Dashboard
 
-Version: 1.16.0
+Version: 1.17.0
 
-Last Updated: 2026-07-28 (session end — #78 merged; Sentry held back on #79; 47%)
+Last Updated: 2026-08-01 (the offline-completion race diagnosed correctly and fixed; #79 unblocked; 47%)
 
 Purpose:
 This document provides a high-level snapshot of the overall project.
@@ -91,6 +91,25 @@ product scope. Sliced B1–B8; see CURRENT_MILESTONE.md.
 
 Current Focus
 
+- **⛔→✅ The offline-completion race, diagnosed correctly and fixed (2026-08-01, branch
+  `fix/offline-completion-lost-on-kill`, `dd26ef1`, **verified 5/5 green, 30/30 flows**).** A completion
+  made offline was not SHOWN after an app kill — `FLOW_OFFLINE_SYNC` failing ~50% on the assertion
+  its own header calls the reason the flow exists. **The recorded cause was wrong.** "An
+  asynchronous MMKV write loses to the kill" is refuted: `keyValueStore.set` is MMKV's synchronous
+  JSI call inside the tap handler, the library loads natively every launch, and no `[sync]` warning
+  is emitted — **the queue reached disk every time.** The defect is that **nothing re-derived it
+  onto the rendered read model**: the tick after a cold start came only from the persisted query
+  cache, written on a 1 s trailing throttle and flushed from an unsubscribe handler a process kill
+  never runs, while offline `useChecklist.onError` reverted the optimistic tick although the
+  mutation was durably queued. **A durable queue guarantees DELIVERY, not DISPLAY.** Fixed with a
+  pure projection (`domain/sync/pendingProjection.ts`), a startup correction
+  (`reapplyPendingMutations`), a revert guard keyed on the queue rather than a vendor's error text,
+  and an `onFlowComplete` teardown so one defect stops presenting as three. 367 mobile jest (+17),
+  two perturbations each failing exactly the right test.
+- **✅ PR #79 IS UNBLOCKED (2026-08-01).** Its E2E blocker was attributed to Sentry; the main
+  baseline refutes that — main flakes identically with **no Sentry code**, 3 green / 3 red across
+  2026-07-28 with the same three-flow signature, one red being `4fdaf10` (#78), a commit touching
+  **only** `.github/dependabot.yml` and ADR markdown. Merge it once the fix above lands.
 - **Dependency queue — clean, and the SDK-upgrade increment turned out not to exist (2026-07-28,
   PR #78, merged as `4fdaf10`).** The three PRs queued as that increment were checked against the **installed peer graph**
   and all three closed: **#64** (`@expo/metro-runtime` 6.1.2→57.0.7 — dist-tags map majors to SDK
