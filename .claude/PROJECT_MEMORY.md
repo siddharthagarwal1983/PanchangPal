@@ -412,10 +412,17 @@ Stable, cross-cutting facts (permanent until an approved decision changes them):
 - **TelemetryAdapter** (client, B4.1) — errors and crashes leave the app through this port and
   nowhere else (TDD Part 5 §7.1); no feature, screen, or repository imports a crash-reporting SDK.
   Two call sites feed it: `ErrorBoundary.componentDidCatch` and a global `ErrorUtils` handler. The
-  concrete Sentry adapter is DEFERRED, like NotificationAdapter's: `@sentry/react-native` is not
-  installed and no DSN is provisioned, so `NullTelemetryAdapter` drops every report and the §7.2
-  crash-free SLO cannot be measured. That state is inspectable, not silent —
-  `getTelemetryBackend()` reports `'none'` and a DSN configured with no adapter warns at startup.
+  concrete Sentry adapter is **LIVE as of 2026-08-02** (`@sentry/react-native` ~7.2.0, PR #79),
+  provisioned against org `panchang` / project `panchangpal-mobile`, and **verified on device**:
+  `[telemetry] reporter=sentry` appears once per launch in the E2E artifact (12/12) where it read
+  `reporter=none` before. The native SDK installs `UncaughtExceptionHandlerIntegration`,
+  `NdkIntegration`, `AnrV2Integration` and `AppLifecycleIntegration` — the last is what crash-free
+  sessions (NFR-06 / §7.2) is computed from, and **none of them installed under the original
+  defect**, where `Sentry.init` ran only after the FIRST JS error. The adapter is therefore resolved
+  once in AppProviders' mount effect, guarded by a test that fails if that resolution is removed.
+  **It still degrades honestly**: with no DSN the adapter resolves to Null, `getTelemetryBackend()`
+  reports `'none'`, and `isUsableDsn()` rejects placeholders — so a local or CI build without one
+  behaves as before rather than half-initialising.
   **No PII is structural** (§7.1 `[MANDATORY]`): unrecognised errors map to `ERR_UNKNOWN` rather than
   echoing a message, EVT_054's props are a closed four-key shape, and `componentStack` is never
   forwarded. Every ERR_* maps to EVT_054; its sink is the analytics adapter (ADR-013).
