@@ -1,8 +1,14 @@
 /**
  * Composition root for the TelemetryAdapter (Provider Adapter pattern, TDD Part 5 §7.1). Returns
- * the app-wide singleton. Today that is always NullTelemetryAdapter — the concrete Sentry adapter
- * is deferred until `@sentry/react-native` is installed and a DSN is provisioned — so swapping it
- * in is a one-line change here, with no call-site changes anywhere.
+ * the app-wide singleton.
+ *
+ * `@sentry/react-native` is now installed, so this resolves to the real reporter **when a DSN is
+ * configured** and to NullTelemetryAdapter otherwise. That is not a fallback for convenience: the
+ * DSN is per-environment (`EXPO_PUBLIC_SENTRY_DSN`), and a local or CI build without one must still
+ * run normally rather than initialising an SDK that has nowhere to send anything.
+ *
+ * The reported backend therefore answers a real question — `'sentry'` means reports are leaving the
+ * device, `'none'` means they are being dropped — where before it could only ever say `'none'`.
  *
  * The `getTelemetryBackend()` reporter is not ceremony. `ritualSessionRepository` degraded to
  * in-memory storage silently, and the resulting question ("were sessions never saved, or saved
@@ -21,6 +27,7 @@ import {
   type TelemetryErrorReport,
 } from '../domain/telemetry';
 import { getAnalyticsService } from './analyticsAdapter';
+import { SentryTelemetryAdapter, initSentry } from './sentryTelemetry';
 
 /**
  * Which CRASH REPORTER receives errors. `'none'` means the diagnostic copy is dropped — it does
@@ -37,11 +44,47 @@ export function getTelemetryBackend(): TelemetryBackend | null {
   return activeBackend;
 }
 
-/** Whether a DSN was supplied at build time (EXPO_PUBLIC_SENTRY_DSN → app.config.ts `extra`). */
-function isDsnConfigured(): boolean {
+/** The DSN supplied at build time (EXPO_PUBLIC_SENTRY_DSN → app.config.ts `extra`), or ''. */
+function configuredDsn(): string {
   const extra = (Constants.expoConfig?.extra ?? {}) as { sentryDsn?: string };
-  const dsn = extra.sentryDsn ?? process.env.EXPO_PUBLIC_SENTRY_DSN ?? '';
-  return dsn.length > 0;
+  return extra.sentryDsn ?? process.env.EXPO_PUBLIC_SENTRY_DSN ?? '';
+}
+
+/**
+ * Whether a DSN string is one we should actually initialise the SDK with.
+ *
+ * Every `.env.*.example` in this repo ships the literal placeholder
+ * `https://YOUR_KEY@oXXXX.ingest.sentry.io/XXXX`. A placeholder that reaches a build is worse than
+ * an absent value: `initSentry` would run, the SDK would install its network instrumentation, and
+ * every event would be addressed to a project that does not exist — telemetry that looks configured
+ * and reports nowhere, which is the precise failure mode this whole seam exists to make visible.
+ * So the shape is checked, not just the length.
+ */
+export function isUsableDsn(dsn: string): boolean {
+  if (!dsn) return false;
+  if (/YOUR_KEY|XXXX|example\.com/i.test(dsn)) return false;
+  try {
+    const url = new URL(dsn);
+    // A real DSN is `https://<publicKey>@<host>/<projectId>`.
+    return (
+      (url.protocol === 'https:' || url.protocol === 'http:') &&
+      url.username.length > 0 &&
+      url.pathname.replace(/^\//, '').length > 0
+    );
+  } catch {
+    return false;
+  }
+}
+
+/**
+ * Which environment a report belongs to. Sentry filters and alerts on this, so a staging crash
+ * must not be counted against the production crash-free SLO (§7.2). Derived from the release
+ * channel rather than a separate variable, so it cannot disagree with the build it came from.
+ */
+function sentryEnvironment(): string {
+  const channel = Constants.expoConfig?.extra?.eas?.channel;
+  if (typeof channel === 'string' && channel.length > 0) return channel;
+  return __DEV__ ? 'development' : 'production';
 }
 
 /**
@@ -83,18 +126,25 @@ class ReportingTelemetryAdapter implements TelemetryAdapter {
 
 export function getTelemetryAdapter(): TelemetryAdapter {
   if (!adapter) {
-    adapter = new ReportingTelemetryAdapter(new NullTelemetryAdapter());
-    activeBackend = 'none';
+    const dsn = configuredDsn();
 
-    if (isDsnConfigured()) {
-      // A DSN is present, which means someone provisioned Sentry and reasonably expects reports.
-      // There is no adapter to send them. Say so where it will be seen — Metro and `adb logcat`.
-      console.warn(
-        '[telemetry] A Sentry DSN is configured but no telemetry adapter is wired — errors and ' +
-          'crashes are NOT being reported. Install @sentry/react-native and swap the adapter in ' +
-          'src/data/telemetryAdapter.ts (TDD Part 5 §7.1).',
-      );
+    if (isUsableDsn(dsn)) {
+      // Initialise BEFORE constructing the adapter: a report captured against an uninitialised
+      // client is dropped by the SDK, and the first thing to fail in a session is exactly the
+      // thing worth reporting.
+      initSentry({ dsn, environment: sentryEnvironment() });
+      adapter = new ReportingTelemetryAdapter(new SentryTelemetryAdapter());
+      activeBackend = 'sentry';
+    } else {
+      adapter = new ReportingTelemetryAdapter(new NullTelemetryAdapter());
+      activeBackend = 'none';
     }
+
+    // Say which reporter won, once, at resolution. `getStorageBackend()` earns its keep the same
+    // way: when a native-backed seam degrades, the only thing worse than the degradation is not
+    // being able to tell from a device log whether it happened. This line is what makes an E2E
+    // artifact answer "was Sentry actually running in that build?" without a redeploy.
+    console.log(`[telemetry] reporter=${activeBackend}`);
   }
   return adapter;
 }

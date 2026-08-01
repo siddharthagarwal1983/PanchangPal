@@ -27,7 +27,45 @@ const config: ExpoConfig = {
   // Config plugins required from SDK 54 — these packages now ship native config that must
   // be declared explicitly (previously autolinked). `expo install` cannot write to a
   // dynamic (.ts) config, so they are maintained here by hand.
-  plugins: ['expo-localization', 'expo-router', 'expo-secure-store'],
+  // `@sentry/react-native/expo` is what makes SOURCE MAPS work, and it is the reason B4.3 stopped
+  // short of wiring the upload by hand: Hermes maps must be uploaded from inside the build that
+  // produced the bundle. Maps from a separate `expo export` belong to a different bundle, so
+  // uploading those yields symbolication that is confidently wrong — worse than none. The plugin
+  // hooks the native build itself, which is the only place the correspondence holds.
+  //
+  // ⚠️ THE UPLOAD TASK FAILS THE BUILD WHEN IT CANNOT RUN — it does not skip. An earlier version of
+  // this comment claimed otherwise and was WRONG; the first CI native build failed on
+  // `:app:createBundleReleaseJsAndAssets_SentryUpload_*`. Two consequences, both handled:
+  //
+  //   1. `@sentry/cli` is declared as a direct dependency of this app. `sentry.gradle` resolves the
+  //      binary and falls back to `$reactRoot/node_modules/@sentry/cli`, a FLAT-layout assumption
+  //      that pnpm's nested store never satisfies for a transitive dep — so the task tried to exec
+  //      a path that did not exist. This is the third instance of the defect `@babel/runtime` and
+  //      `babel-preset-expo` caused during the Execution Gap, and it has the same fix: declare it.
+  //   2. A build with no `SENTRY_AUTH_TOKEN` must set `SENTRY_DISABLE_AUTO_UPLOAD=true`, which
+  //      `sentry.gradle` honours via `onlyIf`. e2e.yml does this — an emulator test build has
+  //      nothing to symbolicate — and release-build.yml keeps its own credential gate.
+  //
+  // The plugin is included UNCONDITIONALLY even without credentials, deliberately: `runtimeVersion`
+  // uses the `fingerprint` policy, so adding or removing a config plugin changes the runtime
+  // version and therefore which builds an OTA update reaches. Upload is controlled by environment,
+  // never by changing the plugin list.
+  plugins: [
+    'expo-localization',
+    'expo-router',
+    'expo-secure-store',
+    [
+      '@sentry/react-native/expo',
+      {
+        // Read from the build environment rather than hard-coded: no Sentry org exists yet, and
+        // an invented slug would make the upload fail at build time with a confusing 404 instead
+        // of the plugin's own clear "missing config" notice. Neither value is a secret (the slugs
+        // appear in every Sentry URL); SENTRY_AUTH_TOKEN is, and is never read here.
+        organization: process.env.SENTRY_ORG,
+        project: process.env.SENTRY_PROJECT,
+      },
+    ],
+  ],
   // OTA (TDD Part 5 §2.4 [MANDATORY]). `eas update:configure` cannot write to a dynamic
   // .ts config, so this is maintained by hand — as with `plugins` and the EAS project id.
   updates: {

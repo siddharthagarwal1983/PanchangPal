@@ -1,7 +1,7 @@
 # Secrets Matrix — PanchangPal
 
-Version: 1.0.0
-Last Updated: 2026-07-12
+Version: 1.1.0
+Last Updated: 2026-08-02 (Sentry provisioning runbook; four missing SENTRY_* rows)
 
 Purpose: classify every secret/variable the repository uses by **where it must be stored** and
 **why**. Grounded in the code/workflow scan (see `ENVIRONMENT_VARIABLES.md`). No invented secrets.
@@ -41,7 +41,11 @@ Purpose: classify every secret/variable the repository uses by **where it must b
 | `EXPO_PUBLIC_SUPABASE_URL` | EAS Secret / build env | Local (`apps/mobile/.env`) | 🟢 Low (public) | Baked into the app binary; public by design. Provided at build time per profile. |
 | `EXPO_PUBLIC_SUPABASE_ANON_KEY` | EAS Secret / build env | Local | 🟢 Low (public) | Public anon key embedded in the app; RLS-guarded. |
 | `EXPO_PUBLIC_REVENUECAT_KEY` | EAS Secret / build env | Local | 🟢 Low (public) | RevenueCat **public** SDK key; safe on device by design. |
-| `EXPO_PUBLIC_SENTRY_DSN` | EAS Secret / build env | Local | 🟢 Low (public) | Sentry DSN is publishable; safe on device. |
+| `EXPO_PUBLIC_SENTRY_DSN` | **EAS environment variable** (`preview` + `production`) | Local Only (`apps/mobile/.env`) | 🟢 Low (public) | The DSN the APP reads. Publishable — write-only ingest, safe in the bundle. **Inlined at build time** (`app.config.ts` → `extra.sentryDsn` → `telemetryAdapter.ts`), so adding it needs a NEW BUILD, not a restart. The GitHub copy below does not reach the app. |
+| `SENTRY_DSN` | **Supabase Edge Secret** (per project) | GitHub (gate only) | 🟢 Low (public) | The DSN the EDGE FUNCTIONS read (`_shared/http.ts`), from a SEPARATE Sentry project — one project would merge device crashes with database errors and make the §7.2 crash-free-sessions metric meaningless, since it is computed per project. Resolved at MODULE LOAD, so warm instances keep the old value until redeployed. |
+| `SENTRY_AUTH_TOKEN` | **EAS environment variable** (`production`, secret) | GitHub Repository Secret (gate only) | 🟠 High | Source-map upload from inside the EAS build that produced the bundle. The one Sentry value that grants WRITE access to the org. Scopes: `org:read`, `project:read`, `project:releases`. Never in a committed file. |
+| `SENTRY_ORG` | **EAS environment variable** (`production`) | GitHub Repository Secret (gate only) | 🟢 Low | Org slug, for the source-map upload. Not secret; an identifier. |
+| `SENTRY_PROJECT` | **EAS environment variable** (`production`) | GitHub Repository Secret (gate only) | 🟢 Low | Mobile project slug, for the source-map upload. Not secret; an identifier. |
 | `DATABASE_URL` | Local Only | CI job env (ephemeral) | 🟠 Depends | Local/CI uses a throwaway Postgres URL. If ever pointed at a real DB it becomes critical — never commit a real one. |
 | `NODE_ENV` | Local Only (tool-set) | CI | 🟢 Low | Standard Node mode flag; not a secret. |
 | `PORT` | Local Only | — | 🟢 Low | Command Center dev server port; tooling only. |
@@ -75,6 +79,103 @@ in this repo. See `docs/SETUP.md`.
 
 ---
 
+## Provisioning Sentry, end to end (B4.4)
+
+⚠️ **Read this before doing any of it: the four `SENTRY_*` values already in GitHub satisfy only
+`scripts/preflight.sh` and `release-build.yml`. Neither the app nor the Edge Functions ever read
+them.** So CI can report Sentry as fully configured while the app reports nothing — which is the
+state the project was in, and why B4 looked closeable when it was not. The values below go to
+**four different destinations**, and they are not interchangeable.
+
+**Almost none of this goes in a file.** Three of the four destinations are hosted secret stores;
+the only file is a git-ignored local `.env` for development.
+
+### 1. Sentry — create the org and TWO projects
+
+1. Sign up at **sentry.io** (the free Developer tier is sufficient).
+2. Create an organization. Its **slug** — Settings → General → *Organization Slug*, also the
+   `sentry.io/organizations/<slug>/` path segment — is `SENTRY_ORG`.
+3. Create **two** projects (Projects → Create Project):
+   - platform **React Native**, e.g. `panchangpal-mobile` → its slug is `SENTRY_PROJECT`
+   - platform **Deno** (or Node), e.g. `panchangpal-edge`
+
+   Two, not one: §7.1 wires the client and the Edge Functions through separate ports, and
+   crash-free sessions (NFR-06 / §7.2) is computed **per project**. Merging a device crash with a
+   Postgres error into one stream makes that number meaningless.
+
+### 2. Sentry — copy the two DSNs
+
+Per project: Settings → Projects → *(project)* → **Client Keys (DSN)** → copy the `DSN`.
+
+- mobile project → `EXPO_PUBLIC_SENTRY_DSN`
+- edge project → `SENTRY_DSN`
+
+A DSN is **publishable** (write-only ingest), which is why the matrix classes both 🟢 Low.
+
+### 3. Sentry — create the auth token (the only secret here)
+
+Settings → **Auth Tokens** → *Create New Token*, scopes **`org:read`**, **`project:read`**,
+**`project:releases`** → `SENTRY_AUTH_TOKEN`. Sentry shows it once. If the source-map upload later
+returns 403, widen the scopes first — that is the usual cause.
+
+### 4. Place in EAS — the app, and source maps
+
+```bash
+cd apps/mobile && eas login
+
+eas env:create --environment preview    --name EXPO_PUBLIC_SENTRY_DSN --value "<mobile DSN>"
+eas env:create --environment production --name EXPO_PUBLIC_SENTRY_DSN --value "<mobile DSN>"
+
+eas env:create --environment production --name SENTRY_ORG        --value "<org-slug>"
+eas env:create --environment production --name SENTRY_PROJECT     --value "<mobile-project-slug>"
+eas env:create --environment production --name SENTRY_AUTH_TOKEN  --value "<token>" --visibility secret
+```
+
+(Dashboard equivalent: **expo.dev** → project → *Environment variables*, per environment. The
+environment names come from `eas.json`'s three profiles.)
+
+⚠️ **`EXPO_PUBLIC_*` is inlined at bundle time.** A DSN added after a build does not reach that
+build. Rebuild — restarting the app cannot help.
+
+### 5. Place in Supabase — the Edge Functions
+
+```bash
+supabase secrets set SENTRY_DSN="<edge DSN>" --project-ref <PROJECT_REF>
+supabase functions deploy --project-ref <PROJECT_REF>
+```
+
+The deploy is not optional: `_shared/http.ts` resolves the DSN at **module load**, so already-warm
+instances keep the previous value.
+
+### 6. GitHub — already placed, and gate-only
+
+`SENTRY_DSN`, `SENTRY_ORG`, `SENTRY_PROJECT`, `SENTRY_AUTH_TOKEN` are set as repository/environment
+secrets and are consumed **only** by `preflight.sh`'s production tier and `release-build.yml`'s
+readiness gate. Leave them; just do not mistake them for runtime configuration.
+
+### 7. Local development (the only file)
+
+`apps/mobile/.env` — git-ignored:
+
+```
+EXPO_PUBLIC_SENTRY_DSN=<mobile DSN>
+```
+
+**Never** put `SENTRY_AUTH_TOKEN` here.
+
+### 8. Verify — configured is not the same as effective
+
+This step is the point of the section. Do not close B4.4 on configuration alone:
+
+- **Client:** `getTelemetryBackend()` returns `'sentry'`, not `'none'`, and an E2E artifact's
+  logcat shows `[telemetry] reporter=sentry` once per launch. That log line exists specifically
+  because this state was reported wrongly once already.
+- **Server:** `getServerTelemetryBackend()` stops reporting the null backend.
+- **End to end:** trigger one real error and confirm it lands in the expected project. §8.4 is
+  explicit that alerting which has never been triggered is a plan, not a capability.
+
+---
+
 ## Rotation & hygiene
 
 | Secret | Rotate when | How |
@@ -82,6 +183,7 @@ in this repo. See `docs/SETUP.md`.
 | `SUPABASE_SERVICE_ROLE_KEY` | Suspected leak; staff offboarding | Supabase dashboard → API → regenerate; re-set Edge secret |
 | `OPENAI_API_KEY` | Leak; usage spike | OpenAI dashboard → new key; update Edge secret; revoke old |
 | `SUPABASE_ACCESS_TOKEN` / `EXPO_ACCESS_TOKEN` | Leak; offboarding | Provider dashboard → revoke + reissue; update GitHub secret |
+| `SENTRY_AUTH_TOKEN` | Leak; offboarding | Sentry → Settings → Auth Tokens → revoke + reissue; update the **EAS** variable (and the GitHub copy). The DSNs need no rotation on their own — they are write-only ingest — but a compromised token can rewrite releases. |
 | `REVENUECAT_WEBHOOK_SECRET` | Leak | RevenueCat dashboard → rotate; update Edge secret + webhook config |
 | DB URLs | Leak; credential rotation | Rotate DB password; update the environment secret |
 
