@@ -106,6 +106,26 @@ Current Focus
   (`reapplyPendingMutations`), a revert guard keyed on the queue rather than a vendor's error text,
   and an `onFlowComplete` teardown so one defect stops presenting as three. 367 mobile jest (+17),
   two perturbations each failing exactly the right test.
+- **✅ PR #79 — BOTH BLOCKERS CLOSED, rebased onto `080c710` and verified (2026-08-02).** The
+  startup-init defect is fixed and guarded by a behavioural test; the "deterministic" E2E red was
+  never Sentry — it was the **preference-durability defect** closed in #86, misattributed four
+  times. **B4 still does not close**: with no DSN provisioned the adapter resolves to Null and
+  reports nothing, so crash-free sessions (NFR-06) remain unmeasurable. The owner action is placing
+  `EXPO_PUBLIC_SENTRY_DSN` into EAS and `SENTRY_DSN` into Supabase Edge secrets — GitHub is not
+  where the app or the functions read theirs.
+- **⛔→✅ A preference write had no durable path (2026-08-02, #86, `080c710`).**
+  `useUpdatePreferences` called the server directly with an optimistic update, so an app kill
+  inside the request window silently reverted the setting — and because
+  `FLOW_AUTH_SESSION_PERSISTENCE` reads the tradition back as its proof of identity, that loss
+  presented as IDENTITY LOSS and was blamed twice on the launch race, once on Sentry, once on a
+  flake. `preferences` is a syncable kind again with a server branch, a **column allowlist** on the
+  upsert (client payload + service role = the SVC_account defect in a new place), and **mutations
+  stamped with the identity that made them** — without which durable preferences would have created
+  a **false green** on the suite's most important flow. ⚠️ **Its §6.6 conflict rule is UNRATIFIED**,
+  adopting `personal_date`'s last-writer-wins as the nearest ratified precedent.
+- **The general lesson, twice in one day: a durable queue guarantees DELIVERY, not DISPLAY.** The
+  offline completion reached disk every time and was never re-derived onto the read model; the
+  preference was delivered by the drain while nothing invalidated its query.
 - **✅ PR #79 IS UNBLOCKED (2026-08-01).** Its E2E blocker was attributed to Sentry; the main
   baseline refutes that — main flakes identically with **no Sentry code**, 3 green / 3 red across
   2026-07-28 with the same three-flow signature, one red being `4fdaf10` (#78), a commit touching

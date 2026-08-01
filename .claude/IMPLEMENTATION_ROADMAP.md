@@ -3,7 +3,7 @@
 # PanchangPal — Implementation Roadmap
 
 Version: 2.6.0
-Last Updated: 2026-08-01 (the offline-completion race diagnosed correctly and fixed; #79 unblocked)
+Last Updated: 2026-08-02 (preference durability fixed and merged; #79 verified and ready)
 
 Purpose: the forward plan from the current state. Complements PROJECT_STATUS.md (snapshot) and
 CURRENT_MILESTONE.md (active milestone). Updated when scope or sequencing changes — and at every
@@ -11,10 +11,24 @@ increment/milestone boundary per the Increment & Milestone Completion Checkpoint
 
 ---
 
-## Where we are (2026-08-01)
+## Where we are (2026-08-02)
 
 **Beta Readiness & Platform Hardening, 47%** — B2 ✅, B5 ✅ and B6 ✅ (the latter two at verifiable
 scope), plus ¾ of B4. B1 ~85%, B3 ~80%, all remainders owner-gated on money or a store account.
+
+**2026-08-02 — #86 merged (`080c710`) and #79 is verified and ready.** A **preference write had no
+durable path at all**: `useUpdatePreferences` went straight to the server, so an app kill inside the
+request window silently reverted the setting. `FLOW_AUTH_SESSION_PERSISTENCE` reads the tradition
+back as its proof of identity, so the loss presented as IDENTITY LOSS and was misattributed **four
+times** — twice to the launch race, once to Sentry (which is what blocked #79 across two sessions),
+once to a flake. Fixed with a durable queue path, an **unratified** §6.6 rule (LWW, the nearest
+ratified precedent — the TDD owes a ruling), a **column allowlist** on the server upsert, and
+**identity-stamped mutations** without which durable preferences would have created a false green on
+the suite's most important flow. **B4 still does not close**: no DSN means the adapter resolves to
+Null and reports nothing.
+
+**The lesson worth carrying: a durable queue guarantees DELIVERY, not DISPLAY.** Both of the day's
+defects had that shape, reached from opposite directions.
 
 **Two things moved on 2026-08-01, neither advancing a slice.** The **offline-completion race** — a
 completion made offline not being SHOWN after an app kill, a TDD Part 4 §6 launch blocker — is
