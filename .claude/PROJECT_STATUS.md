@@ -2,9 +2,9 @@
 
 # PanchangPal — Project Status Dashboard
 
-Version: 1.17.0
+Version: 1.18.0
 
-Last Updated: 2026-08-01 (the offline-completion race diagnosed correctly and fixed; #79 unblocked; 47%)
+Last Updated: 2026-08-02 (session end — four PRs merged; Sentry live and verified; 47%)
 
 Purpose:
 This document provides a high-level snapshot of the overall project.
@@ -90,6 +90,20 @@ builds/distribution, observability, DR, security/privacy, release mechanics, go/
 product scope. Sliced B1–B8; see CURRENT_MILESTONE.md.
 
 Current Focus
+
+- **✅ SENTRY IS LIVE AND VERIFIED ON DEVICE (2026-08-02).** Org `panchang`, projects
+  `panchangpal-mobile` + `panchangpal-edge`, DSN placed in EAS (`preview` + `production`) and
+  Supabase Edge secrets. `[telemetry] reporter=sentry` appears once per launch in the E2E artifact
+  (12/12, where it read `none` before), and the native SDK installs NDK / ANR / uncaught-exception
+  plus **`AppLifecycleIntegration`** — what crash-free sessions is computed from, and none of which
+  installed under the original defect. **NFR-06 is measurable for the first time.**
+  **B4 STILL DOES NOT CLOSE:** B4.4's §7.2 dashboards and alerts do not exist, and §8.4 holds that
+  alerting never triggered is a plan, not a capability. Also unverified: ingest into Sentry itself,
+  the Edge Function path, and the source-map upload.
+  Provisioning is now documented end to end in `docs/devops/SECRETS_MATRIX.md` §*Provisioning
+  Sentry* — including the trap that the four GitHub `SENTRY_*` secrets are read only by
+  `preflight.sh` and `release-build.yml`, so CI could report Sentry configured while the app
+  reported nothing.
 
 - **⛔→✅ The offline-completion race, diagnosed correctly and fixed (2026-08-01, branch
   `fix/offline-completion-lost-on-kill`, `dd26ef1`, **verified 5/5 green, 30/30 flows**).** A completion

@@ -1278,3 +1278,75 @@ The same discipline applies one level up. `DATA_INVENTORY.md` §2 is pinned agai
 rather than `packages/database`'s `TABLES` registry, because that registry had already drifted — 29
 names against 32 tables — inside a single milestone. Verify against the thing that is true, not
 against another hand-maintained list of it.
+
+---
+
+# 2026-08-02 — A durable queue guarantees DELIVERY, not DISPLAY
+
+Two defects on the same day had this shape, reached from opposite directions.
+
+The offline **completion** was written to MMKV synchronously on every tap and never re-derived onto
+the rendered read model, so the tick a user saw came from a query-cache snapshot written on a 1 s
+trailing throttle and flushed from an unsubscribe handler a process kill never runs. The **preference**
+write, once made durable, was delivered to the server by the drain while nothing invalidated its
+query — so the screen kept showing what it fetched at launch.
+
+**Rule: when a write path joins the offline queue, the read half belongs in the same change.** The
+queue is durable; the cache is a cache; nothing re-reads on its own.
+
+The corollary is diagnostic. "It reached disk" and "the user can see it" are separate claims, and
+this repo has now spent three investigations conflating them. Check which one is actually failing
+before attributing a cause.
+
+---
+
+# 2026-08-02 — A queued mutation carries the identity that made it, and is HELD under any other
+
+`QueuedMutation.user_id` is stamped at enqueue; `isSendableBy` refuses to drain a mutation under a
+different uid. Held, never discarded — §6 forbids discarding a completion, and "belongs to someone
+else right now" is not "invalid". An absent uid (older builds) or an unresolved session is treated
+as sendable, preserving prior behaviour rather than stranding a queue.
+
+The obvious reason is that one user's pending change must not be written onto another's account,
+reachable whenever a fresh anonymous uid is minted — the M1/M9 defect `secureSessionStorage.ts`
+exists to prevent.
+
+**The non-obvious reason is the one worth remembering.** `FLOW_AUTH_SESSION_PERSISTENCE` proves
+identity survived a restart by reading back a tradition only that identity could have written. Once
+preferences became durable, a drain that ignored identity would RECREATE that value under the new
+uid — so the flow would pass at the exact moment the defect it guards occurred. **Making a kind
+syncable can silently destroy an unrelated flow's ability to detect a defect. Check what reads the
+value back before adding one.**
+
+---
+
+# 2026-08-02 — `expo/bundledNativeModules.json` is the authority on SDK-pinned packages
+
+Not `.github/dependabot.yml`. Every key in that manifest is SDK-pinned by definition; check a
+package against it — not against release notes, and never against whether CI is green — before
+triaging any Dependabot PR.
+
+Hand-enumerated patterns did not converge: the rule leaked for `@expo/*`, `@babel/runtime` and
+`react` (#64/#65/#75), then again for `@react-native-community/*` (#81) and `jest`/`jest-expo` (#63,
+pinned transitively — `jest-expo@54.0.17` depends on the jest 29 family). #63 spent two weeks
+triaged as "red for its own unrelated reasons" because it was classified from its red CI rather than
+its dependency graph.
+
+Scanning the manifest against every declared dependency found exactly those two gaps, so the SDK 54
+set is complete rather than awaiting a fourth instalment.
+
+---
+
+# 2026-08-02 — `preferences` sync uses last-writer-wins ⚠️ UNRATIFIED
+
+TDD Part 2 §6.6 defines conflict rules for `ritual_complete`, `checklist` and `personal_date` and
+says nothing about `preferences`. `resolvePreferences` adopts **`personal_date`'s last-writer-wins
+on `local_ts`** as the nearest ratified precedent rather than inventing a novel rule.
+
+Union and first-write-wins are both wrong for a single mutable value: the former cannot express a
+change at all, and the latter would make the first tradition a user ever picked permanent. `local_ts`
+rather than server-receipt time, matching `personal_date`, because the client's clock is what orders
+two of the user's own offline edits.
+
+**The TDD owes a ruling, and `resolvePreferences` is the only place a different one lands.** Recorded
+here rather than left implicit because it shipped in merged code.

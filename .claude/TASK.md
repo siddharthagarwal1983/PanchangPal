@@ -2,8 +2,8 @@
 
 # PanchangPal — Current Task
 
-Version: 4.2.0
-Last Updated: 2026-08-01 (offline-completion race diagnosed correctly, fixed, verified 5/5; #79 unblocked)
+Version: 5.0.0
+Last Updated: 2026-08-02 (session end — four PRs merged; Sentry live and verified)
 
 Purpose: the current implementation task. Stay focused; avoid unrelated work unless instructed.
 
@@ -110,8 +110,35 @@ green in CI on a real native build. Canonical progress 0% → 13% (1 of 8 Beta s
 # Current Task
 
 ## Title
-✅ THE OFFLINE-COMPLETION RACE IS DIAGNOSED, FIXED, AND VERIFIED ON DEVICE (5/5 green)
-(branch `fix/offline-completion-lost-on-kill`, `dd26ef1`)
+✅ SESSION COMPLETE (2026-08-02) — FOUR PRs MERGED, SENTRY LIVE AND VERIFIED ON DEVICE
+
+**Merged:** #84 `45f00c7` (offline completion) · #85 `b8ab528` (SDK-pin third leak) · #86 `080c710`
+(durable preference writes) · #79 `6182955` (Sentry).
+
+**Sentry is provisioned and verified:** org `panchang`, projects `panchangpal-mobile` +
+`panchangpal-edge`; `[telemetry] reporter=sentry` once per launch (12/12) where it read `none`
+before, with `AppLifecycleIntegration` installed — so **crash-free sessions (NFR-06) is measurable
+for the first time**. **B4 still does not close**: B4.4's §7.2 dashboards and alerts do not exist.
+
+**The session's general finding: a durable queue guarantees DELIVERY, not DISPLAY.** Three defects
+had that shape, including one of my own. See DECISIONS.md (2026-08-02) for all four decisions
+recorded, and SESSION.md for the narrative.
+
+## NEXT TASK
+
+1. **Confirm events arrive in the Sentry dashboard**, then set `panchangpal-mobile` alert rules to
+   `environment:production` so CI `preview` runs do not page.
+2. **B4.4** — §7.2 SLO dashboards + alerts, proven by a deliberate trigger (§8.4: alerting never
+   triggered is a plan, not a capability). This is the last engineering increment in B4.
+3. **Owner:** ratify ADR-034; rule on the **§6.6 `preferences` conflict rule**, which shipped
+   unratified as last-writer-wins.
+4. Dependency queue, none SDK-pinned: **#80**, **#82** (major), **#83**, **#62** (major).
+
+---
+
+## Superseded — the offline-completion race
+
+✅ DIAGNOSED, FIXED, AND VERIFIED ON DEVICE (5/5 green) — merged as #84 `45f00c7`
 
 **Progress unchanged at 47%.** This closes a TDD Part 4 §6 launch blocker inside a slice already
 counted, exactly as offline sync and the deletion executor did.

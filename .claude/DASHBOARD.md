@@ -2,9 +2,9 @@
 
 # PanchangPal Dashboard
 
-Version: 1.31.0
+Version: 1.32.0
 
-Last Updated: 2026-08-01 (the offline-completion race diagnosed correctly and fixed; #79 unblocked; 47%)
+Last Updated: 2026-08-02 (session end — four PRs merged; Sentry live and verified; 47%)
 
 Purpose:
 This is the first file Claude should read at the beginning of every session.
@@ -729,6 +729,18 @@ Verified end-to-end. **PR #36 merged to main as `e1e10d4`**; the docs checkpoint
 (`45f1b0d`). Main's E2E is green again (run 30156615768). See TASK.md.
 
 # Today's Objective
+
+Session of 2026-08-02 (session end). **Merge the verified work, then provision Sentry end to end.**
+Outcome: **four PRs merged** — #84 (offline completion), #85 (SDK-pin third leak), #86 (durable
+preference writes), #79 (Sentry) — and **Sentry is live and verified on device**:
+`[telemetry] reporter=sentry` once per launch (12/12), with `AppLifecycleIntegration` installed, so
+**crash-free sessions is measurable for the first time**. The session's general finding, arrived at
+three times: **a durable queue guarantees DELIVERY, not DISPLAY.** The preference-durability defect
+behind it had been misattributed **four times**, twice to a launch race and once to Sentry — which
+is what blocked #79 across two sessions. **Progress unchanged at 47%; no Beta slice advanced.**
+Next: confirm ingest in the dashboard, then **B4.4** (§7.2 dashboards + alerts).
+
+---
 
 Session of 2026-08-01. **Read the main baseline, then fix the offline-persistence race.** Outcome:
 the baseline **clears Sentry** (main is 3 green / 3 red with no Sentry code, one red on a
