@@ -2,8 +2,8 @@
 
 # PanchangPal — Implementation Roadmap
 
-Version: 2.5.0
-Last Updated: 2026-07-28 (ADR-034 opens the deletion-audit decision; the SDK-crossing PRs are closed)
+Version: 2.6.0
+Last Updated: 2026-08-01 (the offline-completion race diagnosed correctly and fixed; #79 unblocked)
 
 Purpose: the forward plan from the current state. Complements PROJECT_STATUS.md (snapshot) and
 CURRENT_MILESTONE.md (active milestone). Updated when scope or sequencing changes — and at every
@@ -11,10 +11,19 @@ increment/milestone boundary per the Increment & Milestone Completion Checkpoint
 
 ---
 
-## Where we are (2026-07-28)
+## Where we are (2026-08-01)
 
 **Beta Readiness & Platform Hardening, 47%** — B2 ✅, B5 ✅ and B6 ✅ (the latter two at verifiable
 scope), plus ¾ of B4. B1 ~85%, B3 ~80%, all remainders owner-gated on money or a store account.
+
+**Two things moved on 2026-08-01, neither advancing a slice.** The **offline-completion race** — a
+completion made offline not being SHOWN after an app kill, a TDD Part 4 §6 launch blocker — is
+diagnosed and fixed on `fix/offline-completion-lost-on-kill`, awaiting device verification. Its
+recorded cause was wrong: MMKV writes synchronously and the queue always reached disk, while nothing
+re-derived it onto the rendered read model, which a throttled cache snapshot and an `onError` revert
+then raced. **A durable queue guarantees DELIVERY, not DISPLAY.** And **PR #79 (Sentry) is
+unblocked** — the main baseline shows main flaking identically with no Sentry code, so the red that
+held it back was this same race. B4 still does not close: B4.4 needs a real Sentry org + DSN.
 
 **B6 closed on 2026-07-27 with B6.3** — the data-collection inventory, the privacy policy draft and
 the store Data Safety / App Privacy answers, all in `docs/devops/`, each derived from the one before

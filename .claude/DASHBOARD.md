@@ -2,9 +2,9 @@
 
 # PanchangPal Dashboard
 
-Version: 1.30.0
+Version: 1.31.0
 
-Last Updated: 2026-07-29 (session end — an offline completion is lost on app kill; 47%)
+Last Updated: 2026-08-01 (the offline-completion race diagnosed correctly and fixed; #79 unblocked; 47%)
 
 Purpose:
 This is the first file Claude should read at the beginning of every session.
@@ -92,28 +92,38 @@ CURRENT_MILESTONE.md
 
 # Current Task
 
-⛔ **AN OFFLINE COMPLETION IS SOMETIMES LOST ON APP KILL — a §6 launch blocker, found while chasing
-Sentry's red E2E.**
+✅ **THE OFFLINE-COMPLETION RACE IS DIAGNOSED CORRECTLY AND FIXED — awaiting device verification.**
+Branch `fix/offline-completion-lost-on-kill` (`dd26ef1`), pushed.
 
-**Progress unchanged at 47%.** `FLOW_OFFLINE_SYNC` fails intermittently (~50%) at **line 131** — the
-`☑` assertion **after** the process kill, not before it. Proven by which screenshots exist:
-`offline-sync-03-offline-completed` is captured, `offline-sync-04-survived-restart-offline` is not.
-The optimistic tick appears and is gone once the process dies — the assertion the flow's own header
-calls "THE ASSERTION THIS FLOW EXISTS FOR".
+**Progress unchanged at 47%.** This closes a TDD Part 4 §6 launch blocker inside a slice already
+counted, exactly as offline sync and the deletion executor did.
 
-**A race, not a broken path**: the flow taps, asserts, screenshots, then kills immediately, so an
-asynchronous MMKV write of `STORE_offlineQueue` loses to the kill. A user completing a ritual
-offline whose app is reclaimed moments later hits the same window. **MMKV loads natively in every
-run**, so this is not the mmkv-v2 bug. §6 forbids losing a completion. **Do not fix it by adding
-settle time to the flow.**
+**#79 IS UNBLOCKED.** The main baseline came back and main flakes identically with **no Sentry code
+at all** — 3 green / 3 red across 2026-07-28, every red the same three-flow signature. One of the
+reds is `4fdaf10` (#78), a commit that changed **only** `.github/dependabot.yml` and ADR markdown
+and therefore cannot have introduced a runtime race. Sentry was never the cause.
 
-**One defect presented as three.** `FLOW_OFFLINE_SYNC` restores the radio as its LAST step, so any
-earlier failure leaves airplane mode on and takes SESSION_PERSISTENCE and RETURNING with it. That
-cascade is why this took most of a session to isolate, and why it looked like a Sentry regression:
-a new native module shifts timing and changes the odds of a latent race.
+⚠️ **THE RECORDED ROOT CAUSE WAS WRONG, AND THE CORRECTION IS THE FINDING.** "An asynchronous or
+batched MMKV write loses to the kill" is refuted: `keyValueStore.set` is MMKV's **synchronous** JSI
+call made inside the tap handler, the library loads natively in every launch, and no `[sync]`
+warning is ever emitted. **The queue reached disk every time.**
 
-**Baseline in flight:** three `e2e.yml` runs on main — `30390519585` (6/6 green), `30391501865`,
-`30391533413`. **Read them first next session**; they decide whether #79's E2E blocker dissolves.
+**Nothing rendered it.** `STORE_offlineQueue` was read only by the drain, so the tick after a cold
+start came solely from the persisted query cache — written on a **1 s trailing throttle** and
+flushed from an unsubscribe handler **a process kill never runs**. Offline it was additionally
+poisoned: the direct write always fails, and `useChecklist.onError` reverted the optimistic tick
+although the mutation was durably queued. The ~50% was whether the process died before or after
+that revert-plus-throttle write landed — **the passing runs passed by luck of timing.**
+
+**The rule: a durable queue guarantees DELIVERY, not DISPLAY.** Pending state is now re-derived
+from the queue onto the read model at startup (`pendingProjection` + `reapplyPendingMutations`),
+and `FLOW_OFFLINE_SYNC` restores the radio in an `onFlowComplete` teardown so one defect stops
+presenting as three.
+
+**Verified:** 367 mobile jest (+17), 102 vitest, tsc across 11 projects, eslint 0 errors, bundle
+gate both platforms, two perturbations each failing exactly the right test. **NOT device-verified** —
+the race only reproduces on hardware. **Dispatch E2E runs SEQUENTIALLY**: the concurrency group
+permits one pending run per ref, so a batch of four left two cancelled.
 
 ---
 
@@ -698,6 +708,17 @@ Verified end-to-end. **PR #36 merged to main as `e1e10d4`**; the docs checkpoint
 (`45f1b0d`). Main's E2E is green again (run 30156615768). See TASK.md.
 
 # Today's Objective
+
+Session of 2026-08-01. **Read the main baseline, then fix the offline-persistence race.** Outcome:
+the baseline **clears Sentry** (main is 3 green / 3 red with no Sentry code, one red on a
+config-and-docs-only commit), so #79's E2E blocker dissolves; and the race's recorded cause turned
+out to be **wrong** — MMKV writes synchronously and the queue always reached disk, while nothing
+re-derived it onto the rendered read model, which a throttled snapshot and an `onError` revert then
+raced. Fixed on `fix/offline-completion-lost-on-kill` with a pure projection, two perturbations, and
+a failure-proof radio teardown. **Progress unchanged at 47%.** Next: device verification, then the
+PR, then merge #79.
+
+---
 
 Session of 2026-07-28 (parts 3–4, session end). **Resolve the deletion audit, then implement
 Sentry.** Outcome: **ADR-034 (Proposed)** and the **SDK-pinned dependency rule** merged as #78 with

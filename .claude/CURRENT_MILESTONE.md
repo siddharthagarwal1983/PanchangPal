@@ -2,9 +2,9 @@
 
 # PanchangPal — Current Milestone
 
-Version: 4.9.0
+Version: 4.10.0
 
-Last Updated: 2026-07-28 (session end — Sentry built but held back; ADR-034 merged; 47%)
+Last Updated: 2026-08-01 (the offline-completion race diagnosed correctly and fixed; #79 unblocked; 47%)
 
 Purpose:
 This document defines the current milestone. Unlike SESSION.md (daily work) or TASK.md (current
@@ -586,7 +586,18 @@ testers' hands.
   read cache so a cold start offline is not empty. ~~**Residual risk:** never run against a live backend, and no `FLOW_OFFLINE_SYNC`.~~ **CLOSED
   2026-07-27.** `FLOW_OFFLINE_SYNC` is written and green against staging on a native build, proving
   the queue reaches disk, the §6.1 cache renders a cold start with no network, and the drain does
-  not revert the completion. Getting it green found three E2E-harness defects and none in offline
+  not revert the completion.
+  ⛔ **REOPENED AND RE-FIXED 2026-08-01: a completion made offline was not SHOWN after an app
+  kill.** The flow caught it at ~50% and the recorded cause — "an asynchronous MMKV write loses to
+  the kill" — was **wrong**. `keyValueStore.set` is MMKV's synchronous JSI call inside the tap
+  handler; the queue reached disk every time. **Nothing re-derived it onto the rendered read
+  model**: the tick after a cold start came only from the persisted query cache, written on a 1 s
+  trailing throttle and flushed from an unsubscribe handler a process kill never runs, and offline
+  `useChecklist.onError` reverted the optimistic tick even though the mutation was durably queued.
+  **The rule this establishes: a durable queue guarantees DELIVERY, not DISPLAY.** Fixed on
+  `fix/offline-completion-lost-on-kill` (pure projection + startup correction + a revert guard
+  keyed on the queue rather than on a vendor's error text), with two perturbations each failing
+  exactly the right test. **Not device-verified yet.** Getting it green found three E2E-harness defects and none in offline
   sync itself — a launch race where the stale TASK's destroy-timeout killed the newly started
   process, the flow breaking a neighbour because a cleared offline banner is not proof of a usable
   route, and both being visible only in the uploaded artifact rather than the run log.
@@ -604,16 +615,19 @@ testers' hands.
 - **⚠️ Sentry is built but NOT merged, and NOT measurable as built (2026-07-28, PR #79).**
   `@sentry/react-native` ~7.2.0 is wired behind both telemetry ports with PII scrubbing made
   structural and the Expo config plugin for source maps. It is held back for two reasons:
-  **(a)** `getTelemetryAdapter()` is called only from inside the two error handlers, so
-  `Sentry.init` runs only after the FIRST ERROR — a healthy session never starts one and native
-  crash capture never installs, leaving **NFR-06 / §7.2 unmeasurable**, which was the entire
-  justification for the work. The session claimed the opposite across five documents before catching
-  it. **(b)** Adding Sentry turned E2E deterministically red (three flows, twice, identical commit,
-  against a 6/6 green main); it went green once after `isUsableDsn()` rejected a placeholder DSN, but
-  **the mechanism is unconfirmed and one green run after a deterministic red is not a verdict**.
-  The two are not stacked deliberately: (a)'s fix changes *when* Sentry's network instrumentation
-  installs, which is the leading suspect for (b). **B4.4 remains the open increment; B4 does not
-  close.**
+  **(a)** ✅ **CLOSED.** `getTelemetryAdapter()` was called only from inside the two error
+  handlers, so `Sentry.init` ran only after the FIRST ERROR — a healthy session never started one
+  and native crash capture never installed. Fixed by resolving the adapter in AppProviders' mount
+  effect, guarded by a behavioural test proven to fail without it, and verified on device
+  (`[telemetry] reporter=none` appears once per launch in the E2E artifact).
+  **(b)** ✅ **CLOSED 2026-08-01 — and it was never Sentry.** The red was attributed to Sentry
+  because three flows failed twice on an identical commit. **The main baseline refutes that**: main
+  flakes the same way with no Sentry code at all — **3 green / 3 red across 2026-07-28**, every red
+  the identical three-flow signature — and one of the reds is `4fdaf10` (#78), a commit that changed
+  **only** `.github/dependabot.yml` and ADR markdown and so cannot have introduced a runtime race.
+  The real defect is the offline-completion race (see its own entry), now fixed on
+  `fix/offline-completion-lost-on-kill`. **#79 is ready to merge once that lands.**
+  **B4.4 remains the open increment; B4 does not close**, still owner-gated on a Sentry org + DSN.
 - **⚠️ Local native builds are broken — a JDK regression (found 2026-07-28).** Only **JDK 26** is
   installed on the dev Mac and Kotlin's version parser throws on `"26.0.1"`, so `./gradlew` fails
   resolving `com.facebook.react.settings` before compiling anything. The 2026-07-26 note that
