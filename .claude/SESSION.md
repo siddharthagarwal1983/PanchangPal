@@ -68,9 +68,29 @@ the distinction the corrected re-run heuristic exists to enforce.
 `cancel-in-progress: false`, which permits one *pending* run per ref — an initial batch of four left
 two cancelled and yielded two usable samples.
 
+# 5. Merged this session
+
+- **#84 → `45f00c7`** — the offline-completion fix above.
+- **#85 → `b8ab528`** — the SDK-pin rule's **third leak**, closed at its cause. `#81` (netinfo) and
+  `#63` (jest) are both this gap and were closed with evidence: Expo SDK 54's
+  `bundledNativeModules.json` pins netinfo to exactly the installed 11.4.1, and `jest-expo@54.0.17`
+  depends on the **jest 29 family** (`@jest/globals`, `babel-jest`, `jest-environment-jsdom`,
+  `jest-snapshot`, all `^29.2.1`). **#63's standing triage was wrong** — it sat for two weeks as
+  "red for its own unrelated reasons", classified from its red CI rather than its dependency graph,
+  which is the exact mistake #78 documented.
+  **The durable fix is naming the authoritative source**: every key in
+  `node_modules/expo/bundledNativeModules.json` is SDK-pinned by definition. Scanning it against
+  every declared dependency found exactly those two gaps and no others, so the SDK 54 set is now
+  complete rather than enumerated reactively.
+
 # Recommended next task
 
-1. **Review and merge the PR** on `fix/offline-completion-lost-on-kill`.
-2. **Merge #79** — its E2E blocker is closed (never Sentry) and its startup-init defect is fixed.
-3. Owner: `EXPO_PUBLIC_SENTRY_DSN` into EAS + `SENTRY_DSN` into Supabase Edge secrets; ratify
-   ADR-034. Still open: #62, #63, #80–#82 (**#81 is the SDK-pin defect again**).
+1. **#79 (Sentry)** — rebased onto `45f00c7`, title corrected, **sample 1 green 6/6** with
+   `[telemetry] reporter=none` appearing **12 times, once per launch** (Blocker 1's fix confirmed on
+   device). Merge on a second green.
+2. Owner: `EXPO_PUBLIC_SENTRY_DSN` into EAS (`preview` + `production`) and `SENTRY_DSN` into
+   Supabase Edge secrets — GitHub is not where the app or the functions read theirs. Then ratify
+   ADR-034.
+3. Remaining dependency queue, none SDK-pinned and so all genuine decisions: **#80**
+   (supabase-js 2.111.0), **#82** (react-i18next 15→17, major), **#83** (setup-java), **#62**
+   (i18next 23→26, major).

@@ -170,12 +170,19 @@ corrected re-run heuristic exists to enforce.
 `cancel-in-progress: false`, which permits one *pending* run per ref — an initial batch of four left
 two cancelled and yielded only two usable samples.
 
+## Merged
+
+**#84 → `45f00c7`** (this fix) and **#85 → `b8ab528`** (the SDK-pin rule's third leak; `#81` and
+`#63` closed with evidence, `bundledNativeModules.json` named as the authoritative source).
+
 ## Next task, in order
 
-1. **Review and merge the PR.**
-2. **Merge #79** — its E2E blocker is closed and its startup-init defect was already fixed.
-3. Owner: `EXPO_PUBLIC_SENTRY_DSN` into EAS + `SENTRY_DSN` into Supabase Edge secrets; ratify
+1. **Merge #79** — rebased onto `45f00c7`, title corrected, sample 1 green 6/6 with
+   `[telemetry] reporter=none` appearing 12 times (once per launch), which confirms Blocker 1's fix
+   on device. Merging lands verified code but reports nothing until a DSN exists; **B4.4 stays open**.
+2. Owner: `EXPO_PUBLIC_SENTRY_DSN` into EAS + `SENTRY_DSN` into Supabase Edge secrets; ratify
    ADR-034.
+3. Remaining dependency queue, none SDK-pinned: **#80**, **#82** (major), **#83**, **#62** (major).
 
 ## Superseded framing — Sentry
 

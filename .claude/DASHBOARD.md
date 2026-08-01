@@ -92,8 +92,11 @@ CURRENT_MILESTONE.md
 
 # Current Task
 
-✅ **THE OFFLINE-COMPLETION RACE IS DIAGNOSED CORRECTLY, FIXED, AND VERIFIED ON DEVICE (5/5 green).**
-Branch `fix/offline-completion-lost-on-kill` (`dd26ef1`), pushed.
+✅ **THE OFFLINE-COMPLETION RACE IS DIAGNOSED CORRECTLY, FIXED, VERIFIED (5/5 green), AND MERGED**
+as **`45f00c7` (#84)**. Also merged: **`b8ab528` (#85)**, the SDK-pin rule's **third leak** — `#81`
+(netinfo) and `#63` (jest, via `jest-expo`'s jest-29 dependency family) closed with evidence, and
+`bundledNativeModules.json` named as the authoritative source so the next triage checks the manifest
+rather than release notes.
 
 **Progress unchanged at 47%.** This closes a TDD Part 4 §6 launch blocker inside a slice already
 counted, exactly as offline sync and the deletion executor did.

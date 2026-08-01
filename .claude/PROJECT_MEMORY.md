@@ -523,8 +523,20 @@ Stable, cross-cutting facts (permanent until an approved decision changes them):
   scripts, which should be reverted). **iOS is unchanged — still unbuilt, still needs an Apple
   membership.** This matters mainly because Maestro flows can now be iterated locally instead of
   through 20-minute CI runs.
-- **THE EXPO SDK 54 PIN IS A SEAM, AND EIGHT PACKAGE PATTERNS ARE FROZEN BEHIND IT** (established
-  2026-07-28). `react`, `@types/react`, `@expo/*` and `@babel/runtime` are pinned by the SDK exactly
+- **THE EXPO SDK 54 PIN IS A SEAM, AND THE AUTHORITATIVE LIST IS A FILE, NOT A PATTERN SET**
+  (established 2026-07-28, corrected 2026-08-01 after the rule leaked a THIRD time).
+  **`node_modules/expo/bundledNativeModules.json` is the authority: every key in it is SDK-pinned by
+  definition.** Check a package against that manifest — `node -e "console.log(require('expo/bundledNativeModules.json')['<pkg>'])"` —
+  never against its release notes, and never against whether CI is green. Hand-enumerating patterns
+  in `.github/dependabot.yml` did **not** converge: it leaked for `@expo/*`, `@babel/runtime`,
+  `react` (#64/#65/#75), then again for **`@react-native-community/*`** (#81 — netinfo, pinned at
+  exactly the installed 11.4.1) and **`jest`/`jest-expo`** (#63 — `jest-expo@54.0.17` depends on the
+  jest 29 family: `@jest/globals`, `babel-jest`, `jest-environment-jsdom`, `jest-snapshot`, all
+  `^29.2.1`). **#63 spent two weeks triaged as "red for its own unrelated reasons"** because it was
+  classified from its red CI rather than its dependency graph — the exact mistake #78 documented.
+  Scanning the manifest against every declared dependency found those two gaps and no others, so the
+  SDK 54 set is now complete.
+  `react`, `@types/react`, `@expo/*` and `@babel/runtime` are pinned by the SDK exactly
   as `expo`, `expo-*`, `react-native` and `react-native-*` are; all eight are ignored in
   `.github/dependabot.yml` and move ONLY with a deliberate SDK upgrade via `expo install --fix`,
   validated by a native build plus the six Maestro flows. The four specific pins, each read out of
