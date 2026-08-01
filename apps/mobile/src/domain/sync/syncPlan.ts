@@ -59,8 +59,33 @@ export function nextBatch(
   queue: readonly QueuedMutation[],
   now: number,
   limit: number = SYNC_BATCH_LIMIT,
+  currentUserId?: string | null,
 ): QueuedMutation[] {
-  return queue.filter((m) => isDue(m, now)).slice(0, limit);
+  return queue
+    .filter((m) => isDue(m, now) && isSendableBy(m, currentUserId))
+    .slice(0, limit);
+}
+
+/**
+ * Whether this mutation may be sent while `currentUserId` is signed in.
+ *
+ * A mutation belongs to the identity that made it. Draining one under a different uid would write
+ * one user's pending change onto another user's account — reachable whenever a fresh anonymous
+ * uid is minted, which is precisely the M1/M9 defect `secureSessionStorage.ts` exists to prevent
+ * and which this app cannot assume never recurs.
+ *
+ * A blocked mutation is HELD, never dropped: it stays in the queue and becomes sendable again if
+ * its own identity is restored. §6 forbids discarding a completion, and "belongs to someone else
+ * right now" is not the same as "invalid".
+ *
+ * An entry with no `user_id` was written by an earlier build; it is sendable, which preserves the
+ * behaviour those entries were queued under. Same for an unknown current uid — the drain has
+ * nothing to compare against, and refusing everything would strand the queue on a cold start
+ * before the session resolves.
+ */
+export function isSendableBy(m: QueuedMutation, currentUserId?: string | null): boolean {
+  if (!m.user_id || !currentUserId) return true;
+  return m.user_id === currentUserId;
 }
 
 export interface BatchReconciliation {

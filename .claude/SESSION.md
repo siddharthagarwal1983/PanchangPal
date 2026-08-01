@@ -83,6 +83,36 @@ two cancelled and yielded two usable samples.
   every declared dependency found exactly those two gaps and no others, so the SDK 54 set is now
   complete rather than enumerated reactively.
 
+# 6. Then the flow that failed took the session somewhere else
+
+`FLOW_AUTH_SESSION_PERSISTENCE` failed on #79's second E2E sample — tradition reverted to Generic,
+the signature that flow calls **identity loss**. It was neither Sentry nor identity.
+
+**`useUpdatePreferences` wrote directly to the server with NO durable path**, so an app kill inside
+the request window silently reverted the setting. The flow reads the tradition back as its proof of
+identity, so a lost write and a lost identity are indistinguishable there. **That is four
+misattributions**: twice to the launch race, once to Sentry, once to an unexplained flake.
+
+Fixed on `fix/durable-preference-writes`: `preferences` is a syncable kind again, with the server
+branch and conflict rule it lacked (⚠️ **§6.6 rule UNRATIFIED** — adopts `personal_date`'s LWW as the
+nearest ratified precedent; the TDD owes a ruling), the upsert behind a **column allowlist** (the
+payload is client-supplied and the function runs as service role — the SVC_account defect in a new
+place), and **mutations stamped with the identity that made them**.
+
+**That last part is load-bearing.** Without it, durable preferences would have created a FALSE GREEN
+on the suite's most important flow: a drain ignoring identity recreates the tradition under a newly
+minted uid, so the flow passes exactly when the defect it guards occurs.
+
+**My own first E2E run failed, and it was my gap, not a flake** — I shipped the durable write path
+and left the read half stale (`onServerState` invalidated `['streak']`/`['checklist']`, not
+`['preferences']`). Same "durable but never rendered" shape as the offline completion, from the
+opposite direction, twice in one day. Also added a fourth drain trigger: identity resolving, since
+session restore is async and the mount drain otherwise burns an attempt and waits 60s.
+
+**Verified:** 377 mobile jest, 111 vitest, tsc × 11, eslint 0 errors, bundle gate. Two perturbations
+(allowlist removal fails exactly the three redirect/drop tests; revert-guard removal fails exactly
+the still-queued test). E2E **6/6 green on run 2** after run 1 exposed the read-half gap.
+
 # Recommended next task
 
 1. **#79 (Sentry)** — rebased onto `45f00c7`, title corrected, **sample 1 green 6/6** with

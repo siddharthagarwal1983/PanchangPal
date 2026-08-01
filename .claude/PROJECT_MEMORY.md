@@ -486,6 +486,33 @@ Stable, cross-cutting facts (permanent until an approved decision changes them):
   in-memory zustand slice beneath a header claiming MMKV persistence, was never drained or
   dequeued, and **nothing bound API_POST_SYNC at all**, so a fully implemented SVC_sync was
   unreachable from the app. NOT yet exercised against a live backend, and no Maestro flow covers it.
+- **A DURABLE QUEUE GUARANTEES DELIVERY, NOT DISPLAY — and this cost two separate defects in one
+  day** (2026-08-01). Both had the same shape and were reached from opposite directions.
+  (1) The offline COMPLETION was written to disk synchronously every time and simply never
+  re-derived onto the rendered read model, so the tick came from a throttled cache snapshot that
+  raced the process kill. (2) The PREFERENCE write, once made durable, was delivered to the server
+  by the drain while `useOfflineSync` invalidated only `['streak']` and `['checklist']` — so the
+  screen kept showing what it fetched at launch and the change looked lost at the moment it landed.
+  **When you add a write path to the queue, add the read half in the same change**: the queue is
+  durable, the cache is a cache, and nothing re-reads on its own.
+- **A QUEUED MUTATION CARRIES THE IDENTITY THAT MADE IT, AND IS HELD — NEVER DROPPED — UNDER ANY
+  OTHER** (`isSendableBy`, 2026-08-01). Two reasons, and the second is the subtle one. A pending
+  change must not drain onto another account after a fresh anonymous uid is minted (the M1/M9
+  defect `secureSessionStorage.ts` exists to prevent). And because
+  `FLOW_AUTH_SESSION_PERSISTENCE` proves identity by reading back a tradition only that identity
+  could have written, a drain that ignored identity would RECREATE that value under the new uid —
+  **the flow would pass at the exact moment the defect it guards occurred.** Making a kind syncable
+  can therefore break an unrelated flow's ability to detect a defect; check what reads the value
+  back before adding one. Held rather than discarded, because §6 forbids discarding a completion
+  and "belongs to someone else right now" is not "invalid".
+- **A LOST WRITE AND A LOST IDENTITY LOOK IDENTICAL ON THE SETTINGS SCREEN** (established
+  2026-08-01, after FOUR misattributions). `FLOW_AUTH_SESSION_PERSISTENCE` reverting to Generic was
+  blamed twice on the launch race, once on a Sentry regression, and once on an unexplained flake.
+  The real cause each time was that `useUpdatePreferences` wrote **directly to the server with no
+  durable path**, so an app kill inside the request window silently reverted the setting. The flow's
+  own header asserted only the identity reading and sent every investigation down the wrong path.
+  **When a flow's failure has two candidate causes, its header must name both** — a diagnostic that
+  names one is worse than none, because it is trusted.
 - **The persisted query cache is an allowlist** (`src/data/queryPersistence.ts`, §6.1) — the READ
   half of offline-first, without which a cold start offline is empty and §6.2's `[MANDATORY]`
   cached daily loop cannot hold. Only §6.1's set plus `checklist` is written to disk, only in

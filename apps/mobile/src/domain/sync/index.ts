@@ -19,6 +19,7 @@ export {
   backoffDelayMs,
   isDue,
   isExhausted,
+  isSendableBy,
   nextBatch,
   reconcileBatch,
   withFailedAttempt,

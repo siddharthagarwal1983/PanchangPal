@@ -13,6 +13,7 @@ import {
   resolveRitualCompletion,
   resolveChecklist,
   resolvePersonalDate,
+  resolvePreferences,
   type Mutation,
   type ConflictResult,
 } from './logic.ts';
@@ -59,6 +60,14 @@ export const handler = withHandler('SVC_sync', async (req, ctx) => {
       case 'personal_date':
         record(resolvePersonalDate(m, null));
         break;
+      case 'preferences': {
+        // Upsert onto the CALLER's row. `userId` comes from the JWT (repo.currentUserId), never
+        // from the payload — the SVC_account defect that let a request body name its own subject
+        // is the reason that rule is absolute here (ADR-030, B6.2).
+        await repo.updatePreferences(userId, m.payload as Record<string, unknown>, m.local_ts);
+        record(resolvePreferences(m, null));
+        break;
+      }
       default:
         ctx.log.warn('sync_unknown_kind', { kind: (m as Mutation).kind });
     }

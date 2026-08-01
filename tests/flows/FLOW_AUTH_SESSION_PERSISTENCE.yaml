@@ -19,11 +19,24 @@
 # WHY THE TRADITION PREFERENCE IS THE PROBE. Nothing on screen renders the uid, so the identity
 # has to be observed through something only that identity can read back. `user_profile` is
 # upserted by `user_id` under owner-RLS (profileRepository.updatePreferences) and read back the
-# same way; STORE_prefs is in-memory Zustand and the TanStack query cache is NOT persisted, so
-# after a restart the value on screen can only have come from the server. Default is 'generic'
-# (domain/profile/types.ts), so 'bengali' is unambiguous:
+# same way. Default is 'generic' (domain/profile/types.ts), so 'bengali' is unambiguous:
 #   - identity survived  → same uid → the row is found  → Bengali still selected
 #   - identity lost      → new uid  → no row → defaults → reverts to Generic, and this fails
+#
+# ⚠️ THIS HEADER USED TO SAY "the TanStack query cache is NOT persisted, so after a restart the
+# value on screen can only have come from the server". THAT PREMISE IS FALSE and has been since
+# PR #66: `queryPersistence.ts` writes `preferences` to disk. The CONCLUSION still holds, but for
+# a different reason — the cache key is `['preferences', userId]`, so a newly minted uid cannot
+# read the previous identity's cached entry and falls through to the server exactly as before.
+# The probe survives on uid-scoping, not on absence of persistence. Anyone widening that key, or
+# dropping the uid from it, breaks this flow's ability to detect the defect it exists for.
+#
+# THE SECOND WAY THIS COULD HAVE GONE FALSE-GREEN (closed 2026-08-01). `preferences` is now a
+# durably queued sync kind, so the change survives an app kill in STORE_offlineQueue. A drain that
+# ignored identity would then RECREATE Bengali under the new uid — the flow would pass at the
+# exact moment identity was lost. `isSendableBy` prevents it: a queued mutation carries the uid
+# that made it and is HELD, never applied, under any other. Guarded by
+# `domain/sync/__tests__/identityScope.test.ts`.
 #
 # SELECTORS ARE testIDs, NOT TEXT — see FLOW_MORNING_RITUAL for why text matching silently
 # passes while navigating nowhere.
@@ -112,8 +125,23 @@ appId: com.panchangpal.app
 # If this fails, `adb logcat` from the same run (captured by e2e.yml) separates the causes: the
 # '[auth-storage] SecureStore unavailable' warning means the keystore degraded to memory; its
 # absence means SecureStore was active and the persist/restore path itself is at fault.
-- assertVisible:
-    id: 'settings-tradition-bengali'
-    selected: true
+# `extendedWaitUntil`, not a bare `assertVisible`, and the distinction is not cosmetic.
+#
+# The tradition now reaches the server by TWO paths: the direct write, and — if that lost the race
+# to the kill — the durable queue draining after this relaunch (§6.4). The drain is asynchronous
+# with jittered backoff, so the correct assertion is about the END STATE, not its timing. That is
+# the same reasoning FLOW_OFFLINE_SYNC's post-drain assertion already uses.
+#
+# THIS IS NOT SETTLE TIME HIDING A RACE. The race it used to hide is gone: before 2026-08-01 a
+# preference had no durable path at all, so this assertion was reading whether an in-flight HTTP
+# request happened to beat `stopApp` — and when it did not, the revert to Generic was
+# indistinguishable from identity loss and was misattributed three times (twice to a launch race,
+# once to a Sentry regression). The wait below cannot mask identity loss, because a mutation made
+# under the old uid is HELD rather than applied under a new one.
+- extendedWaitUntil:
+    visible:
+      id: 'settings-tradition-bengali'
+      selected: true
+    timeout: 60000
 
 - clearState

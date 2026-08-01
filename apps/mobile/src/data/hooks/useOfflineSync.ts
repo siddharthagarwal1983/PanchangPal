@@ -1,9 +1,11 @@
 /**
  * HOOK_useOfflineSync (TDD Part 4 §6.4) — the drain's triggers. Mounted once, at the root layout.
  *
- * §6.4 names three: connectivity regained, app foreground, and a periodic flush while active. All
- * three funnel into `drainOfflineQueue`, which is single-flight, so overlapping triggers cost one
- * drain rather than three.
+ * §6.4 names three: connectivity regained, app foreground, and a periodic flush while active. A
+ * fourth — the identity becoming known — was added on 2026-08-01 and is documented at its call
+ * site; it is not a new policy but a cold-start gap the other three leave open. All funnel into
+ * `drainOfflineQueue`, which is single-flight, so overlapping triggers cost one drain rather than
+ * four.
  *
  * Nothing here blocks render or navigation: a drain is fire-and-forget and its failures land in
  * STORE_syncStatus, never in an alert (§6.4, and §8.2's policy that no sync failure blocks the
@@ -15,6 +17,7 @@ import NetInfo from '@react-native-community/netinfo';
 import { useQueryClient } from '@tanstack/react-query';
 import { drainOfflineQueue } from '../syncService';
 import { hydrateOfflineQueue } from '../../store/offlineQueue';
+import { useSessionStore } from '../../store/session';
 
 /** Periodic flush while the app is in the foreground. */
 export const SYNC_FLUSH_INTERVAL_MS = 60_000;
@@ -34,6 +37,13 @@ export function useOfflineSync(): void {
           // which is the authority for both.
           if (state.streak !== undefined) void qc.invalidateQueries({ queryKey: ['streak'] });
           void qc.invalidateQueries({ queryKey: ['checklist'] });
+          // `preferences` became a syncable kind on 2026-08-01, and adding the WRITE path without
+          // this left the read half stale: the drain upserted the row server-side while the screen
+          // kept showing whatever it fetched at launch. On a cold start that is the pre-change
+          // value, so a preference made offline appeared lost even though it had just been
+          // delivered — which is the same "durable but never rendered" shape as the offline
+          // completion, arrived at from the opposite direction.
+          void qc.invalidateQueries({ queryKey: ['preferences'] });
         },
       });
     };
@@ -67,10 +77,26 @@ export function useOfflineSync(): void {
       if (AppState.currentState === 'active') drain();
     }, SYNC_FLUSH_INTERVAL_MS);
 
+    // Trigger 4 — the identity became known.
+    //
+    // Not in §6.4's list, and it is not a fourth policy: it closes a gap the other three leave on
+    // a COLD START. Session restore is asynchronous, so the mount drain above can run while
+    // `userId` is still null — the request has no usable token and every entry takes a failed
+    // attempt and a backoff. Without this the queue then waits on the periodic flush, so a
+    // mutation made before the last kill can sit undelivered for up to SYNC_FLUSH_INTERVAL_MS on
+    // the launch that should have flushed it. It also releases anything `isSendableBy` held while
+    // the current identity was unknown.
+    let previousUserId = useSessionStore.getState().userId;
+    const unsubscribeSession = useSessionStore.subscribe((state) => {
+      if (state.userId && state.userId !== previousUserId) drain();
+      previousUserId = state.userId;
+    });
+
     return () => {
       unsubscribeNet();
       appStateSub.remove();
       clearInterval(interval);
+      unsubscribeSession();
     };
     // `qc` is the provider's client and stable for the app's lifetime, so this subscribes once.
   }, [qc]);
