@@ -66,6 +66,36 @@ updates:
       - dependency-name: '@types/react'
       - dependency-name: '@expo/*'
       - dependency-name: '@babel/runtime'
+
+      # THIRD LEAK OF THE SAME RULE (2026-08-01), which is the signal that enumerating patterns by
+      # hand does not converge. #81 and #63 are both this gap, and neither is a judgement call:
+      #
+      #   @react-native-community/*   `react-native-*` does not match a SCOPED name, the same way
+      #                               `expo-*` did not match `@expo/`. Expo SDK 54's own
+      #                               bundledNativeModules.json pins netinfo to EXACTLY the
+      #                               installed 11.4.1; #81 proposed 12.0.1. It is also a NATIVE
+      #                               module, so `expo export` resolves it while a native build
+      #                               would not — the anti-correlation again.
+      #   jest-expo                   Pinned by the SDK at ~54.0.17.
+      #   jest                        Pinned TRANSITIVELY by jest-expo, which depends on the jest
+      #                               29 family (@jest/globals, babel-jest, jest-environment-jsdom,
+      #                               jest-snapshot, @jest/create-cache-key-function, all ^29.2.1).
+      #                               #63 (jest 29→30) was filed under "red for its own unrelated
+      #                               reasons" for two weeks; it is not unrelated, it is this rule.
+      #
+      # THE AUTHORITATIVE LIST IS NOT THIS FILE. It is
+      # `node_modules/expo/bundledNativeModules.json` — every key in it is SDK-pinned by
+      # definition. Before adding a pattern here, or triaging any Dependabot PR, check the package
+      # against that manifest rather than against its release notes. The one-liner that found both
+      # gaps above, and would have found the earlier three:
+      #
+      #   node -e "const b=require('expo/bundledNativeModules.json'); console.log(b['<pkg>'])"
+      #
+      # A hit means the package moves only with `expo install --fix`, as part of a deliberate SDK
+      # upgrade validated by a native build plus the six Maestro flows.
+      - dependency-name: '@react-native-community/*'
+      - dependency-name: jest-expo
+      - dependency-name: jest
     labels: ['dependencies']
 
   # The workflows themselves are a supply chain. A compromised or abandoned action runs with
