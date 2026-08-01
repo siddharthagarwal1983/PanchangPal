@@ -62,6 +62,48 @@ export class SyncRepository {
     };
   }
 
+  /**
+   * Owner-only upsert of the preference columns (§6.6 `preferences`).
+   *
+   * THE ALLOWLIST IS THE POINT, not tidiness. `payload` arrives from a client-supplied mutation
+   * queue, so spreading it into an upsert would let any caller write ANY column of
+   * `user_profile` — including `user_id` itself, which would redirect the write to another
+   * person's row while the function runs with the SERVICE ROLE and RLS is therefore not a
+   * backstop. That is the SVC_account defect (B6.2) in a new place, and it is why `user_id` is
+   * assigned from the JWT-derived argument AFTER the spread rather than before it.
+   *
+   * Unknown keys are dropped silently rather than rejected: a queue entry written by an older
+   * build must still drain, and failing the batch would strand every other mutation behind it.
+   */
+  async updatePreferences(
+    userId: string,
+    payload: Record<string, unknown>,
+    localTs: string,
+  ): Promise<void> {
+    const ALLOWED = [
+      'tradition_code',
+      'content_depth',
+      'appearance',
+      'ritual_time',
+      'timezone',
+      'city',
+    ] as const;
+
+    const row: Record<string, unknown> = {};
+    for (const column of ALLOWED) {
+      if (payload[column] !== undefined) row[column] = payload[column];
+    }
+    // Nothing recognised — an entry from a future or corrupted build. Acknowledging it is correct:
+    // it has no effect to apply, and leaving it queued would retry forever.
+    if (Object.keys(row).length === 0) return;
+
+    row.user_id = userId;
+    row.updated_at = localTs;
+
+    const { error } = await this.db.from('user_profile').upsert(row, { onConflict: 'user_id' });
+    if (error) throw error;
+  }
+
   async getPanchangCache(cacheKey: string): Promise<Record<string, unknown> | null> {
     const { data } = await this.db
       .from('panchang_cache')

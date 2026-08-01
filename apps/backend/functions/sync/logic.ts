@@ -10,7 +10,7 @@
  *  - streak: DERIVED server-side from completions — never client-set (can't be gamed).
  */
 
-export type MutationKind = 'ritual_complete' | 'checklist' | 'personal_date';
+export type MutationKind = 'ritual_complete' | 'checklist' | 'personal_date' | 'preferences';
 
 export interface Mutation {
   kind: MutationKind;
@@ -46,6 +46,34 @@ export function resolvePersonalDate(
 ): ConflictResult {
   const isDelete = Boolean(incoming.payload['deleted_at']);
   if (isDelete) return { client_id: incoming.client_id, resolution: 'tombstoned' };
+  if (existingUpdatedAt && new Date(existingUpdatedAt) >= new Date(incoming.local_ts)) {
+    return { client_id: incoming.client_id, resolution: 'superseded' };
+  }
+  return { client_id: incoming.client_id, resolution: 'applied' };
+}
+
+/**
+ * preferences: last-writer-wins on `local_ts`.
+ *
+ * ⚠️ **THE §6.6 RULE FOR THIS KIND IS NOT YET RATIFIED.** TDD Part 2 §6.6 defines conflict rules
+ * for the other three kinds and says nothing about preferences, so this adopts the NEAREST
+ * RATIFIED PRECEDENT — `personal_date`'s last-writer-wins — rather than inventing a novel one.
+ * That choice is deliberate and narrow, and the TDD owes a ruling; if it lands differently, this
+ * function is the only place that changes.
+ *
+ * Why LWW is the defensible default here: a preference is a single mutable value with no
+ * uniqueness constraint and no history, so union (checklist) and first-write-wins
+ * (ritual_complete) are both wrong for it — the former cannot express a change at all, and the
+ * latter would make the FIRST tradition a user ever picked permanent.
+ *
+ * `local_ts` rather than a server timestamp, matching `personal_date`: the client's clock is what
+ * orders two of the user's own edits made offline, and a server-received-at time would reorder
+ * them by whichever drained first.
+ */
+export function resolvePreferences(
+  incoming: Mutation,
+  existingUpdatedAt: string | null,
+): ConflictResult {
   if (existingUpdatedAt && new Date(existingUpdatedAt) >= new Date(incoming.local_ts)) {
     return { client_id: incoming.client_id, resolution: 'superseded' };
   }

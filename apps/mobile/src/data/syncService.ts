@@ -9,6 +9,7 @@
 import { randomUUID } from 'expo-crypto';
 import {
   MAX_SYNC_ATTEMPTS,
+  SYNC_BATCH_LIMIT,
   isExhausted,
   nextBatch,
   reconcileBatch,
@@ -17,6 +18,7 @@ import {
   type SyncResponse,
 } from '../domain/sync';
 import { hydrateOfflineQueue, useOfflineQueueStore } from '../store/offlineQueue';
+import { useSessionStore } from '../store/session';
 import { useSyncStatusStore } from '../store/syncStatus';
 import { getSyncRepository } from './syncRepository';
 
@@ -25,6 +27,11 @@ export interface SyncDeps {
   now: () => number;
   random: () => number;
   newIdempotencyKey: () => string;
+  /**
+   * The identity the drain is running as. A mutation made by another uid is HELD, never sent —
+   * see `isSendableBy`. Injected rather than read inline so the rule is testable without a store.
+   */
+  currentUserId: () => string | null;
   /** Reconcile server truth into the query cache (§6.4). Streak is server-derived, never guessed. */
   onServerState?: (state: NonNullable<SyncResponse['server_state']>) => void;
 }
@@ -44,6 +51,7 @@ function defaultDeps(): SyncDeps {
     now: () => Date.now(),
     random: Math.random,
     newIdempotencyKey: () => randomUUID(),
+    currentUserId: () => useSessionStore.getState().userId ?? null,
   };
 }
 
@@ -87,7 +95,7 @@ async function runDrain(deps: SyncDeps): Promise<DrainResult> {
 
   for (let i = 0; i < MAX_BATCHES_PER_DRAIN; i++) {
     const queue = useOfflineQueueStore.getState().queue;
-    const batch = nextBatch(queue, deps.now());
+    const batch = nextBatch(queue, deps.now(), SYNC_BATCH_LIMIT, deps.currentUserId());
     if (batch.length === 0) break; // nothing due — everything left is inside its backoff
 
     let response: SyncResponse;
