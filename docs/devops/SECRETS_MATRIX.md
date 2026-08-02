@@ -28,11 +28,11 @@ Purpose: classify every secret/variable the repository uses by **where it must b
 
 | Secret / Variable | Primary class | Also set as | Sensitive | Why (reason) |
 |---|---|---|---|---|
-| `SUPABASE_SERVICE_ROLE_KEY` | Supabase Edge Secret | Local Only (local functions) | 🔴 Critical | Bypasses RLS entirely; full DB access. Server-only, must never reach the client or git (ADR-030). Set per project via `supabase secrets set`. |
+| `SUPABASE_SERVICE_ROLE_KEY` | Supabase Edge Secret | Local Only (local functions) | 🔴 Critical | Bypasses RLS entirely; full DB access. Server-only, must never reach the client or git (ADR-030). Set per project via `supabase secrets set`. ⚠️ **Supabase now marks this DEPRECATED** in favour of `SUPABASE_SECRET_KEYS` (JWT Signing Keys) — see the deprecation note below. |
 | `OPENAI_API_KEY` | Supabase Edge Secret | Local Only | 🔴 Critical | Billable OpenAI access for `ask-guru`/`content-ingest`. Server-only; a leak is a financial + abuse risk. |
 | `REVENUECAT_WEBHOOK_SECRET` | Supabase Edge Secret | Local Only | 🟠 High | Verifies inbound RevenueCat webhooks (F-4). A leak lets attackers forge entitlement events. |
 | `SUPABASE_URL` | Supabase Edge Secret | GitHub Variable (non-secret), Local | 🟢 Low | Public project URL. Not secret, but set alongside the keys for the functions runtime. |
-| `SUPABASE_ANON_KEY` | Supabase Edge Secret | Local, client build | 🟢 Low | Public anon key; RLS is the boundary. Rotate if abused. |
+| `SUPABASE_ANON_KEY` | Supabase Edge Secret | Local, client build | 🟢 Low | Public anon key; RLS is the boundary. Rotate if abused. ⚠️ **Supabase now marks this DEPRECATED** in favour of `SUPABASE_PUBLISHABLE_KEYS` (JWT Signing Keys) — see below. |
 | `SUPABASE_ACCESS_TOKEN` | GitHub Repository Secret | Local (CLI login alt) | 🔴 Critical | Supabase **CLI** auth used by CD to deploy functions. Grants account-level CLI power → repo secret consumed by `cd.yml`. |
 | `SUPABASE_STAGING_DB_URL` | GitHub Environment Secret (`staging`) | — | 🔴 Critical | Direct Postgres connection (contains password) for staging migrations. Scope to `staging` so prod jobs can't read it. |
 | `SUPABASE_PROD_DB_URL` | GitHub Environment Secret (`production`) | — | 🔴 Critical | Direct Postgres connection for prod migrations. Scope to `production` (behind manual approval) — never exposed to staging jobs. |
@@ -52,6 +52,30 @@ Purpose: classify every secret/variable the repository uses by **where it must b
 | `PORT` | Local Only | — | 🟢 Low | Command Center dev server port; tooling only. |
 | `NODE_VERSION` / `PNPM_VERSION` | GitHub Variable (workflow `env`) | — | 🟢 Low | Toolchain pins in `ci.yml`. Non-secret config. |
 | `POSTGRES_PASSWORD` (CI service) | — (literal `postgres`) | — | 🟢 Low | Ephemeral CI Postgres password; not a real secret. |
+
+---
+
+## ⚠️ Both legacy Supabase keys are deprecated by the platform (noticed 2026-08-02)
+
+The Edge Function Secrets dashboard now labels **`SUPABASE_ANON_KEY`** and
+**`SUPABASE_SERVICE_ROLE_KEY`** as `DEPRECATED`, directing to `SUPABASE_PUBLISHABLE_KEYS` and
+`SUPABASE_SECRET_KEYS` issued through **JWT Signing Keys**.
+
+**Every Edge Function depends on both.** `_shared/env.ts` lists them in `REQUIRED` and `readEnv()`
+**throws** when either is absent — so the day Supabase removes them, every function fails at boot,
+not gracefully and not partially.
+
+**Deprecated is not removed**, and nothing is broken today; this is recorded so it is a scheduled
+migration rather than an outage someone diagnoses live. Two things make it less alarming than it
+sounds:
+
+- **`SVC_health` catches it.** Its dependency check wraps `readEnv` in a `try`, so a missing or
+  malformed environment returns **503 degraded** rather than crashing — which is exactly the case
+  the NFR-14 uptime monitor exists to catch. The failure would page rather than lurk.
+- The migration is mechanical (new key names, same values' role), but it touches the service-role
+  path, so it wants its own change with the RLS suites run against it — not a drive-by edit.
+
+**Not scheduled.** Whoever picks it up should check whether Supabase has announced a removal date.
 
 ---
 
