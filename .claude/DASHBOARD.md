@@ -92,7 +92,48 @@ CURRENT_MILESTONE.md
 
 # Current Task
 
-✅ **THE OFFLINE-COMPLETION RACE IS DIAGNOSED CORRECTLY, FIXED, VERIFIED (5/5 green), AND MERGED**
+✅ **THE DEPENDENCY QUEUE IS EMPTY — THREE PRs MERGED, THREE CLOSED WITH EVIDENCE.**
+Merged: **#87** `da9e945` (Dependabot majors-only for actions) · **#88** `652831d` (i18next 23→26 +
+react-i18next 15→17 as **one** increment) · **#80** `715e2de` (supabase-js 2.111.0). Closed: #83,
+#82, #62. **Progress unchanged at 47%** — dependency hygiene advances no Beta slice.
+
+**Two of the four were not what they were filed as.** **#82 and #62 are one change**:
+`react-i18next@17.0.11` peer-requires **`i18next >= 26.2.0`** and the repo had 23.16.8. **#82 was
+GREEN on all five gates while shipping a violated peer** — its lockfile reads
+`react-i18next@17.0.11(i18next@23.16.8)` beneath the declared `>= 26.2.0`, because **pnpm records an
+unmet peer without failing**. Fourth instance of green being anti-correlated with safety, and the
+**first by a mechanism unrelated to the SDK pin** — neither package is in
+`bundledNativeModules.json`. #62's red was the other half, and its message pointed nowhere near #82.
+
+**The trap inside #62:** `compatibilityJSON: 'v3'` carried a *runtime* justification (Hermes' partial
+Intl), so flipping it to `'v4'` to clear the type error is the **#75 `react-test-renderer` pattern**.
+Read against the installed source instead: `PluralResolver`'s constructor touches no Intl, and
+`new Intl.PluralRules()` is lazy inside a `getRule` that **catches and degrades** — the justification
+does not survive v26.
+
+⚠️ **My own first guard failed on its first run, and that was the finding.** It asserted "no call site
+passes `count`"; `streak.label` and `household.memberCount` both do, so the plural path *is* reached.
+The real invariant is narrower — both use `count` only as an **interpolation variable** and no
+`_one`/`_other` variants exist, so the suffixed lookup misses and falls back to the base key.
+**The invalidating condition is a plural-suffixed KEY, not a `count` call site**, and the first locale
+with more than two plural categories would render the wrong form *silently*. The test now runs the
+real bundle with `Intl.PluralRules` **deleted** rather than grepping for a legitimate pattern.
+
+**#83 was not an upgrade at all.** All nine actions are major-pinned and publishers move the major
+tag, so `@v5` already receives 5.x; `5 → 5.6.0` would have **frozen** one action while eight float,
+and `JAVA_VERSION: '17'` is set separately. #87 fixes the cause — no `update-types` filter on the
+`github-actions` block. **SHA-pinning all nine is recorded and deliberately left to the owner.**
+
+**Verified:** tsc 11/11, eslint 0 errors, **418 mobile jest (+5)**, 118 vitest, `expo export` both
+platforms, and **E2E 6/6 on device for both #88 and #80** — including
+`FLOW_AUTH_SESSION_PERSISTENCE`, the flow guarding the auth-js storage adapter #80's bump moves.
+⚠️ One sample each: meaningful now that #84 fixed the ~50% race, but not a verdict.
+
+---
+
+**Previously — the offline-completion race.**
+
+✅ **DIAGNOSED CORRECTLY, FIXED, VERIFIED (5/5 green), AND MERGED**
 as **`45f00c7` (#84)**. Also merged: **`b8ab528` (#85)**, the SDK-pin rule's **third leak** — `#81`
 (netinfo) and `#63` (jest, via `jest-expo`'s jest-29 dependency family) closed with evidence, and
 `bundledNativeModules.json` named as the authoritative source so the next triage checks the manifest
@@ -730,7 +771,17 @@ Verified end-to-end. **PR #36 merged to main as `e1e10d4`**; the docs checkpoint
 
 # Today's Objective
 
-Session of 2026-08-02 (session end). **Merge the verified work, then provision Sentry end to end.**
+Session of 2026-08-02 (part 2). **Work the dependency queue — the only credential-free engineering
+left, with B4.4 and the Sentry dashboard both owner-gated.** Outcome: the queue is **empty**, three
+PRs merged and three closed with evidence, and the triage found that **#82 and #62 were one change
+all along** — a peer requirement pnpm records without enforcing, which let a violated peer pass all
+five gates. Also found: **#83 was not an upgrade**, and would have frozen one action's pinning while
+eight others float. **Progress unchanged at 47%; no Beta slice advanced.** Next: **B4.4** (§7.2
+dashboards + alerts) once Sentry ingest is confirmed in the dashboard.
+
+---
+
+Session of 2026-08-02 (part 1). **Merge the verified work, then provision Sentry end to end.**
 Outcome: **four PRs merged** — #84 (offline completion), #85 (SDK-pin third leak), #86 (durable
 preference writes), #79 (Sentry) — and **Sentry is live and verified on device**:
 `[telemetry] reporter=sentry` once per launch (12/12), with `AppLifecycleIntegration` installed, so

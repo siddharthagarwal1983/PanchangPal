@@ -110,7 +110,67 @@ green in CI on a real native build. Canonical progress 0% → 13% (1 of 8 Beta s
 # Current Task
 
 ## Title
-✅ SESSION COMPLETE (2026-08-02) — FOUR PRs MERGED, SENTRY LIVE AND VERIFIED ON DEVICE
+✅ THE DEPENDENCY QUEUE IS EMPTY (2026-08-02, part 2) — THREE PRs MERGED, THREE CLOSED WITH EVIDENCE
+
+**Progress unchanged at 47%.** Dependency hygiene advances no Beta slice. The queue went from four
+open PRs to **zero**, and two of the four were not what they were filed as.
+
+**Merged:** #87 `da9e945` (Dependabot majors-only for actions) · #88 `652831d` (i18next 23→26 +
+react-i18next 15→17 as one increment) · #80 `715e2de` (supabase-js 2.111.0).
+**Closed with evidence:** #83, #82, #62.
+
+## #82 and #62 were always one change
+
+`react-i18next@17.0.11` peer-requires **`i18next >= 26.2.0`**; the repo had 23.16.8. **#82 was GREEN
+on all five gates while shipping a violated peer** — its own lockfile reads
+`react-i18next@17.0.11(i18next@23.16.8)` beneath `i18next: '>= 26.2.0'`, because **pnpm records an
+unmet peer without failing**. Fourth instance of green being anti-correlated with safety, and the
+first by a mechanism **unrelated to the SDK pin** — neither package is in
+`bundledNativeModules.json`, so that rule never applied. #62's red was the other half and its message
+pointed nowhere near #82.
+
+## The trap, and the guard that caught my own error
+
+`compatibilityJSON: 'v3'` carried a **runtime** justification (Hermes' partial Intl). Flipping it to
+`'v4'` to clear the type error is the **#75 `react-test-renderer` pattern**. Checked against the
+installed i18next source: `PluralResolver`'s constructor touches no Intl, and `new Intl.PluralRules()`
+is lazy inside a `getRule` that catches and degrades — the justification does not survive v26.
+
+**My first guard asserted "no call site passes `count`" and failed on its first run** —
+`streak.label` and `household.memberCount` both do. The real invariant: both use `count` only as an
+**interpolation variable** and no `_one`/`_other` variants exist, so the suffixed lookup misses and
+falls back to the base key. **The invalidating condition is a plural-suffixed KEY.** The test runs the
+real bundle with `Intl.PluralRules` **deleted** rather than grepping for a legitimate pattern.
+
+## #83 was not an upgrade
+
+All nine actions are major-pinned and publishers move the major tag, so `@v5` already gets 5.x.
+`5 → 5.6.0` would **freeze** one action while eight float; `JAVA_VERSION: '17'` is set separately, so
+it changed nothing. #87 fixes the cause — the `github-actions` block had no `update-types` filter.
+
+## Verified
+
+`tsc` 11/11 · eslint 0 errors (16 warnings, baseline) · **418 mobile jest (+5)** · 118 vitest ·
+`expo export` both platforms · **E2E 6/6 for #88 and #80** (`30733670783`, `30733470569`), incl.
+`FLOW_AUTH_SESSION_PERSISTENCE` — the flow guarding the auth-js adapter #80 moves. One perturbation
+failing exactly three assertions with controls green. Main re-verified after the merges.
+⚠️ One E2E sample each; meaningful now that #84 fixed the ~50% race, but not a verdict.
+
+## NEXT TASK
+
+1. **Confirm events arrive in the Sentry dashboard**, then set `panchangpal-mobile` alert rules to
+   `environment:production` so CI `preview` runs do not page.
+2. **B4.4** — §7.2 SLO dashboards + alerts, proven by a deliberate trigger (§8.4: alerting never
+   triggered is a plan, not a capability). The last engineering increment in B4.
+3. **Owner:** ratify ADR-034 · rule on the §6.6 `preferences` conflict rule (shipped unratified as
+   LWW) · decide whether to **SHA-pin all nine GitHub Actions**, which #87 records and deliberately
+   left open as a security-posture call.
+
+---
+
+## Superseded — the Sentry session
+
+## ✅ SESSION COMPLETE (2026-08-02) — FOUR PRs MERGED, SENTRY LIVE AND VERIFIED ON DEVICE
 
 **Merged:** #84 `45f00c7` (offline completion) · #85 `b8ab528` (SDK-pin third leak) · #86 `080c710`
 (durable preference writes) · #79 `6182955` (Sentry).

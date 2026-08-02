@@ -2,9 +2,9 @@
 
 # PanchangPal — Project Memory
 
-Version: 2.7.0
+Version: 2.8.0
 
-Last Updated: 2026-07-29 (offline completion lost on app kill; the re-run heuristic corrected; JDK 26; SDK 54 pin)
+Last Updated: 2026-08-02 (the peer graph as triage input; the i18n no-plural-key constraint)
 
 Current Phase:
 Beta Readiness & Platform Hardening (TDD Part 5)
@@ -590,6 +590,47 @@ Stable, cross-cutting facts (permanent until an approved decision changes them):
   === `react` exactly, and satisfying it (the step TASK.md had recorded as required) would have
   turned CI green while leaving the renderer mismatched. When a bump fails a version assertion,
   satisfy the constraint the assertion defends, not the assertion.
+- **AN UNMET PEER DOES NOT FAIL CI, SO THE PEER GRAPH IS A TRIAGE INPUT AND NOT A CONSEQUENCE OF
+  ONE** (established 2026-08-02). **pnpm records an unmet peer dependency and installs anyway.** PR
+  #82 (`react-i18next` 15→17) therefore passed **all five gates** while violating its own declared
+  peer, `i18next >= 26.2.0`, against the installed 23.16.8 — and its lockfile stated both facts
+  side by side: `react-i18next@17.0.11(i18next@23.16.8)`.
+  **Read the proposed package's declared peers against the installed graph BEFORE looking at CI.**
+  A PR whose peer is unsatisfiable alone is not a PR; it is half of a coupled change. #82 and #62
+  (`i18next` 23→26) sat in the queue for a week as two independent items, one green and one red,
+  and #62's red — a *type* error about `compatibilityJSON` — pointed nowhere near #82.
+  **This is a DIFFERENT mechanism from the SDK-pin rule below, with the same signature.** Neither
+  package appears in `bundledNativeModules.json`, so the SDK rule never applied; green was still not
+  the criterion. Fourth instance overall, after mmkv v2, `babel-preset-expo`, and #64/#65. The
+  generalisation worth keeping: **a red PR and a green PR in the same queue can be two halves of one
+  change, and the error message will not say so.**
+- **THE i18n BUNDLE MUST DEFINE NO PLURAL-SUFFIXED KEY, AND THAT IS LOAD-BEARING** (established
+  2026-08-02, when i18next moved 23 → 26 and removed `compatibilityJSON`). No `_one` / `_other` /
+  `_plural` (or other CLDR-category) variants in `apps/mobile/src/i18n/en-US.ts`. Pinned by
+  `apps/mobile/src/i18n/__tests__/pluralization.test.ts`, which runs the real bundle with
+  `Intl.PluralRules` **deleted** to simulate a partial-Intl Hermes.
+  **The safety condition is narrower than "pluralization is unused."** Two call sites DO pass
+  `count` — `t('streak.label', { count })` and `t('household.memberCount', { count })` — so i18next's
+  plural path is genuinely reached. What makes it harmless is that both use `count` only as an
+  **interpolation variable** (`'{{count}} day streak'`) and no suffixed variants exist, so the
+  suffixed lookup **misses and falls back to the base key** whichever rule produced the suffix.
+  `household.tsx` additionally branches on `n === 1` itself.
+  **So the invalidating condition is a plural-suffixed KEY, not a `count` call site.** Add one and
+  the rendered form starts depending on the plural rule; where `Intl.PluralRules` is absent,
+  i18next's `getRule` catches and substitutes a dummy `one`/`other` rule. For en-US that dummy agrees
+  with the real rule, so **the first locale with more than two categories (Polish, Arabic, Russian)
+  renders the wrong form outright — silently**: no crash, nothing reaching the telemetry seam, just
+  incorrect copy. Verify `Intl.PluralRules` on device first and add `@formatjs/intl-pluralrules` if
+  it is absent.
+  **Whether Hermes ships Intl.PluralRules is still UNANSWERED** — Android's Intl lives in the
+  prebuilt AAR, not the npm package, so it cannot be settled from the repo. The test makes the
+  question moot rather than answering it; the first plural key restores the dependence.
+  Two method notes worth not rediscovering. The old `compatibilityJSON: 'v3'` setting carried a
+  runtime justification in a comment, and **flipping it to `'v4'` to clear the type error would have
+  been the #75 `react-test-renderer` trap** — green CI, changed device behaviour. And the first guard
+  written for this asserted "no call site passes `count`" and **failed on its first run**, which is
+  how the narrower invariant was found: test the property, do not grep for a pattern that
+  legitimately exists.
 - **⛔ AN OFFLINE COMPLETION WAS LOST ON APP KILL — AND THE QUEUE WAS NEVER THE PROBLEM** (found
   2026-07-28/29, root cause corrected 2026-08-01; fix implemented, **not yet device-verified**).
   `FLOW_OFFLINE_SYNC` failed ~50% at **line 131** — the `☑` assertion AFTER `stopApp` / `launchApp`,

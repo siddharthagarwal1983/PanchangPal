@@ -21,6 +21,86 @@ docs/architecture/adr/
 
 # Product Decisions
 
+## 2026-08-02 — A dependency PR is triaged from the peer graph; an unmet peer does not fail CI
+
+**Decision.** Before triaging any dependency PR, read the proposed package's **declared peer
+requirements against the installed graph**. A PR whose peer is unsatisfiable alone is not a PR — it
+is half of a coupled change, and is closed in favour of one that lands both halves together.
+
+**What forced it.** #82 (`react-i18next` 15→17) and #62 (`i18next` 23→26) sat in the queue for a
+week as two independent items, one green and one red. They are the same change:
+`react-i18next@17.0.11` peer-requires **`i18next >= 26.2.0`** and the repo had 23.16.8. #82's own
+lockfile recorded the violation in plain text —
+`react-i18next@17.0.11(i18next@23.16.8)` beneath `i18next: '>= 26.2.0'` — and it passed **all five
+gates**, because **pnpm records an unmet peer without failing**. Merging it would have shipped a
+violated peer behind a green pipeline.
+
+**This extends the 2026-07-28 rule rather than repeating it.** That entry established that green is
+anti-correlated with safety for an *SDK-pinned* package, because `expo export` resolves what fails
+natively. This is a second, independent mechanism with the same signature: neither package here is
+SDK-pinned (checked against `bundledNativeModules.json` — both absent), so the SDK rule does not
+apply at all, and CI is still not the criterion. **Fourth instance overall**, after mmkv v2,
+`babel-preset-expo`, and #64/#65.
+
+**Corollary, worth stating separately.** A red PR and a green PR in the same queue can be two halves
+of one change, and the red one's error message will not say so. #62's red was a *type* error about
+`compatibilityJSON`; nothing in it pointed at #82.
+
+---
+
+## 2026-08-02 — The i18n bundle defines no plural-suffixed key, and that is load-bearing
+
+**Decision.** `apps/mobile/src/i18n/en-US.ts` must not define `_one` / `_other` / `_plural` (or any
+CLDR-category) key variants. Adding one requires verifying `Intl.PluralRules` **on device** first,
+and adding `@formatjs/intl-pluralrules` if Hermes lacks it. Pinned by
+`apps/mobile/src/i18n/__tests__/pluralization.test.ts`.
+
+**Why it is load-bearing.** i18next 26 removed `compatibilityJSON`, so the `'v3'` setting the app
+had carried was deleted. That setting existed for a runtime reason — Hermes ships a partial Intl —
+so removing it needed the claim rechecked rather than the type error silenced. Against the installed
+source: `PluralResolver`'s constructor touches no Intl at all, and `new Intl.PluralRules(...)` is
+lazy inside `getRule`, which **catches and degrades to a dummy rule** rather than throwing. There is
+no launch-time error on any engine.
+
+**The safety condition is narrower than "pluralization is unused."** Two call sites *do* pass
+`count` — `t('streak.label', { count })` and `t('household.memberCount', { count })` — so the plural
+path is genuinely reached. What makes it harmless is that both use `count` only as an
+**interpolation variable** (`'{{count}} day streak'`) and no `_one`/`_other` variants exist, so the
+suffixed lookup **misses and falls back to the base key** whichever rule produced the suffix.
+`household.tsx` additionally branches on `n === 1` itself.
+
+**So the invalidating condition is a plural-suffixed KEY, not a `count` call site.** Add one and the
+suffixed lookup starts hitting, at which point the rendered form depends on the plural rule — which
+on a partial-Intl engine is i18next's `one`/`other` dummy. For en-US that dummy agrees with the real
+rule; **the first locale with more than two categories (Polish, Arabic, Russian) renders the wrong
+form outright.** Silently: no crash, nothing reaching the telemetry seam, just incorrect copy.
+
+**Method note.** The first guard written for this asserted "no call site passes `count`" and
+**failed on its first run**, which is how the narrower invariant was found. The test now runs the
+real bundle with `Intl.PluralRules` **deleted** — testing the property rather than grepping for a
+pattern that legitimately exists.
+
+---
+
+## 2026-08-02 — GitHub Actions are pinned by major, so Dependabot proposes majors only
+
+**Decision.** `.github/dependabot.yml`'s `github-actions` block ignores patch and minor updates. All
+nine actions stay pinned by **major** (`actions/checkout@v7`, `actions/setup-java@v5`, …).
+
+**Why.** Publishers move the major tag to each new patch, so `@v5` **already receives** 5.x fixes.
+Dependabot cannot see a moving tag and reads `v5` as a version behind `5.6.0` — which produced #83.
+Merging that would have **frozen** one action at an exact patch while the other eight kept floating:
+it stops receiving the fixes the moving tag delivers, and splits the pinning strategy two ways.
+`JAVA_VERSION: '17'` is set independently in `e2e.yml`, so the bump changed no JDK and no behaviour.
+A **major** bump is the one case the moving tag does not deliver, and the case that breaks inputs.
+
+**Open, and deliberately not decided here.** Pinning every action to a full **commit SHA** is the
+coherent defence against a compromised tag being re-pointed — the threat that block's own comment
+names ("this repo's CI holds deploy credentials"). That is a security-posture decision across all
+nine actions and every workflow, **owner-owned**, and was not smuggled in behind a dependency triage.
+
+---
+
 ## 2026-07-28 — An SDK-pinned dependency is never bumped alone, and CI greenness does not exempt it
 
 **Decision.** `react`, `@types/react`, `@expo/*` and `@babel/runtime` join `expo`, `expo-*`,
