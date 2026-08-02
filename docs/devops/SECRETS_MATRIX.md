@@ -43,6 +43,7 @@ Purpose: classify every secret/variable the repository uses by **where it must b
 | `EXPO_PUBLIC_REVENUECAT_KEY` | EAS Secret / build env | Local | 🟢 Low (public) | RevenueCat **public** SDK key; safe on device by design. |
 | `EXPO_PUBLIC_SENTRY_DSN` | **EAS environment variable** (`preview` + `production`) | Local Only (`apps/mobile/.env`) | 🟢 Low (public) | The DSN the APP reads. Publishable — write-only ingest, safe in the bundle. **Inlined at build time** (`app.config.ts` → `extra.sentryDsn` → `telemetryAdapter.ts`), so adding it needs a NEW BUILD, not a restart. The GitHub copy below does not reach the app. |
 | `SENTRY_DSN` | **Supabase Edge Secret** (per project) | GitHub (gate only) | 🟢 Low (public) | The DSN the EDGE FUNCTIONS read (`_shared/http.ts`), from a SEPARATE Sentry project — one project would merge device crashes with database errors and make the §7.2 crash-free-sessions metric meaningless, since it is computed per project. Resolved at MODULE LOAD, so warm instances keep the old value until redeployed. |
+| `SENTRY_ENVIRONMENT` | **Supabase Edge Secret** (per project) | — | 🟢 Low | The environment tag Edge errors carry (`_shared/http.ts`). ⚠️ **Defaults to `production` when unset**, so an unlabelled staging project reports its errors as production — found 2026-08-02, the same defect PR #98 fixed on the mobile side. Set it explicitly on EVERY project, including production, so correctness is not a coincidence. Values follow the backend's own naming: `staging`, `production`. Resolved at MODULE LOAD, like the DSN. |
 | `SENTRY_AUTH_TOKEN` | **EAS environment variable** (`production`, secret) | GitHub Repository Secret (gate only) | 🟠 High | Source-map upload from inside the EAS build that produced the bundle. The one Sentry value that grants WRITE access to the org. Scopes: `org:read`, `project:read`, `project:releases`. Never in a committed file. |
 | `SENTRY_ORG` | **EAS environment variable** (`production`) | GitHub Repository Secret (gate only) | 🟢 Low | Org slug, for the source-map upload. Not secret; an identifier. |
 | `SENTRY_PROJECT` | **EAS environment variable** (`production`) | GitHub Repository Secret (gate only) | 🟢 Low | Mobile project slug, for the source-map upload. Not secret; an identifier. |
@@ -111,6 +112,28 @@ Per project: Settings → Projects → *(project)* → **Client Keys (DSN)** →
 - edge project → `SENTRY_DSN`
 
 A DSN is **publishable** (write-only ingest), which is why the matrix classes both 🟢 Low.
+
+⚠️ **A DSN alone is not enough — set `SENTRY_ENVIRONMENT` on the same project.** `_shared/http.ts`
+defaults it to `production`, so a staging project with only a DSN reports **staging errors as
+production**: they land in the same bucket real incidents will, and any alert scoped to
+`environment:production` fires on staging traffic. Found 2026-08-02, immediately after the edge DSN
+was first provisioned, and it is the identical defect PR #98 fixed on the mobile side — where CI
+builds reported as production because the environment was derived from a value only EAS Build sets.
+
+It stayed hidden because `panchangpal-edge` had never received a single event: **you cannot notice a
+mislabelled environment in a project with no data.** Set the variable on every project, production
+included — relying on the default being right is how the mobile side went wrong.
+
+⚠️ **The two Sentry projects use different names for the same tier, and that is deliberate.** Mobile
+takes its tag from the EAS channel, so staging is `preview` (and E2E is `ci`); the edge project
+follows the backend's own vocabulary, so staging is `staging` — the word `preflight.sh` and `cd.yml`
+already use. Each matches its own tooling. Recorded here so the mismatch reads as a decision rather
+than a mistake.
+
+| Sentry project | staging tier | production |
+|---|---|---|
+| `panchangpal-mobile` | `preview` · `ci` (E2E) | `production` |
+| `panchangpal-edge` | `staging` | `production` |
 
 ### 3. Sentry — create the auth token (the only secret here)
 

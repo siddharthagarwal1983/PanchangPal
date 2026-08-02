@@ -110,6 +110,11 @@ case "$TARGET" in
 
     hdr "Observability (warn-only until production — §7.1)"
     optional_var SENTRY_DSN        "crashes and Edge Function errors go unreported on staging"
+    # Unset means Edge errors are tagged `production` (the default in _shared/http.ts), so staging
+    # failures land in the bucket real incidents will and any environment:production alert fires on
+    # them. Reported rather than required, because the absence only costs correct labelling — but it
+    # is reported, because a silent default is exactly how this went unnoticed until 2026-08-02.
+    optional_var SENTRY_ENVIRONMENT "Edge errors will be tagged 'production' even on staging"
     optional_var SENTRY_AUTH_TOKEN "source maps will not upload; staging crashes stay unsymbolicated"
 
     hdr "Edge Function runtime secrets (set on the staging Supabase project)"
@@ -145,6 +150,9 @@ case "$TARGET" in
     # bytecode. Required here for the same reason as the webhook secret — at dev/staging the
     # absence costs visibility, in production it costs the release's only health signal.
     require_var SENTRY_DSN         "$GH_SECRETS → Environment: production"
+    # Correct by default here, and set explicitly anyway: a value that happens to be right is not
+    # the same as a value that was chosen, and the mobile side already paid for that distinction.
+    optional_var SENTRY_ENVIRONMENT "defaults to 'production' — correct here, but set it explicitly"
     require_var SENTRY_ORG         "$GH_SECRETS → Repository secrets"
     require_var SENTRY_PROJECT     "$GH_SECRETS → Repository secrets"
     require_var SENTRY_AUTH_TOKEN  "$GH_SECRETS → Repository secrets (source-map upload)"
