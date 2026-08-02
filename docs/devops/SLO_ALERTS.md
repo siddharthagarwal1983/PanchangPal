@@ -1,7 +1,7 @@
 # SLOs & Alerts — PanchangPal
 
 **Status:** Active · **Owner:** Solo operator · **Source:** TDD Part 5 §7.2; NFR table at Part 1 §8
-**Last verified:** 2026-08-02 (NFR-06 alerting live and proven; the other six SLOs audited against the code)
+**Last verified:** 2026-08-02 (NFR-06 detects but does NOT notify — proven by drill; the other six audited against the code)
 
 §7.2 names seven SLOs. This document records, for each one, **the instrument, the threshold, the
 alert, and — where it does not exist — precisely what is blocking it.**
@@ -15,16 +15,18 @@ capability.**
 
 ## 0. What is actually alerting today
 
-**One of the seven.**
+⛔ **ZERO of the seven page anyone.** NFR-06 **detects** correctly and its notification does not
+arrive — proven by a deliberate trigger on 2026-08-02, see §8. Everything else below is unbuilt.
 
 | | |
 |---|---|
-| **Live and proven** | NFR-06 crash-free sessions |
+| **Detects, but does NOT notify** | NFR-06 crash-free sessions ⛔ |
 | **Measurable, no monitor yet** | NFR-07 crash-free users (same Sentry session data, no new instrumentation) |
 | **Blocked on engineering** | NFR-14 availability · NFR-10 sync success |
 | **Blocked on a gated feature** | NFR-05 AI latency · NFR-16 AI cost · refusal/groundedness (all Ask Guru) · NFR-11 push delivery |
 
-Nothing else pages anyone. If the app breaks in a way that is not a crash, **no alert fires.**
+If the app breaks in a way that is not a crash, nothing detects it at all. If it breaks *by*
+crashing, Sentry notices and the operator is not told.
 
 ---
 
@@ -32,7 +34,7 @@ Nothing else pages anyone. If the app breaks in a way that is not a crash, **no 
 
 | SLO | NFR | Target | Instrument | Status |
 |---|---|---|---|---|
-| Crash-free sessions | NFR-06 | ≥ 99.5% | Sentry sessions | ✅ **live** — monitor `7968827` |
+| Crash-free sessions | NFR-06 | ≥ 99.5% | Sentry sessions | ⛔ **detects, does not notify** — monitor `7968827`, see §8 |
 | Availability (core reads) | NFR-14 | ≥ 99.9% | uptime monitor | ⛔ no pollable endpoint |
 | Sync success | NFR-10 | ≥ 99.5% | SVC_sync metrics | ⛔ no metric emitted |
 | AI first-token latency | NFR-05 | < 2 s | EVT_030 | ⛔ not emitted; feature gated |
@@ -42,9 +44,9 @@ Nothing else pages anyone. If the app breaks in a way that is not a crash, **no 
 
 ---
 
-## 2. NFR-06 — crash-free sessions ≥ 99.5% ✅
+## 2. NFR-06 — crash-free sessions ≥ 99.5% ⛔ detects, does not notify
 
-The only SLO that both measures and pages.
+The only SLO that measures. It does **not** page — see §8.
 
 | | |
 |---|---|
@@ -163,7 +165,39 @@ proven.**
 
 | Date | What was triggered | Result |
 |---|---|---|
-| 2026-08-02 | `scripts/slo-alert-drill.mjs` — 20 synthetic sessions, 3 crashed, into `environment=production`, release `0.1.0` | ✅ Submission accepted (HTTP 200) · ✅ **Detection fired** — issue `PANCHANGPAL-MOBILE-2` opened 12:31 IST, priority **high**, assigned · ⏳ notification unconfirmed |
+| 2026-08-02 | `scripts/slo-alert-drill.mjs` — 20 synthetic sessions, 3 crashed, into `environment=production`, release `0.1.0` | ✅ Submission accepted (HTTP 200) · ✅ **Detection fired** — issue `PANCHANGPAL-MOBILE-2` opened 12:31 IST, priority **high**, assigned · ⛔ **NO NOTIFICATION ARRIVED** |
+
+## ⛔ NFR-06 ALERTING IS BROKEN AT THE LAST STEP
+
+**The monitor detects and tells nobody.** This is the finding, and the drill is the only reason it
+is known. Everything upstream is correct — threshold, `production` filter, 1-hour interval, an issue
+opened at high priority and assigned — and **no email reached the operator**.
+
+**A monitor that opens an issue nobody sees is not an alert.** For a calm ritual app the failure is
+worse than it sounds: §8.4's worst unattended failure is a crash affecting every user going
+unnoticed, because users of this product do not file bug reports — they stop opening the app. That
+is precisely the scenario this SLO exists for, and it would have played out in full.
+
+**Recorded as a launch blocker**, not a configuration note. Until an email is observed, treat NFR-06
+as **detected but unalerted**, which for operational purposes is unalerted.
+
+### What it is most likely to be, in the order worth checking
+
+1. **The alert actions target *Suggested Assignees*, and a metric-monitor issue has none.** Both
+   attached rows — the connected *Notify Suggested Assignees* and the project's *Send a notification
+   for high priority issues* — resolve recipients from suspect commits and ownership rules. A metric
+   issue has **no stack trace and no suspect commit**, so the recipient set is plausibly empty. Note
+   the issue *was* assigned to the operator: that came from the monitor's own Assign field, which is
+   a different mechanism from an alert's recipient resolution. **Fix: change the action to notify a
+   specific Member (or Team) explicitly rather than suggested assignees.**
+2. **Personal notification settings** — Sentry Settings → Notifications → Issue Alerts must be
+   enabled for this project, and the account email verified.
+3. **Digest batching** — Sentry batches issue-alert email with a delay; a late arrival is a different
+   defect from no arrival, and distinguishing them costs only a re-check.
+4. **Spam/quarantine.**
+
+**Whatever the cause, the fix must be re-proven by re-running the drill.** A configuration change
+that has not been observed to page anyone is the same class of claim this section exists to reject.
 
 **What the issue recorded**, which is the proof that the monitor evaluates what it claims to:
 
@@ -229,5 +263,5 @@ once real users exist. That is an argument for doing it before launch, not after
   in this project runs on a schedule except the deletion sweep.
 - **Apdex / performance.** Offered by Sentry and not set up; NFR-01…NFR-04 have no alerting.
 - **Error budgets.** §7.3 `[RECOMMENDATION]` asks for one per SLO to decide when to pause feature
-  work. Not defined — with one live SLO and no real traffic, a budget would be arithmetic on an
-  empty set.
+  work. Not defined — with no SLO yet paging anyone and no real traffic, a budget would be
+  arithmetic on an empty set.
