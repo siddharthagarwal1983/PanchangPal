@@ -101,7 +101,19 @@ one — which would make #90 SDK-coupled after all. Worth confirming before anyo
 
 # Blockers
 
-1. ⚠️ **The §6.6 `preferences` conflict rule is UNRATIFIED** and shipped in merged code (LWW).
+1. ⚠️ **The §6.6 `preferences` rule is UNRATIFIED — now opened as ADR-035 (Proposed)** — *and the
+   rule it documents is **not implemented***. Found while drafting the ADR:
+   `resolvePreferences` has one non-test call site and is passed **`null`**, so its comparison can
+   never fire and it returns `applied` unconditionally; `updatePreferences` does an unconditional
+   upsert with no `where updated_at < local_ts` guard and stamps `updated_at` regardless. **Actual
+   behaviour is last-drain-wins, and `updated_at` can move backwards.** Identical to LWW for a
+   single device (FIFO drain matches `local_ts` order) and divergent exactly where a conflict rule
+   earns its keep — a retried mutation, or a second device. The unit tests pass because they call
+   `resolvePreferences` directly; nothing tests the handler's use of it.
+   ADR-035 settles the **per-column merge** on engineering grounds (already the behaviour, and
+   strictly better than whole-record LWW) and refers **whose edit wins across devices** to Product,
+   recommending LWW on `local_ts`. **No behaviour should change before ratification** — changing it
+   under a guess replaces an unratified rule with a different unratified rule.
 2. **NFR-10 needs a product decision** — PDD §11's registry has no sync event, and inventing one is
    forbidden by `events.ts` and rejected at runtime. Either PDD adds sync events, or a server-side
    metrics sink is chosen. Not engineering.
