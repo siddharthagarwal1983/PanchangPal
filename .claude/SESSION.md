@@ -11,7 +11,12 @@ resolved, and two of the four were not what they were filed as.
 ⛔ **"THE QUEUE IS EMPTY" WAS TRUE FOR FOUR MINUTES.** Dependabot re-ran against the new lockfile the
 moment the merges landed and opened **five fresh majors** (#89–#93) at 05:29–05:31 — majors are not
 in the `production-minor` group, so they arrive individually. The claim is corrected here rather than
-left standing. **One of them is a real finding: see "A fourth leak" below.**
+left standing.
+
+**Those five were then triaged the same way** — two-sided SDK check, then the installed peer graph.
+Result: **#93 merged** (zod 4, genuinely peer-legal), **#89 / #91 / #92 closed** as SDK-pinned by
+three *different* mechanisms via **#94**, and **#90 left open** as real work. **Only one open PR
+remains, and it is a wanted upgrade rather than a defect.**
 
 ---
 
@@ -22,8 +27,11 @@ left standing. **One of them is a real finding: see "A fourth leak" below.**
 | #87 | `da9e945` | Dependabot proposes MAJOR action bumps only (closes #83) |
 | #88 | `652831d` | i18next 23→26 + react-i18next 15→17 as **one** increment (closes #62, #82) |
 | #80 | `715e2de` | `@supabase/supabase-js` 2.110.9 → 2.111.0 |
+| #93 | `ea71ce6` | `zod` 3.25.76 → 4.4.3 |
+| #94 | `1d035ce` | The SDK-pin check is two-sided (closes #89, #91, #92) |
 
-**Closed with evidence, as #64/#65/#75 were:** #83, #82, #62.
+**Closed with evidence, as #64/#65/#75 were:** #83, #82, #62, #89, #91, #92.
+**Nine dependency PRs resolved; one left open (#90) as real work.**
 
 # The finding: #82 and #62 were always one change
 
@@ -89,10 +97,39 @@ That `babel-preset-expo` is the leak is pointed: it is one of the two undeclared
 dependencies that broke bundling during the Execution Gap, and the dependabot config already says it
 **gets extra care, not less**.
 
-**The rest of the new batch, untriaged:** #90 `@testing-library/react-native` 13→14 (the package
-whose `ensure-peer-deps.js` asserts `react-test-renderer === react` exactly — see #75) · #91
-`@sentry/cli` 2→3 (declared in #79 specifically to fix pnpm resolution for `sentry.gradle`) · #92
-`@babel/core` 7→8 · #93 `zod` 3→4 (`packages/api` contracts, and the OpenAPI conformance test).
+# The second batch, triaged (#89–#93)
+
+| PR | Verdict | Mechanism |
+|---|---|---|
+| **#89** `babel-preset-expo` 54→57 | Closed via **#94** | `expo@54.0.36` depends on it as `~54.0.12`; majors track SDK majors |
+| **#92** `@babel/core` 7→8 | Closed via **#94** | Pinned by the **babel 7 plugin family**, no declared peer; v8 is **ESM-only** and every plugin `require()`s it |
+| **#91** `@sentry/cli` 2→3 | Closed via **#94** | `@sentry/react-native@7.2.0` depends on it at **exactly `"2.55.0"`** |
+| **#90** RNTL 13→14 | **Left open** | Not pinned by either side — a real migration, see below |
+| **#93** `zod` 3→4 | **MERGED** `ea71ce6` | Genuinely peer-legal |
+
+**Three different pinning mechanisms in one batch**, none of which the manifest reports: a direct
+SDK dependency range, a transitive plugin family, and a vendored exact version. The list is less
+useful than the shape.
+
+⚠️ **#91 is the clearest case yet that a green gate can be VACUOUS.** It passed all five gates —
+and **had to**: `e2e.yml` sets `SENTRY_DISABLE_AUTO_UPLOAD: 'true'` and **no gate runs
+`sentry.gradle` at all**, so `@sentry/cli`'s only consumer is never exercised. **Ask which gate would
+have to fail**; if none touches the package's consumer, the colour carries no information. Third
+distinct mechanism behind this signature, after native resolution and unenforced peers.
+
+**#93 is the one that survived, and it survived the check that killed #82.**
+`zod-validation-error@4.0.2` peer-requires `zod: ^3.25.0 || ^4.0.0` — **satisfied**, not merely
+unenforced. API usage is basic (`z.string/object/number/enum/array/boolean`), no production code
+consumes zod error shapes, and the 16 OpenAPI conformance tests pass under zod 4 — with a positive
+*and* a negative assertion, so they cannot be vacuously green. Verified locally on the branch before
+merging: tsc 11/11, 118 vitest.
+
+**#90 is left OPEN, deliberately not ignored.** RNTL 14 replaces the `react-test-renderer` peer with
+**`test-renderer@^1.0.0`**, which fails the entire `packages/ui` suite — a migration with a named
+scope, not a bump. Ignoring a wanted upgrade is the "looks like coverage" failure the config's own
+header warns about. Worth recording: RNTL 14 **removes the `react-test-renderer === react` assertion
+that made #75 red** — but it does not unblock `react`, which stays SDK-pinned for the independent
+Fabric-renderer reason. It removes the *detector*, not the constraint.
 
 # Blockers
 
@@ -116,3 +153,6 @@ whose `ensure-peer-deps.js` asserts `react-test-renderer === react` exactly — 
    last engineering increment in B4.
 3. **Owner:** ratify ADR-034; rule on the §6.6 `preferences` conflict rule. Decide whether to
    SHA-pin all nine GitHub Actions (#87 records the case and deliberately left it open).
+4. **#90 (RNTL 14) when the testing-infrastructure migration is wanted** — add `test-renderer`, drop
+   `react-test-renderer`, migrate `packages/ui` + `apps/mobile` component tests. Not urgent, and
+   deliberately not ignored.

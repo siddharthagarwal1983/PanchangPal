@@ -21,6 +21,48 @@ docs/architecture/adr/
 
 # Product Decisions
 
+## 2026-08-02 — The SDK-pin check is two-sided, and a green gate can be vacuous
+
+**Decision.** Before triaging any dependency PR, run **both** checks:
+
+```bash
+node -e "console.log(require('expo/bundledNativeModules.json')['<pkg>'])"   # native modules
+node -e "console.log(require('expo/package.json').dependencies['<pkg>'])"   # build packages
+```
+
+A tilde or caret range in the **second** is an SDK pin just as much as a hit in the first.
+`babel-preset-expo`, `@babel/core` and `@sentry/cli` join the ignore list (12 → 15 entries).
+
+**This corrects a rule recorded a week earlier, rather than extending it.** The 2026-08-01 entry
+concluded that scanning `bundledNativeModules.json` "found those two gaps and no others, so the SDK
+54 set is now complete." **The manifest lists NATIVE modules.** It is authoritative in **one
+direction** — a hit means SDK-pinned — and is silent about SDK-pinned **build** packages, which are
+not native and never appear in it. #89 falsified the completeness claim within a week by proposing
+`babel-preset-expo` 54.0.12 → **57.0.5**, an SDK 57 package for an SDK 54 app, pinned by
+`expo@54.0.36`'s own `~54.0.12` range and matched by no pattern (`expo-*` does not match a
+`babel-preset-` prefix — the `@expo/` and `@react-native-community/` miss shape again).
+
+**Two pins that NEITHER side of the check reports**, so the general form matters more than the list:
+a pin can live in a **transitive graph** or in a **vendored exact version**. `@babel/core` is pinned
+by the babel 7 plugin family with no declared peer anywhere — v8 is **ESM-only** and every babel-7
+plugin `require()`s it. `@sentry/cli` is pinned because `@sentry/react-native@7.2.0` depends on it at
+**exactly `"2.55.0"`**; the top-level `^2.55.0` declaration exists only so `sentry.gradle`'s
+flat-`node_modules` fallback resolves under pnpm (#79).
+
+**⚠️ The wider lesson — ask which gate would have to fail.** #91 passed **all five gates, and had
+to**: `e2e.yml` sets `SENTRY_DISABLE_AUTO_UPLOAD: 'true'` and **no gate runs `sentry.gradle` at
+all**, so `@sentry/cli`'s only consumer is never exercised. **A green from a gate that does not touch
+the package carries no information.** Third distinct mechanism behind this signature, after native
+resolution (mmkv v2, #64/#65) and unmet peers pnpm does not enforce (#82).
+
+**What this does NOT cover.** `@testing-library/react-native` 13→14 (#90) is pinned by neither side
+and is a legitimate upgrade — deliberately **left open, not ignored**, because it is real work with a
+named scope (RNTL 14 replaces the `react-test-renderer` peer with `test-renderer@^1.0.0`, failing the
+entire `packages/ui` suite). Ignoring a wanted upgrade is the "looks like coverage" failure the
+config's own header warns about.
+
+---
+
 ## 2026-08-02 — A dependency PR is triaged from the peer graph; an unmet peer does not fail CI
 
 **Decision.** Before triaging any dependency PR, read the proposed package's **declared peer

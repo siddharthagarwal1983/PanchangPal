@@ -583,6 +583,23 @@ Stable, cross-cutting facts (permanent until an approved decision changes them):
   That `babel-preset-expo` is the leak is pointed: it is one of the two undeclared transitive
   dependencies that broke bundling during the Execution Gap, which is why this file already says it
   **gets extra care, not less**.
+  **Two further packages are SDK-pinned by mechanisms NEITHER side of the check reports, found in
+  the same batch (#91, #92) and now also ignored.** They are worth knowing by name, because the
+  general lesson is that a pin can live in a *transitive* graph or in a *vendored exact version*:
+  **`@babel/core`** is pinned by the **babel 7 plugin family** the SDK's toolchain is built from,
+  with no declared peer anywhere — `@babel/core` 8 is **ESM-only** and every babel-7 plugin
+  `require()`s it (`ERR_REQUIRE_ESM` from `@babel/plugin-transform-object-rest-spread`, plus the
+  bundle gate dying inside `react-native-worklets`' plugin). **`@sentry/cli`** is pinned because
+  `@sentry/react-native@7.2.0` depends on it at **exactly `"2.55.0"`**, not a range; the top-level
+  `^2.55.0` declaration exists only so `sentry.gradle`'s flat-`node_modules` fallback resolves under
+  pnpm (added by #79).
+  ⚠️ **#91 IS THE CLEAREST CASE THAT A GREEN GATE CAN BE VACUOUS RATHER THAN REASSURING.** It passed
+  all five gates and *had to*: `e2e.yml` sets `SENTRY_DISABLE_AUTO_UPLOAD: 'true'` and **no gate runs
+  `sentry.gradle` at all**, so the only consumer of `@sentry/cli` is never exercised. Before reading
+  a green as evidence, **ask which gate would have to fail** — if no gate touches the package's
+  consumer, the colour carries no information. That is now the **third distinct mechanism** behind
+  the same signature, after native resolution (mmkv v2, #64/#65) and unmet peers pnpm does not
+  enforce (#82).
   `react`, `@types/react`, `@expo/*` and `@babel/runtime` are pinned by the SDK exactly
   as `expo`, `expo-*`, `react-native` and `react-native-*` are; all eight are ignored in
   `.github/dependabot.yml` and move ONLY with a deliberate SDK upgrade via `expo install --fix`,

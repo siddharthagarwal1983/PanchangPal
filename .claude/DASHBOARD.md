@@ -93,13 +93,33 @@ CURRENT_MILESTONE.md
 # Current Task
 
 ✅ **ALL FOUR QUEUED DEPENDENCY PRs RESOLVED — THREE MERGED, THREE CLOSED WITH EVIDENCE.**
-⛔ **But "the queue is empty" was true for four minutes**: Dependabot re-ran against the new lockfile
-and opened **five fresh majors (#89–#93)**, one of which is a **fourth leak of the SDK-pin rule** —
-**#89 `babel-preset-expo` 54.0.12 → 57.0.5**, pinned by `expo@54.0.36`'s own `~54.0.12` range and
-matched by no ignore pattern. **It falsifies PROJECT_MEMORY's claim that the SDK 54 set was
-"complete"**: `bundledNativeModules.json` lists NATIVE modules and is authoritative in one direction
-only, so SDK-pinned *build* packages never appear in it. Corrected in PROJECT_MEMORY; #89–#93 are
-untriaged.
+⛔ **"The queue is empty" was true for four minutes**: Dependabot re-ran against the new lockfile and
+opened **five fresh majors (#89–#93)** — **since triaged the same way.** Merged **#93** `ea71ce6`
+(zod 4) and **#94** `1d035ce`; closed **#89 / #91 / #92** with evidence; **#90 left open** as real
+work. **Nine dependency PRs resolved across the session; one open, and it is a wanted upgrade rather
+than a defect.**
+
+**#89 is a FOURTH LEAK that corrected the rule rather than extending it.** `babel-preset-expo`
+54.0.12 → **57.0.5** is pinned by `expo@54.0.36`'s own `~54.0.12` range and matched by no pattern.
+**It falsifies PROJECT_MEMORY's claim that the SDK 54 set was "complete"**: `bundledNativeModules.json`
+lists **NATIVE** modules and is authoritative in one direction only, so SDK-pinned *build* packages
+never appear in it. **The check is two-sided** — the manifest, plus `expo`'s own dependency ranges.
+
+**Three different pinning mechanisms in one batch**, none of them reported by the manifest: a direct
+SDK range (#89) · a **transitive babel-7 plugin family** with no declared peer anywhere (#92 —
+`@babel/core` 8 is ESM-only and every plugin `require()`s it) · a **vendored exact version** (#91 —
+`@sentry/react-native@7.2.0` depends on `@sentry/cli` at exactly `"2.55.0"`).
+
+⚠️ **#91 is the clearest case yet that a green gate can be VACUOUS.** It passed all five gates and
+**had to**: `e2e.yml` sets `SENTRY_DISABLE_AUTO_UPLOAD` and **no gate runs `sentry.gradle`**, so
+`@sentry/cli`'s only consumer is never exercised. **Ask which gate would have to fail** — if none
+touches the package's consumer, the colour carries no information. Third distinct mechanism behind
+this signature, after native resolution and unenforced peers.
+
+**#93 survived the very check that killed #82:** `zod-validation-error@4.0.2` peer-requires
+`zod: ^3.25.0 || ^4.0.0` — genuinely **satisfied**, not merely unenforced. Verified locally before
+merging (tsc 11/11, 118 vitest, 16 conformance tests that carry their own positive *and* negative
+assertion, so they cannot pass vacuously).
 Merged: **#87** `da9e945` (Dependabot majors-only for actions) · **#88** `652831d` (i18next 23→26 +
 react-i18next 15→17 as **one** increment) · **#80** `715e2de` (supabase-js 2.111.0). Closed: #83,
 #82, #62. **Progress unchanged at 47%** — dependency hygiene advances no Beta slice.

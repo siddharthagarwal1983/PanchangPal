@@ -116,11 +116,30 @@ green in CI on a real native build. Canonical progress 0% → 13% (1 of 8 Beta s
 resolved and two were not what they were filed as.
 
 ⛔ **"Zero open PRs" held for four minutes.** Dependabot re-ran on the new lockfile and opened five
-majors (#89–#93). **#89 `babel-preset-expo` 54.0.12 → 57.0.5 is a FOURTH LEAK of the SDK-pin rule** —
-pinned by `expo@54.0.36`'s own `~54.0.12` range, matched by no ignore pattern, and **not in
-`bundledNativeModules.json`, which lists native modules only.** That falsifies PROJECT_MEMORY's
-"the SDK 54 set is now complete"; the check is two-sided (manifest **plus** expo's own dependency
-ranges). Corrected in PROJECT_MEMORY. **#89–#93 are untriaged — start there.**
+majors (#89–#93), **since triaged the same way**: **#93 merged** (`ea71ce6`, zod 4) · **#89/#91/#92
+closed** via **#94** (`1d035ce`) · **#90 left open** as real work.
+
+**#89 is a FOURTH LEAK, and it corrected the rule rather than extending it.** `babel-preset-expo`
+54.0.12 → 57.0.5 is pinned by `expo@54.0.36`'s own `~54.0.12` range, matched by no pattern, and **not
+in `bundledNativeModules.json` — which lists NATIVE modules only.** That falsifies PROJECT_MEMORY's
+"the SDK 54 set is now complete". **The check is two-sided: the manifest, plus expo's own dependency
+ranges.**
+
+**Three different pinning mechanisms in one batch**, none reported by the manifest: a direct SDK
+range (#89), a **transitive babel-7 plugin family** with no declared peer anywhere (#92 — v8 is
+ESM-only, every plugin `require()`s it), and a **vendored exact version** (#91 —
+`@sentry/react-native@7.2.0` depends on `@sentry/cli` at exactly `"2.55.0"`).
+
+⚠️ **#91 is the clearest case yet that a green gate can be VACUOUS.** All five gates passed, and had
+to: `e2e.yml` sets `SENTRY_DISABLE_AUTO_UPLOAD` and **no gate runs `sentry.gradle`**, so the only
+consumer of `@sentry/cli` is never exercised. **Ask which gate would have to fail.**
+
+**#93 survived the check that killed #82:** `zod-validation-error@4.0.2` peer-requires
+`zod: ^3.25.0 || ^4.0.0` — genuinely **satisfied**, not merely unenforced.
+
+**#90 (RNTL 13→14) is OPEN and deliberately NOT ignored** — it replaces the `react-test-renderer`
+peer with `test-renderer@^1.0.0` and fails the whole `packages/ui` suite. A migration with a named
+scope, not a bump.
 
 **Merged:** #87 `da9e945` (Dependabot majors-only for actions) · #88 `652831d` (i18next 23→26 +
 react-i18next 15→17 as one increment) · #80 `715e2de` (supabase-js 2.111.0).
@@ -165,12 +184,6 @@ failing exactly three assertions with controls green. Main re-verified after the
 
 ## NEXT TASK
 
-0. **Extend the SDK-pin ignore list to `babel-preset-expo` and close #89**, using the two-sided
-   check. Then triage the rest of the new batch: **#90** `@testing-library/react-native` 13→14 (the
-   package whose `ensure-peer-deps.js` asserts `react-test-renderer === react` exactly — see #75) ·
-   **#91** `@sentry/cli` 2→3 (declared in #79 specifically to fix pnpm resolution for
-   `sentry.gradle`) · **#92** `@babel/core` 7→8 · **#93** `zod` 3→4 (`packages/api` contracts and
-   the OpenAPI conformance test).
 1. **Confirm events arrive in the Sentry dashboard**, then set `panchangpal-mobile` alert rules to
    `environment:production` so CI `preview` runs do not page.
 2. **B4.4** — §7.2 SLO dashboards + alerts, proven by a deliberate trigger (§8.4: alerting never
@@ -178,6 +191,9 @@ failing exactly three assertions with controls green. Main re-verified after the
 3. **Owner:** ratify ADR-034 · rule on the §6.6 `preferences` conflict rule (shipped unratified as
    LWW) · decide whether to **SHA-pin all nine GitHub Actions**, which #87 records and deliberately
    left open as a security-posture call.
+4. **#90 (RNTL 14)** when the testing-infrastructure migration is wanted: add `test-renderer@^1.0.0`,
+   drop `react-test-renderer`, migrate the component tests across `packages/ui` and `apps/mobile`.
+   Not urgent; open rather than ignored because it is a wanted upgrade.
 
 ---
 
