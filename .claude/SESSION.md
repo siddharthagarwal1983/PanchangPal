@@ -99,6 +99,38 @@ populates in `packages/ui` (whole suite), and `renderHook` throws
 **`jest-expo` is SDK-pinned**, so this may not be cleanly fixable until an SDK upgrade ships a newer
 one — which would make #90 SDK-coupled after all. Worth confirming before anyone invests in it.
 
+# Two owner decisions ratified and implemented the same day
+
+| | |
+|---|---|
+| **ADR-035** — §6.6 `preferences` | ✅ Accepted `0083cab` — LWW on `local_ts`, per-column merge |
+| **ADR-034** — deletion audit | ✅ Accepted `a1208a0` — Alternative C, one-way digest |
+
+**Both ratifications exposed a defect in the thing being ratified.**
+
+**§6.6:** the documented LWW rule **was not implemented** — `resolvePreferences` was passed `null`,
+so its comparison could never fire, and the upsert was unguarded. Actual behaviour was
+last-drain-wins with `updated_at` free to move backwards. Every existing test passed, because they
+called `resolvePreferences` directly. Fixed via `applyPreferences` (read → decide → write only on
+`applied`), pinned by sequencing tests; perturbing it back fails exactly 3 while all 16 pre-existing
+assertions still pass.
+
+**ADR-034:** a completed erasure left **no record at all**, while §5.1 named that record as the
+repudiation mitigation. Now `account_deletion_audit` — no FK to `app_user`, service-role only, a
+**frozen** `sha256(uuid::text)` digest so an operator can verify a specific claim without the table
+being a readable roster. `executed_at` retired with its unconditionally-true predicate.
+**Verified against a real Postgres 17** (`pgvector/pgvector:pg17`, the CI image): 23/23 pgTAP, whole
+DB suite clean, two perturbations. The **DR drill also passed**, so the table survives a
+backup/restore round trip with its RLS intact.
+
+⚠️ **A mistake worth carrying:** I rewrote `execute_account_deletion`'s body from memory rather than
+copying it, and paraphrased the F-3 check as `m.status = 'active'` when the column is `m.is_active`.
+plpgsql does not resolve columns until execution, and the sweep's per-user exception handler
+**swallowed the error** — so a typo presented as 20 of 23 assertions failing with nothing erased.
+**When replacing a `create or replace function`, copy the body verbatim and add only what is new.**
+
+**ADR-033 is now the only ADR still Proposed.**
+
 # Blockers
 
 1. ✅ **§6.6 `preferences` is RATIFIED (ADR-035, Accepted) — and the defect found while drafting it
