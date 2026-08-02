@@ -98,10 +98,30 @@ export class SyncRepository {
     if (Object.keys(row).length === 0) return;
 
     row.user_id = userId;
+    // Safe to stamp unconditionally: the caller decides via `resolvePreferences` and only reaches
+    // this method for a mutation that WINS, so `updated_at` cannot move backwards from here.
     row.updated_at = localTs;
 
     const { error } = await this.db.from('user_profile').upsert(row, { onConflict: 'user_id' });
     if (error) throw error;
+  }
+
+  /**
+   * The `updated_at` currently stored for this user's preferences, or `null` if there is no row.
+   *
+   * Exists so the sync handler can apply §6.6's last-writer-wins rule (ADR-035) BEFORE writing.
+   * Until 2026-08-02 the handler passed `null` here, which made `resolvePreferences` return
+   * `applied` unconditionally and reduced the rule to last-drain-wins — a documented control that
+   * nothing implemented.
+   */
+  async getPreferencesUpdatedAt(userId: string): Promise<string | null> {
+    const { data, error } = await this.db
+      .from('user_profile')
+      .select('updated_at')
+      .eq('user_id', userId)
+      .maybeSingle();
+    if (error) throw error;
+    return (data?.updated_at as string | undefined) ?? null;
   }
 
   async getPanchangCache(cacheKey: string): Promise<Record<string, unknown> | null> {

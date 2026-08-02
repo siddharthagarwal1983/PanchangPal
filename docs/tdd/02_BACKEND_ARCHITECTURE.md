@@ -622,7 +622,7 @@ SQL migrations in `apps/backend/migrations` (timestamped, forward-only), applied
 Transactional in `SVC_account.merge` (§4.3, §5.1): reassign `user_id`/`owner_id` from anon uid → auth uid across owned tables; resolve household/streak/history conflicts by union / longer-streak; single active household preserved (`F-2`); emit `EVT_045`.
 
 ## 6.6 Offline sync & conflict resolution (`ERR_SYNC_CONFLICT`)
-Per-kind rules (Part 1 §2.11 / §5.7): **daily completion** client-authoritative for its `local_date` (upsert-do-nothing); **checklist** union; **personal_date** last-writer-wins on `updated_at` with tombstones (`deleted_at`); **streak** derived server-side from completions (never client-set directly) so it can't be gamed. Idempotency via `client_id` + unique constraints.
+Per-kind rules (Part 1 §2.11 / §5.7): **daily completion** client-authoritative for its `local_date` (upsert-do-nothing); **checklist** union; **personal_date** last-writer-wins on `updated_at` with tombstones (`deleted_at`); **preferences** last-writer-wins on the client's `local_ts`, applied as a **per-column merge** — only fields present in the mutation are written, so two devices editing different settings do not clobber one another (ADR-035, ratified 2026-08-02; `resolvePreferences` is the single point of decision, and a losing mutation is reported `superseded` and never written, so `updated_at` cannot move backwards); **streak** derived server-side from completions (never client-set directly) so it can't be gamed. Idempotency via `client_id` + unique constraints.
 
 ## 6.7 Backups & DR
 Supabase PITR (daily) → RPO ≤ 24 h, RTO ≤ 4 h (Part 1 NFR-15); migration + restore runbook in TDD Part 5. Content corpus and seed are reproducible from the repo.

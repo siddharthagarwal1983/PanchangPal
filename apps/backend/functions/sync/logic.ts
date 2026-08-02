@@ -80,6 +80,45 @@ export function resolvePreferences(
   return { client_id: incoming.client_id, resolution: 'applied' };
 }
 
+/**
+ * The narrow slice of the repository `applyPreferences` needs. Declared here rather than importing
+ * `SyncRepository` so the sequencing can be tested with a fake, which is the whole point of it.
+ */
+export interface PreferencesStore {
+  getPreferencesUpdatedAt(userId: string): Promise<string | null>;
+  updatePreferences(
+    userId: string,
+    payload: Record<string, unknown>,
+    localTs: string,
+  ): Promise<void>;
+}
+
+/**
+ * Read the stored timestamp, decide with `resolvePreferences`, and write ONLY if the mutation wins.
+ *
+ * ⚠️ **THIS SEQUENCE IS THE THING THAT WAS BROKEN.** Until 2026-08-02 the handler called
+ * `resolvePreferences(m, null)` and then wrote unconditionally, so the comparison could never fire
+ * and §6.6's rule was really last-drain-wins — with `updated_at` free to move backwards. Every
+ * existing test passed, because they called `resolvePreferences` directly and nothing exercised the
+ * handler's use of it.
+ *
+ * It lives here, separately from the handler, so a fake store can assert the ORDERING: that a stale
+ * mutation is reported `superseded` **and never reaches the write**. A test that only checks the
+ * returned resolution would have passed against the defect.
+ */
+export async function applyPreferences(
+  store: PreferencesStore,
+  userId: string,
+  m: Mutation,
+): Promise<ConflictResult> {
+  const existingUpdatedAt = await store.getPreferencesUpdatedAt(userId);
+  const outcome = resolvePreferences(m, existingUpdatedAt);
+  if (outcome.resolution === 'applied') {
+    await store.updatePreferences(userId, m.payload as Record<string, unknown>, m.local_ts);
+  }
+  return outcome;
+}
+
 /** Longer streak wins (used by anon→auth merge and cross-device reconcile). */
 export function reconcileStreak(a: number, b: number): number {
   return Math.max(a, b);
