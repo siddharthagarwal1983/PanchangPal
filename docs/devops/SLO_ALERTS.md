@@ -163,9 +163,12 @@ allow-list is now anonymously readable, naming `x-revenuecat-signature` and
 1. **Create the Sentry Uptime monitor** against the deployed URL, alerting **to an explicit Member**
    — the recipient mistake from §8 applies here too, and would fail the same silent way.
    ⚠️ Blocked until `panchangpal-edge` has seen an event: Sentry populates the required Environment
-   field from observed events, and that project has none, because `SENTRY_DSN` is a **Supabase Edge
-   Secret** that had never been set (`preflight.sh` treats it as optional on staging, and the GitHub
-   copy is a gate only — it does not reach the runtime).
+   field from observed events, and that project had none.
+   **Not because the DSN was missing — it was set on 2026-08-01.** An earlier version of this
+   document said otherwise and was wrong. The project was empty for a simpler reason: **no Edge
+   error had ever been triggered.** Telemetry fires only at `errorResponse()`, so a backend with no
+   server failures produces no events, exactly as designed. "Unverified" and "broken" look identical
+   from an empty dashboard, and only one of them was true.
 2. **Prove it** the way NFR-06 was proven: not by seeing a 200, but by making it go **red** and
    watching an email arrive. Until then this row is an instrument, not an SLO.
 

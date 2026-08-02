@@ -116,12 +116,15 @@ A DSN is **publishable** (write-only ingest), which is why the matrix classes bo
 ⚠️ **A DSN alone is not enough — set `SENTRY_ENVIRONMENT` on the same project.** `_shared/http.ts`
 defaults it to `production`, so a staging project with only a DSN reports **staging errors as
 production**: they land in the same bucket real incidents will, and any alert scoped to
-`environment:production` fires on staging traffic. Found 2026-08-02, immediately after the edge DSN
-was first provisioned, and it is the identical defect PR #98 fixed on the mobile side — where CI
+`environment:production` fires on staging traffic. Found 2026-08-02, the first time an Edge error was
+ever deliberately triggered — the DSN had been in place since 2026-08-01, so nothing was broken;
+there had simply never been a server failure to report. It is the identical defect PR #98 fixed on
+the mobile side — where CI
 builds reported as production because the environment was derived from a value only EAS Build sets.
 
-It stayed hidden because `panchangpal-edge` had never received a single event: **you cannot notice a
-mislabelled environment in a project with no data.** Set the variable on every project, production
+It stayed hidden because `panchangpal-edge` had never received a single event — **you cannot notice
+a mislabelled environment in a project with no data**, and an empty dashboard looks the same whether
+telemetry is broken or merely unexercised. Set the variable on every project, production
 included — relying on the default being right is how the mobile side went wrong.
 
 ⚠️ **The two Sentry projects use different names for the same tier, and that is deliberate.** Mobile
