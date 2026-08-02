@@ -168,30 +168,34 @@ plpgsql does not resolve columns until execution, and the sweep's per-user excep
    least surface it as 503.
 6. Paid Supabase (~$25/mo, NFR-15) · ADR-034 ratification · Apple $99 + Play $25 · JDK 17 locally.
 
-# ⛔ NODE 20 IS END-OF-LIFE — verified 2026-08-02
+# ✅ NODE 20 → 22 DONE — it was end-of-life, and nothing was watching
 
-Checked against `nodejs/Release/schedule.json`, the authoritative source, not assumed:
+Verified against `nodejs/Release/schedule.json` rather than assumed: **Node 20 reached EOL on
+2026-04-30**, and every workflow still pinned `20.11.0` on 2026-08-02. **CI ran an unsupported
+runtime for three months with every gate green**, because no gate asks that question.
 
-| Version | Status as of 2026-08-02 | EOL |
-|---|---|---|
-| **v20** | ⛔ **END OF LIFE since 2026-04-30** | past |
-| v22 | Maintenance — critical fixes only | 2027-04-30 |
-| **v24** | ✅ Active LTS | 2028-04-30 |
+Merged as **`f5c018c`**. `NODE_VERSION` in `ci.yml`/`e2e.yml`/`release-build.yml`, `cd.yml`'s
+hardcoded pin, `engines.node >=22.13.0` and `@types/node ^22.20.1` all moved together —
+`types-node-matches-engine.test.ts` enforces exactly that.
 
-**Every workflow pins `NODE_VERSION: '20.11.0'` and `engines.node` is `>=20.11.0`.** CI has been
-running an unsupported runtime for three months, receiving no security patches. This is no longer an
-RNTL-14 convenience item; it is security hygiene with a deadline that has already passed.
+**Verified as a runtime change, not on unit tests:** E2E on a **native Android build** — 6/6 flows —
+with **MMKV's Nitro bindings loading natively and no memory fallback**, which is the seam a
+toolchain change degrades silently (mmkv v2 cost a week that way, and `expo export` cannot see it).
+CD then applied migrations and deployed all eight Edge Functions on main under Node 22.
 
-**Recommended target: Node 22, not 24**, despite 24 being Active LTS with twice the runway.
-`expo@54.0.36` depends on `@types/node ^22.14.0`, which is good evidence SDK 54 was developed against
-Node 22 — and the whole build toolchain is SDK-pinned (`jest-expo`, `babel-preset-expo`,
-`@expo/metro-runtime`), a class this repo has been bitten by four times. Node 24 belongs with the
-next SDK upgrade, where the toolchain moves and is validated together.
+**22, not Active-LTS 24, deliberately.** `expo@54.0.36` depends on `@types/node ^22.14.0`, so SDK 54
+was built against 22, and the toolchain is SDK-pinned (`jest-expo`, `babel-preset-expo`,
+`@expo/metro-runtime`) — betting against SDK pins has failed four times here. This buys ~9 months
+(22 EOL 2027-04-30); **Node 24 belongs with the SDK 55 upgrade.**
 
-**What moves together:** `NODE_VERSION` in every workflow · `engines.node` · `@types/node`.
-`apps/backend/tests/toolchain/types-node-matches-engine.test.ts` now *enforces* that, so this is one
-coherent change rather than drift. Validate it like an SDK change — native build plus the six Maestro
-flows. It also unblocks **#90** (RNTL 14 requires `^22.13.0 || >=24`).
+⚠️ **Two guard gaps this exposed, both now closed.** `cd.yml` hardcoded `node-version: 20.11.0` on
+the step rather than reading the env var, and the guard matched only `NODE_VERSION:` — *the drift the
+test existed to prevent was hiding inside the test*. And nothing asserted that the engine floor is a
+supported major, which is how three months passed unnoticed. Both are now asserted, the first
+perturbation-proven.
+
+**Also unblocked: #90 (RNTL 14)**, whose only blocker was `engines: node ^22.13.0 || >=24`. Bounded:
+41 call sites across 14 files, codemods shipped.
 
 # Recommended next task
 
