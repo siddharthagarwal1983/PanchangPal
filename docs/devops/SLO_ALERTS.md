@@ -427,12 +427,36 @@ incident of that kind pages nobody.** It is the inverse of alert fatigue — not
 looks wrong, and the alert simply does not arrive. For a solo operator with no second pair of eyes,
 that is a plausible way to miss an outage entirely.
 
-**Two rules follow:**
+⛔ **AND A METRIC-MONITOR ISSUE CANNOT BE CLEARED BY HAND.** Verified in the UI on both
+`PANCHANGPAL-MOBILE-4` and `-5`: there is **no Resolve button** and **Delete is disabled**. The only
+actions offered are *Archive* (which mutes — strictly worse), *Mark reviewed*, and *Bookmark*. The
+sidebar says why: *"This issue was created by a metric monitor."* Its lifecycle belongs to the
+monitor, not the operator. (A regular error issue, e.g. `PANCHANGPAL-EDGE-2`, does offer Resolve —
+the two issue types differ.) Sentry's public docs do not cover this; it was established from the
+product UI.
 
-1. **Resolve issues, including drill issues.** A synthetic issue left open is not untidiness; it is a
-   disabled alert. Resolve — never *archive*, which mutes notifications outright.
-2. **A silent alert is not evidence the threshold held.** Before concluding a metric is healthy,
-   check whether its issue is already open.
+**It resolves only on a HEALTHY READING** — the monitor's own config says *"Issue will be resolved
+when the query value is above or equal to 99.8%"*. Not on time passing, and not on the offending data
+ageing out.
+
+**Which produces a launch-day trap.** Pre-launch this is harmless: there is no production traffic, so
+a suppressed alert has nothing to suppress. But the issue closes only when a healthy value arrives —
+so **if the first real traffic is itself unhealthy (a bad launch build), the metric never recovers,
+the drill issue never closes, and the alert for a genuine incident never fires.** The suppression
+outlasts exactly the period in which it was safe.
+
+**The only lever is to RECREATE THE MONITOR**, which starts it with no open issue. That is what
+accidentally happened to the original NFR-06 monitor (`7968827`), and the replacement fired cleanly
+on its next drill. Recreating now would not help — a fresh monitor returns to the same state after
+one drill — so this belongs on the **pre-launch checklist**, not in today's work.
+
+**Three rules follow:**
+
+1. **Before launch, confirm no metric monitor has an open issue.** If one does, recreate the monitor.
+   Do not archive; archiving mutes.
+2. **A silent alert is not evidence the threshold held.** Check whether the issue is already open.
+3. **Prefer error-issue drills where a choice exists** — those can be resolved by hand, so they leave
+   no residue. A metric-monitor drill cannot be cleaned up.
 
 **Still untested rather than disproven: whether one degradation pages twice.** NFR-06 and NFR-07 are
 separate monitors with separate issues, so both *should* fire when neither has an open period — the

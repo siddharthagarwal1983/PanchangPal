@@ -494,6 +494,14 @@ Stable, cross-cutting facts (permanent until an approved decision changes them):
   open. It is the inverse of alert fatigue: nothing looks wrong, and the alert simply does not
   arrive. **Resolve issues, including drill issues — never ARCHIVE, which mutes outright.** And a
   silent alert is not evidence the threshold held; check whether the issue is already open.
+  ⛔ **AND A METRIC-MONITOR ISSUE CANNOT BE CLEARED BY HAND** — no Resolve button, Delete disabled;
+  only Archive (which mutes), Mark reviewed, Bookmark. Its lifecycle belongs to the monitor, and it
+  closes **only on a healthy reading** (`>= 99.8%`), never on time passing or on the bad data ageing
+  out. Regular ERROR issues do offer Resolve; the two types differ. **The only lever is to recreate
+  the monitor.** Harmless pre-launch — no traffic means nothing to suppress — but it becomes a
+  launch-day trap: if the FIRST real traffic is unhealthy, the metric never recovers, the drill issue
+  never closes, and a genuine incident never pages. **Pre-launch checklist: confirm no metric monitor
+  has an open issue.**
   **`scripts/slo-alert-drill.mjs`** makes the crash-free drill repeatable, guarded behind `--confirm`
   because it writes unremovable synthetic crashes into production session data — cheap before launch,
   permanently expensive after.
