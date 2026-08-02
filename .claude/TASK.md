@@ -111,6 +111,58 @@ green in CI on a real native build. Canonical progress 0% → 13% (1 of 8 Beta s
 # Current Task
 
 ## Title
+✅ **RNTL 13 → 14 MIGRATED, AND THE TRACKING DOCS RECONCILED.** Branch
+`chore/rntl-14-migration`, commit **`9942763`** — **not merged, no PR opened.**
+
+**Progress unchanged at 50%.** Neither piece advances a Beta slice.
+
+### What the migration actually was
+
+**Not the renderer swap — the API went ASYNC.** `render`, `renderHook`, `fireEvent`, `act`,
+`rerender` and `unmount` all return Promises (React 19's rendering model); queries stay sync. The
+version bump alone failed all 33 `packages/ui` tests with "`render` function has not been called",
+because `screen` is populated only after the awaits resolve. 11 test files migrated; **no behaviour
+changed and no test was dropped** — counts are identical to a baseline taken before any edit.
+
+⚠️ **`test-renderer` is pinned at 1.1.0, and the constraint is two levels down:**
+
+```
+test-renderer@1.1.0 -> react-reconciler@~0.32.0 -> peer react ^19.1.0   satisfied
+test-renderer@1.2.0 -> react-reconciler@~0.33.0 -> peer react ^19.2.0   NOT satisfiable
+```
+
+`react` is pinned at exactly 19.1.0 (RN 0.81.5's Fabric renderer is hardcoded to it). **RNTL's own
+peer is only `^1.0.0`, so 1.2.0 is peer-LEGAL** and Dependabot has every reason to propose it —
+**pnpm would record the unmet transitive peer and install anyway**, green, with a reconciler built for
+a React the app does not run. **Read the reconciler's peer, not RNTL's.** Ignored in
+`.github/dependabot.yml` with the evidence inline. **Sixth pinning mechanism, and the first where the
+constraint lives in a transitive dependency's peer rather than anywhere in our own graph** — neither
+side of the two-sided SDK check reports it.
+
+`react-test-renderer` remains in the tree via **`jest-expo@54.0.17`'s direct dependency**. Expected;
+it is simply no longer what RNTL renders with, and it was never declared by us.
+
+### The docs half
+
+The SLO count drift was **two merged denominators, not a stale number**: §7.2 names seven and
+**NFR-07 is not among them** (Part 1 §8 NFR table), so both figures in circulation were correct.
+Fixed by making the distinction explicit in six documents. Three further staleness items corrected —
+`SLO_ALERTS.md`'s header describing its own pre-drill-2 state, ADR-034 recorded as Proposed, and
+DECISIONS.md calling the §6.6 rule UNRATIFIED and the SDK 54 set "complete".
+
+### Verified
+
+ui **33/33** · mobile **424/424** (both identical to baseline) · vitest 144 (+2 skipped) · tsc 11/11 ·
+eslint 0 errors · `expo export` both platforms · **one perturbation** — dropping a single
+`await wrap(...)` fails exactly those 3 tests and no others.
+
+**Not done, and stated:** no native build, no Maestro run. Test infrastructure only; `test-renderer`
+never reaches the shipped bundle.
+
+---
+
+## Superseded — the task as scoped at the start
+
 🚧 **RNTL 13 → 14 — the testing-infrastructure migration (`@testing-library/react-native`).**
 
 **Progress stays at 50%.** This advances no Beta slice; it is testing infrastructure, in the same
@@ -184,8 +236,15 @@ unproven, none unfinished engineering: three behind the Ask Guru gate, one behin
 config~~ ✅ merged (#102) · ~~#97 zustand 5~~ ✅ merged · ~~#95~~ closed.
 **ADR-033 (Canonical Panchang Computation Engine) is now the only Proposed ADR.**
 
-1. **B1 / B3 remainders** — all owner-gated on money or a store account.
-2. **Owner decisions still open:** **NFR-10's path** (a PDD §11 taxonomy addition vs a server metrics
+1. **Open a PR for `9942763` and dispatch one E2E run.** Test infrastructure only — no app code, and
+   `test-renderer` never reaches the bundle — so this is judgement rather than ceremony. E2E runs
+   SEQUENTIALLY per ref; do not dispatch a batch.
+2. **B1 / B3 remainders** — all owner-gated on money or a store account.
+3. ⚠️ **Named rather than fixed: `.github/dependabot.yml`'s `@types/node` block cites
+   `NODE_VERSION: '20.11.0'` and `engines.node: >=20.11.0`, both stale after #106 moved CI to
+   22.23.2.** That block's own rule is that the types follow the engine floor **deliberately**, so
+   raising them 20 → 22 is an owner call, not a silent edit.
+4. **Owner decisions still open:** **NFR-10's path** (a PDD §11 taxonomy addition vs a server metrics
    sink — no sync event exists and inventing one is forbidden) · **SHA-pin the nine GitHub Actions**
    (#87 records the case and deliberately left it open) · **~$25/mo paid Supabase** for NFR-15 PITR,
    a stated launch blocker · **Apple $99 + Play $25**.

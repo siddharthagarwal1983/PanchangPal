@@ -1603,9 +1603,18 @@ its dependency graph.
 Scanning the manifest against every declared dependency found exactly those two gaps, so the SDK 54
 set is complete rather than awaiting a fourth instalment.
 
+> ⛔ **"COMPLETE" WAS FALSIFIED WITHIN A WEEK — by #89 (`babel-preset-expo` 54.0.12 → 57.0.5).**
+> `bundledNativeModules.json` lists **NATIVE** modules, so it is authoritative in ONE DIRECTION only:
+> a hit means SDK-pinned, and a miss means nothing. SDK-pinned *build* packages never appear in it.
+> **The check is two-sided** — the manifest, PLUS `expo`'s own dependency ranges
+> (`require('expo/package.json').dependencies['<pkg>']`; a tilde or caret range there is an SDK pin).
+> Two further packages are pinned by mechanisms NEITHER side reports: `@babel/core` (transitive
+> babel-7 plugin family, no declared peer anywhere) and `@sentry/cli` (vendored exact version).
+> See PROJECT_MEMORY for the full list; the count of mechanisms is now six.
+
 ---
 
-# 2026-08-02 — `preferences` sync uses last-writer-wins ⚠️ UNRATIFIED
+# 2026-08-02 — `preferences` sync uses last-writer-wins ✅ RATIFIED as ADR-035
 
 TDD Part 2 §6.6 defines conflict rules for `ritual_complete`, `checklist` and `personal_date` and
 says nothing about `preferences`. `resolvePreferences` adopts **`personal_date`'s last-writer-wins
@@ -1616,5 +1625,37 @@ change at all, and the latter would make the first tradition a user ever picked 
 rather than server-receipt time, matching `personal_date`, because the client's clock is what orders
 two of the user's own offline edits.
 
-**The TDD owes a ruling, and `resolvePreferences` is the only place a different one lands.** Recorded
-here rather than left implicit because it shipped in merged code.
+**The TDD owed a ruling, and `resolvePreferences` was the only place a different one would land.**
+Recorded here rather than left implicit because it shipped in merged code.
+
+✅ **Ratified as ADR-035 (#103), and implementing it found that the rule had never actually run** —
+`resolvePreferences` was being passed `null`, so the comparison could not fire. Every existing test
+passed. A documented rule with no reachable code path is the milestone's signature defect again.
+
+---
+
+# 2026-08-02 — `test-renderer` is pinned by the REACT MINOR, and the pin lives two levels down
+
+RNTL 14 replaced the `react-test-renderer` peer with `test-renderer@^1.0.0`. That range is not the
+constraint; the reconciler underneath it is:
+
+```
+test-renderer@1.1.0 -> react-reconciler@~0.32.0 -> peer react ^19.1.0   satisfied
+test-renderer@1.2.0 -> react-reconciler@~0.33.0 -> peer react ^19.2.0   NOT satisfiable
+```
+
+`react` is pinned at exactly **19.1.0** because react-native 0.81.5 ships a Fabric renderer hardcoded
+against React `"19.1.0"`. So **`test-renderer` moves only with `react`, which moves only with the
+SDK** — pinned at `1.1.0` in both `apps/mobile` and `packages/ui`, and ignored in
+`.github/dependabot.yml` with the evidence inline.
+
+**This is a SIXTH pinning mechanism, and the first where the constraint lives in a TRANSITIVE
+dependency's peer rather than anywhere in our own graph.** Neither side of the two-sided SDK check
+reports it: `test-renderer` is not in `bundledNativeModules.json` and is not an `expo` dependency.
+RNTL's own migration guide states the coupling directly (React 19.1 → test-renderer 1.1) and is the
+only place it is written down.
+
+⚠️ **1.2.0 is peer-LEGAL as far as RNTL is concerned**, so Dependabot has every reason to propose it
+and **pnpm would record the unmet transitive peer and install anyway** (the #82 mechanism). CI would
+be green with a reconciler built for a React the app does not run. **Read the reconciler's peer, not
+RNTL's.**

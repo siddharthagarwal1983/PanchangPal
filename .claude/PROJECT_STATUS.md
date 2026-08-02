@@ -449,6 +449,19 @@ prefs work today, so gating and prefs are real before the SDKs are wired.
 
 # Recently Completed
 
+- **Tracking docs reconciled + RNTL 13 → 14 (2026-08-02, `9942763` on `chore/rntl-14-migration`; not
+  merged).** **Progress unchanged at 50%** — neither advances a Beta slice.
+  The SLO drift was **two merged denominators, not a stale number**: TDD Part 5 §7.2 names seven and
+  **NFR-07 is not among them** (Part 1 §8 NFR table), so "two of the seven" and "three proven" are
+  both correct. Also corrected: `SLO_ALERTS.md`'s header describing its own pre-drill-2 state,
+  ADR-034 still recorded as Proposed, and DECISIONS.md still calling the §6.6 rule UNRATIFIED and the
+  SDK 54 pin set "complete".
+  RNTL 14's real breaking change is that **the API went async** (`render`/`renderHook`/`fireEvent`/
+  `act`/`rerender`/`unmount` return Promises), not the renderer swap; 11 test files migrated with
+  **identical test counts to the pre-change baseline** (ui 33, mobile 424). **`test-renderer` pinned
+  at 1.1.0** — 1.2.0's reconciler peer-requires react `^19.2.0` against the SDK-pinned exact 19.1.0,
+  and is **peer-legal as far as RNTL is concerned**, so pnpm would have installed it green under an
+  unmet transitive peer. Sixth pinning mechanism; first living in a transitive dependency's peer.
 - **The SDK-pinned dependency rule + ADR-034, merged as #78 (2026-07-28, `4fdaf10`).** All six gates
   green including the DR drill. Split out of the Sentry branch precisely so the verified half could
   land while the unverified half waits.

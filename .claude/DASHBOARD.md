@@ -114,6 +114,41 @@ CURRENT_MILESTONE.md
 
 # Current Task
 
+✅ **TRACKING DOCS RECONCILED · RNTL 13 → 14 MIGRATED.** Branch `chore/rntl-14-migration`,
+commit **`9942763`** — not merged, no PR opened. **Progress unchanged at 50%**; neither piece
+advances a Beta slice.
+
+**The SLO count had drifted, and both numbers were right.** SESSION.md said three proven; five other
+docs said two. **TDD Part 5 §7.2 names SEVEN and does not include NFR-07** — that is from the Part 1
+§8 NFR table. So "two of §7.2's seven" and "three SLOs proven" are both true, and the denominators had
+been silently merged. Fixed by making the distinction explicit rather than by picking a number.
+Also corrected: `SLO_ALERTS.md`'s own header still described the pre-drill-2 state and contradicted
+its §0 · ADR-034 still recorded as Proposed · DECISIONS.md still calling the §6.6 rule UNRATIFIED and
+the SDK 54 pin set "complete".
+
+**RNTL 14's breaking change is not the renderer swap — the API went ASYNC.** `render`, `renderHook`,
+`fireEvent`, `act`, `rerender` and `unmount` all return Promises now (React 19's rendering model);
+queries stay sync. The bump alone failed all 33 `packages/ui` tests with "`render` function has not
+been called". 11 test files migrated, no behaviour changed.
+
+⚠️ **`test-renderer` is pinned at 1.1.0, two levels down, and that is a SIXTH pinning mechanism.**
+1.2.0 → `react-reconciler@~0.33.0` → peer `react ^19.2.0`, against the SDK-pinned **exact 19.1.0**
+(react-native 0.81.5's Fabric renderer is hardcoded to it). **1.2.0 is peer-LEGAL as far as RNTL is
+concerned** — its own peer is only `^1.0.0` — so Dependabot would propose it and **pnpm would record
+the unmet transitive peer and install anyway**, green, with a reconciler built for a React the app
+does not run. Read the reconciler's peer, not RNTL's. Ignored in `dependabot.yml` with evidence.
+**First instance where the constraint lives in a transitive dependency's peer rather than anywhere in
+our own graph** — neither side of the two-sided SDK check reports it.
+
+**Verified:** ui **33/33**, mobile **424/424** — *identical to the baseline taken before any change*,
+so nothing was quietly dropped · vitest 144 · tsc 11/11 · eslint 0 errors · `expo export` both
+platforms · one perturbation failing exactly the right 3 tests. **No native build or Maestro run** —
+test infrastructure only, and `test-renderer` never reaches the bundle.
+
+---
+
+**Previously — B4.**
+
 ✅ **B4 — OBSERVABILITY IS CLOSED. 47% → 50%.** The first slice completed since B6 on 2026-07-27.
 
 **B4.4 delivered three SLOs that are PROVEN, not configured** — the distinction §8.4 exists to
@@ -909,6 +944,15 @@ Verified end-to-end. **PR #36 merged to main as `e1e10d4`**; the docs checkpoint
 (`45f1b0d`). Main's E2E is green again (run 30156615768). See TASK.md.
 
 # Today's Objective
+
+Session of 2026-08-02 (part 4). **Fix the tracking-doc drift, then migrate RNTL 14.** Outcome: both
+done on `chore/rntl-14-migration` (`9942763`), **progress unchanged at 50%**. The drift turned out not
+to be a stale number but two **merged denominators** — §7.2's seven versus the Part 1 §8 NFR table —
+so both figures in circulation were correct. RNTL 14's real cost is that the API went **async**, not
+the renderer swap; and its `test-renderer` peer is pinned by the **React minor two levels down**, a
+sixth pinning mechanism that no existing check reports. Next: open the PR, dispatch one E2E.
+
+---
 
 Session of 2026-08-02 (part 3). **Close B4.** Outcome: **B4 CLOSED at verifiable scope, 47% → 50%** —
 the first slice completed since B6. **Three SLOs proven end to end** by deliberate trigger (NFR-06 and
