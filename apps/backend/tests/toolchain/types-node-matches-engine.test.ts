@@ -36,15 +36,25 @@ function major(range: string): number {
   return Number(m[1]);
 }
 
-/** Every `NODE_VERSION:` pinned across the workflows. */
-function workflowNodeVersions(): string[] {
+/**
+ * Every Node version pinned across the workflows, in BOTH forms.
+ *
+ * ⚠️ An earlier version of this matched only `NODE_VERSION:` and therefore could not see
+ * `cd.yml`'s `node-version: 20.11.0`, which is hardcoded on the step rather than read from the env.
+ * That is precisely the drift this test exists to prevent, and it was hiding inside the test. A
+ * literal `node-version:` is now matched too; the `${{ env.NODE_VERSION }}` form is skipped, since
+ * it is not itself a pin.
+ */
+function workflowNodeVersions(): { file: string; version: string }[] {
   const dir = path.join(REPO_ROOT, '.github/workflows');
-  const found = new Set<string>();
+  const found: { file: string; version: string }[] = [];
   for (const file of readdirSync(dir).filter((f) => /\.ya?ml$/.test(f))) {
     const src = readFileSync(path.join(dir, file), 'utf8');
-    for (const m of src.matchAll(/^\s*NODE_VERSION:\s*'?([\d.]+)'?/gm)) found.add(m[1]);
+    for (const m of src.matchAll(/^\s*(?:NODE_VERSION|node-version):\s*'?([\d]+\.[\d.]+)'?\s*$/gm)) {
+      found.push({ file, version: m[1] });
+    }
   }
-  return [...found];
+  return found;
 }
 
 describe('@types/node tracks the runtime, not the newest release', () => {
@@ -66,15 +76,27 @@ describe('@types/node tracks the runtime, not the newest release', () => {
     ).toBe(major(engineRange!));
   });
 
-  it('matches every workflow NODE_VERSION to that same floor', () => {
+  it('matches every workflow Node pin to that same floor, in both pin forms', () => {
     // A CI runtime ahead of (or behind) the declared floor makes the floor fiction, and this test's
     // premise with it.
-    const versions = workflowNodeVersions();
-    expect(versions.length, 'no NODE_VERSION found in any workflow').toBeGreaterThan(0);
-    for (const v of versions) {
-      expect(major(v), `workflow NODE_VERSION ${v} disagrees with engines.node ${engineRange}`).toBe(
-        major(engineRange!),
-      );
+    const pins = workflowNodeVersions();
+    expect(pins.length, 'no Node version pin found in any workflow').toBeGreaterThan(0);
+    for (const { file, version } of pins) {
+      expect(
+        major(version),
+        `${file} pins Node ${version}, which disagrees with engines.node ${engineRange}`,
+      ).toBe(major(engineRange!));
     }
+  });
+
+  it('is not running an end-of-life Node major', () => {
+    // Node 20 reached EOL on 2026-04-30 and this repo was still pinned to 20.11.0 on 2026-08-02 —
+    // three months on an unsupported runtime, with the upgrade queued behind a test-library bump
+    // rather than treated as the security item it was. Verified against
+    // nodejs/Release/schedule.json; update this floor when 22 approaches its own EOL (2027-04-30).
+    expect(
+      major(engineRange!),
+      `Node ${major(engineRange!)} is end-of-life. Check nodejs/Release/schedule.json and upgrade.`,
+    ).toBeGreaterThanOrEqual(22);
   });
 });
