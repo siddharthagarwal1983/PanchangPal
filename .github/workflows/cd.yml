@@ -137,10 +137,16 @@ jobs:
       # Functions are declared in supabase/config.toml with explicit entrypoints
       # (sources live under apps/backend/functions). Deploy them by name so the CLI
       # uses those entrypoints + import maps rather than the empty default dir.
+      # ⚠️ THIS LIST IS HAND-MAINTAINED AND WILL DRIFT. Declaring a function in
+      # supabase/config.toml is NOT enough to deploy it — the CLI only deploys the names given
+      # here, so a new function silently stays undeployed while every doc says it shipped. That
+      # happened to `health` the moment it was added (caught before merge, 2026-08-02).
+      # `tests/rls/edge-function-deploy-list.test.ts` now compares this list against config.toml
+      # in both directions so the next one fails CI instead of shipping as a no-op.
       - name: Deploy Edge Functions
         run: |
           supabase functions deploy \
-            account ask-guru content-ingest notify-scheduler panchang revenuecat-webhook sync \
+            account ask-guru content-ingest health notify-scheduler panchang revenuecat-webhook sync \
             --project-ref "$SUPABASE_STAGING_REF"
         env:
           SUPABASE_STAGING_REF: ${{ secrets.SUPABASE_STAGING_REF }}
