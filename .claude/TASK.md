@@ -112,8 +112,15 @@ green in CI on a real native build. Canonical progress 0% → 13% (1 of 8 Beta s
 ## Title
 ✅ THE DEPENDENCY QUEUE IS EMPTY (2026-08-02, part 2) — THREE PRs MERGED, THREE CLOSED WITH EVIDENCE
 
-**Progress unchanged at 47%.** Dependency hygiene advances no Beta slice. The queue went from four
-open PRs to **zero**, and two of the four were not what they were filed as.
+**Progress unchanged at 47%.** Dependency hygiene advances no Beta slice. All four queued PRs are
+resolved and two were not what they were filed as.
+
+⛔ **"Zero open PRs" held for four minutes.** Dependabot re-ran on the new lockfile and opened five
+majors (#89–#93). **#89 `babel-preset-expo` 54.0.12 → 57.0.5 is a FOURTH LEAK of the SDK-pin rule** —
+pinned by `expo@54.0.36`'s own `~54.0.12` range, matched by no ignore pattern, and **not in
+`bundledNativeModules.json`, which lists native modules only.** That falsifies PROJECT_MEMORY's
+"the SDK 54 set is now complete"; the check is two-sided (manifest **plus** expo's own dependency
+ranges). Corrected in PROJECT_MEMORY. **#89–#93 are untriaged — start there.**
 
 **Merged:** #87 `da9e945` (Dependabot majors-only for actions) · #88 `652831d` (i18next 23→26 +
 react-i18next 15→17 as one increment) · #80 `715e2de` (supabase-js 2.111.0).
@@ -158,6 +165,12 @@ failing exactly three assertions with controls green. Main re-verified after the
 
 ## NEXT TASK
 
+0. **Extend the SDK-pin ignore list to `babel-preset-expo` and close #89**, using the two-sided
+   check. Then triage the rest of the new batch: **#90** `@testing-library/react-native` 13→14 (the
+   package whose `ensure-peer-deps.js` asserts `react-test-renderer === react` exactly — see #75) ·
+   **#91** `@sentry/cli` 2→3 (declared in #79 specifically to fix pnpm resolution for
+   `sentry.gradle`) · **#92** `@babel/core` 7→8 · **#93** `zod` 3→4 (`packages/api` contracts and
+   the OpenAPI conformance test).
 1. **Confirm events arrive in the Sentry dashboard**, then set `panchangpal-mobile` alert rules to
    `environment:production` so CI `preview` runs do not page.
 2. **B4.4** — §7.2 SLO dashboards + alerts, proven by a deliberate trigger (§8.4: alerting never

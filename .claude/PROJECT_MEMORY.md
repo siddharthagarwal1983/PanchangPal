@@ -568,8 +568,21 @@ Stable, cross-cutting facts (permanent until an approved decision changes them):
   jest 29 family: `@jest/globals`, `babel-jest`, `jest-environment-jsdom`, `jest-snapshot`, all
   `^29.2.1`). **#63 spent two weeks triaged as "red for its own unrelated reasons"** because it was
   classified from its red CI rather than its dependency graph — the exact mistake #78 documented.
-  Scanning the manifest against every declared dependency found those two gaps and no others, so the
-  SDK 54 set is now complete.
+  Scanning the manifest against every declared dependency found those two gaps and no others.
+  ⛔ **"SO THE SDK 54 SET IS NOW COMPLETE" WAS WRONG, AND WAS FALSIFIED WITHIN A WEEK** (2026-08-02,
+  by PR #89 proposing `babel-preset-expo` 54.0.12 → **57.0.5**). **`bundledNativeModules.json` lists
+  NATIVE modules.** It is authoritative in one direction only — a hit means SDK-pinned — and says
+  nothing about SDK-pinned **build** packages, which are not native and never appear in it.
+  `babel-preset-expo` is pinned by **`expo@54.0.36`'s own direct dependency range, `~54.0.12`**, and
+  its majors track SDK majors exactly as `@expo/metro-runtime`'s do. It is not in the manifest, and
+  no ignore pattern matches it — `expo-*` does not match a `babel-preset-` prefix, the same shape as
+  the `@expo/` and `@react-native-community/` misses. **Fourth leak of this rule.**
+  So the check is **two-sided**: the manifest for native modules, plus
+  `node -e "console.log(require('expo/package.json').dependencies['<pkg>'])"` for anything the SDK
+  itself depends on. A tilde or caret range there is an SDK pin.
+  That `babel-preset-expo` is the leak is pointed: it is one of the two undeclared transitive
+  dependencies that broke bundling during the Execution Gap, which is why this file already says it
+  **gets extra care, not less**.
   `react`, `@types/react`, `@expo/*` and `@babel/runtime` are pinned by the SDK exactly
   as `expo`, `expo-*`, `react-native` and `react-native-*` are; all eight are ignored in
   `.github/dependabot.yml` and move ONLY with a deliberate SDK upgrade via `expo install --fix`,

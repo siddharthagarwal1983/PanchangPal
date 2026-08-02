@@ -5,8 +5,13 @@
 Version: 5.1.0
 Last Updated: 2026-08-02 (part 2 — the dependency queue is empty; three PRs merged; 47%)
 
-**Progress unchanged at 47%** — dependency hygiene advances no Beta slice. What changed is that the
-queue is now **zero open PRs**, and two of the four items in it were not what they were filed as.
+**Progress unchanged at 47%** — dependency hygiene advances no Beta slice. All four queued PRs are
+resolved, and two of the four were not what they were filed as.
+
+⛔ **"THE QUEUE IS EMPTY" WAS TRUE FOR FOUR MINUTES.** Dependabot re-ran against the new lockfile the
+moment the merges landed and opened **five fresh majors** (#89–#93) at 05:29–05:31 — majors are not
+in the `production-minor` group, so they arrive individually. The claim is corrected here rather than
+left standing. **One of them is a real finding: see "A fourth leak" below.**
 
 ---
 
@@ -66,6 +71,28 @@ exactly three assertions, controls green. Main re-verified green after all three
 ⚠️ **One E2E sample each, not a verdict.** Main's suite is no longer the ~50% race it was before #84,
 so a single 6/6 is meaningful — but the corrected re-run heuristic says one sample cannot rule out a
 low-rate flake.
+
+# A fourth leak of the SDK-pin rule, and a correction to permanent memory
+
+**#89 proposes `babel-preset-expo` 54.0.12 → 57.0.5.** That is SDK 57's line — majors track SDK
+majors, exactly as `@expo/metro-runtime`'s do. It is pinned by **`expo@54.0.36`'s own direct
+dependency range, `~54.0.12`**, and **no ignore pattern matches it** (`expo-*` does not match a
+`babel-preset-` prefix — the same shape as the `@expo/` and `@react-native-community/` misses).
+
+**It falsifies a claim this repo recorded a week ago.** PROJECT_MEMORY said scanning
+`bundledNativeModules.json` "found those two gaps and no others, so the SDK 54 set is now complete."
+**The manifest lists NATIVE modules.** It is authoritative in one direction only — a hit means
+SDK-pinned — and says nothing about SDK-pinned *build* packages, which never appear in it. The check
+is two-sided: the manifest, **plus** `expo`'s own dependency ranges. Corrected in PROJECT_MEMORY.
+
+That `babel-preset-expo` is the leak is pointed: it is one of the two undeclared transitive
+dependencies that broke bundling during the Execution Gap, and the dependabot config already says it
+**gets extra care, not less**.
+
+**The rest of the new batch, untriaged:** #90 `@testing-library/react-native` 13→14 (the package
+whose `ensure-peer-deps.js` asserts `react-test-renderer === react` exactly — see #75) · #91
+`@sentry/cli` 2→3 (declared in #79 specifically to fix pnpm resolution for `sentry.gradle`) · #92
+`@babel/core` 7→8 · #93 `zod` 3→4 (`packages/api` contracts, and the OpenAPI conformance test).
 
 # Blockers
 

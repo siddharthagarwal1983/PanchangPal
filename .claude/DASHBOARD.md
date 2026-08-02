@@ -92,7 +92,14 @@ CURRENT_MILESTONE.md
 
 # Current Task
 
-✅ **THE DEPENDENCY QUEUE IS EMPTY — THREE PRs MERGED, THREE CLOSED WITH EVIDENCE.**
+✅ **ALL FOUR QUEUED DEPENDENCY PRs RESOLVED — THREE MERGED, THREE CLOSED WITH EVIDENCE.**
+⛔ **But "the queue is empty" was true for four minutes**: Dependabot re-ran against the new lockfile
+and opened **five fresh majors (#89–#93)**, one of which is a **fourth leak of the SDK-pin rule** —
+**#89 `babel-preset-expo` 54.0.12 → 57.0.5**, pinned by `expo@54.0.36`'s own `~54.0.12` range and
+matched by no ignore pattern. **It falsifies PROJECT_MEMORY's claim that the SDK 54 set was
+"complete"**: `bundledNativeModules.json` lists NATIVE modules and is authoritative in one direction
+only, so SDK-pinned *build* packages never appear in it. Corrected in PROJECT_MEMORY; #89–#93 are
+untriaged.
 Merged: **#87** `da9e945` (Dependabot majors-only for actions) · **#88** `652831d` (i18next 23→26 +
 react-i18next 15→17 as **one** increment) · **#80** `715e2de` (supabase-js 2.111.0). Closed: #83,
 #82, #62. **Progress unchanged at 47%** — dependency hygiene advances no Beta slice.
