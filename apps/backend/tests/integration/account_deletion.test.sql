@@ -14,7 +14,7 @@
 -- =============================================================================
 
 begin;
-select plan(17);
+select plan(23);
 create extension if not exists pgtap;
 
 -- ---- Fixtures ---------------------------------------------------------------
@@ -138,6 +138,58 @@ select is(
 select is(
   (select count(*)::int from auth.users where id='dd000000-0000-0000-0000-00000000000d'), 1,
   'a request inside its grace window is not executed early'
+);
+
+-- ---- 18-23. ADR-034: the audit OUTLIVES the erasure it records -------------
+-- The whole point. `account_deletion` cascades away with its subject, so before ADR-034 a completed
+-- erasure left no record at all — while TDD Part 5 §5.1 names that record as the repudiation
+-- mitigation. These assert the audit exists, is a DIGEST rather than an identifier, and carries no
+-- recovered content.
+
+select is(
+  (select count(*)::int from account_deletion_audit
+     where subject_digest = account_deletion_subject_digest('da000000-0000-0000-0000-00000000000a')),
+  1,
+  'a completed erasure leaves exactly one audit row, keyed by the digest of its subject'
+);
+
+select is(
+  (select count(*)::int from account_deletion where user_id='da000000-0000-0000-0000-00000000000a'),
+  0,
+  'the REQUEST row is gone — the audit survives an erasure that destroyed its own source'
+);
+
+-- The digest must not be the identifier. Asserting on CONTENT rather than on the column name,
+-- because the same class of mistake as "assert a deletion by user_id" is available here: a column
+-- called subject_digest that happens to hold a uuid would pass a name-based check.
+select ok(
+  (select subject_digest from account_deletion_audit
+     where subject_digest = account_deletion_subject_digest('da000000-0000-0000-0000-00000000000a'))
+    <> 'da000000-0000-0000-0000-00000000000a',
+  'the stored value is NOT the raw uid (ADR-034 chose the digest over Alternative B)'
+);
+
+select ok(
+  (select subject_digest from account_deletion_audit
+     where subject_digest = account_deletion_subject_digest('da000000-0000-0000-0000-00000000000a'))
+    ~ '^[0-9a-f]{64}$',
+  'the stored value is a 64-char hex sha256 digest, the frozen construction ADR-034 specifies'
+);
+
+-- Verification is the operation a repudiation dispute needs: digest the uid the claimant supplies
+-- and look it up. A uid that was never erased must NOT match.
+select is(
+  (select count(*)::int from account_deletion_audit
+     where subject_digest = account_deletion_subject_digest('dc000000-0000-0000-0000-00000000000c')),
+  0,
+  'a user who was NOT erased has no audit row — the record can refute a claim as well as confirm one'
+);
+
+-- The grace window is evidenced, which is the other half of what §5.1 asks the record to prove.
+select ok(
+  (select requested_at is not null from account_deletion_audit
+     where subject_digest = account_deletion_subject_digest('da000000-0000-0000-0000-00000000000a')),
+  'the audit carries requested_at, captured before the request row cascaded away'
 );
 
 select * from finish();

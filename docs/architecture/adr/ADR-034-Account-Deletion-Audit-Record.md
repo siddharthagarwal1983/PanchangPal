@@ -1,10 +1,15 @@
 # ADR-034 — Account-Deletion Audit Record
 
-**Status:** Proposed
-**Date:** 2026-07-28
+**Status:** Accepted
+**Date:** 2026-07-28 (proposed) · **2026-08-02 (ratified: Alternative C)**
 **Decision Owner:** Security / Privacy (with Legal sign-off on the retention question)
 
-> This ADR opens a decision the TDD owes. It is **Proposed**, not Accepted. It settles the part
+> ✅ **RATIFIED 2026-08-02 — Alternative C, a one-way digest of the subject.** Implemented in
+> `20260802000130_account_deletion_audit.sql` and proven by 6 new pgTAP assertions (23 total) against
+> a real Postgres 17. `executed_at` is retired, along with the `where executed_at is null` predicate
+> that was unconditionally true.
+>
+> This ADR opened a decision the TDD owed. It settles the part
 > that is decidable on engineering grounds — that a deletion *request* and a deletion *audit* are
 > two records with opposite lifetimes and cannot be one table row — and frames the part that must
 > be ratified with privacy and legal input: **what, if anything, identifies the subject of a
@@ -90,7 +95,7 @@ ADR-030 (least privilege); ADR-025 (background jobs); ADR-006 (`SVC_account`); P
    its own row is a standing invitation to reimplement the bug. The sweep's `where executed_at is
    null` predicate goes with it.
 
-**Owed ratification — do not implement before this is settled.**
+**✅ Ratified 2026-08-02 — Alternative C. Implemented in the same change.**
 
 **What identifies the subject of a completed erasure**, chosen from the alternatives below. This is
 a privacy decision with legal weight, not an engineering preference: it determines whether the
@@ -98,7 +103,13 @@ system retains a permanent list of identifiers belonging to people who asked to 
 whether the audit can answer "did you delete *this* user?" at all. Security/Privacy owns the choice;
 Legal must confirm the retention obligation and period before the record is given a retention rule.
 
-**Recommendation, for the ratifying decision rather than in place of it:** the digest form
+**Ratified: Alternative C**, exactly as recommended. The digest construction is **frozen** —
+`sha256(uuid::text)`, hex, unsalted — and defined once in `account_deletion_subject_digest(uuid)`;
+changing it makes every existing record unverifiable, because no row remains to recompute from.
+Unsalted is deliberate: a v4 uuid carries 122 bits of entropy, so the dictionary attack a salt
+defends against is infeasible, and a per-row salt adds nothing an attacker holding the table lacks.
+
+**The original recommendation, retained for the record:** the digest form
 (Alternative C). It is the only option that lets an operator *verify* a specific claim — hash the
 uid in question and compare — without the table itself being a readable roster of erased users, and
 it degrades to the raw-identifier option's usefulness in every scenario where the claimant supplies

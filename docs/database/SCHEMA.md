@@ -191,7 +191,7 @@ Background queue: `type`, `status`, `run_at`, `payload`, `attempts`, `last_error
 `(status, run_at)`. **RLS:** enabled, **service-only** (no client policy → client denied).
 
 ### `account_deletion` — TBL_ACCOUNT_DELETION
-Grace window (F-3): PK `user_id`, `requested_at`, `execute_after`, `executed_at`.
+Grace window (F-3): PK `user_id`, `requested_at`, `execute_after`. The **request** record; it cascades with its subject. `executed_at` was retired 2026-08-02 (ADR-034) — it could never be written, since the row is erased along with the user it names. A completed erasure is evidenced by `account_deletion_audit` (digest-only, service-role only).
 **RLS:** owner-read.
 
 ### `support_ticket` — TBL_SUPPORT_TICKET
