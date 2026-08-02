@@ -13,8 +13,16 @@ increment/milestone boundary per the Increment & Milestone Completion Checkpoint
 
 ## Where we are (2026-08-02)
 
-**Beta Readiness & Platform Hardening, 47%** — B2 ✅, B5 ✅ and B6 ✅ (the latter two at verifiable
-scope), plus ¾ of B4. B1 ~85%, B3 ~80%, all remainders owner-gated on money or a store account.
+**Beta Readiness & Platform Hardening, 50%** — **B2 ✅, B4 ✅, B5 ✅, B6 ✅** (the last three at
+verifiable scope). B1 ~85%, B3 ~80%, all remainders owner-gated on money or a store account.
+
+**B4 — Observability closed 2026-08-02.** B4.4 landed two §7.2 SLOs **proven end to end** — NFR-06
+crash-free sessions and NFR-14 availability — each watched to open an issue and email a human, which
+is §8.4's standard rather than "configured". The first NFR-06 drill detected correctly and notified
+**nobody** (both alert rows targeted *Suggested Assignees*, which a metric issue cannot resolve), and
+would have shipped as done without a deliberate trigger. Five SLOs remain unproven, none of them
+unfinished engineering: three behind the Ask Guru gate, one behind uninstalled `expo-notifications`,
+NFR-10 behind a PDD taxonomy decision.
 
 **2026-08-02 — #86 merged (`080c710`) and #79 is verified and ready.** A **preference write had no
 durable path at all**: `useUpdatePreferences` went straight to the server, so an app kill inside the

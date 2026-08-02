@@ -110,7 +110,50 @@ green in CI on a real native build. Canonical progress 0% → 13% (1 of 8 Beta s
 # Current Task
 
 ## Title
-✅ SENTRY INGEST CONFIRMED — AND CI WAS REPORTING AS PRODUCTION (2026-08-02, part 2)
+✅ **B4 — OBSERVABILITY IS CLOSED (2026-08-02, part 3). 47% → 50%.**
+
+First slice completed since B6 on 2026-07-27. **B4.4 delivered two of §7.2's seven SLOs PROVEN end
+to end**, which is §8.4's standard rather than "configured":
+
+| SLO | Proof |
+|---|---|
+| **NFR-06** crash-free sessions ≥ 99.5% | drill → issue → **email 14:43** |
+| **NFR-14** availability ≥ 99.9% | `SVC_health` forced red → `PANCHANGPAL-EDGE-3` → **email 16:17** |
+
+⚠️ **NFR-06 needed two drills and the first is the finding.** It detected perfectly and **told
+nobody** — both alert rows targeted *Suggested Assignees*, which a metric issue cannot resolve. Every
+visible signal said configured. **It would have shipped as done.** NFR-14 passed first time only
+because that lesson was applied: an explicit **Member** recipient.
+
+**Shipped:** `docs/devops/SLO_ALERTS.md` (all seven SLOs, instrument/threshold/alert/blocker, pinned
+by `slo-alerts.test.ts` which fails when an instrument *appears* while the doc calls it missing) ·
+`SVC_health` (`verify_jwt = false`, only unauthenticated surface, body structurally unable to leak) ·
+`scripts/slo-alert-drill.mjs` · three environment/deploy defects fixed (#98 CI-as-production, the
+identical edge defect, `cd.yml` omitting `health` from its deploy list).
+
+**Closed at verifiable scope** — same basis as B5 (no PITR) and B6 (no ratified ADR-034). Five SLOs
+unproven, none unfinished engineering: three behind the Ask Guru gate, one behind uninstalled
+`expo-notifications`, NFR-10 behind a PDD taxonomy decision.
+
+## NEXT TASK
+
+1. **NFR-07 crash-free users** — same wizard, `crash_free_rate(user)` below 99.8, no new
+   instrumentation. A third SLO for ~2 minutes of owner time.
+2. **B1 / B3 remainders** — all owner-gated on money or a store account.
+3. **Owner decisions:** ratify **ADR-034** · rule on the **§6.6 `preferences`** rule (shipped
+   unratified as LWW) · decide **NFR-10's path** (PDD taxonomy vs a server metrics sink) · **SHA-pin
+   the nine GitHub Actions** (#87 records the case and left it open).
+4. **Deferred deliberately:** #90 (RNTL 14 migration), #95, #96 (eslint 9 flat config),
+   #97 (**zustand 5 — touches `STORE_offlineQueue`**, which produced two defects this week).
+5. **Owed, and named rather than absorbed:** `SVC_health`'s **503 branch** end to end (belongs with
+   the DB-outage runbook drill), §7.2 **dashboards** (ADR-025's rollup worker is unbuilt), and the
+   **deprecated Supabase key migration** (`readEnv` throws without them).
+
+---
+
+## Superseded — Sentry ingest
+
+## ✅ SENTRY INGEST CONFIRMED — AND CI WAS REPORTING AS PRODUCTION (2026-08-02, part 2)
 
 **Merged #98 `a724519`.** Ingest works (91 sessions, release `0.1.0`, one error). But
 `sentryEnvironment()` derived the environment from `extra.eas.channel`, **which only EAS Build

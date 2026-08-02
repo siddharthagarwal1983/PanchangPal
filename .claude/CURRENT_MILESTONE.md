@@ -4,7 +4,7 @@
 
 Version: 4.10.0
 
-Last Updated: 2026-08-01 (the offline-completion race diagnosed correctly and fixed; #79 unblocked; 47%)
+Last Updated: 2026-08-02 (B4 CLOSED — two §7.2 SLOs proven end to end; 50%)
 
 Purpose:
 This document defines the current milestone. Unlike SESSION.md (daily work) or TASK.md (current
@@ -23,8 +23,30 @@ Status
 
 Overall Progress
 
-47% (3 of 8 slices COMPLETE — **B2 ✅**, **B5 ✅**, **B6 ✅**, the latter two at verifiable scope —
-plus ¾ of B4; B1 ~85%, B3 ~80%)
+50% (**4 of 8 slices COMPLETE — B2 ✅, B4 ✅, B5 ✅, B6 ✅**, the last three at verifiable scope;
+B1 ~85%, B3 ~80%)
+
+**B4 — Observability closed 2026-08-02**, the first slice completed since B6 on 2026-07-27. B4.4
+delivered two of §7.2's seven SLOs **proven end to end** rather than configured: NFR-06 crash-free
+sessions and NFR-14 availability, each watched to open an issue and deliver mail to a human. §8.4's
+standard is that an alert nobody has seen fire is a plan, not a capability.
+
+⚠️ **NFR-06 needed two drills, and the failure is the finding.** The first detected perfectly — right
+threshold, right `production` filter, high-priority issue opened and assigned — and reached **nobody**,
+because both alert rows resolved recipients from suspect commits that a metric-monitor issue does not
+have. Everything visible said "configured". **This would have shipped as done.** It is the
+milestone's signature defect one layer further out: not a control that was never implemented, but one
+implemented, visible, and inert.
+
+**Closed at verifiable scope**, the same basis as B5 (no PITR) and B6 (no ratified ADR-034). The five
+unproven SLOs are blocked on what engineering does not own: three behind the Ask Guru gate, one
+behind uninstalled `expo-notifications`, and **NFR-10 behind a PDD taxonomy decision** — PDD §11's
+registry has no sync event, and inventing one is forbidden by `events.ts` and rejected at runtime.
+None is unfinished code.
+
+**Two gaps stated rather than absorbed:** `SVC_health`'s 503 branch is unit-proven but never
+exercised end to end (it belongs with the DB-outage runbook drill), and §7.2's dashboards remain
+absent because ADR-025's `analytics_event` rollup worker is unbuilt.
 
 **B6 closed on 2026-07-27 with B6.3**, and closing it found a launch blocker. The data-collection
 inventory, the privacy policy draft and the store Data Safety / App Privacy answers now exist in

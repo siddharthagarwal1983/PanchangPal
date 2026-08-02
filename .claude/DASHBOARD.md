@@ -4,7 +4,7 @@
 
 Version: 1.32.0
 
-Last Updated: 2026-08-02 (session end — four PRs merged; Sentry live and verified; 47%)
+Last Updated: 2026-08-02 (B4 CLOSED — two SLOs proven end to end; 47% → 50%)
 
 Purpose:
 This is the first file Claude should read at the beginning of every session.
@@ -41,9 +41,23 @@ PanchangPal
 
 Progress
 
-47%
+50%
 
-(Canonical progress metric — 3 of 8 Beta Readiness slices COMPLETE plus **¾ of B4**:
+(Canonical progress metric — **4 of 8 Beta Readiness slices COMPLETE: B2, B4, B5, B6.**
+**B4 closed 2026-08-02** when B4.4 landed: two of §7.2's seven SLOs — NFR-06 crash-free sessions and
+NFR-14 availability — are live AND **proven end to end by deliberate triggers**, each watched to open
+an issue and deliver mail to a human. §8.4's standard is that an alert nobody has seen fire is a
+plan, not a capability; both have now been seen.
+Counted at **verifiable scope**, the same basis as B5 (no PITR) and B6 (no ratified ADR-034): the
+five unproven SLOs are blocked on things engineering does not own — three behind the Ask Guru gate
+(`GURU_LIVE = false`), one behind uninstalled `expo-notifications`, and **NFR-10 behind a PDD
+taxonomy decision**, since PDD §11's registry contains no sync event and inventing one is forbidden.
+Not one is unfinished code. NFR-07 is a free addition whenever wanted.
+**Two gaps stated rather than folded in:** `SVC_health`'s 503 branch is proven by unit test but never
+exercised end to end (it belongs with the DB-outage runbook drill), and §7.2's dashboards remain
+absent — the `analytics_event` rollup worker is still unbuilt.
+
+Prior detail — 3 of 8 slices COMPLETE plus **¾ of B4**:
 (3 + ¾)/8 ≈ 47%. **B6 is the third**, and like B2 and B5 it is counted at its VERIFIABLE scope:
 all four increments are delivered — B6.1 OWASP review · B6.2 CCPA export + the SVC_account
 authorization fix · B6.3 data inventory + privacy policy + store labels · B6.4 §5.2 supply-chain
@@ -91,6 +105,50 @@ CURRENT_MILESTONE.md
 ---
 
 # Current Task
+
+✅ **B4 — OBSERVABILITY IS CLOSED. 47% → 50%.** The first slice completed since B6 on 2026-07-27.
+
+**B4.4 delivered two SLOs that are PROVEN, not configured** — the distinction §8.4 exists to enforce:
+
+| SLO | Proof |
+|---|---|
+| **NFR-06** crash-free sessions ≥ 99.5% | Synthetic crashed sessions → issue → **email received 14:43** |
+| **NFR-14** availability ≥ 99.9% | `SVC_health` probe forced red → issue `PANCHANGPAL-EDGE-3` → **email 16:17** |
+
+⚠️ **NFR-06 took TWO drills, and the first one is the more valuable half.** Drill 1 detected
+perfectly — correct threshold, correct `production` filter, high-priority issue opened and assigned
+— and **told nobody.** Both alert rows targeted *Suggested Assignees*, and a metric-monitor issue has
+no stack trace and no suspect commit, so the recipient set was empty. Every visible signal said
+"configured". **Without a deliberate trigger this would have shipped as done**, and §8.4's worst
+unattended failure — a crash affecting every user going unnoticed, because users of a calm ritual app
+stop opening it rather than filing bugs — would have played out in full. NFR-14 then worked on the
+first attempt purely because that lesson was applied: an explicit **Member** recipient.
+
+**Also delivered in B4.4:** `docs/devops/SLO_ALERTS.md`, all seven §7.2 SLOs with instrument,
+threshold, alert and named blocker, pinned by `slo-alerts.test.ts` — which fails when an instrument
+**appears** while the doc still calls it missing, the dangerous direction. `SVC_health`
+(`verify_jwt = false`, the only unauthenticated surface, body structurally incapable of leaking) and
+`scripts/slo-alert-drill.mjs`, a repeatable guarded drill.
+
+**Three defects found along the way, each by asking what a build actually reports rather than what it
+should:** CI reporting itself as **production** (#98); the **edge seam having the identical defect**
+(`SENTRY_ENVIRONMENT` undocumented, defaulting to production); and `cd.yml`'s hardcoded deploy list
+**omitting `health`**, which would have merged green and served nothing.
+
+⚠️ **THE DAY'S LESSON, LEARNED FOUR TIMES: A CHANGE THAT LOOKS APPLIED IS NOT A CHANGE THAT TOOK
+EFFECT.** The `.env` newline that corrupted a Supabase URL; the mobile environment default; the edge
+environment default; and a secret saved **eight minutes after** the curl meant to verify it. Each
+time the tell was a timestamp or a log line, never the thing being changed. The cheapest check of the
+day was `sha256("staging")` against Supabase's published digest — it settled a value question in one
+step that two screenshots had left ambiguous.
+
+**Not proven, and stated:** `SVC_health`'s 503 branch end to end (permission to deploy a deliberately
+broken endpoint was declined — correctly; it belongs with the DB-outage drill), and §7.2's dashboards,
+which wait on the unbuilt `analytics_event` rollup worker.
+
+---
+
+**Previously — Sentry ingest.**
 
 ✅ **SENTRY INGEST IS CONFIRMED — AND CONFIRMING IT FOUND THAT CI WAS REPORTING AS PRODUCTION**
 (fixed and merged, **#98** `a724519`).
@@ -841,6 +899,14 @@ Verified end-to-end. **PR #36 merged to main as `e1e10d4`**; the docs checkpoint
 (`45f1b0d`). Main's E2E is green again (run 30156615768). See TASK.md.
 
 # Today's Objective
+
+Session of 2026-08-02 (part 3). **Close B4.** Outcome: **B4 CLOSED at verifiable scope, 47% → 50%** —
+the first slice completed since B6. Two SLOs proven end to end by deliberate trigger, the first of
+which **failed at the notification step and would otherwise have shipped as configured**. Three
+environment/deploy defects found on the way, all of the same shape. Next: **B1/B3 remainders** (all
+owner-gated on money or store accounts), or **NFR-07** for a third SLO.
+
+---
 
 Session of 2026-08-02 (part 2). **Work the dependency queue, then confirm Sentry ingest.** Outcome:
 nine dependency PRs resolved across three regenerating batches (#90 left open as real work), the

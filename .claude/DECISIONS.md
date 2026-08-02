@@ -21,6 +21,89 @@ docs/architecture/adr/
 
 # Product Decisions
 
+## 2026-08-02 — An alert is not a capability until someone has watched it reach a human
+
+**Decision.** A §7.2 SLO counts as delivered only when a **deliberate trigger** has been observed to
+produce a notification a person received. Configuration that reads correctly does not count, and
+neither does detection. B4 closed on that basis with **two** SLOs (NFR-06, NFR-14), not seven.
+
+**Why the bar is that high.** NFR-06's first drill got everything right except the last step:
+correct threshold, correct `environment:production` filter, a high-priority issue opened *and
+assigned to the operator* — and **no email**. Both alert rows targeted *Suggested Assignees*, which
+Sentry resolves from suspect commits and ownership rules, and a **metric-monitor issue has no stack
+trace and no suspect commit**, so the recipient set was empty. The issue's own assignment came from
+the monitor's `Assign` field, a different mechanism, which is exactly what made it look correct.
+
+**Without the trigger this ships as done.** It is the milestone's signature defect one layer further
+out — not a documented control that was never implemented, but one implemented, visible, and inert.
+For this product the cost is specific: §8.4's worst unattended failure is a crash affecting every
+user going unnoticed, because people who use a calm ritual app stop opening it rather than filing
+bugs.
+
+**The rule that follows: three questions, not one.** Did the data land · did **detection** fire ·
+did **notification** reach a human. Only the third settles it, and the first two both passed while
+the third failed. NFR-14 passed first time solely because the fix was applied in advance — an
+explicit **Member** recipient.
+
+**Proving it costs something, and the cost is paid before launch or not at all.** The NFR-06 drill
+put six synthetic crashes permanently into production session data. That is cheap while production
+has no real sessions and permanently expensive afterwards. `scripts/slo-alert-drill.mjs` is checked
+in and guarded so the drill is repeatable rather than a one-off curl.
+
+---
+
+## 2026-08-02 — A change that looks applied is not a change that took effect
+
+**Decision.** After any config or environment change, verify from **evidence the system emits** — a
+log line, a timestamp, a digest — never from the settings screen where the change was made.
+
+**Learned four times in one day, three of them self-inflicted:**
+
+1. `echo "K=V" >> .env` with no leading newline **concatenated onto the previous variable's value**.
+   The name still parsed, so `EXPO_PUBLIC_SUPABASE_URL` held garbage, four of six E2E flows failed,
+   and it read as a product defect. The tell was the job's own `env: export …` line, which listed
+   three names and not the new one.
+2. The **mobile** environment derived from `extra.eas.channel`, which only EAS Build stamps, so CI
+   reported as `production` (#98).
+3. The **edge** seam had the identical defect — `SENTRY_ENVIRONMENT` undocumented and defaulting to
+   `production`. It hid because `panchangpal-edge` had never received an event: **you cannot notice a
+   mislabelled environment in a project with no data.**
+4. A secret saved **eight minutes after** the curl meant to verify it, producing two false negatives
+   that each looked like the fix had failed.
+
+**Corollaries worth keeping.** Compare **timestamps** before touching code when a change appears not
+to take. Prefer a check the platform can answer cryptographically — `sha256("staging")` against
+Supabase's published secret digest settled in one step what two screenshots left ambiguous. And when
+a value is read at **module load** (`_shared/http.ts`, `telemetryAdapter.ts`), setting it is only
+half the change; the deploy that follows is the other half.
+
+---
+
+## 2026-08-02 — `SVC_health` is the only unauthenticated surface, and stays that way
+
+**Decision.** Exactly one Edge Function sets `verify_jwt = false`. Pinned by
+`tests/rls/unauthenticated-surface.test.ts`, which fails if a second one appears.
+
+**Why an exception at all.** NFR-14 had no instrument: `verify_jwt` defaults to true, so an anonymous
+uptime probe measured the auth layer returning 401 rather than availability.
+
+**Why the exception is safe.** GET/OPTIONS only, no body parsed, no query read; reads no user data
+(`feature_flag`, with `head: true` so no rows return); and the body is a closed `{status, checked}`
+shape built from a **boolean**, so there is no parameter through which a dependency error could reach
+it. Structural, not conventional — the "add a little more detail" edit cannot reintroduce the leak.
+
+**Why it does a real database read.** A liveness-only probe reports 99.9% straight through a total
+outage — a monitor that cannot go red, which is the same defect as a CI gate that cannot fail.
+
+**Why the second guard matters.** Edge Functions run with the **service role**, so RLS is not a
+backstop — the B6.2 finding, where `SVC_account` trusted the request body and any caller could delete
+any account. A second unauthenticated function is that hole again, and would ship green.
+
+**Related, found the same day:** declaring a function in `supabase/config.toml` does **not** deploy
+it — `cd.yml` passes an explicit name list, and `health` was missing from it. Now pinned in both
+directions by `tests/rls/edge-function-deploy-list.test.ts`.
+
+
 ## 2026-08-02 — A build states its own telemetry environment, and states it observably
 
 **Decision.** `EXPO_PUBLIC_SENTRY_ENVIRONMENT`, threaded through `app.config.ts`'s `extra`, is the

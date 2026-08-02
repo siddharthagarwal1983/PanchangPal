@@ -2,9 +2,9 @@
 
 # PanchangPal — Project Memory
 
-Version: 2.8.0
+Version: 2.9.0
 
-Last Updated: 2026-08-02 (the peer graph as triage input; the i18n no-plural-key constraint)
+Last Updated: 2026-08-02 (B4 closed; SVC_health as the only anonymous surface; observability proven, not configured)
 
 Current Phase:
 Beta Readiness & Platform Hardening (TDD Part 5)
@@ -456,6 +456,45 @@ Stable, cross-cutting facts (permanent until an approved decision changes them):
   **No PII is structural** (§7.1 `[MANDATORY]`): unrecognised errors map to `ERR_UNKNOWN` rather than
   echoing a message, EVT_054's props are a closed four-key shape, and `componentStack` is never
   forwarded. Every ERR_* maps to EVT_054; its sink is the analytics adapter (ADR-013).
+- **SVC_health IS THE ONLY UNAUTHENTICATED SURFACE IN THE SYSTEM** (`apps/backend/functions/health/`,
+  added 2026-08-02 for NFR-14). Every other Edge Function relies on `verify_jwt` defaulting to true;
+  this one sets it **false**, because an anonymous uptime probe against any of the others measures
+  the auth layer returning 401 rather than availability — which is why NFR-14 had no instrument.
+  **Two invariants are pinned by tests, and neither should be relaxed to make something pass.**
+  `tests/rls/unauthenticated-surface.test.ts` fails if a **second** function goes anonymous — Edge
+  Functions run with the SERVICE ROLE, so RLS is not a backstop (the B6.2 finding), and a second one
+  is that hole again, shipping green. `functions/health/probe.test.ts` pins the response body as a
+  closed `{status, checked}` shape: anything this endpoint returns is public to the internet, and a
+  health endpoint that echoes its dependency error hands out Postgres versions and table names.
+  **`evaluateHealth()` takes a BOOLEAN**, so no parameter exists through which an error could reach
+  the body — structural, not conventional.
+  **It does a REAL database read** (`feature_flag`, `head: true` so no rows return), because a
+  liveness-only probe reports 99.9% straight through a total outage: a monitor that cannot go red.
+  ⚠️ **Declaring a function in `supabase/config.toml` does NOT deploy it.** `cd.yml` passes an
+  explicit name list to `supabase functions deploy`, and `health` was missing from it — the PR would
+  have merged green and served nothing. Pinned both ways by
+  `tests/rls/edge-function-deploy-list.test.ts`.
+- **OBSERVABILITY IS PROVEN, NOT CONFIGURED — AND ONLY TWO SLOs QUALIFY** (B4, closed 2026-08-02).
+  §7.2 names seven; `docs/devops/SLO_ALERTS.md` records each one's instrument, threshold, alert and
+  named blocker, pinned by `apps/backend/tests/observability/slo-alerts.test.ts` — which fails when
+  an instrument **appears** while the doc still calls it missing, because a doc that keeps saying
+  "blocked" after the instrument lands makes the gap invisible.
+  **NFR-06** (crash-free sessions, mobile) and **NFR-14** (availability, via SVC_health) are live and
+  were each **watched to open an issue and deliver mail to a human**.
+  ⚠️ **NFR-06's first drill detected perfectly and notified NOBODY**: both alert rows targeted
+  *Suggested Assignees*, which Sentry resolves from suspect commits, and a **metric-monitor issue has
+  no stack trace and no suspect commit** — the recipient set was empty. The issue was still assigned,
+  via the monitor's separate `Assign` field, which is what made it look correct. **Always set an
+  explicit Member.** The three questions are not one: did the data land · did DETECTION fire · did
+  NOTIFICATION reach a human. Only the third settles it, and the first two passed while it failed.
+  **`scripts/slo-alert-drill.mjs`** makes the crash-free drill repeatable, guarded behind `--confirm`
+  because it writes unremovable synthetic crashes into production session data — cheap before launch,
+  permanently expensive after.
+  **The five unproven SLOs are not unfinished engineering:** three sit behind the Ask Guru gate, one
+  behind uninstalled `expo-notifications`, and **NFR-10 behind a PDD decision** — PDD §11's registry
+  (EVT_001-EVT_055) contains **no sync event**, `events.ts` forbids inventing one, and
+  `AnalyticsService` rejects unknown ids at runtime. Either PDD adds sync events or a server-side
+  metrics sink is chosen; neither is typing.
 - **AnalyticsService** (client, B4.2) — every `EVT_*` goes through this port (ADR-013); the launch
   sink is the Postgres `analytics_event` table, which is INSERT-ONLY for clients (policy
   `analytics_ins_own`, no select policy — rollups run service-side under pg_cron, ADR-025). Events
