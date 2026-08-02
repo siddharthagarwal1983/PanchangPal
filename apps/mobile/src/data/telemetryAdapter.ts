@@ -78,12 +78,28 @@ export function isUsableDsn(dsn: string): boolean {
 
 /**
  * Which environment a report belongs to. Sentry filters and alerts on this, so a staging crash
- * must not be counted against the production crash-free SLO (§7.2). Derived from the release
- * channel rather than a separate variable, so it cannot disagree with the build it came from.
+ * must not be counted against the production crash-free SLO (§7.2).
+ *
+ * ⚠️ THE CHANNEL-ONLY DERIVATION WAS WRONG FOR EVERY BUILD EAS DID NOT PRODUCE, and CI is exactly
+ * that build. `extra.eas.channel` is stamped by EAS Build; `e2e.yml` runs `expo prebuild` +
+ * `gradlew assembleRelease` on the runner, so there is no channel — and `__DEV__` is false in a
+ * release APK. The fallback therefore resolved to **'production'**, and CI has been reporting
+ * emulator sessions into the production SLO. It pulls a REAL DSN
+ * (`eas-cli env:pull --environment preview`), so this was not theoretical: at the time this was
+ * found, essentially all 91 sessions in `panchangpal-mobile` were E2E launches, and an alert
+ * scoped to `environment:production` — the scope §7.2 wants — would have paged on CI.
+ *
+ * An explicit override wins, because the build that knows it is not production is the build
+ * itself. The channel remains the preferred signal for EAS builds, since it cannot disagree with
+ * the binary it came from; the override exists for builds EAS did not make.
  */
 function sentryEnvironment(): string {
+  const explicit = process.env.EXPO_PUBLIC_SENTRY_ENVIRONMENT;
+  if (typeof explicit === 'string' && explicit.length > 0) return explicit;
+
   const channel = Constants.expoConfig?.extra?.eas?.channel;
   if (typeof channel === 'string' && channel.length > 0) return channel;
+
   return __DEV__ ? 'development' : 'production';
 }
 
@@ -128,11 +144,13 @@ export function getTelemetryAdapter(): TelemetryAdapter {
   if (!adapter) {
     const dsn = configuredDsn();
 
+    const environment = sentryEnvironment();
+
     if (isUsableDsn(dsn)) {
       // Initialise BEFORE constructing the adapter: a report captured against an uninitialised
       // client is dropped by the SDK, and the first thing to fail in a session is exactly the
       // thing worth reporting.
-      initSentry({ dsn, environment: sentryEnvironment() });
+      initSentry({ dsn, environment });
       adapter = new ReportingTelemetryAdapter(new SentryTelemetryAdapter());
       activeBackend = 'sentry';
     } else {
@@ -144,7 +162,13 @@ export function getTelemetryAdapter(): TelemetryAdapter {
     // way: when a native-backed seam degrades, the only thing worse than the degradation is not
     // being able to tell from a device log whether it happened. This line is what makes an E2E
     // artifact answer "was Sentry actually running in that build?" without a redeploy.
-    console.log(`[telemetry] reporter=${activeBackend}`);
+    //
+    // `env=` is here because the answer to "which environment did that build report as?" cost a
+    // four-file deduction (e2e.yml's `env:pull` → app.config.ts → this function → Expo's channel
+    // stamping) and STILL could not be read directly out of an artifact. Sentry's own logs print
+    // the DSN and never the environment. An SLO that is scoped by a value nobody can observe is
+    // the same shape of defect as a gate that cannot fail.
+    console.log(`[telemetry] reporter=${activeBackend} env=${environment}`);
   }
   return adapter;
 }

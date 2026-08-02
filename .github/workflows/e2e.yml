@@ -103,6 +103,23 @@ jobs:
         env:
           EXPO_TOKEN: ${{ secrets.EXPO_ACCESS_TOKEN }}
 
+      # ⚠️ WITHOUT THIS, CI REPORTS ITSELF AS PRODUCTION. The step above pulls a REAL
+      # EXPO_PUBLIC_SENTRY_DSN, so these emulator launches reach Sentry; and `sentryEnvironment()`
+      # derived the environment from `extra.eas.channel`, which only EAS Build stamps. This job
+      # builds with `expo prebuild` + `gradlew assembleRelease` on the runner, so there is no
+      # channel, and `__DEV__` is false in a release APK — the fallback resolved to 'production'.
+      #
+      # Found 2026-08-02, after the dashboard showed 91 sessions at "100% crash-free" that were
+      # essentially all E2E launches. An alert scoped to `environment:production` — the scope §7.2
+      # wants — would have paged on every CI run, and the crash-free SLO would have been measuring
+      # an emulator instead of users.
+      #
+      # Appended rather than set in `env:`, because `env:pull` OVERWRITES .env wholesale and the
+      # bundler reads the file, not the shell.
+      - name: Tag this build's telemetry as CI, not production
+        working-directory: apps/mobile
+        run: echo "EXPO_PUBLIC_SENTRY_ENVIRONMENT=ci" >> .env
+
       # Generates the native android/ project. Not committed — the app is a managed
       # Expo project, so this is regenerated per run and stays disposable.
       # `pnpm exec`, NOT `pnpm dlx`. dlx fetches the LATEST expo CLI (57.x), whose config
