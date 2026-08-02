@@ -72,7 +72,8 @@ All 32 tables in `apps/backend/migrations`. Classification:
 | `entitlement` | Personal | household entitlement, active flag, expiry | SVC_revenuecat_webhook (unimplemented) | No |
 | `push_token` | Identifying | Expo push token (a device credential), platform | Client (upsert) | No — `expo-notifications` not installed |
 | `notification` | Personal | notification type, schedule/send/open times, deep link, payload | SVC_notify_scheduler (unimplemented) | No |
-| `account_deletion` | Personal | uid, deletion request time, grace expiry | SVC_account | Yes — **but never executed, see §8.2** |
+| `account_deletion` | Personal | uid, deletion request time, grace expiry | SVC_account | Yes — the request record; cascades away with its subject on erasure |
+| `account_deletion_audit` | **Pseudonymous** | a one-way **sha256 digest** of the erased uid, the request time, the erasure time, outcome. **No identifier, no recovered content.** | `execute_account_deletion()` (service role only; RLS on with no policies) | Yes — durable evidence that an erasure completed (ADR-034, TDD Part 5 §5.1) |
 | `support_ticket` | Identifying | email, subject, free-text body | Not implemented | No |
 | `analytics_event` | Pseudonymous | `EVT_*` id, `user_pseudo_id`, household id, session id, props | Client (insert-only) | Yes — see §4 |
 | `ai_cost_ledger` | Pseudonymous | model, cost, correlation id, `user_pseudo_id` | SVC_ask-guru | No — `GURU_LIVE=false` |
@@ -325,27 +326,16 @@ in the household without improving this user's position.
 
 ⚠️ **Two residual gaps, stated rather than implied:**
 
-1. **`executed_at` is never written, and cannot be.** `account_deletion.user_id` cascades with
-   `app_user`, so the request row is erased along with its own subject — after a successful
-   deletion there is no row left to stamp. This collides with TDD Part 5 §5.1, whose threat model
-   names `TBL_ACCOUNT_DELETION` as the **deletion audit** mitigating repudiation, which requires
-   the row to survive. Changing the foreign key would be inventing a schema decision with its own
-   privacy consequence (the surviving row names a uid), so the executor implements the schema as
-   declared. Consequence today: a completed deletion leaves no record that it happened.
-   **Now tracked by ADR-034 — Account-Deletion Audit Record (Proposed, 2026-07-28)**, which settles
-   that a deletion *request* and a deletion *audit* have opposite lifetimes and cannot be one row,
-   and refers the remaining question — **what identifies the subject of a completed erasure** — to
-   Security/Privacy with Legal sign-off. The choice is between retaining the raw `user_id`, a
-   one-way digest of it, or no subject identifier at all, and it directly determines what this
-   inventory must classify. **Until it is ratified, no schema change is made and this gap stands.**
-2. **The schedule depends on pg_cron, which is a Supabase dashboard action.** The migration
-   schedules the sweep where pg_cron exists and raises a **warning** where it does not — it cannot
-   enable the extension itself. `account_deletion_sweep_is_scheduled()` makes the state assertable
-   (false if pg_cron is absent, the job is missing, *or* an operator disabled it), it is checked by
-   the DR restore drill, and `ACCOUNT_SWEEP_SECRET` is required at preflight's production tier.
-   **Until pg_cron is enabled on the hosted project, the only execution path is the operator
-   trigger.** That is an owner action, and it is the one thing standing between this section and
-   being fully true in production.
+1. ✅ **RESOLVED 2026-08-02 (ADR-034, Accepted).** `executed_at` was never written and could
+   not be — `account_deletion.user_id` cascades with `app_user`, so the request row was erased
+   along with its own subject and there was nothing left to stamp. The column is now **retired**,
+   together with the `where executed_at is null` predicate that was unconditionally true.
+   A completed erasure now writes `account_deletion_audit` in the SAME transaction: a
+   service-role-only record holding a **one-way digest** of the subject, never the identifier
+   and never content recovered from the deleted rows. It answers the question a repudiation
+   dispute actually asks — *did you erase my account?* — because the claimant supplies the uid
+   and the operator digests it and compares, while the table itself is not a readable roster of
+   people who asked to be forgotten (ADR-034 Alternative C over B).
 
 ### 8.3 Correction / access
 
@@ -392,7 +382,7 @@ recorded in `DR_RUNBOOKS.md`). A privacy policy should not describe safeguards t
 |---|---|---|---|
 | 1 | ~~Account deletion is never executed~~ — **CLOSED 2026-07-27** at engineering scope (§8.2). Residual: pg_cron must be enabled on the hosted project, an owner action | 🟡 Owner action | Owner |
 | 2 | **No scheduled execution exists at all** — `pg_cron` is now scheduled by migration where the extension is present, but is still **not enabled on the hosted projects**, and no job runner processes `job`. Analytics rollup/prune, tombstone removal and cache TTL remain unimplemented (§9) | ⛔ Launch blocker | Engineering + Owner |
-| 2b | **`executed_at` is unwritable** — the audit row cascades with its own subject, colliding with §5.1's deletion-audit claim (§8.2) | 🟡 TDD owes a resolution | Documentation |
+| 2b | ✅ **RESOLVED** — `executed_at` retired; a completed erasure now writes `account_deletion_audit` (digest-only, service-role only) in the same transaction (ADR-034, Accepted 2026-08-02) | ✅ Closed | — |
 | 3 | **The CCPA export omits `message` rows**, so it is incomplete the moment Ask Guru goes live (§8.1) | 🟡 Before `GURU_LIVE` | Engineering |
 | 4 | **No in-app affordance for export or deletion** — the endpoints exist and no screen calls them (§8.1) | 🟡 Before launch | PDD (product) |
 | 5 | **A user-deleted personal date is a tombstone, not an erasure** — must be disclosed (§3.2) | 🟢 Disclosure | Policy |

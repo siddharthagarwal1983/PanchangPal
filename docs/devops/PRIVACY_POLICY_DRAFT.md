@@ -278,7 +278,7 @@ the store age rating) need a decision before submission.
 |---|---|---|
 | 1 | ~~Account deletion is not executed~~ — **CLOSED 2026-07-27**; residual: enable pg_cron on the hosted project | 🟡 Owner action |
 | 2 | No retention or pruning for analytics (§8) | ⛔ Engineering |
-| 2b | A completed deletion leaves no audit record (`executed_at` cascades away with its subject) | 🟡 TDD owes a resolution |
+| 2b | ✅ **RESOLVED 2026-08-02 (ADR-034)** — a completed erasure writes `account_deletion_audit` in the same transaction: a one-way digest of the subject, never the identifier and never recovered content | ✅ Closed |
 | 3 | No in-app export or deletion affordance (§7.1) | 🟡 Product — PDD owes the screen |
 | 4 | No point-in-time backup (§9) | ⛔ Owner purchase |
 | 5 | Legal entity, address, privacy contact (§1, §13) | Owner |
