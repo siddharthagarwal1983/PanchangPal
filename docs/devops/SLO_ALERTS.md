@@ -22,7 +22,8 @@ by a deliberate trigger on 2026-08-02 (§8). That is the only SLO here that meet
 |---|---|
 | **Live and PROVEN** | NFR-06 crash-free sessions ✅ |
 | **Measurable, no monitor yet** | NFR-07 crash-free users (same Sentry session data, no new instrumentation) |
-| **Blocked on engineering** | NFR-14 availability · NFR-10 sync success |
+| **Instrument built, not yet live** | NFR-14 availability — `SVC_health`, needs deploy + monitor |
+| **Blocked on a decision** | NFR-10 sync success — no sync event exists in the PDD §11 taxonomy |
 | **Blocked on a gated feature** | NFR-05 AI latency · NFR-16 AI cost · refusal/groundedness (all Ask Guru) · NFR-11 push delivery |
 
 If the app breaks **by crashing**, Sentry notices and the operator is emailed. If it breaks in any
@@ -36,8 +37,8 @@ all.**
 | SLO | NFR | Target | Instrument | Status |
 |---|---|---|---|---|
 | Crash-free sessions | NFR-06 | ≥ 99.5% | Sentry sessions | ✅ **live and proven** — see §2, §8 |
-| Availability (core reads) | NFR-14 | ≥ 99.9% | uptime monitor | ⛔ no pollable endpoint |
-| Sync success | NFR-10 | ≥ 99.5% | SVC_sync metrics | ⛔ no metric emitted |
+| Availability (core reads) | NFR-14 | ≥ 99.9% | `SVC_health` probe | 🟡 built; needs deploy + monitor |
+| Sync success | NFR-10 | ≥ 99.5% | SVC_sync metrics | ⛔ blocked on a decision (§5) |
 | AI first-token latency | NFR-05 | < 2 s | EVT_030 | ⛔ not emitted; feature gated |
 | AI cost | NFR-16 | ≤ ceiling | cost dashboard | ⛔ feature gated |
 | Push delivery | NFR-11 | ≥ 95% | EVT_040 / Expo receipts | ⛔ not emitted; adapter uninstalled |
@@ -93,45 +94,82 @@ reason than "we judged it not worth a second page for a solo operator."
 
 ---
 
-## 4. NFR-14 — availability ≥ 99.9% ⛔
+## 4. NFR-14 — availability ≥ 99.9% 🟡 instrument built, not yet deployed or monitored
 
-**Blocked on: there is nothing an uptime probe can poll.**
+**Was blocked on: there was nothing an uptime probe could poll.** `verify_jwt` defaults to true and
+every function relied on that default, so an anonymous probe measured the auth layer returning 401
+rather than availability.
 
-`supabase/config.toml` notes that **`verify_jwt` defaults to true**, and no function overrides it —
-the one planned exception, `revenuecat-webhook`, is explicitly "once the webhook is wired", which has
-not happened. So every Edge Function returns 401 to an anonymous request, and an uptime monitor
-against any of them measures the auth layer rather than availability.
+**Now built: `SVC_health`** (`apps/backend/functions/health/`), the **only** function with
+`verify_jwt = false` — and the only unauthenticated surface in the system.
 
-**What unblocks it:** a public, unauthenticated health endpoint. That is a small piece of
-engineering, but it carries a design decision that should not be made by accident — **does "healthy"
-mean the function responded, or that it reached the database?** A probe that only proves the Edge
-runtime is up will report 99.9% through a total database outage, which is the same
-looks-like-coverage failure as a gate that cannot fail. It also must expose nothing: a health
-endpoint is unauthenticated by definition and must not leak version, schema, or configuration.
+| | |
+|---|---|
+| **Endpoint** | `GET /health` (also `OPTIONS`; everything else → 405) |
+| **Healthy** | `200` · `{"status":"ok","checked":"database"}` |
+| **Degraded** | `503` · `{"status":"degraded","checked":"database"}` |
+| **Dependency check** | a real read against `feature_flag` with `head: true` |
+| **Caching** | `Cache-Control: no-store` |
 
----
+**It does a real database read, not a bare 200.** A liveness-only probe reports 99.9% straight
+through a total outage — a monitor that cannot go red, which is the same defect as a CI gate that
+cannot fail. NFR-14 says "core reads", so the probe reaches Postgres too.
 
-## 5. NFR-10 — sync success ≥ 99.5% ⛔
+**Why `feature_flag`:** tiny, already public-select, carries nothing personal, and is read by the app
+at every launch — so the probe exercises a path the product genuinely depends on rather than a
+synthetic one. `head: true` returns no rows at all, so nothing from the table can reach the response
+even by accident.
 
-**Blocked on: no metric is emitted.**
+**Why the body is a closed shape.** Anything this endpoint returns is public to the internet. A
+health endpoint that echoes its dependency error hands out Postgres versions, table names and role
+names to anyone who curls it. `evaluateHealth()` takes a **boolean**, so there is no parameter
+through which an error could reach the body — the leak cannot be reintroduced by an edit that "adds
+a little more detail". Pinned by `probe.test.ts`, and the single-unauthenticated-function invariant
+by `tests/rls/unauthenticated-surface.test.ts`.
 
-The NFR table names "SVC_sync metrics; ERR_SYNC_CONFLICT rate". Neither exists as a measurable rate:
-`syncService.ts` and `useOfflineSync.ts` emit **no `EVT_*` at all**, and the nine ids the app does
-emit (EVT_012, 015–021, 054) contain nothing about sync.
+### ⏳ What remains, and it is not code
 
-**A partial proxy exists and is not sufficient.** Sync *failures* surface as `ERR_*` and therefore
-reach `EVT_054` through the telemetry seam, so the failure count is observable in `analytics_event`.
-But a success *rate* needs a denominator — attempted drains — and nothing counts those. **A failure
-count with no denominator cannot be compared against 99.5%**, and treating it as if it could is how a
-number gets reported that nobody can act on.
+1. **Deploy** the function (it exists in the repo and is declared in `supabase/config.toml`; nothing
+   is serving it yet).
+2. **Create the Sentry Uptime monitor** against the deployed URL, alerting **to an explicit Member**
+   — the recipient mistake from §8 applies here too, and would fail the same silent way.
+3. **Prove it** the way NFR-06 was proven: not by seeing a 200, but by **breaking the dependency and
+   watching it report 503 and page**. Until then this row is an instrument, not an SLO.
 
-**What unblocks it:** emit drain-attempt and drain-outcome events from `syncService`, then compute
-the rate server-side. Both belong to the offline-sync seam
-(`STORE_offlineQueue` → `syncService` → `syncRepository` → SVC_sync) and must not be instrumented at
-call sites, for the same reason the ritual events are derived from view-model transitions: a metric
-that double-fires is worse than none.
+## 5. NFR-10 — sync success ≥ 99.5% ⛔ blocked on a DECISION, not on engineering
 
----
+**This was recorded on 2026-08-02 as "ordinary engineering, only blocked by time." That was wrong**,
+and the correction is the useful part of this section.
+
+`syncService.ts` and `useOfflineSync.ts` emit **no `EVT_*` at all**. Failures *do* reach `EVT_054`
+through the telemetry seam, so a failure count is observable — but a success **rate** needs a
+denominator, and nothing counts attempted drains.
+
+**The obvious fix is forbidden.** Emitting a "sync attempted / succeeded" event means adding to the
+`EVT_*` taxonomy, and **there is no sync event in it**: PDD §11's registry runs EVT_001–EVT_055 and
+contains nothing for sync, queue, drain or conflict (the sole "queue" match is EVT_048, *Account
+Deletion Requested*). `packages/shared/src/events.ts` says it outright — *"do not invent names beyond
+what the source docs define"* — and CLAUDE.md forbids inventing analytics events. An invented id
+would also be **rejected at runtime**: `AnalyticsService` validates against the taxonomy precisely so
+a made-up event cannot reach a text column and silently become a dashboard that returns nothing.
+
+**The NFR itself points elsewhere.** Its Measure column reads "**SVC_sync metrics**; ERR_SYNC_CONFLICT
+rate" — *server*-side, not a client event. That path invents no taxonomy. But it needs a sink, and
+none exists: `analytics_event` is client-fed and insert-only for clients, Sentry's free tier has no
+custom metrics, and a counter table would be inventing schema.
+
+### The decision this is actually waiting on
+
+One of:
+
+1. **PDD adds sync events to the §11 taxonomy** (product-owned; then the client emits them like any
+   other event), or
+2. **A server-side metrics sink is chosen** — structured logs from SVC_sync aggregated in Supabase's
+   log explorer is the cheapest and adds no schema, but it is **measurable, not alertable** on the
+   current plan, which does not satisfy §7.2's "warn on conflict/failure spike".
+
+Neither is typing. Recording it as blocked-on-engineering would have been the same
+documented-control-nothing-implements failure this document exists to name.
 
 ## 6. NFR-05, NFR-16, refusal/groundedness — all Ask Guru ⛔
 

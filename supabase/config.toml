@@ -58,13 +58,37 @@ enable_anonymous_sign_ins = true
 # (path relative to this supabase/ directory) and the monorepo `import_map`
 # (apps/backend/deno.json → @panchangpal/shared, @panchangpal/ai, supabase-js).
 # `_shared` is a shared library, not a function, so it is not declared.
-# NOTE: verify_jwt defaults to true. revenuecat-webhook is called by RevenueCat
+# NOTE: verify_jwt defaults to true, and every function keeps it EXCEPT `health` (see its block
+# below for why that one is safe to expose). revenuecat-webhook is called by RevenueCat
 # (no Supabase JWT) — set verify_jwt = false for it once the webhook is wired.
 # =============================================================================
 
 [functions.account]
 entrypoint = "../apps/backend/functions/account/index.ts"
 import_map = "../apps/backend/deno.json"
+
+# SVC_health — the ONLY function with verify_jwt = false, and the only unauthenticated surface in
+# the system. NFR-14 (availability ≥ 99.9% on core reads, TDD Part 5 §7.2) had no instrument
+# precisely because of the default: an uptime monitor polling any other function anonymously
+# measures the auth layer returning 401, not availability.
+#
+# What makes this safe to expose, as built (see functions/health/probe.ts):
+#   · GET/OPTIONS only — no body parsed, no query parameter read, so there is no input to abuse.
+#   · Reads no user data. The dependency check hits `feature_flag`, which is tiny, already
+#     public-select, carries nothing personal, and is read by the app at every launch — so the
+#     probe exercises a path the product genuinely depends on.
+#   · `head: true` — the query returns no rows at all, only status, so nothing from the table can
+#     reach the response even by accident.
+#   · The body is a CLOSED {status, checked} shape built from a boolean, never from the dependency
+#     error. A health endpoint that echoes its error hands out Postgres versions, table names and
+#     role names to anyone who curls it. Pinned by probe.test.ts.
+#
+# It deliberately does a real database read rather than returning a bare 200: a liveness-only probe
+# reports 99.9% straight through a total outage, which is a monitor that cannot go red.
+[functions.health]
+entrypoint = "../apps/backend/functions/health/index.ts"
+import_map = "../apps/backend/deno.json"
+verify_jwt = false
 
 [functions.ask-guru]
 entrypoint = "../apps/backend/functions/ask-guru/index.ts"
