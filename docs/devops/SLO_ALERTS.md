@@ -162,13 +162,12 @@ allow-list is now anonymously readable, naming `x-revenuecat-signature` and
 
 1. **Create the Sentry Uptime monitor** against the deployed URL, alerting **to an explicit Member**
    — the recipient mistake from §8 applies here too, and would fail the same silent way.
-   ⚠️ Blocked until `panchangpal-edge` has seen an event: Sentry populates the required Environment
-   field from observed events, and that project had none.
-   **Not because the DSN was missing — it was set on 2026-08-01.** An earlier version of this
-   document said otherwise and was wrong. The project was empty for a simpler reason: **no Edge
-   error had ever been triggered.** Telemetry fires only at `errorResponse()`, so a backend with no
-   server failures produces no events, exactly as designed. "Unverified" and "broken" look identical
-   from an empty dashboard, and only one of them was true.
+   ✅ **Unblocked 2026-08-02.** Sentry populates the required Environment field from observed
+   events, and `panchangpal-edge` had none — not because the DSN was missing (it was set
+   2026-08-01) but because **no Edge error had ever been triggered**. Three deliberate errors later
+   the project reports `staging` correctly (see §8), so the dropdown now offers it.
+   ⚠️ Two of those three are tagged `production` and are **staging traffic mislabelled**, from
+   before `SENTRY_ENVIRONMENT` was set. Scope the monitor to **`staging`**, not `production`.
 2. **Prove it** the way NFR-06 was proven: not by seeing a 200, but by making it go **red** and
    watching an email arrive. Until then this row is an instrument, not an SLO.
 
@@ -275,6 +274,44 @@ project `panchangpal-mobile`, **environment `production`**, threshold `< 99.5%`,
 metric `percentage(sessions_crashed, sessions)`.
 
 **This is the first alert in this project proven to reach a human.**
+
+### ✅ The Edge telemetry path is proven — 2026-08-02
+
+§7.1 is "client **+** Edge Functions", and the server half had never been exercised: `panchangpal-edge`
+had zero events since Sentry went live. Not because anything was broken — the DSN had been set since
+2026-08-01 — but because **telemetry fires only at `errorResponse()`, and no server error had ever
+occurred.** An empty dashboard looks identical whether the seam is broken or merely unexercised.
+
+Triggered deliberately with a `GET /functions/v1/sync`, which throws at `sync/index.ts:31`
+(`AppError('ERR_UNKNOWN', 'Method not allowed')`) — chosen because it is **before** line 38's
+`currentUserId`, so it touches no database and resolves no user: one intentional error, zero side
+effects. The anon key serves as the bearer token because it is itself a signed JWT, which is what
+gets past the gateway's `verify_jwt` so our code can run at all.
+
+| # | Time (UTC) | Correlation id | `environment` |
+|---|---|---|---|
+| 1 | 09:57:16 | `0990dbbd-…` | `production` ⚠️ |
+| 2 | 10:10:03 | `7c91cf8b-…` | `production` ⚠️ |
+| 3 | **10:25:51** | `03a30d83-…` | **`staging`** ✅ |
+
+All three reached Sentry with the correlation id matching the HTTP response, which is what §7.1's
+correlation is for. **The first two were mislabelled**, and that is the finding: `_shared/http.ts`
+defaults `SENTRY_ENVIRONMENT` to `production`, and the variable had never been set — so staging
+errors landed in the bucket real incidents will, and any `environment:production` alert on this
+project would have fired on staging traffic. The identical defect PR #98 fixed on the mobile side,
+in the server seam, found the same way.
+
+**The ordering is the whole story, and it cost two false negatives.** The secret was saved at
+**10:18:15**, *after* both of the first two curls — so neither could ever have shown `staging`,
+and each looked like the fix had failed. Only the third curl (38 s after a deploy that finished
+10:25:13) was capable of proving anything. **When a config change does not appear to take, compare
+timestamps before touching code.**
+
+Config was ultimately verified without reading the value at all: Supabase shows a SHA-256 digest per
+secret, and `sha256("staging")` matches it exactly — ruling out a trailing space, a newline, or a
+capitalisation slip, none of which a screenshot would reveal.
+
+---
 
 ### Reproducing
 
