@@ -57,6 +57,33 @@ Each time the tell was a **timestamp or a log line**, never the thing being chan
 check of the day was `sha256("staging")` against Supabase's published digest — one step, where two
 screenshots had left the value ambiguous.
 
+# Dependency queue, part 3 (after B4 closed)
+
+**Progress unchanged at 50%** — dependency work advances no slice.
+
+| PR | Verdict |
+|---|---|
+| **#97** `zustand` 4→5 | ✅ **merged** `4812316` — E2E **6/6 on device** |
+| **#95** `@types/node` 20→26 | ❌ closed via **#101** `3434538` |
+| **#96** `eslint` 8→9 | 🔧 left open — flat-config migration |
+| **#90** RNTL 13→14 | 🔧 left open — `test-renderer` migration |
+
+**#95 was green and wrong — the fourth time this session.** `@types/node` describes the runtime, and
+newer types only *add* APIs, so a bump always compiles. With `NODE_VERSION: '20.11.0'` and
+`engines.node: >=20.11.0`, moving to 26 makes TypeScript accept built-ins the runtime lacks. #101
+adds the ignore rule **and** asserts the invariant — including that every workflow's `NODE_VERSION`
+agrees with the engine floor — because that ignore list has leaked **four times** and does not stop a
+human. Perturbed with #95's exact bump.
+
+**#97 was safer than predicted.** I expected zustand 5's curried `create<T>()(fn)` to break all five
+stores; the non-curried form still compiles. None of v5's breaking surfaces are used — no default
+import, no two-arg `useStore(sel, equalityFn)`, and the six `persist(` calls are **our own function**
+in `offlineQueue.ts`, not zustand middleware. Verified anyway on device because
+`STORE_offlineQueue` produced two defects this week: **6/6 flows**, including FLOW_OFFLINE_SYNC.
+
+**Correction:** I called #96 a seven-package migration. It is **one** `.eslintrc.cjs` shared by seven
+packages — bounded, though the `toISOString().slice` guard from issue #30 must survive the port.
+
 # Blockers
 
 1. ⚠️ **The §6.6 `preferences` conflict rule is UNRATIFIED** and shipped in merged code (LWW).
