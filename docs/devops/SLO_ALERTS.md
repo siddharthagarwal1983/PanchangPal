@@ -341,6 +341,27 @@ detection + notification, not the 503 path.** That gap is covered logically by `
 **The alert action was set to an explicit Member**, which is the entire reason this succeeded on the
 first attempt where NFR-06 needed two — see Drill 1 above.
 
+The check-in log is the drill in ten rows, and matches the configured thresholds exactly:
+
+| Time (IST) | Status | HTTP |
+|---|---|---|
+| 4:09–4:12 | Uptime | 200 |
+| 4:13, 4:14 | Failure (Assertions Failed) | 404 |
+| **4:15** | **Downtime** — third consecutive, issue opens | 404 |
+| 4:16, 4:17 | Downtime | 404 |
+| **4:18** | **Uptime** — resolves on one success | 200 |
+
+⚠️ **Latency headroom is thinner than the timeout suggests.** Healthy checks take **1–2 s**
+(observed 1.041 s … 2.057 s) against a **5 s timeout**: Sentry probes from US East/West while the
+Supabase project is `ap-south-1` (Mumbai), so every check is a transcontinental round trip *plus* a
+real database read. That is normal, not a fault — but a slow moment has less margin than 5 s implies.
+The failure threshold of 3 absorbs a single slow check, which is the reason not to raise the timeout
+reflexively; if false failures ever appear, raise the **timeout**, not the threshold, because the
+threshold is what stops a blip from paging.
+
+The drill also cost the monitor's own uptime figure — it read **70%** immediately afterwards. That is
+the six deliberate 404s, not an outage.
+
 ---
 
 ### Reproducing
