@@ -65,8 +65,8 @@ screenshots had left the value ambiguous.
 |---|---|
 | **#97** `zustand` 4→5 | ✅ **merged** `4812316` — E2E **6/6 on device** |
 | **#95** `@types/node` 20→26 | ❌ closed via **#101** `3434538` |
-| **#96** `eslint` 8→9 | 🔧 left open — flat-config migration |
-| **#90** RNTL 13→14 | 🔧 left open — `test-renderer` migration |
+| **#96** `eslint` 8→9 | ✅ **merged** `18ab1c4` — `.eslintrc.cjs` ported to flat config |
+| **#90** RNTL 13→14 | 🔧 **stopped** — a two-part API migration, possibly SDK-coupled |
 
 **#95 was green and wrong — the fourth time this session.** `@types/node` describes the runtime, and
 newer types only *add* APIs, so a bump always compiles. With `NODE_VERSION: '20.11.0'` and
@@ -81,8 +81,23 @@ import, no two-arg `useStore(sel, equalityFn)`, and the six `persist(` calls are
 in `offlineQueue.ts`, not zustand middleware. Verified anyway on device because
 `STORE_offlineQueue` produced two defects this week: **6/6 flows**, including FLOW_OFFLINE_SYNC.
 
-**Correction:** I called #96 a seven-package migration. It is **one** `.eslintrc.cjs` shared by seven
-packages — bounded, though the `toISOString().slice` guard from issue #30 must survive the port.
+**#96 done (`18ab1c4`).** One `.eslintrc.cjs` → `eslint.config.mjs`, rule-for-rule: all 7 packages
+lint at **0 errors / 16 warnings**, matching the baseline exactly. The ADR-026 guard still fires —
+perturbed by reintroducing `toISOString().slice(0,10)` — and `time.test.ts` stays exempt. Four flat
+specifics, each found by running it: `react-hooks` needs `configs.flat.recommended` (not
+`recommended-latest`, which adds a 17th rule); **`import/parsers` keyed by module NAME breaks under
+pnpm's nesting** and needed an absolute path — the fourth flat-`node_modules` assumption to fail here
+after `@babel/runtime`, `babel-preset-expo` and `@sentry/cli`; `react-native`'s entry is **Flow** and
+unparseable, so `import/ignore` is scoped to that one module rather than disabling `import/namespace`
+wholesale; and `ignores` replaces `ignorePatterns`.
+
+⛔ **#90 stopped, with the scope established so nobody re-derives it.** Not a bump and not a
+resolution problem — `test-renderer@1.2.0` installs cleanly and RNTL loads it. RNTL 14 changed
+`render`/`renderHook` internals in ways `jest-expo@54`'s preset does not accommodate: `screen` never
+populates in `packages/ui` (whole suite), and `renderHook` throws
+`Cannot read properties of undefined (reading 'current')` across **19 mobile tests / 5 suites**.
+**`jest-expo` is SDK-pinned**, so this may not be cleanly fixable until an SDK upgrade ships a newer
+one — which would make #90 SDK-coupled after all. Worth confirming before anyone invests in it.
 
 # Blockers
 
