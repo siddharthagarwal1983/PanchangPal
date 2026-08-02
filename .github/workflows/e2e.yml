@@ -116,9 +116,21 @@ jobs:
       #
       # Appended rather than set in `env:`, because `env:pull` OVERWRITES .env wholesale and the
       # bundler reads the file, not the shell.
+      #
+      # ⚠️ THE LEADING NEWLINE IS LOAD-BEARING, and omitting it broke the suite once (run
+      # 30735155676, 4/6 failed against main's 6/6). `eas env:pull` does not guarantee a trailing
+      # newline, so a bare `echo ... >> .env` concatenates onto the LAST VARIABLE'S VALUE: the
+      # name still parses, so the file looks fine, while that variable now holds
+      # `<real value>EXPO_PUBLIC_SENTRY_ENVIRONMENT=ci`. A corrupted EXPO_PUBLIC_SUPABASE_URL
+      # fails every backend call, and the four flows that need one fail while the two that do not
+      # pass — which reads as a product defect rather than a workflow bug.
+      #
+      # The tell is in this job's own log: `env: export ...` lists the parsed names. If
+      # EXPO_PUBLIC_SENTRY_ENVIRONMENT is absent from that line, this step silently did the wrong
+      # thing. Check it before believing a green.
       - name: Tag this build's telemetry as CI, not production
         working-directory: apps/mobile
-        run: echo "EXPO_PUBLIC_SENTRY_ENVIRONMENT=ci" >> .env
+        run: printf '\nEXPO_PUBLIC_SENTRY_ENVIRONMENT=ci\n' >> .env
 
       # Generates the native android/ project. Not committed — the app is a managed
       # Expo project, so this is regenerated per run and stays disposable.

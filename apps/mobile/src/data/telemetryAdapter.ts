@@ -94,7 +94,13 @@ export function isUsableDsn(dsn: string): boolean {
  * the binary it came from; the override exists for builds EAS did not make.
  */
 function sentryEnvironment(): string {
-  const explicit = process.env.EXPO_PUBLIC_SENTRY_ENVIRONMENT;
+  // `extra` FIRST, mirroring `configuredDsn()`. Reading only `process.env` relies on Babel
+  // inlining `EXPO_PUBLIC_*` into the bundle, and the gradle-driven `export:embed` path did not
+  // deliver it — run 30735155676 logged `env=production` with the variable present in .env.
+  // `extra` is evaluated by Expo CLI in Node, where the .env is loaded; it is the path the DSN
+  // already takes, and the one proven to work in CI.
+  const extra = (Constants.expoConfig?.extra ?? {}) as { sentryEnvironment?: string };
+  const explicit = extra.sentryEnvironment ?? process.env.EXPO_PUBLIC_SENTRY_ENVIRONMENT;
   if (typeof explicit === 'string' && explicit.length > 0) return explicit;
 
   const channel = Constants.expoConfig?.extra?.eas?.channel;

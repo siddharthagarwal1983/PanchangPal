@@ -298,6 +298,22 @@ describe('the environment a build reports as', () => {
     expect(resolvedEnv()).toBe('ci');
   });
 
+  it('reads the override from `extra`, which is the path that actually works in CI', () => {
+    // The first attempt read ONLY `process.env`, which relies on Babel inlining EXPO_PUBLIC_* into
+    // the bundle. The gradle-driven `export:embed` path did not deliver it: run 30735155676 logged
+    // `env=production` with the variable set in .env. `extra` is evaluated by Expo CLI in Node,
+    // and is how `sentryDsn` already reaches the app. This asserts the working path directly,
+    // because the broken one passed its unit test.
+    constants.expoConfig.extra = { sentryEnvironment: 'ci' };
+    expect(resolvedEnv()).toBe('ci');
+  });
+
+  it('prefers `extra` over a stale process.env value', () => {
+    constants.expoConfig.extra = { sentryEnvironment: 'ci' };
+    process.env.EXPO_PUBLIC_SENTRY_ENVIRONMENT = 'production';
+    expect(resolvedEnv()).toBe('ci');
+  });
+
   it('lets the override WIN over an EAS channel, since only the build knows it is not real', () => {
     // The ordering that matters. If the channel won, `e2e.yml`'s override would be inert on any
     // build that happened to carry one, and the fix would look applied while changing nothing.
