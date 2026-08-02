@@ -66,7 +66,7 @@ screenshots had left the value ambiguous.
 | **#97** `zustand` 4→5 | ✅ **merged** `4812316` — E2E **6/6 on device** |
 | **#95** `@types/node` 20→26 | ❌ closed via **#101** `3434538` |
 | **#96** `eslint` 8→9 | ✅ **merged** `18ab1c4` — `.eslintrc.cjs` ported to flat config |
-| **#90** RNTL 13→14 | 🔧 **stopped** — a two-part API migration, possibly SDK-coupled |
+| **#90** RNTL 13→14 | ❌ **closed** — requires **Node 22**; this repo runs Node 20 |
 
 **#95 was green and wrong — the fourth time this session.** `@types/node` describes the runtime, and
 newer types only *add* APIs, so a bump always compiles. With `NODE_VERSION: '20.11.0'` and
@@ -91,13 +91,22 @@ after `@babel/runtime`, `babel-preset-expo` and `@sentry/cli`; `react-native`'s 
 unparseable, so `import/ignore` is scoped to that one module rather than disabling `import/namespace`
 wholesale; and `ignores` replaces `ignorePatterns`.
 
-⛔ **#90 stopped, with the scope established so nobody re-derives it.** Not a bump and not a
-resolution problem — `test-renderer@1.2.0` installs cleanly and RNTL loads it. RNTL 14 changed
-`render`/`renderHook` internals in ways `jest-expo@54`'s preset does not accommodate: `screen` never
-populates in `packages/ui` (whole suite), and `renderHook` throws
-`Cannot read properties of undefined (reading 'current')` across **19 mobile tests / 5 suites**.
-**`jest-expo` is SDK-pinned**, so this may not be cleanly fixable until an SDK upgrade ships a newer
-one — which would make #90 SDK-coupled after all. Worth confirming before anyone invests in it.
+❌ **#90 closed — RNTL 14 declares `engines: { node: "^22.13.0 || >=24" }` and this repo pins Node
+20.11.0 in every workflow.** A declared constraint, not documentation.
+
+⚠️ **My first reading was wrong.** I attributed the failures to `jest-expo@54`'s preset and guessed
+SDK coupling. The package ships `docs/guides/migration-v14.md`, which says the real cause: **`render`,
+`renderHook`, `fireEvent` and `act` are now async.** That explains both symptoms exactly — `wrap()`
+never awaits `render`, so `screen` is unpopulated; `renderHook` returns a promise, so `result.current`
+is undefined. **Reading the package's own migration guide would have settled it in one step**, far
+cheaper than debugging renderer internals.
+
+**The prerequisite is a Node 20 → 22 upgrade**, which is a platform increment in its own right: it
+moves `NODE_VERSION` in every workflow, `engines.node`, and `@types/node` — and
+`types-node-matches-engine.test.ts` now *forces* those to move together, which turns it into one
+coherent change instead of drift. Notably **`expo@54.0.36` already depends on `@types/node ^22.14.0`**,
+so SDK 54 expects Node 22 and the upgrade is likely owed regardless. The async migration after it is
+bounded: 41 call sites across 14 files, with codemods shipped.
 
 # Two owner decisions ratified and implemented the same day
 
