@@ -163,7 +163,30 @@ proven.**
 
 | Date | What was triggered | Result |
 |---|---|---|
-| 2026-08-02 | `scripts/slo-alert-drill.mjs` — 20 synthetic sessions, 3 crashed (**85% crash-free**) into `environment=production`, release `0.1.0` | Submission **accepted (HTTP 200)**. Detection + notification: ⏳ **unconfirmed** |
+| 2026-08-02 | `scripts/slo-alert-drill.mjs` — 20 synthetic sessions, 3 crashed, into `environment=production`, release `0.1.0` | ✅ Submission accepted (HTTP 200) · ✅ **Detection fired** — issue `PANCHANGPAL-MOBILE-2` opened 12:31 IST, priority **high**, assigned · ⏳ notification unconfirmed |
+
+**What the issue recorded**, which is the proof that the monitor evaluates what it claims to:
+
+| Triggered Condition | |
+|---|---|
+| Dataset | `Releases` |
+| Aggregate | `crash_free_rate(session)` |
+| **Environment** | **`production`** |
+| Interval | 1 hour |
+| Condition | Below 99.5 |
+| **Evaluated Value** | **93.182** |
+
+**The evaluated value is not the drill's 85%, and the discrepancy is worth keeping.** 41/44 = 93.18%,
+so the window held **44** production sessions: the drill's 20 plus **24 from run `30735155676`** —
+the broken E2E run earlier that morning that tagged its sessions `production` before the newline
+defect in `e2e.yml` was fixed. It is **not** an ongoing leak: both `main` runs after PR #98
+(`30736249752`, `30736362471`) log `env=ci`, 12 each.
+
+Two things follow. **Sessions outnumber launches** — 24 sessions from 8 launches, consistent with
+`AppLifecycleIntegration` starting a session per foreground while `[telemetry] reporter=` logs once
+per process (inferred from the arithmetic, not measured). And **a drill's evaluated value will
+include whatever else is in the window**, so it should be read as a lower bound on the drill's
+effect rather than as its measurement.
 
 **Reproduce with:**
 
