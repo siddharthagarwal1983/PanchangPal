@@ -65,11 +65,17 @@ try {
 
 const rate = (((total - crashed) / total) * 100).toFixed(1);
 
+// Each session carries a distinct `did`, so N crashed sessions is also N crashed USERS — the same
+// submission exercises NFR-06 (crash-free sessions ≥ 99.5%) and NFR-07 (crash-free users ≥ 99.8%)
+// at once. Deliberately no monitor id or threshold is printed: they live in Sentry, they change
+// when a monitor is recreated, and a hardcoded copy here silently goes stale (7968827 did exactly
+// that within a day).
 console.log(`SLO alert drill
   project id   ${projectId} @ ${host}
   environment  ${environment}
   release      ${release}
-  sessions     ${total} (${crashed} crashed) → crash-free ${rate}%, threshold 99.5%`);
+  sessions     ${total} (${crashed} crashed)
+  → crash-free ${rate}% for BOTH sessions and users (distinct did per session)`);
 
 if (!confirmed) {
   console.error(`
@@ -124,12 +130,19 @@ if (!res.ok) {
 }
 
 console.log(`
-Accepted. Sentry aggregates sessions per interval, so allow up to ~1 interval (the NFR-06 monitor
-uses 1 hour) before judging. Then check, IN THIS ORDER — each answers a different question:
+Accepted. Sentry aggregates sessions per interval, so allow up to one monitor interval before
+judging. Then check, IN THIS ORDER — each answers a different question:
 
   1. Project → Releases/Sessions: does crash-free show the drop?   (did the data land)
-  2. Monitor 7968827: is there an ongoing issue?                   (did detection fire)
+  2. The monitor: is there an ongoing issue?                       (did DETECTION fire)
   3. Your inbox: did the connected alert email arrive?             (did NOTIFICATION work)
 
-Only (3) proves the alert is a capability rather than a plan. Record the result in
-docs/devops/SLO_ALERTS.md §8, including the date, so a later dip is not misread as a regression.`);
+Only (3) proves the alert is a capability rather than a plan — (1) and (2) both passed on
+2026-08-02 while the alert reached nobody, because it targeted Suggested Assignees, which a
+metric-monitor issue cannot resolve. Always notify an explicit Member.
+
+Expect one email PER monitor whose threshold this crosses: NFR-06 and NFR-07 both fire from this
+one submission, which is one fact reported twice rather than two signals.
+
+Record the outcome in docs/devops/SLO_ALERTS.md §8 with the date, so a later crash-free dip is not
+misread as a regression.`);
