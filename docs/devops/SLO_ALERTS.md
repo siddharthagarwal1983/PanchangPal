@@ -163,7 +163,32 @@ proven.**
 
 | Date | What was triggered | Result |
 |---|---|---|
-| _(pending)_ | Synthetic crashed sessions against `environment:production` | _(pending)_ |
+| 2026-08-02 | `scripts/slo-alert-drill.mjs` — 20 synthetic sessions, 3 crashed (**85% crash-free**) into `environment=production`, release `0.1.0` | Submission **accepted (HTTP 200)**. Detection + notification: ⏳ **unconfirmed** |
+
+**Reproduce with:**
+
+```bash
+node scripts/slo-alert-drill.mjs --dsn "<panchangpal-mobile client DSN>" --confirm
+```
+
+The script refuses without `--confirm` and rejects a malformed DSN, because its whole purpose is to
+write data that cannot be taken back.
+
+### The three questions, which are not the same question
+
+Sentry aggregates sessions per interval, so allow ~1 hour (the monitor's interval) before judging.
+Then check **in this order** — each failing for a different reason:
+
+1. **Project → Releases/Sessions: does crash-free show the drop?** — did the data land at all.
+2. **Monitor `7968827`: is there an ongoing issue?** — did *detection* fire.
+3. **Inbox: did the connected alert email arrive?** — did *notification* work.
+
+**Only (3) settles it.** (1) and (2) can both succeed while the alert reaches nobody — which is
+exactly the state this monitor was in before its §7 Alert section was filled in, and is the shape of
+every failure §8.4 is about. Until (3) is confirmed, NFR-06 alerting is **configured, not proven**.
+
+⚠️ **This drill put 3 synthetic crashes into production session data permanently.** A crash-free dip
+dated 2026-08-02 is this, not a regression.
 
 **The trade-off in proving it, stated rather than buried:** the only way to make a
 production-scoped crash-free alert fire is to put crashed sessions into production telemetry, which
