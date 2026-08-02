@@ -89,6 +89,13 @@ const config: ExpoConfig = {
     supabaseAnonKey: process.env.EXPO_PUBLIC_SUPABASE_ANON_KEY,
     revenueCatKey: process.env.EXPO_PUBLIC_REVENUECAT_KEY,
     sentryDsn: process.env.EXPO_PUBLIC_SENTRY_DSN,
+    // Which environment reports are attributed to (§7.2). Threaded through `extra` like every
+    // other value here rather than read as `process.env.*` at runtime: that relies on Babel
+    // inlining `EXPO_PUBLIC_*` into the bundle, and the gradle-driven `export:embed` path did not
+    // deliver it (run 30735155676 logged `env=production` with the variable set). `extra` is
+    // evaluated by Expo CLI in Node, where the .env is definitely loaded — the path `sentryDsn`
+    // already proves works in CI.
+    sentryEnvironment: process.env.EXPO_PUBLIC_SENTRY_ENVIRONMENT,
   },
 };
 

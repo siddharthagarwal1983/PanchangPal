@@ -251,3 +251,81 @@ describe('global error handler', () => {
     expect(() => installGlobalErrorHandler()).not.toThrow();
   });
 });
+
+/**
+ * Which environment a build reports as (§7.2). This is not cosmetic: the crash-free SLO and every
+ * alert are scoped by it, so a build that misreports its environment silently contaminates the
+ * metric it is supposed to be measured by.
+ *
+ * The defect these guard was live: `sentryEnvironment()` derived the environment from
+ * `extra.eas.channel`, which only EAS Build stamps. CI builds with `expo prebuild` +
+ * `gradlew assembleRelease` on the runner — no channel — and `__DEV__` is false in a release APK,
+ * so it fell through to **'production'** while pulling a real DSN from EAS's preview environment.
+ * Essentially all 91 sessions in `panchangpal-mobile` were E2E emulator launches counted as
+ * production, and an `environment:production` alert would have paged on every CI run.
+ */
+describe('the environment a build reports as', () => {
+  const constants = jest.requireMock('expo-constants').default as {
+    expoConfig: { extra: Record<string, unknown> };
+  };
+
+  function resolvedEnv(): string {
+    const log = jest.spyOn(console, 'log').mockImplementation(() => undefined);
+    getTelemetryAdapter();
+    const line = log.mock.calls.map(String).find((c) => c.includes('[telemetry]')) ?? '';
+    return /env=(\S+)/.exec(line)?.[1] ?? '';
+  }
+
+  beforeEach(() => {
+    resetTelemetryForTests();
+    delete process.env.EXPO_PUBLIC_SENTRY_ENVIRONMENT;
+    constants.expoConfig.extra = {};
+  });
+
+  afterEach(() => {
+    jest.restoreAllMocks();
+    delete process.env.EXPO_PUBLIC_SENTRY_ENVIRONMENT;
+    constants.expoConfig.extra = {};
+    resetTelemetryForTests();
+  });
+
+  it('is stated on the resolution line, so an E2E artifact can answer it without a redeploy', () => {
+    expect(resolvedEnv()).not.toBe('');
+  });
+
+  it('uses an explicit override — this is what stops CI reporting as production', () => {
+    process.env.EXPO_PUBLIC_SENTRY_ENVIRONMENT = 'ci';
+    expect(resolvedEnv()).toBe('ci');
+  });
+
+  it('reads the override from `extra`, which is the path that actually works in CI', () => {
+    // The first attempt read ONLY `process.env`, which relies on Babel inlining EXPO_PUBLIC_* into
+    // the bundle. The gradle-driven `export:embed` path did not deliver it: run 30735155676 logged
+    // `env=production` with the variable set in .env. `extra` is evaluated by Expo CLI in Node,
+    // and is how `sentryDsn` already reaches the app. This asserts the working path directly,
+    // because the broken one passed its unit test.
+    constants.expoConfig.extra = { sentryEnvironment: 'ci' };
+    expect(resolvedEnv()).toBe('ci');
+  });
+
+  it('prefers `extra` over a stale process.env value', () => {
+    constants.expoConfig.extra = { sentryEnvironment: 'ci' };
+    process.env.EXPO_PUBLIC_SENTRY_ENVIRONMENT = 'production';
+    expect(resolvedEnv()).toBe('ci');
+  });
+
+  it('lets the override WIN over an EAS channel, since only the build knows it is not real', () => {
+    // The ordering that matters. If the channel won, `e2e.yml`'s override would be inert on any
+    // build that happened to carry one, and the fix would look applied while changing nothing.
+    constants.expoConfig.extra = { eas: { channel: 'preview' } };
+    process.env.EXPO_PUBLIC_SENTRY_ENVIRONMENT = 'ci';
+    expect(resolvedEnv()).toBe('ci');
+  });
+
+  it('still prefers the EAS channel over the __DEV__ fallback when no override is set', () => {
+    // Kept as the primary signal for EAS builds: a channel cannot disagree with the binary it was
+    // stamped into, whereas an override is only as good as the workflow that sets it.
+    constants.expoConfig.extra = { eas: { channel: 'preview' } };
+    expect(resolvedEnv()).toBe('preview');
+  });
+});
