@@ -15,14 +15,13 @@ capability.**
 
 ## 0. What is actually alerting today
 
-✅ **Two of the seven page a human, and both have been watched doing it** — NFR-06 and NFR-14,
-each proven end to end by a deliberate trigger on 2026-08-02 (§8). Those are the only two here that
-meet §8.4's standard.
+✅ **Three page a human, and all three have been watched doing it** — NFR-06, NFR-07 and NFR-14,
+each proven end to end by a deliberate trigger on 2026-08-02 (§8). Those are the only three here
+that meet §8.4's standard.
 
 | | |
 |---|---|
-| **Live and PROVEN** | NFR-06 crash-free sessions ✅ · NFR-14 availability ✅ |
-| **Measurable, no monitor yet** | NFR-07 crash-free users (same Sentry session data, no new instrumentation) |
+| **Live and PROVEN** | NFR-06 crash-free sessions ✅ · NFR-07 crash-free users ✅ · NFR-14 availability ✅ |
 | **Blocked on a decision** | NFR-10 sync success — no sync event exists in the PDD §11 taxonomy |
 | **Blocked on a gated feature** | NFR-05 AI latency · NFR-16 AI cost · refusal/groundedness (all Ask Guru) · NFR-11 push delivery |
 
@@ -37,6 +36,7 @@ all.**
 | SLO | NFR | Target | Instrument | Status |
 |---|---|---|---|---|
 | Crash-free sessions | NFR-06 | ≥ 99.5% | Sentry sessions | ✅ **live and proven** — see §2, §8 |
+| Crash-free users | NFR-07 | ≥ 99.8% | Sentry sessions | ✅ **live and proven** — see §3; binds tighter than NFR-06 |
 | Availability (core reads) | NFR-14 | ≥ 99.9% | `SVC_health` probe | ✅ **live and proven** — see §4, §8 |
 | Sync success | NFR-10 | ≥ 99.5% | SVC_sync metrics | ⛔ blocked on a decision (§5) |
 | AI first-token latency | NFR-05 | < 2 s | EVT_030 | ⛔ not emitted; feature gated |
@@ -83,7 +83,7 @@ this, and the fix is the no-data setting — not the threshold, which is the NFR
 
 ---
 
-## 3. NFR-07 — crash-free users ≥ 99.8% 🟡 specified, monitor not yet created
+## 3. NFR-07 — crash-free users ≥ 99.8% ✅
 
 Not in §7.2's table but in the NFR table (Part 1 §8), and it needs **no new instrumentation** —
 Sentry computes it from the same session data NFR-06 already uses. It is one more monitor of the
@@ -97,6 +97,10 @@ same shape as §2.
 | High priority | **Below `99.8`** (NFR-07) |
 | Medium priority | Below `99.9` |
 | Alert | **Notify → Member** (explicit), Email |
+
+**Proven 2026-08-02 16:40** — issue `PANCHANGPAL-MOBILE-5`, `crash_free_rate(user)` below 99.8,
+environment `production`, **Evaluated Value 85** (the drill's 3 crashed of 20 distinct `did`s), email
+received confirming `percentage(users_crashed, users)`.
 
 ### ⚠️ NFR-07 is a far tighter bar than NFR-06, and will bind first
 
