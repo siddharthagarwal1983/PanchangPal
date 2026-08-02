@@ -114,4 +114,27 @@ updates:
     groups:
       actions:
         patterns: ['*']
+    ignore:
+      # MAJOR BUMPS ONLY, because this repo pins actions by MAJOR — all nine of them
+      # (`actions/checkout@v7`, `pnpm/action-setup@v6`, `actions/setup-java@v5`, …). Publishers
+      # move the major tag to each new patch, so `@v5` ALREADY receives 5.x fixes; Dependabot
+      # cannot see that and reads `v5` as a version behind `5.6.0`.
+      #
+      # That produced PR #83 (`setup-java` 5 → 5.6.0), which is not an upgrade at all: it would
+      # FREEZE the one action at an exact patch while the other eight keep floating, so it stops
+      # receiving the security fixes the moving tag delivers — the opposite of the intent — and
+      # leaves the pinning strategy split two ways. `JAVA_VERSION: '17'` is set independently in
+      # e2e.yml, so the bump changes no JDK and no behaviour whatsoever.
+      #
+      # A major bump is the one that genuinely needs a human: it is the case the moving tag does
+      # NOT deliver, and the case that breaks inputs.
+      #
+      # THE COHERENT ALTERNATIVE, deliberately not taken here: pin every action to a full commit
+      # SHA, which is what defends against a compromised tag being re-pointed — the threat the
+      # comment above names. That is a security-posture decision across all nine actions and all
+      # workflows, not a dependency triage, so it is left to the owner rather than smuggled in
+      # behind a Dependabot PR.
+      - dependency-name: '*'
+        update-types:
+          ['version-update:semver-patch', 'version-update:semver-minor']
     labels: ['dependencies', 'ci']
