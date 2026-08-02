@@ -102,6 +102,47 @@ updates:
       # ships native code AND an Expo config plugin that hooks the native build. `expo install
       # --fix` moves it with the SDK; a lone bump is the mmkv-v2 shape again.
       - dependency-name: '@sentry/react-native'
+
+      # FOURTH LEAK (2026-08-02), and it corrects the rule stated above rather than just extending
+      # the list. **`bundledNativeModules.json` lists NATIVE modules.** It is authoritative in ONE
+      # DIRECTION — a hit means SDK-pinned — and is silent about SDK-pinned *build* packages, which
+      # are not native and never appear in it. The claim recorded on 2026-08-01 that scanning it
+      # made "the SDK 54 set complete" was therefore wrong, and #89 falsified it within a week.
+      #
+      # THE CHECK IS TWO-SIDED. Run both before triaging any dependency PR:
+      #
+      #   node -e "console.log(require('expo/bundledNativeModules.json')['<pkg>'])"   # native
+      #   node -e "console.log(require('expo/package.json').dependencies['<pkg>'])"   # build
+      #
+      # A tilde or caret range in the SECOND is an SDK pin just as much as a hit in the first.
+      #
+      #   babel-preset-expo  `expo@54.0.36` depends on it as `~54.0.12`, and its majors track SDK
+      #                      majors exactly as `@expo/metro-runtime`'s do — #89 proposed 57.0.5,
+      #                      an SDK 57 package, for an SDK 54 app. `expo-*` does not match a
+      #                      `babel-preset-` prefix, the same miss shape as `@expo/` and
+      #                      `@react-native-community/`. Pointedly, this is one of the two
+      #                      undeclared transitive dependencies that broke bundling during the
+      #                      Execution Gap — the comment above already says it gets extra care.
+      #   @babel/core        Pinned by the babel 7 PLUGIN FAMILY the SDK's toolchain is built from,
+      #                      not by a declared peer. #92 (7→8) is red because @babel/core 8 is
+      #                      ESM-only and every babel-7 plugin `require()`s it:
+      #                      `ERR_REQUIRE_ESM ... @babel/plugin-transform-object-rest-spread`, plus
+      #                      the bundle gate dying in react-native-worklets' plugin. Same family as
+      #                      `@babel/runtime`, and it moves with the SDK for the same reason.
+      #   @sentry/cli        `@sentry/react-native@7.2.0` depends on it at EXACTLY "2.55.0" — not a
+      #                      range. The top-level `^2.55.0` declaration exists only so
+      #                      `sentry.gradle`'s flat-node_modules fallback resolves under pnpm (#79).
+      #                      Bumping it to 3.x puts a CLI major at the hoisted path that the SDK was
+      #                      never tested against, while the SDK's own nested copy stays 2.55.0.
+      #                      It moves with `@sentry/react-native`, which is itself SDK-pinned.
+      #
+      # #91 IS THE SHARPEST CASE FOR "GREEN IS NOT THE CRITERION" IN THIS FILE: it passed ALL FIVE
+      # GATES, and had to, because `e2e.yml` sets `SENTRY_DISABLE_AUTO_UPLOAD: 'true'` and no gate
+      # runs `sentry.gradle` at all. The only consumer of @sentry/cli is never exercised in CI, so
+      # its green is vacuous rather than reassuring.
+      - dependency-name: babel-preset-expo
+      - dependency-name: '@babel/core'
+      - dependency-name: '@sentry/cli'
     labels: ['dependencies']
 
   # The workflows themselves are a supply chain. A compromised or abandoned action runs with
