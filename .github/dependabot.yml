@@ -143,6 +143,22 @@ updates:
       - dependency-name: babel-preset-expo
       - dependency-name: '@babel/core'
       - dependency-name: '@sentry/cli'
+
+      # `@types/node` DESCRIBES THE RUNTIME, so it tracks the runtime FLOOR — not the newest release
+      # and not the newest thing the dev machine happens to run. This repo pins
+      # `NODE_VERSION: '20.11.0'` in every workflow and declares `engines.node: >=20.11.0`, so the
+      # types stay on the 20.x line.
+      #
+      # #95 proposed 20 → 26 and passed ALL FIVE GATES, which is exactly what you would expect:
+      # newer types describe MORE APIs, so nothing fails to compile. That is the defect. It tells
+      # the compiler that Node 26 built-ins exist while CI and the declared engine floor are Node
+      # 20 — TypeScript stops rejecting code the runtime cannot run, and the failure surfaces at
+      # runtime instead of at build. Green here is the symptom, not the reassurance.
+      #
+      # Worth knowing: `expo@54.0.36` itself depends on `@types/node: ^22.14.0`, resolved nested by
+      # pnpm. That is Expo's floor, not ours; ours is set by `engines`. If the engine floor is ever
+      # raised, raise these types to match it deliberately — the two move together or not at all.
+      - dependency-name: '@types/node'
     labels: ['dependencies']
 
   # The workflows themselves are a supply chain. A compromised or abandoned action runs with
