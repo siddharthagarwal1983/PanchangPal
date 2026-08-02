@@ -30,13 +30,25 @@
 -- =============================================================================
 
 -- The one place the digest is defined. Callers must never inline the expression.
+--
+-- ⚠️ USES CORE `sha256()`, NOT pgcrypto's `digest()`. The first version called
+-- `digest(p_user_id::text, 'sha256')` and applied cleanly against a local Postgres 17 — and then
+-- failed CD on staging with `function digest(text, unknown) does not exist`. On Supabase, pgcrypto
+-- is installed into the **`extensions`** schema, not `public`, so with `search_path = public` the
+-- function is unresolvable; a local `create extension pgcrypto` puts it in `public`, which is why
+-- local verification could not see it.
+--
+-- `sha256(bytea)` has been in **pg_catalog** since PostgreSQL 11, and pg_catalog is always in the
+-- search path. That removes the extension dependency altogether rather than papering over it by
+-- adding `extensions` to `search_path` — one less thing that has to be true about the environment.
+-- The output is byte-identical to the pgcrypto form: both hash the UTF-8 bytes of the same text.
 create or replace function account_deletion_subject_digest(p_user_id uuid)
 returns text
 language sql
 immutable
 set search_path = public
 as $$
-  select encode(digest(p_user_id::text, 'sha256'), 'hex');
+  select encode(sha256(p_user_id::text::bytea), 'hex');
 $$;
 
 comment on function account_deletion_subject_digest(uuid) is
