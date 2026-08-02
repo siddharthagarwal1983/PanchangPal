@@ -2,8 +2,9 @@
 
 # PanchangPal — Current Task
 
-Version: 5.0.0
-Last Updated: 2026-08-02 (session end — four PRs merged; Sentry live and verified)
+Version: 5.1.0
+Last Updated: 2026-08-02 (tracking docs reconciled — NFR-07 is a third SLO, not one of §7.2's seven;
+current task set to the RNTL 13 → 14 migration)
 
 Purpose: the current implementation task. Stay focused; avoid unrelated work unless instructed.
 
@@ -110,6 +111,34 @@ green in CI on a real native build. Canonical progress 0% → 13% (1 of 8 Beta s
 # Current Task
 
 ## Title
+🚧 **RNTL 13 → 14 — the testing-infrastructure migration (`@testing-library/react-native`).**
+
+**Progress stays at 50%.** This advances no Beta slice; it is testing infrastructure, in the same
+category as the dependency queue. It is picked up now because it is the largest piece of bounded,
+credential-free engineering left — every other candidate is owner-gated on money or a store account.
+
+**Why it is a migration and not a bump.** RNTL 14 **replaces the `react-test-renderer` peer with
+`test-renderer@^1.0.0`**, so the whole `packages/ui` + `apps/mobile` component suite fails on the
+version bump alone. Scope recorded when #90 was triaged: **41 call sites across 14 files**, with
+upstream codemods available.
+
+⚠️ **#90 IS CLOSED, NOT OPEN — and the reason matters.** It was closed at 12:43 on 2026-08-02 because
+**RNTL 14 requires Node 22 and the repo ran Node 20** (`1e33869`). Node 22 landed ~30 minutes later
+(#106, `f5c018c`, merged 13:15), so the stated blocker is gone but the PR is not waiting to be
+merged — this is a fresh branch, and Dependabot's diff is only the starting point.
+
+⚠️ **`react` stays pinned.** RNTL's `ensure-peer-deps.js` asserting a renderer version is the **#75
+trap** this repo has already paid for once: satisfying the assertion is not the same as satisfying
+what the assertion defends. The SDK 54 pin on `react` / `@types/react` is unchanged by this work.
+
+**Verification bar, set before starting:** tsc across 11 projects · eslint at its 0-error baseline ·
+the full jest + vitest suites green with **no reduction in test count** · `expo export` both
+platforms. A migration that quietly drops tests passes every gate — so the count is part of the bar.
+
+---
+
+## Superseded — B4
+
 ✅ **B4 — OBSERVABILITY IS CLOSED (2026-08-02, part 3). 47% → 50%.**
 
 First slice completed since B6 on 2026-07-27. **B4.4 delivered two of §7.2's seven SLOs PROVEN end
@@ -120,10 +149,22 @@ to end**, which is §8.4's standard rather than "configured":
 | **NFR-06** crash-free sessions ≥ 99.5% | drill → issue → **email 14:43** |
 | **NFR-14** availability ≥ 99.9% | `SVC_health` forced red → `PANCHANGPAL-EDGE-3` → **email 16:17** |
 
+✅ **And NFR-07 crash-free users ≥ 99.8% was proven the same day — a THIRD SLO, but NOT one of §7.2's
+seven.** It is from the **Part 1 §8 NFR table**; SLO_ALERTS.md tracks it because it reuses NFR-06's
+session data and **binds tighter**, so it is the page that arrives first. "Two of §7.2's seven" and
+"three SLOs proven" are both correct — do not merge the denominators.
+
 ⚠️ **NFR-06 needed two drills and the first is the finding.** It detected perfectly and **told
 nobody** — both alert rows targeted *Suggested Assignees*, which a metric issue cannot resolve. Every
 visible signal said configured. **It would have shipped as done.** NFR-14 passed first time only
 because that lesson was applied: an explicit **Member** recipient.
+
+⛔ **NFR-07's drill found the other half: AN OPEN ISSUE SUPPRESSES THE NEXT ALERT.** It crossed both
+thresholds and only NFR-07 emailed — NFR-06's earlier issue was still open, and Sentry folds new
+occurrences into an existing open period. So an issue left open means **the next real incident of that
+kind pages nobody**, and a **metric-monitor issue cannot be resolved or deleted by hand** (no Resolve,
+Delete disabled; only Archive, which mutes). It closes only on a healthy reading; the only lever is
+recreating the monitor. **Pre-launch checklist item, not today's work.**
 
 **Shipped:** `docs/devops/SLO_ALERTS.md` (all seven SLOs, instrument/threshold/alert/blocker, pinned
 by `slo-alerts.test.ts` which fails when an instrument *appears* while the doc calls it missing) ·
@@ -137,17 +178,24 @@ unproven, none unfinished engineering: three behind the Ask Guru gate, one behin
 
 ## NEXT TASK
 
-1. **NFR-07 crash-free users** — same wizard, `crash_free_rate(user)` below 99.8, no new
-   instrumentation. A third SLO for ~2 minutes of owner time.
-2. **B1 / B3 remainders** — all owner-gated on money or a store account.
-3. **Owner decisions:** ratify **ADR-034** · rule on the **§6.6 `preferences`** rule (shipped
-   unratified as LWW) · decide **NFR-10's path** (PDD taxonomy vs a server metrics sink) · **SHA-pin
-   the nine GitHub Actions** (#87 records the case and left it open).
-4. **Deferred deliberately:** #90 (RNTL 14 migration), #95, #96 (eslint 9 flat config),
-   #97 (**zustand 5 — touches `STORE_offlineQueue`**, which produced two defects this week).
-5. **Owed, and named rather than absorbed:** `SVC_health`'s **503 branch** end to end (belongs with
+**Done since this block was written, and struck rather than deleted so the drift is visible:**
+~~NFR-07~~ ✅ proven the same day · ~~ratify ADR-034~~ ✅ ratified + implemented (#104) ·
+~~rule on §6.6 `preferences`~~ ✅ ratified as ADR-035, LWW on `local_ts` (#103) · ~~#96 eslint 9 flat
+config~~ ✅ merged (#102) · ~~#97 zustand 5~~ ✅ merged · ~~#95~~ closed.
+**ADR-033 (Canonical Panchang Computation Engine) is now the only Proposed ADR.**
+
+1. **B1 / B3 remainders** — all owner-gated on money or a store account.
+2. **Owner decisions still open:** **NFR-10's path** (a PDD §11 taxonomy addition vs a server metrics
+   sink — no sync event exists and inventing one is forbidden) · **SHA-pin the nine GitHub Actions**
+   (#87 records the case and deliberately left it open) · **~$25/mo paid Supabase** for NFR-15 PITR,
+   a stated launch blocker · **Apple $99 + Play $25**.
+3. **Owed, and named rather than absorbed:** `SVC_health`'s **503 branch** end to end (belongs with
    the DB-outage runbook drill), §7.2 **dashboards** (ADR-025's rollup worker is unbuilt), and the
    **deprecated Supabase key migration** (`readEnv` throws without them).
+4. **Pre-launch checklist:** confirm **no metric monitor has an open issue** — today's drills left
+   two, and a metric-monitor issue cannot be resolved by hand.
+5. **Node 24 with the SDK 55 upgrade** — Node 22 is maintenance-only, EOL 2027-04-30. A deliberate SDK
+   increment requiring a native build plus the six Maestro flows, not a bump.
 
 ---
 

@@ -55,6 +55,24 @@ surface in the system.
 # Recommended next task
 
 1. **Owner:** paid Supabase · store accounts · NFR-10's path · SHA-pin the nine Actions.
-2. **#90 (RNTL 14)** — unblocked by Node 22. Bounded: 41 call sites, 14 files, codemods shipped.
-   Advances no slice.
+2. **RNTL 14** — unblocked by Node 22. Bounded: 41 call sites, 14 files, codemods shipped.
+   Advances no slice. ⚠️ **Correction: #90 is CLOSED, not open** — it was closed at 12:43 because
+   RNTL 14 needs Node 22 and the repo ran Node 20; Node 22 merged at 13:15, ~30 minutes later. This
+   is a fresh branch, not a merge of a waiting PR.
 3. **Node 24 with the SDK 55 upgrade** — 22 is maintenance-only, EOL 2027-04-30.
+
+---
+
+# Addendum — 2026-08-02, tracking docs reconciled
+
+**The SLO count had drifted, and both numbers were right.** SESSION.md said three SLOs proven;
+DASHBOARD, CURRENT_MILESTONE, PROJECT_STATUS, IMPLEMENTATION_ROADMAP and TASK.md said two. Checked
+against **TDD Part 5 §7.2**, which names seven and **does not include NFR-07** — that comes from the
+**Part 1 §8 NFR table**. So "two of §7.2's seven" and "three SLOs proven" are both correct, and the
+denominators had been silently merged. Reconciled by making the distinction explicit everywhere
+rather than by picking a number; `SLO_ALERTS.md` §1 now says why its table has eight rows.
+
+**Also corrected while reconciling:** `SLO_ALERTS.md`'s own header still read "NFR-06 detects but does
+NOT notify", the pre-drill-2 state, contradicting its §0 · PROJECT_STATUS still had ADR-034 as
+*Proposed, awaiting ratification* (ratified and implemented, #104) · TASK.md's NEXT TASK listed six
+items that were already done.

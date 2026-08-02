@@ -26,11 +26,11 @@ import { getTelemetryBackend, resetTelemetryForTests } from '../../data/telemetr
 beforeEach(() => resetTelemetryForTests());
 
 describe('AppProviders — telemetry is live before anything can fail', () => {
-  it('resolves the telemetry adapter on mount, with no error having occurred', () => {
+  it('resolves the telemetry adapter on mount, with no error having occurred', async () => {
     // Nothing has thrown; the reporter is unresolved.
     expect(getTelemetryBackend()).toBeNull();
 
-    render(
+    await render(
       <AppProviders>
         <Text>ready</Text>
       </AppProviders>,
@@ -41,8 +41,8 @@ describe('AppProviders — telemetry is live before anything can fail', () => {
     expect(getTelemetryBackend()).not.toBeNull();
   });
 
-  it('reports a concrete backend rather than leaving it ambiguous', () => {
-    render(
+  it('reports a concrete backend rather than leaving it ambiguous', async () => {
+    await render(
       <AppProviders>
         <Text>ready</Text>
       </AppProviders>,

@@ -74,7 +74,7 @@ TBD
 | Mobile Development (feature slices) | ✅ Complete | 100% (M1–M8 done) |
 | AI Platform | 🟡 In Progress | Adapters + RAG pipeline done; corpus + eval pending |
 | Testing | 🟢 Healthy | 452 green (350 mobile jest + 102 vitest) + 43 pgTAP (incl. **17 on the F-3 deletion executor**) + 17 pgTAP RLS/DB assertions; bundle gate per PR; **6 Maestro FLOW_* green on main** (incl. FLOW_OFFLINE_SYNC); the emulator-ANR false-red is now fixed at its cause (AOSP image, PR #55) after PR #41's `hide_error_dialogs` proved a symptom patch — 3 of the last 4 failures were launcher ANRs; API contract gate restored and proven to fail; AI eval harness still owed |
-| Beta | 🚧 In progress | 50% (B2 ✅; **B4 ✅ CLOSED 2026-08-02 at verifiable scope** — B4.4 landed two §7.2 SLOs *proven end to end*, NFR-06 crash-free sessions and NFR-14 availability, each watched to open an issue and email a human; the first NFR-06 drill detected correctly and notified **nobody** and would have shipped as configured; five SLOs remain unproven, none of them unfinished engineering — three behind the Ask Guru gate, one behind uninstalled `expo-notifications`, NFR-10 behind a PDD taxonomy decision; B5 ✅ at verifiable scope — NFR-15 still needs PITR; **B6 ✅ at verifiable scope** — OWASP review + 2 critical fixes + CCPA export + B6.3 inventory/policy/labels + §5.2 controls, and ✅ **deletion is now executed** — the executor, sweep and pg_cron schedule shipped 2026-07-27 and the extension is enabled on both hosted projects; residual: `executed_at` is unwritable — now opened as **ADR-034** (Proposed), awaiting owner ratification; B1/B3 owner-gated; B7–B8 pending) |
+| Beta | 🚧 In progress | 50% (B2 ✅; **B4 ✅ CLOSED 2026-08-02 at verifiable scope** — B4.4 landed two §7.2 SLOs *proven end to end*, NFR-06 crash-free sessions and NFR-14 availability, each watched to open an issue and email a human, **plus NFR-07 crash-free users as a third SLO** (Part 1 §8, not one of §7.2's seven; binds tighter and pages first); the first NFR-06 drill detected correctly and notified **nobody** and would have shipped as configured, and NFR-07's drill proved that **an open issue suppresses the next alert**; five of §7.2's seven remain unproven, none of them unfinished engineering — three behind the Ask Guru gate, one behind uninstalled `expo-notifications`, NFR-10 behind a PDD taxonomy decision; B5 ✅ at verifiable scope — NFR-15 still needs PITR; **B6 ✅ at verifiable scope** — OWASP review + 2 critical fixes + CCPA export + B6.3 inventory/policy/labels + §5.2 controls, and ✅ **deletion is now executed** — the executor, sweep and pg_cron schedule shipped 2026-07-27 and the extension is enabled on both hosted projects; residual closed: `executed_at` was unwritable, and **ADR-034 is now RATIFIED and implemented** (#104) — a completed erasure leaves a one-way-digest audit record; **ADR-035** ratified the §6.6 `preferences` LWW rule (#103); **ADR-033 is the last Proposed ADR**; B1/B3 owner-gated; B7–B8 pending) |
 | Production Launch | ⏳ Pending | 0% |
 
 ---
@@ -731,9 +731,12 @@ gap: CD reported green while its Maestro E2E and EAS build jobs were placeholder
 **B4 — Observability closed on 2026-08-02**, the first slice since B6. B4.4 delivered two of §7.2's
 seven SLOs **proven end to end** — NFR-06 crash-free sessions and NFR-14 availability — each watched
 to open an issue and deliver mail to a human, which is §8.4's standard rather than "configured".
+**NFR-07 crash-free users was proven the same day as a third SLO**, and is an addition from the Part 1
+§8 NFR table rather than one of §7.2's seven; it binds tighter than NFR-06 and pages first.
 The first NFR-06 drill is the finding: it detected perfectly and reached **nobody**, because both
 alert rows targeted *Suggested Assignees* and a metric-monitor issue has no suspect commit to resolve
-one from. It would have shipped as done.
+one from. It would have shipped as done. NFR-07's drill found the second half of the same lesson —
+**an open issue suppresses the next alert**, and a metric-monitor issue cannot be cleared by hand.
 
 **B6 closed on 2026-07-27, and closing it found a launch blocker.** B6.3's data-collection
 inventory — built from the migrations and the mobile source rather than from the documentation, and

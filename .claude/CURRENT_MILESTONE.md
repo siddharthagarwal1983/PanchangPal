@@ -4,7 +4,7 @@
 
 Version: 4.10.0
 
-Last Updated: 2026-08-02 (B4 CLOSED — two §7.2 SLOs proven end to end; 50%)
+Last Updated: 2026-08-02 (B4 CLOSED — two §7.2 SLOs proven end to end, plus NFR-07; 50%)
 
 Purpose:
 This document defines the current milestone. Unlike SESSION.md (daily work) or TASK.md (current
@@ -30,6 +30,20 @@ B1 ~85%, B3 ~80%)
 delivered two of §7.2's seven SLOs **proven end to end** rather than configured: NFR-06 crash-free
 sessions and NFR-14 availability, each watched to open an issue and deliver mail to a human. §8.4's
 standard is that an alert nobody has seen fire is a plan, not a capability.
+
+✅ **A third SLO, NFR-07 crash-free users, was proven the same day — and is deliberately NOT one of
+§7.2's seven.** It comes from the Part 1 §8 NFR table; SLO_ALERTS.md tracks it because it runs on the
+session data NFR-06 already produces and **binds tighter** (99.8% against a structurally lower
+metric), making it the page that arrives first. So "two of the seven" and "three SLOs proven" are both
+true — keep the denominators apart.
+
+⛔ **Its drill produced the day's sharpest operational finding: an OPEN ISSUE SUPPRESSES THE NEXT
+ALERT.** The drill crossed both NFR-06's and NFR-07's thresholds and only NFR-07 emailed, because
+NFR-06's earlier drill issue was still open and Sentry folds new occurrences into the existing open
+period. An issue left open means **the next real incident of that kind pages nobody** — the inverse of
+alert fatigue, since nothing looks wrong. And a **metric-monitor issue cannot be resolved or deleted
+by hand**; it closes only on a healthy reading, so the only lever is recreating the monitor. Harmless
+pre-launch, a trap if the first real traffic is unhealthy. It is on the pre-launch checklist.
 
 ⚠️ **NFR-06 needed two drills, and the failure is the finding.** The first detected perfectly — right
 threshold, right `production` filter, high-priority issue opened and assigned — and reached **nobody**,

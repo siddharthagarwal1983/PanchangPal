@@ -20,17 +20,17 @@ const benefits = [
 ];
 
 describe('CMP_VALUE_LIST', () => {
-  it('gives included and excluded rows a screen-reader text equivalent (not color-only)', () => {
-    wrap(<ValueList items={benefits} includedLabel="included" excludedLabel="not included" />);
+  it('gives included and excluded rows a screen-reader text equivalent (not color-only)', async () => {
+    await wrap(<ValueList items={benefits} includedLabel="included" excludedLabel="not included" />);
     expect(screen.getByLabelText('Deep-dive content, included')).toBeTruthy();
     expect(screen.getByLabelText('Share with household, not included')).toBeTruthy();
   });
 });
 
 describe('CMP_PLAN_CARD', () => {
-  it('exposes an accessible radio with name + price and reports selection', () => {
+  it('exposes an accessible radio with name + price and reports selection', async () => {
     const onSelect = jest.fn();
-    wrap(
+    await wrap(
       <PlanCard
         id="individual_monthly"
         name="Individual"
@@ -45,12 +45,12 @@ describe('CMP_PLAN_CARD', () => {
     );
     const card = screen.getByRole('radio', { name: 'Individual, $4.99 per month' });
     expect(card).toBeTruthy();
-    fireEvent.press(card);
+    await fireEvent.press(card);
     expect(onSelect).toHaveBeenCalledWith('individual_monthly');
   });
 
-  it('conveys best value as text in the accessible name (not color alone)', () => {
-    wrap(
+  it('conveys best value as text in the accessible name (not color alone)', async () => {
+    await wrap(
       <PlanCard
         id="family_yearly"
         name="Family"
@@ -70,9 +70,9 @@ describe('CMP_PLAN_CARD', () => {
     expect(screen.getByRole('radio', { name: 'Family, Best value, $39.99 per year' })).toBeTruthy();
   });
 
-  it('does not fire select while a purchase is in flight (loading)', () => {
+  it('does not fire select while a purchase is in flight (loading)', async () => {
     const onSelect = jest.fn();
-    wrap(
+    await wrap(
       <PlanCard
         id="individual_monthly"
         name="Individual"
@@ -86,15 +86,15 @@ describe('CMP_PLAN_CARD', () => {
         testID="plan-loading"
       />,
     );
-    fireEvent.press(screen.getByTestId('plan-loading'));
+    await fireEvent.press(screen.getByTestId('plan-loading'));
     expect(onSelect).not.toHaveBeenCalled();
   });
 });
 
 describe('CMP_LEGAL_FOOTNOTE', () => {
-  it('renders disclosure text and labeled legal links', () => {
+  it('renders disclosure text and labeled legal links', async () => {
     const onTerms = jest.fn();
-    wrap(
+    await wrap(
       <LegalFootnote
         text="Subscriptions renew automatically until cancelled."
         links={[
@@ -104,7 +104,7 @@ describe('CMP_LEGAL_FOOTNOTE', () => {
       />,
     );
     expect(screen.getByText('Subscriptions renew automatically until cancelled.')).toBeTruthy();
-    fireEvent.press(screen.getByRole('link', { name: 'Terms of Service' }));
+    await fireEvent.press(screen.getByRole('link', { name: 'Terms of Service' }));
     expect(onTerms).toHaveBeenCalled();
   });
 });

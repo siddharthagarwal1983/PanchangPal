@@ -159,6 +159,25 @@ updates:
       # pnpm. That is Expo's floor, not ours; ours is set by `engines`. If the engine floor is ever
       # raised, raise these types to match it deliberately — the two move together or not at all.
       - dependency-name: '@types/node'
+
+      # `test-renderer` IS PINNED BY THE REACT MINOR, AND THE PIN LIVES TWO LEVELS DOWN. This is a
+      # SIXTH mechanism, and the first where the constraint is in a TRANSITIVE dependency's peer
+      # rather than anywhere in our own graph:
+      #
+      #   test-renderer@1.1.0 -> react-reconciler@~0.32.0 -> peer react ^19.1.0   ✅ we run 19.1.0
+      #   test-renderer@1.2.0 -> react-reconciler@~0.33.0 -> peer react ^19.2.0   ❌ unsatisfiable
+      #
+      # RNTL 14's own peer is only `test-renderer@^1.0.0`, so 1.2.0 is peer-LEGAL as far as RNTL is
+      # concerned and Dependabot has no reason not to propose it. RNTL's migration guide states the
+      # coupling directly — React 19.1 -> test-renderer@1.1, React 19.2 -> test-renderer@1.2 — and
+      # `react` is itself pinned at EXACTLY 19.1.0 above, because react-native 0.81.5 ships a Fabric
+      # renderer hardcoded against React "19.1.0".
+      #
+      # So this moves ONLY with `react`, which moves only with the SDK. A lone bump would install a
+      # reconciler built for a React we do not run, under an unmet peer that PNPM RECORDS AND
+      # INSTALLS ANYWAY (the #82 mechanism) — green CI, mismatched renderer, exactly the shape that
+      # mmkv v2 and #64/#65 already cost this repo.
+      - dependency-name: test-renderer
     labels: ['dependencies']
 
   # The workflows themselves are a supply chain. A compromised or abandoned action runs with

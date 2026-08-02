@@ -4,7 +4,7 @@
 
 Version: 1.32.0
 
-Last Updated: 2026-08-02 (B4 CLOSED — two SLOs proven end to end; 47% → 50%)
+Last Updated: 2026-08-02 (B4 CLOSED — three SLOs proven end to end, two of them §7.2's; 47% → 50%)
 
 Purpose:
 This is the first file Claude should read at the beginning of every session.
@@ -52,7 +52,15 @@ Counted at **verifiable scope**, the same basis as B5 (no PITR) and B6 (no ratif
 five unproven SLOs are blocked on things engineering does not own — three behind the Ask Guru gate
 (`GURU_LIVE = false`), one behind uninstalled `expo-notifications`, and **NFR-10 behind a PDD
 taxonomy decision**, since PDD §11's registry contains no sync event and inventing one is forbidden.
-Not one is unfinished code. NFR-07 is a free addition whenever wanted.
+Not one is unfinished code.
+✅ **NFR-07 crash-free users was since proven too, as a THIRD SLO — and it is not one of §7.2's
+seven.** It comes from the Part 1 §8 NFR table, runs on the session data NFR-06 already produces, and
+binds **tighter** (99.8% against a metric that is structurally lower), so it is the page that arrives
+first. **"Two of §7.2's seven" and "three SLOs proven" are both correct** — see `SLO_ALERTS.md` §1.
+⛔ Its drill produced the day's sharpest operational finding: it crossed **both** thresholds and only
+NFR-07 emailed, because **an open issue suppresses the next alert** — Sentry folds new occurrences
+into the existing open period. An issue left open means the next real incident of that kind pages
+nobody, and a **metric-monitor issue cannot be resolved or deleted by hand**. Hence blocker 5 below.
 **Two gaps stated rather than folded in:** `SVC_health`'s 503 branch is proven by unit test but never
 exercised end to end (it belongs with the DB-outage runbook drill), and §7.2's dashboards remain
 absent — the `analytics_event` rollup worker is still unbuilt.
@@ -108,12 +116,14 @@ CURRENT_MILESTONE.md
 
 ✅ **B4 — OBSERVABILITY IS CLOSED. 47% → 50%.** The first slice completed since B6 on 2026-07-27.
 
-**B4.4 delivered two SLOs that are PROVEN, not configured** — the distinction §8.4 exists to enforce:
+**B4.4 delivered three SLOs that are PROVEN, not configured** — the distinction §8.4 exists to
+enforce. Two are §7.2's; **NFR-07 is an addition from the Part 1 §8 NFR table, not one of the seven**:
 
 | SLO | Proof |
 |---|---|
 | **NFR-06** crash-free sessions ≥ 99.5% | Synthetic crashed sessions → issue → **email received 14:43** |
 | **NFR-14** availability ≥ 99.9% | `SVC_health` probe forced red → issue `PANCHANGPAL-EDGE-3` → **email 16:17** |
+| **NFR-07** crash-free users ≥ 99.8% (+) | Same session data, one more monitor → issue → **email**; binds tighter than NFR-06 and pages first |
 
 ⚠️ **NFR-06 took TWO drills, and the first one is the more valuable half.** Drill 1 detected
 perfectly — correct threshold, correct `production` filter, high-priority issue opened and assigned
@@ -901,10 +911,11 @@ Verified end-to-end. **PR #36 merged to main as `e1e10d4`**; the docs checkpoint
 # Today's Objective
 
 Session of 2026-08-02 (part 3). **Close B4.** Outcome: **B4 CLOSED at verifiable scope, 47% → 50%** —
-the first slice completed since B6. Two SLOs proven end to end by deliberate trigger, the first of
-which **failed at the notification step and would otherwise have shipped as configured**. Three
-environment/deploy defects found on the way, all of the same shape. Next: **B1/B3 remainders** (all
-owner-gated on money or store accounts), or **NFR-07** for a third SLO.
+the first slice completed since B6. **Three SLOs proven end to end** by deliberate trigger (NFR-06 and
+NFR-14 from §7.2, plus NFR-07 from the Part 1 §8 NFR table), the first of which **failed at the
+notification step and would otherwise have shipped as configured**. Three environment/deploy defects
+found on the way, all of the same shape. Next: **B1/B3 remainders**, all owner-gated on money or
+store accounts.
 
 ---
 

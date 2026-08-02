@@ -32,13 +32,15 @@ function memoryStore(): KeyValueStore {
 
 const clients: QueryClient[] = [];
 
-function setup() {
+// RNTL 14: `renderHook` is async (React 19's async rendering model), so this helper is async too
+// and every call site awaits it.
+async function setup() {
   const qc = new QueryClient({ defaultOptions: { mutations: { retry: false } } });
   clients.push(qc);
   const wrapper = ({ children }: { children: ReactNode }) => (
     <QueryClientProvider client={qc}>{children}</QueryClientProvider>
   );
-  const { result } = renderHook(() => useUpdatePreferences(), { wrapper });
+  const { result } = await renderHook(() => useUpdatePreferences(), { wrapper });
   return { qc, result };
 }
 
@@ -60,7 +62,7 @@ describe('useUpdatePreferences durability', () => {
       .spyOn(getProfileRepository(), 'updatePreferences')
       .mockRejectedValue(new Error('Network request failed'));
 
-    const { result } = setup();
+    const { result } = await setup();
     result.current.mutate({ tradition: 'bengali' });
 
     await waitFor(() => expect(result.current.isError).toBe(true));
@@ -81,7 +83,7 @@ describe('useUpdatePreferences durability', () => {
       .spyOn(getProfileRepository(), 'updatePreferences')
       .mockRejectedValue(new Error('Network request failed'));
 
-    const { qc, result } = setup();
+    const { qc, result } = await setup();
     qc.setQueryData(['preferences', USER], {
       tradition: 'generic',
       depth: 'quick',
@@ -105,7 +107,7 @@ describe('useUpdatePreferences durability', () => {
       throw new Error('rejected');
     });
 
-    const { qc, result } = setup();
+    const { qc, result } = await setup();
     qc.setQueryData(['preferences', USER], {
       tradition: 'generic',
       depth: 'quick',

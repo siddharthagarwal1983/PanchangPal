@@ -1,7 +1,7 @@
 # SLOs & Alerts — PanchangPal
 
 **Status:** Active · **Owner:** Solo operator · **Source:** TDD Part 5 §7.2; NFR table at Part 1 §8
-**Last verified:** 2026-08-02 (NFR-06 detects but does NOT notify — proven by drill; the other six audited against the code)
+**Last verified:** 2026-08-02 (NFR-06, NFR-07 and NFR-14 each proven end to end by drill — detection *and* notification; the remaining five audited against the code)
 
 §7.2 names seven SLOs. This document records, for each one, **the instrument, the threshold, the
 alert, and — where it does not exist — precisely what is blocking it.**
@@ -31,7 +31,14 @@ all.**
 
 ---
 
-## 1. The seven, at a glance
+## 1. The seven, at a glance — plus NFR-07
+
+⚠️ **This table has eight rows because §7.2 names seven and NFR-07 is not one of them.** NFR-07
+(crash-free users) comes from the **Part 1 §8 NFR table** and is tracked here deliberately: it runs on
+the session data NFR-06 already produces, and §3 shows it binds *tighter*, so it is the page that
+arrives first. Count it as an addition to §7.2's seven, never as one of them — "two of the seven are
+proven" and "three SLOs are proven" are both true, and mixing the denominators is how the tracking
+docs drifted once already.
 
 | SLO | NFR | Target | Instrument | Status |
 |---|---|---|---|---|
