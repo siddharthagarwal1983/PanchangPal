@@ -168,6 +168,31 @@ plpgsql does not resolve columns until execution, and the sweep's per-user excep
    least surface it as 503.
 6. Paid Supabase (~$25/mo, NFR-15) · ADR-034 ratification · Apple $99 + Play $25 · JDK 17 locally.
 
+# ⛔ NODE 20 IS END-OF-LIFE — verified 2026-08-02
+
+Checked against `nodejs/Release/schedule.json`, the authoritative source, not assumed:
+
+| Version | Status as of 2026-08-02 | EOL |
+|---|---|---|
+| **v20** | ⛔ **END OF LIFE since 2026-04-30** | past |
+| v22 | Maintenance — critical fixes only | 2027-04-30 |
+| **v24** | ✅ Active LTS | 2028-04-30 |
+
+**Every workflow pins `NODE_VERSION: '20.11.0'` and `engines.node` is `>=20.11.0`.** CI has been
+running an unsupported runtime for three months, receiving no security patches. This is no longer an
+RNTL-14 convenience item; it is security hygiene with a deadline that has already passed.
+
+**Recommended target: Node 22, not 24**, despite 24 being Active LTS with twice the runway.
+`expo@54.0.36` depends on `@types/node ^22.14.0`, which is good evidence SDK 54 was developed against
+Node 22 — and the whole build toolchain is SDK-pinned (`jest-expo`, `babel-preset-expo`,
+`@expo/metro-runtime`), a class this repo has been bitten by four times. Node 24 belongs with the
+next SDK upgrade, where the toolchain moves and is validated together.
+
+**What moves together:** `NODE_VERSION` in every workflow · `engines.node` · `@types/node`.
+`apps/backend/tests/toolchain/types-node-matches-engine.test.ts` now *enforces* that, so this is one
+coherent change rather than drift. Validate it like an SDK change — native build plus the six Maestro
+flows. It also unblocks **#90** (RNTL 14 requires `^22.13.0 || >=24`).
+
 # Recommended next task
 
 1. **NFR-07 crash-free users** — same Sentry wizard, `crash_free_rate(user)` below 99.8, no new
