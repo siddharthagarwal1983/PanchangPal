@@ -2,8 +2,8 @@
 
 # PanchangPal — Current Session
 
-Version: 5.1.0
-Last Updated: 2026-08-02 (part 2 — the dependency queue is empty; three PRs merged; 47%)
+Version: 5.2.0
+Last Updated: 2026-08-02 (part 2 — dependency queue worked; Sentry ingest confirmed; CI was reporting as production; 47%)
 
 **Progress unchanged at 47%** — dependency hygiene advances no Beta slice. All four queued PRs are
 resolved, and two of the four were not what they were filed as.
@@ -29,6 +29,7 @@ remains, and it is a wanted upgrade rather than a defect.**
 | #80 | `715e2de` | `@supabase/supabase-js` 2.110.9 → 2.111.0 |
 | #93 | `ea71ce6` | `zod` 3.25.76 → 4.4.3 |
 | #94 | `1d035ce` | The SDK-pin check is two-sided (closes #89, #91, #92) |
+| #98 | `a724519` | CI was reporting itself as production — B4.4 precondition |
 
 **Closed with evidence, as #64/#65/#75 were:** #83, #82, #62, #89, #91, #92.
 **Nine dependency PRs resolved; one left open (#90) as real work.**
@@ -131,12 +132,63 @@ header warns about. Worth recording: RNTL 14 **removes the `react-test-renderer 
 that made #75 red** — but it does not unblock `react`, which stays SDK-pinned for the independent
 Fabric-renderer reason. It removes the *detector*, not the constraint.
 
+# Sentry ingest is confirmed — and confirming it found a defect
+
+**Ingest works.** 91 sessions, release `0.1.0`, 1 error captured, Crash Free Sessions 100%. Sessions
+existing at all is the direct evidence `AppLifecycleIntegration` installed. The stray
+`react-native-9n` project (created by the failed `sentry-wizard` run on 2026-07-28 — its 33-byte log
+is just `pnpm: command not found`, the documented corepack breakage) has been deleted by the owner.
+
+⛔ **BUT CI WAS REPORTING ITSELF AS PRODUCTION** (fixed, **#98** `a724519`). `sentryEnvironment()`
+derived the environment from `extra.eas.channel`, **which only EAS Build stamps**. `e2e.yml` builds
+with `expo prebuild` + `gradlew assembleRelease` on the runner — no channel — and `__DEV__` is false
+in a release APK, so it fell through to `'production'`. It pulls a REAL DSN via
+`eas-cli env:pull --environment preview`, so this was live.
+
+**Evidence, not inference:** the artifact's logcat shows the DSN resolving to project
+`4511814237290496`, which is the `panchangpal-mobile` id in the dashboard URL; sessions climbed
+**87 → 91 while a `main` E2E run was mid-flight** with no user activity. At 12 launches per run,
+essentially all 91 sessions were CI.
+
+**Two consequences.** "100% crash-free" was measuring an emulator — worse than a sampling caveat,
+because those sessions were **labelled** production. And `environment:production`, the alert scope
+§7.2 wants, **would have paged on every CI run**. This had to land before any alert exists.
+
+⚠️ **Historical CI sessions stay labelled `production`** — the fix is forward-only. Treat the
+crash-free figure as meaningless until `ci`-tagged or real-user sessions accumulate.
+
+# My first attempt at that fix broke the suite — both defects kept in history
+
+Run `30735155676`: **4/6 flows failed against main's 6/6 on two runs** — a real regression,
+established by baseline rather than by re-running.
+
+1. **`echo "..." >> .env` had no leading newline.** `eas env:pull` does not guarantee a trailing one,
+   so the line concatenated onto the **last variable's value**:
+   `EXPO_PUBLIC_SUPABASE_URL=https://real.supabase.coEXPO_PUBLIC_SENTRY_ENVIRONMENT=ci`. The name
+   still parses, so the file looks fine while the value is garbage. A corrupted Supabase URL fails
+   every backend call — four flows failed, the two not needing a backend passed, and it read as a
+   product defect. **The build log had said so: `env: export` listed three names, mine absent.**
+2. **The override was read from `process.env` only**, relying on Babel inlining `EXPO_PUBLIC_*`; the
+   gradle-driven `export:embed` path did not deliver it. It now reads
+   `Constants.expoConfig.extra.sentryEnvironment`, threaded through `app.config.ts` exactly as
+   `sentryDsn` is — the path proven to work in CI every run.
+
+**The second is the worse one: the broken path PASSED its unit test**, because jest sets
+`process.env` directly and never exercises the bundler. The perturbations were sound and told me
+nothing, because they tested the wrong layer.
+
+**Device-verified (`30735709985`), all three checks named in advance:** the variable now appears in
+`env: export`; **6/6 flows**; **12 × `[telemetry] reporter=sentry env=ci`**.
+
 # Blockers
 
-1. **B4.4 is still open; B4 does not close.** §7.2 SLO dashboards and alerts do not exist, and §8.4
-   holds that alerting never triggered is a plan, not a capability.
-2. **Unverified:** Sentry ingest (needs the dashboard), the Edge Function path (needs a real server
-   error), source-map upload (`e2e.yml` disables it deliberately).
+1. **B4.4 is still open; B4 does not close.** §7.2 SLO dashboards and alerts do not exist — the
+   dashboard shows "Create Alert", i.e. **zero rules**, confirmed rather than assumed. §8.4 holds
+   that alerting never triggered is a plan, not a capability. **Its precondition is now met**: the
+   environment a build reports is correct and observable, so `environment:production` finally means
+   something. Closing B4 takes the milestone **47% → 50%**.
+2. **Unverified:** the Edge Function path (needs a real server error), source-map upload (`e2e.yml`
+   disables it deliberately). **Sentry ingest is now CONFIRMED** — 91 sessions in the dashboard.
 3. ⚠️ **The §6.6 `preferences` conflict rule is UNRATIFIED** and shipped in merged code — LWW, the
    nearest ratified precedent. `resolvePreferences` is the only place a ruling lands.
 4. **Not answered, and made moot rather than resolved:** whether Hermes actually ships
@@ -147,10 +199,11 @@ Fabric-renderer reason. It removes the *detector*, not the constraint.
 
 # Recommended next task
 
-1. **Confirm events in the Sentry dashboard**, then filter alerts to `environment:production` so CI
-   `preview` runs do not page.
-2. **B4.4** — §7.2 dashboards + alerts, proven by a deliberate trigger rather than configured. The
-   last engineering increment in B4.
+1. **B4.4** — §7.2 SLO dashboards + alert rules, scoped to `environment:production` (which is now
+   trustworthy), proven by a **deliberate trigger** rather than configured. The last engineering
+   increment in B4, and the only one that moves the milestone number.
+   ⚠️ Ignore the current 100% crash-free when setting thresholds: it is historical CI traffic
+   mislabelled as production, and is not relabelled by #98.
 3. **Owner:** ratify ADR-034; rule on the §6.6 `preferences` conflict rule. Decide whether to
    SHA-pin all nine GitHub Actions (#87 records the case and deliberately left it open).
 4. **#90 (RNTL 14) when the testing-infrastructure migration is wanted** — add `test-renderer`, drop

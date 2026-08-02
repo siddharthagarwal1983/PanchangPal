@@ -92,6 +92,50 @@ CURRENT_MILESTONE.md
 
 # Current Task
 
+✅ **SENTRY INGEST IS CONFIRMED — AND CONFIRMING IT FOUND THAT CI WAS REPORTING AS PRODUCTION**
+(fixed and merged, **#98** `a724519`).
+
+Ingest works: **91 sessions**, release `0.1.0`, one error captured — sessions existing at all is the
+direct evidence `AppLifecycleIntegration` installed. The stray `react-native-9n` project (from the
+failed `sentry-wizard` run on 2026-07-28) has been deleted by the owner.
+
+⛔ **But `sentryEnvironment()` derived the environment from `extra.eas.channel`, which only EAS Build
+stamps.** `e2e.yml` builds with `expo prebuild` + `gradlew assembleRelease` on the runner — no
+channel — and `__DEV__` is false in a release APK, so it fell through to **`'production'`**. It pulls
+a REAL DSN (`eas-cli env:pull --environment preview`), so this was live, not theoretical.
+**Evidence:** the artifact's logcat resolves to project `4511814237290496` — the `panchangpal-mobile`
+id in the dashboard URL — and sessions climbed **87 → 91 while a `main` E2E run was mid-flight** with
+no user activity. At 12 launches per run, **essentially all 91 sessions were CI.**
+
+**Two consequences.** "100% crash-free" was measuring an emulator — worse than a sampling caveat,
+because the sessions were **labelled** production. And `environment:production`, the alert scope §7.2
+wants, **would have paged on every CI run**. ⚠️ **Historical sessions stay labelled `production`**;
+the fix is forward-only, so treat the crash-free figure as meaningless until real traffic accrues.
+
+⚠️ **MY FIRST ATTEMPT AT THAT FIX BROKE THE SUITE — 4/6 against main's 6/6 on two runs**, a real
+regression established by baseline rather than by re-running. Two defects, both kept in history:
+(1) `echo "..." >> .env` had **no leading newline**, so it concatenated onto the last variable's
+VALUE — `EXPO_PUBLIC_SUPABASE_URL=https://real.supabase.coEXPO_PUBLIC_SENTRY_ENVIRONMENT=ci`. The
+name still parses, so the file looks fine while the value is garbage; a corrupted Supabase URL failed
+every backend call, and it read as a product defect. **The build log had said so all along:
+`env: export` listed three names, mine absent.** (2) The override was read from `process.env` only,
+which relies on Babel inlining `EXPO_PUBLIC_*`; the gradle `export:embed` path did not deliver it.
+It now reads `extra.sentryEnvironment`, threaded through `app.config.ts` exactly as `sentryDsn` is.
+**The second is the worse one: the broken path PASSED its unit test**, because jest sets
+`process.env` directly and never exercises the bundler — the perturbations were sound and tested the
+wrong layer.
+
+**Device-verified (`30735709985`), all three checks named in advance:** the variable appears in
+`env: export` · **6/6 flows** · **12 × `[telemetry] reporter=sentry env=ci`**.
+
+**B4.4's precondition is now met** — `environment:production` finally means something — but the §7.2
+dashboards and alert rules are still unbuilt (the dashboard shows "Create Alert": **zero rules**,
+confirmed). Closing B4 takes the milestone **47% → 50%**.
+
+---
+
+**Previously this session — the dependency queue.**
+
 ✅ **ALL FOUR QUEUED DEPENDENCY PRs RESOLVED — THREE MERGED, THREE CLOSED WITH EVIDENCE.**
 ⛔ **"The queue is empty" was true for four minutes**: Dependabot re-ran against the new lockfile and
 opened **five fresh majors (#89–#93)** — **since triaged the same way.** Merged **#93** `ea71ce6`
@@ -798,13 +842,16 @@ Verified end-to-end. **PR #36 merged to main as `e1e10d4`**; the docs checkpoint
 
 # Today's Objective
 
-Session of 2026-08-02 (part 2). **Work the dependency queue — the only credential-free engineering
-left, with B4.4 and the Sentry dashboard both owner-gated.** Outcome: the queue is **empty**, three
-PRs merged and three closed with evidence, and the triage found that **#82 and #62 were one change
-all along** — a peer requirement pnpm records without enforcing, which let a violated peer pass all
-five gates. Also found: **#83 was not an upgrade**, and would have frozen one action's pinning while
-eight others float. **Progress unchanged at 47%; no Beta slice advanced.** Next: **B4.4** (§7.2
-dashboards + alerts) once Sentry ingest is confirmed in the dashboard.
+Session of 2026-08-02 (part 2). **Work the dependency queue, then confirm Sentry ingest.** Outcome:
+nine dependency PRs resolved across three regenerating batches (#90 left open as real work), the
+SDK-pin rule corrected to a **two-sided** check after #89 falsified last week's "the SDK 54 set is
+complete", and **ingest confirmed — which found that CI had been reporting itself as production**,
+fixed and merged as #98. The sharpest finding of the day: **#91 passed all five gates and had to**,
+because no gate runs `sentry.gradle` at all — *ask which gate would have to fail*. The most
+uncomfortable: **my own fix broke the suite 4/6**, and its unit tests passed against the broken
+version because they exercised `process.env` while the bundler used `extra`.
+**Progress unchanged at 47%; no Beta slice advanced.** Next: **B4.4** — the alert rules, now that
+`environment:production` means something. Closing B4 takes the milestone to **50%**.
 
 ---
 

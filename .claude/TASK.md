@@ -110,7 +110,32 @@ green in CI on a real native build. Canonical progress 0% → 13% (1 of 8 Beta s
 # Current Task
 
 ## Title
-✅ THE DEPENDENCY QUEUE IS EMPTY (2026-08-02, part 2) — THREE PRs MERGED, THREE CLOSED WITH EVIDENCE
+✅ SENTRY INGEST CONFIRMED — AND CI WAS REPORTING AS PRODUCTION (2026-08-02, part 2)
+
+**Merged #98 `a724519`.** Ingest works (91 sessions, release `0.1.0`, one error). But
+`sentryEnvironment()` derived the environment from `extra.eas.channel`, **which only EAS Build
+stamps** — `e2e.yml` builds with `expo prebuild` + `gradlew assembleRelease`, so no channel, and
+`__DEV__` is false in a release APK. It fell through to `'production'` while pulling a **real DSN**.
+
+**Evidence:** logcat resolves to project `4511814237290496` = `panchangpal-mobile`; sessions climbed
+**87 → 91 while a `main` E2E run was mid-flight** with no user activity. Essentially all 91 were CI.
+So "100% crash-free" measured an emulator, and `environment:production` — §7.2's alert scope — would
+have paged on every CI run. ⚠️ **Historical sessions stay labelled `production`**; forward-only fix.
+
+⚠️ **My first attempt broke the suite (4/6 vs main's 6/6 twice).** (1) `echo >> .env` with no leading
+newline concatenated onto the last variable's VALUE, corrupting `EXPO_PUBLIC_SUPABASE_URL` — the name
+still parsed, so it read as a product defect; the build log's `env: export` line had listed three
+names with mine absent. (2) The override was read from `process.env` only, which relies on Babel
+inlining; the gradle `export:embed` path did not deliver it. Now read from
+`extra.sentryEnvironment` via `app.config.ts`, as `sentryDsn` already is.
+**The broken path passed its unit test** — jest sets `process.env` and never runs the bundler.
+
+**Device-verified (`30735709985`):** variable in `env: export` · **6/6 flows** ·
+**12 × `[telemetry] reporter=sentry env=ci`**.
+
+---
+
+## Previously — THE DEPENDENCY QUEUE: THREE PRs MERGED, THREE CLOSED WITH EVIDENCE
 
 **Progress unchanged at 47%.** Dependency hygiene advances no Beta slice. All four queued PRs are
 resolved and two were not what they were filed as.
@@ -215,10 +240,13 @@ recorded, and SESSION.md for the narrative.
 
 ## NEXT TASK
 
-1. **Confirm events arrive in the Sentry dashboard**, then set `panchangpal-mobile` alert rules to
-   `environment:production` so CI `preview` runs do not page.
-2. **B4.4** — §7.2 SLO dashboards + alerts, proven by a deliberate trigger (§8.4: alerting never
-   triggered is a plan, not a capability). This is the last engineering increment in B4.
+1. **B4.4** — §7.2 SLO dashboards + alert rules on `panchangpal-mobile`, scoped to
+   `environment:production` (now trustworthy, per #98), proven by a **deliberate trigger** rather
+   than configured (§8.4: alerting never triggered is a plan, not a capability). The dashboard
+   currently shows "Create Alert" — **zero rules**, confirmed rather than assumed. This is the last
+   engineering increment in B4, and closing B4 moves the milestone **47% → 50%**.
+   ⚠️ **Do not set thresholds off the current 100% crash-free**: that is historical CI traffic
+   mislabelled as production, and #98 does not relabel it.
 3. **Owner:** ratify ADR-034; rule on the **§6.6 `preferences` conflict rule**, which shipped
    unratified as last-writer-wins.
 4. Dependency queue, none SDK-pinned: **#80**, **#82** (major), **#83**, **#62** (major).

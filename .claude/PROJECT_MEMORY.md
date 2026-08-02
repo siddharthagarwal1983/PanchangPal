@@ -423,6 +423,36 @@ Stable, cross-cutting facts (permanent until an approved decision changes them):
   **It still degrades honestly**: with no DSN the adapter resolves to Null, `getTelemetryBackend()`
   reports `'none'`, and `isUsableDsn()` rejects placeholders — so a local or CI build without one
   behaves as before rather than half-initialising.
+  ⚠️ **CI IS NOT A BUILD WITHOUT A DSN — IT PULLS A REAL ONE**, via
+  `eas-cli env:pull --environment preview` in `e2e.yml`. Every E2E launch reaches the live
+  `panchangpal-mobile` project, and **until 2026-08-02 it did so tagged `environment: production`**:
+  `sentryEnvironment()` read `extra.eas.channel`, which only **EAS Build** stamps, and the CI build
+  is `expo prebuild` + `gradlew assembleRelease` on the runner, where `__DEV__` is also false. So the
+  fallback resolved to production and the crash-free SLO was measuring an emulator — essentially all
+  91 sessions at the time of discovery. An `environment:production` alert would have paged on every
+  CI run. Fixed by an explicit `EXPO_PUBLIC_SENTRY_ENVIRONMENT` override (#98) that **wins over the
+  channel**, because the build that knows it is not production is the build itself.
+  **Historical sessions are NOT relabelled** — the crash-free number is untrustworthy until real
+  traffic accrues, which matters at a go/no-go.
+  **`[telemetry] reporter=<backend> env=<environment>` is the one observable**, and the `env=` half
+  exists because answering "which environment did that build report as?" took a four-file deduction
+  and still could not be read from an artifact — Sentry's own logs print the DSN and never the
+  environment. **An SLO scoped by a value nobody can observe is the same defect shape as a gate that
+  cannot fail.**
+  **BUILD-TIME CONFIG REACHES THE APP THROUGH `app.config.ts`'s `extra`, NOT `process.env`.**
+  Reading `process.env.EXPO_PUBLIC_*` in app code relies on Babel inlining it into the bundle, and
+  **the gradle-driven `export:embed` path does not deliver it** — a value present in `.env` still
+  read as `undefined` on device. `extra` is evaluated by Expo CLI in Node where the `.env` is loaded;
+  it is how `supabaseUrl`, `supabaseAnonKey`, `revenueCatKey` and `sentryDsn` already work. **The
+  `process.env`-only version passed its unit test**, because jest sets `process.env` directly and
+  never exercises the bundler: a test can only prove the layer it touches.
+  **Appending to `.env` in CI needs an explicit leading newline.** `eas env:pull` does not guarantee
+  a trailing one, so `echo "K=V" >> .env` concatenates onto the **last variable's value** —
+  `EXPO_PUBLIC_SUPABASE_URL=https://real.supabase.coEXPO_PUBLIC_SENTRY_ENVIRONMENT=ci`. The name
+  still parses, so the file looks valid while the value is garbage; a corrupted Supabase URL failed
+  four of six flows and read as a product defect. Use `printf '\nK=V\n'`. **The tell is the job's own
+  `env: export ...` line**, which lists the parsed names — if the new variable is missing from it,
+  the append silently did the wrong thing.
   **No PII is structural** (§7.1 `[MANDATORY]`): unrecognised errors map to `ERR_UNKNOWN` rather than
   echoing a message, EVT_054's props are a closed four-key shape, and `componentStack` is never
   forwarded. Every ERR_* maps to EVT_054; its sink is the analytics adapter (ADR-013).

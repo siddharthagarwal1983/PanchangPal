@@ -21,6 +21,40 @@ docs/architecture/adr/
 
 # Product Decisions
 
+## 2026-08-02 — A build states its own telemetry environment, and states it observably
+
+**Decision.** `EXPO_PUBLIC_SENTRY_ENVIRONMENT`, threaded through `app.config.ts`'s `extra`, is the
+first signal `sentryEnvironment()` consults and **wins over the EAS channel**. `e2e.yml` sets it to
+`ci`. The resolution line reports it: `[telemetry] reporter=sentry env=ci`.
+
+**Why the override outranks the channel.** The channel is the better signal *for EAS builds* — it
+cannot disagree with the binary it was stamped into — but it is absent from every build EAS did not
+make, and CI is exactly that. `e2e.yml` runs `expo prebuild` + `gradlew assembleRelease` on the
+runner, where `__DEV__` is also false, so the derivation fell through to **`'production'`** while
+pulling a **real DSN** (`eas-cli env:pull --environment preview`). The crash-free SLO was measuring
+an emulator, and `environment:production` — the scope §7.2 wants — would have paged on every CI run.
+The build that knows it is not production is the build itself.
+
+**Why the environment is logged.** Answering "which environment did that build report as?" required
+reading four files and *still* could not be settled from an artifact; Sentry's own logs print the DSN
+and never the environment. **An SLO scoped by a value nobody can observe is the same defect shape as
+a gate that cannot fail** — the failure this whole milestone exists to remove.
+
+**Consequence that is not fixed by this, and must be stated at go/no-go:** historical sessions stay
+labelled `production`. The fix is forward-only.
+
+**Two implementation rules this established, both learned by breaking the suite (4/6 against main's
+6/6 on two runs):**
+- **Build-time config reaches the app through `extra`, never `process.env` alone.** The latter relies
+  on Babel inlining `EXPO_PUBLIC_*`, which the gradle `export:embed` path did not do. Worse, the
+  broken version **passed its unit test** — jest sets `process.env` directly and never runs the
+  bundler. A test only proves the layer it touches.
+- **Appending to `.env` in CI needs an explicit leading newline.** `eas env:pull` does not guarantee
+  a trailing one, so `echo "K=V" >> .env` concatenates onto the last variable's **value**, leaving
+  its name parseable and its content garbage. The tell is the job's `env: export ...` line.
+
+---
+
 ## 2026-08-02 — The SDK-pin check is two-sided, and a green gate can be vacuous
 
 **Decision.** Before triaging any dependency PR, run **both** checks:
