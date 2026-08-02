@@ -5,7 +5,7 @@
   "description": "PanchangPal \u2014 a calm, trust-first, offline-first Hindu spiritual companion. Monorepo (pnpm + Turborepo, TDD Part 1 \u00a74).",
   "packageManager": "pnpm@9.6.0",
   "engines": {
-    "node": ">=20.11.0",
+    "node": ">=22.13.0",
     "pnpm": ">=9.0.0"
   },
   "scripts": {
@@ -19,7 +19,7 @@
   },
   "devDependencies": {
     "@eslint/js": "^9.8.0",
-    "@types/node": "^20.14.0",
+    "@types/node": "^22.20.1",
     "@typescript-eslint/eslint-plugin": "^8.65.0",
     "@typescript-eslint/parser": "^8.65.0",
     "eslint": "^9.8.0",
