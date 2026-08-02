@@ -15,14 +15,14 @@ capability.**
 
 ## 0. What is actually alerting today
 
-✅ **One of the seven pages a human, and it has been watched doing it** — NFR-06, proven end to end
-by a deliberate trigger on 2026-08-02 (§8). That is the only SLO here that meets §8.4's standard.
+✅ **Two of the seven page a human, and both have been watched doing it** — NFR-06 and NFR-14,
+each proven end to end by a deliberate trigger on 2026-08-02 (§8). Those are the only two here that
+meet §8.4's standard.
 
 | | |
 |---|---|
-| **Live and PROVEN** | NFR-06 crash-free sessions ✅ |
+| **Live and PROVEN** | NFR-06 crash-free sessions ✅ · NFR-14 availability ✅ |
 | **Measurable, no monitor yet** | NFR-07 crash-free users (same Sentry session data, no new instrumentation) |
-| **Deployed, not yet monitored** | NFR-14 availability — `SVC_health` live on staging; needs an uptime monitor |
 | **Blocked on a decision** | NFR-10 sync success — no sync event exists in the PDD §11 taxonomy |
 | **Blocked on a gated feature** | NFR-05 AI latency · NFR-16 AI cost · refusal/groundedness (all Ask Guru) · NFR-11 push delivery |
 
@@ -37,7 +37,7 @@ all.**
 | SLO | NFR | Target | Instrument | Status |
 |---|---|---|---|---|
 | Crash-free sessions | NFR-06 | ≥ 99.5% | Sentry sessions | ✅ **live and proven** — see §2, §8 |
-| Availability (core reads) | NFR-14 | ≥ 99.9% | `SVC_health` probe | 🟡 deployed; needs monitor + proof |
+| Availability (core reads) | NFR-14 | ≥ 99.9% | `SVC_health` probe | ✅ **live and proven** — see §4, §8 |
 | Sync success | NFR-10 | ≥ 99.5% | SVC_sync metrics | ⛔ blocked on a decision (§5) |
 | AI first-token latency | NFR-05 | < 2 s | EVT_030 | ⛔ not emitted; feature gated |
 | AI cost | NFR-16 | ≤ ceiling | cost dashboard | ⛔ feature gated |
@@ -94,7 +94,7 @@ reason than "we judged it not worth a second page for a solo operator."
 
 ---
 
-## 4. NFR-14 — availability ≥ 99.9% 🟡 deployed and reachable; not yet monitored or proven
+## 4. NFR-14 — availability ≥ 99.9% ✅
 
 **Was blocked on: there was nothing an uptime probe could poll.** `verify_jwt` defaults to true and
 every function relied on that default, so an anonymous probe measured the auth layer returning 401
@@ -158,18 +158,24 @@ actually executes, and `/health` is the only one an anonymous caller can make ex
 allow-list is now anonymously readable, naming `x-revenuecat-signature` and
 `x-panchangpal-api-version`. `/health` needs no custom headers and could be narrowed.
 
-### ⏳ What remains, and it is not code
+### ✅ The uptime monitor, created and proven 2026-08-02
 
-1. **Create the Sentry Uptime monitor** against the deployed URL, alerting **to an explicit Member**
-   — the recipient mistake from §8 applies here too, and would fail the same silent way.
-   ✅ **Unblocked 2026-08-02.** Sentry populates the required Environment field from observed
-   events, and `panchangpal-edge` had none — not because the DSN was missing (it was set
-   2026-08-01) but because **no Edge error had ever been triggered**. Three deliberate errors later
-   the project reports `staging` correctly (see §8), so the dropdown now offers it.
-   ⚠️ Two of those three are tagged `production` and are **staging traffic mislabelled**, from
-   before `SENTRY_ENVIRONMENT` was set. Scope the monitor to **`staging`**, not `production`.
-2. **Prove it** the way NFR-06 was proven: not by seeing a 200, but by making it go **red** and
-   watching an email arrive. Until then this row is an instrument, not an SLO.
+| | |
+|---|---|
+| Project / environment | `panchangpal-edge` / **`staging`** |
+| URL | `https://<staging-ref>.supabase.co/functions/v1/health` |
+| Interval · timeout | 1 minute · 5 s |
+| Assertion | **Status Code = 200** — so a 503 from a degraded probe counts as down |
+| Failure / recovery threshold | 3 consecutive failures (~3 min) · 1 success |
+| Alert | **Notify → Member** (explicit), Email |
+
+**Scoped to `staging`, deliberately not `production`.** On this project `production` currently means
+nothing but two staging errors mislabelled before `SENTRY_ENVIRONMENT` was set (§8) — scoping to it
+would have pointed the monitor at an artifact.
+
+The environment field was itself the last blocker: Sentry populates it from observed events, and
+`panchangpal-edge` had none — not because the DSN was missing (it was set 2026-08-01) but because
+**no Edge error had ever been triggered.**
 
 ## 5. NFR-10 — sync success ≥ 99.5% ⛔ blocked on a DECISION, not on engineering
 
@@ -310,6 +316,30 @@ timestamps before touching code.**
 Config was ultimately verified without reading the value at all: Supabase shows a SHA-256 digest per
 secret, and `sha256("staging")` matches it exactly — ruling out a trailing space, a newline, or a
 capitalisation slip, none of which a screenshot would reveal.
+
+---
+
+### ✅ NFR-14 proven — 2026-08-02 16:16 IST
+
+Monitor pointed at `/functions/v1/health-nonexistent` for one failure window, then reverted.
+
+| Check | Result |
+|---|---|
+| Issue opened | ✅ `PANCHANGPAL-EDGE-3` — *Downtime detected* |
+| Assertion did the work | ✅ `Assertion failed`, Status Code **404** against the `= 200` rule |
+| Environment scoped correctly | ✅ `staging` |
+| **Email received** | ✅ 16:17, *"triggered by **Notify Siddharth Agarwal**"* |
+| Recovery | resolves on 1 successful check after the URL is restored |
+
+**Why a bad URL rather than a real outage.** Breaking the database dependency for real would also
+have exercised the 503 branch, and was prepared — a one-line change pointing `databaseReachable()`
+at a nonexistent table. It was **not run**: deliberately deploying a broken endpoint is an action
+that belongs to the owner, not the agent, and permission was declined. **So what is proven here is
+detection + notification, not the 503 path.** That gap is covered logically by `probe.test.ts`
+(`evaluateHealth(false)` → 503) but not end to end, and it belongs with the DB-outage runbook drill.
+
+**The alert action was set to an explicit Member**, which is the entire reason this succeeded on the
+first attempt where NFR-06 needed two — see Drill 1 above.
 
 ---
 
