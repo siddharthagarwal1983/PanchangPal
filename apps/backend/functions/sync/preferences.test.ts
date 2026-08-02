@@ -3,7 +3,7 @@
  * allowlist standing between a client-supplied payload and an upsert running as the SERVICE ROLE.
  */
 import { describe, it, expect } from 'vitest';
-import { resolvePreferences, type Mutation } from './logic';
+import { applyPreferences, resolvePreferences, type Mutation } from './logic';
 import { SyncRepository } from '../_shared/db/syncRepo';
 
 const mut = (over: Partial<Mutation> = {}): Mutation => ({
@@ -117,5 +117,74 @@ describe('SyncRepository.updatePreferences — the column allowlist', () => {
     const repo = new SyncRepository(db as any);
     await repo.updatePreferences(CALLER, { tradition_code: 'bengali' }, '2026-07-12T06:00:00Z');
     expect(db.calls[0].row.updated_at).toBe('2026-07-12T06:00:00Z');
+  });
+});
+
+/**
+ * The SEQUENCE, not just the decision (ADR-035, ratified 2026-08-02).
+ *
+ * The suite above proves `resolvePreferences` computes the right answer, and it passed for weeks
+ * while the handler called it as `resolvePreferences(m, null)` and then wrote unconditionally —
+ * §6.6's rule reduced to last-drain-wins, with `updated_at` free to move backwards. A test that
+ * only asserts the returned resolution cannot see that.
+ *
+ * So these assert the ordering: the stored timestamp is READ, and a losing mutation NEVER REACHES
+ * THE WRITE.
+ */
+function fakeStore(existing: string | null) {
+  const writes: { userId: string; payload: Record<string, unknown>; localTs: string }[] = [];
+  const reads: string[] = [];
+  return {
+    writes,
+    reads,
+    getPreferencesUpdatedAt(userId: string) {
+      reads.push(userId);
+      return Promise.resolve(existing);
+    },
+    updatePreferences(userId: string, payload: Record<string, unknown>, localTs: string) {
+      writes.push({ userId, payload, localTs });
+      return Promise.resolve();
+    },
+  };
+}
+
+describe('applyPreferences — decide, then write only if it wins', () => {
+  const USER = '11111111-1111-1111-1111-111111111111';
+
+  it('reads the stored timestamp rather than assuming none', async () => {
+    // The exact defect: passing `null` made the comparison unreachable.
+    const store = fakeStore('2026-07-12T05:00:00Z');
+    await applyPreferences(store, USER, mut());
+    expect(store.reads).toEqual([USER]);
+  });
+
+  it('writes a mutation newer than the stored one', async () => {
+    const store = fakeStore('2026-07-12T05:00:00Z');
+    const out = await applyPreferences(store, USER, mut());
+    expect(out.resolution).toBe('applied');
+    expect(store.writes).toHaveLength(1);
+    expect(store.writes[0].localTs).toBe('2026-07-12T06:00:00Z');
+  });
+
+  it('DOES NOT WRITE a stale mutation — so updated_at cannot move backwards', async () => {
+    // The assertion this file exists for. Reporting `superseded` while still writing would look
+    // correct from the response and be wrong in the database.
+    const store = fakeStore('2026-07-12T07:00:00Z');
+    const out = await applyPreferences(store, USER, mut());
+    expect(out.resolution).toBe('superseded');
+    expect(store.writes).toEqual([]);
+  });
+
+  it('writes when there is no stored row at all', async () => {
+    const store = fakeStore(null);
+    const out = await applyPreferences(store, USER, mut());
+    expect(out.resolution).toBe('applied');
+    expect(store.writes).toHaveLength(1);
+  });
+
+  it('does not write on an equal timestamp, so a redelivery cannot reorder', async () => {
+    const store = fakeStore('2026-07-12T06:00:00Z');
+    expect((await applyPreferences(store, USER, mut())).resolution).toBe('superseded');
+    expect(store.writes).toEqual([]);
   });
 });

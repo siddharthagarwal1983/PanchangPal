@@ -13,7 +13,7 @@ import {
   resolveRitualCompletion,
   resolveChecklist,
   resolvePersonalDate,
-  resolvePreferences,
+  applyPreferences,
   type Mutation,
   type ConflictResult,
 } from './logic.ts';
@@ -61,11 +61,24 @@ export const handler = withHandler('SVC_sync', async (req, ctx) => {
         record(resolvePersonalDate(m, null));
         break;
       case 'preferences': {
-        // Upsert onto the CALLER's row. `userId` comes from the JWT (repo.currentUserId), never
-        // from the payload — the SVC_account defect that let a request body name its own subject
-        // is the reason that rule is absolute here (ADR-030, B6.2).
-        await repo.updatePreferences(userId, m.payload as Record<string, unknown>, m.local_ts);
-        record(resolvePreferences(m, null));
+        // §6.6 last-writer-wins on `local_ts` (ADR-035, ratified 2026-08-02). DECIDE FIRST, then
+        // write only if this mutation wins — so a stale edit neither overwrites a newer one nor
+        // drags `updated_at` backwards.
+        //
+        // ⚠️ This previously passed `null`, which made the comparison unreachable and reduced the
+        // rule to last-drain-wins. It looked correct because one device drains FIFO, so drain order
+        // matches `local_ts` order; it diverged exactly where a conflict rule matters — a retried
+        // mutation, or a second device.
+        //
+        // Known and accepted: read-then-write is not atomic, so two devices syncing in the same
+        // instant can both observe the older timestamp. Within a batch the loop is sequential, so
+        // the window is cross-request only, and the outcome is still one of the user's own edits.
+        // Narrowing it further needs a conditional write, which would move the decision out of
+        // `resolvePreferences` — the single point of decision ADR-035 deliberately keeps.
+        // Upserts onto the CALLER's row: `userId` comes from the JWT (repo.currentUserId), never
+        // from the payload — the SVC_account defect that let a request body name its own subject is
+        // why that rule is absolute here (ADR-030, B6.2).
+        record(await applyPreferences(repo, userId, m));
         break;
       }
       default:
