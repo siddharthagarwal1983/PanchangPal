@@ -83,16 +83,53 @@ this, and the fix is the no-data setting — not the threshold, which is the NFR
 
 ---
 
-## 3. NFR-07 — crash-free users ≥ 99.8% 🟡
+## 3. NFR-07 — crash-free users ≥ 99.8% 🟡 specified, monitor not yet created
 
-Not in §7.2's table, but in the NFR table, and it needs **no new instrumentation**: Sentry already
-computes it from the same session data (the project dashboard shows it). It is one more monitor of
-the same shape as §2, with `crash_free_rate(user)` and a 99.8 threshold.
+Not in §7.2's table but in the NFR table (Part 1 §8), and it needs **no new instrumentation** —
+Sentry computes it from the same session data NFR-06 already uses. It is one more monitor of the
+same shape as §2.
 
-Recorded here rather than silently skipped, because "we only built what §7.2 listed" is a worse
-reason than "we judged it not worth a second page for a solo operator."
+| Field | Value |
+|---|---|
+| Project / environment | `panchangpal-mobile` / `production` |
+| Metric | **Crash Free User Rate** (`crash_free_rate(user)`) |
+| Dataset · interval | `Releases` · 1 hour |
+| High priority | **Below `99.8`** (NFR-07) |
+| Medium priority | Below `99.9` |
+| Alert | **Notify → Member** (explicit), Email |
 
----
+### ⚠️ NFR-07 is a far tighter bar than NFR-06, and will bind first
+
+This is not obvious from the two numbers and is worth knowing before wiring it to page.
+
+**Crash-free users is mathematically ≤ crash-free sessions.** A user is crash-free only if *every*
+one of their sessions was, so with a per-session crash rate `p` and `N` sessions per user:
+
+```
+crash-free sessions = 1 − p
+crash-free users    = (1 − p)^N        ≤ 1 − p   for N ≥ 1
+```
+
+So NFR-07's **stricter** threshold (99.8%) applies to the **lower** of the two metrics. At roughly
+five sessions per user, 99.8% crash-free users implies ≈ **99.96%** crash-free sessions — an order
+of magnitude tighter than NFR-06's 99.5%.
+
+**Consequences, stated rather than discovered during an incident:**
+
+- **NFR-07 alerts before NFR-06, essentially always.** Whichever way the app degrades, this is the
+  page that arrives first, and NFR-06 may never fire at all.
+- The two are **not independent signals**. Both firing is one fact reported twice, not corroboration.
+- For a solo operator that argues for NFR-07 as the **warning** and NFR-06 as the **page**, or for
+  accepting that NFR-07 is simply the real crash SLO and NFR-06 the backstop.
+
+**The thresholds come from the NFR table and are not ours to change here.** What is ours is to notice
+that they interact, and to wire the alerting knowing which one actually governs. A second page that
+always fires with the first is noise, and noise is how a solo operator learns to ignore alerts —
+which is the failure §8.4 is ultimately about.
+
+**Recommendation: create it, but consider Email-only/warning severity** rather than a second page,
+until real traffic shows how the two actually move together. Nothing in this project has produced a
+real crash-free datapoint yet — every session so far is CI or a drill.
 
 ## 4. NFR-14 — availability ≥ 99.9% ✅
 
