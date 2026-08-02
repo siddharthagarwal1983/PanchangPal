@@ -21,6 +21,35 @@ docs/architecture/adr/
 
 # Product Decisions
 
+## 2026-08-02 — The Node runtime tracks a SUPPORTED LTS, and the SDK pin picks which one
+
+**Decision.** `engines.node`, every workflow's Node pin, and `@types/node` move as ONE change and
+must name a **supported** major. Enforced by
+`apps/backend/tests/toolchain/types-node-matches-engine.test.ts`, which now also asserts the floor is
+not an end-of-life major.
+
+**Why it needed saying.** Node 20 reached EOL on **2026-04-30**; on 2026-08-02 every workflow still
+pinned `20.11.0`. **Three months on an unsupported runtime, with every gate green** — because no gate
+asked that question. The upgrade had been queued as a prerequisite for a test-library bump (#90),
+which is precisely backwards: it was security hygiene whose deadline had already passed.
+
+**Why 22 and not Active-LTS 24.** `expo@54.0.36` depends on `@types/node ^22.14.0`, so SDK 54 was
+developed against Node 22, and the whole build toolchain is SDK-pinned — `jest-expo`,
+`babel-preset-expo`, `@expo/metro-runtime`. Putting an untested runtime under a pinned toolchain is
+the bet that has failed four times here. **This buys ~9 months, not two years** (22 EOL 2027-04-30),
+and Node 24 belongs with the SDK 55 upgrade where the toolchain moves and is validated with it.
+
+**Validated like an SDK change, not on unit tests:** E2E on a **native Android build** — 6/6 flows,
+with MMKV's Nitro bindings loading natively and no memory fallback. `expo export` resolves what fails
+natively; mmkv v2 cost a week proving that.
+
+**The guard was blind to one of its own subjects.** `cd.yml` hardcoded `node-version` on the step
+rather than reading `env.NODE_VERSION`, and the test matched only `NODE_VERSION:`. **The drift the
+test existed to prevent was hiding inside the test.** It now matches both pin forms and names the
+offending file.
+
+---
+
 ## 2026-08-02 — An alert is not a capability until someone has watched it reach a human
 
 **Decision.** A §7.2 SLO counts as delivered only when a **deliberate trigger** has been observed to

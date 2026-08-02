@@ -4,7 +4,7 @@
 
 Version: 1.18.0
 
-Last Updated: 2026-08-02 (B4 CLOSED — two §7.2 SLOs proven end to end; 50%)
+Last Updated: 2026-08-02 (session end — B4 CLOSED, three §7.2 SLOs proven; Node 22 LTS; 50%)
 
 Purpose:
 This document provides a high-level snapshot of the overall project.

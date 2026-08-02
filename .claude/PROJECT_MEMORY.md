@@ -2,9 +2,9 @@
 
 # PanchangPal — Project Memory
 
-Version: 2.9.0
+Version: 3.0.0
 
-Last Updated: 2026-08-02 (B4 closed; SVC_health as the only anonymous surface; observability proven, not configured)
+Last Updated: 2026-08-02 (B4 closed; SVC_health; observability proven not configured; Node 22 LTS)
 
 Current Phase:
 Beta Readiness & Platform Hardening (TDD Part 5)
