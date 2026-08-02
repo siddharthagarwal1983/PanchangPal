@@ -487,6 +487,13 @@ Stable, cross-cutting facts (permanent until an approved decision changes them):
   via the monitor's separate `Assign` field, which is what made it look correct. **Always set an
   explicit Member.** The three questions are not one: did the data land · did DETECTION fire · did
   NOTIFICATION reach a human. Only the third settles it, and the first two passed while it failed.
+  ⛔ **AN OPEN ISSUE SUPPRESSES THE NEXT ALERT** (confirmed 2026-08-02). Sentry folds new
+  occurrences into an existing open period and does **not** notify again — so an issue left open
+  means **the next real incident of that kind pages nobody.** Confirmed when a drill crossed both
+  the NFR-06 and NFR-07 thresholds and only NFR-07 emailed, because NFR-06's earlier issue was still
+  open. It is the inverse of alert fatigue: nothing looks wrong, and the alert simply does not
+  arrive. **Resolve issues, including drill issues — never ARCHIVE, which mutes outright.** And a
+  silent alert is not evidence the threshold held; check whether the issue is already open.
   **`scripts/slo-alert-drill.mjs`** makes the crash-free drill repeatable, guarded behind `--confirm`
   because it writes unremovable synthetic crashes into production session data — cheap before launch,
   permanently expensive after.

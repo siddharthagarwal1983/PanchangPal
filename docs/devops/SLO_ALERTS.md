@@ -415,6 +415,31 @@ Refuses without `--confirm` and rejects a malformed DSN, because its purpose is 
 cannot be taken back. **Resolve any open drill issue first**, or the new drop folds into the existing
 open period and sends nothing — which reads as a regression when it is not.
 
+### ⛔ AN OPEN ISSUE SUPPRESSES THE NEXT ALERT — confirmed 2026-08-02
+
+The NFR-07 drill crossed **both** thresholds (85% is below NFR-06's 99.5% and NFR-07's 99.8%), so it
+should have produced two emails. **Only NFR-07's arrived.** The reason is not a misconfiguration:
+NFR-06's issue from the earlier drill was **still open**, and Sentry folds new occurrences into an
+existing open period without notifying again.
+
+**The operational consequence is the serious part.** An issue left open means **the next real
+incident of that kind pages nobody.** It is the inverse of alert fatigue — nothing is noisy, nothing
+looks wrong, and the alert simply does not arrive. For a solo operator with no second pair of eyes,
+that is a plausible way to miss an outage entirely.
+
+**Two rules follow:**
+
+1. **Resolve issues, including drill issues.** A synthetic issue left open is not untidiness; it is a
+   disabled alert. Resolve — never *archive*, which mutes notifications outright.
+2. **A silent alert is not evidence the threshold held.** Before concluding a metric is healthy,
+   check whether its issue is already open.
+
+**Still untested rather than disproven: whether one degradation pages twice.** NFR-06 and NFR-07 are
+separate monitors with separate issues, so both *should* fire when neither has an open period — the
+argument in §3 for making one of them a warning stands, but it has not been observed yet.
+
+---
+
 ### Three questions, not one
 
 1. Did the data land? · 2. Did **detection** fire? · 3. Did **notification** reach a human?
