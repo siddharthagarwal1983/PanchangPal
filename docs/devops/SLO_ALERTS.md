@@ -15,18 +15,19 @@ capability.**
 
 ## 0. What is actually alerting today
 
-⛔ **ZERO of the seven page anyone.** NFR-06 **detects** correctly and its notification does not
-arrive — proven by a deliberate trigger on 2026-08-02, see §8. Everything else below is unbuilt.
+✅ **One of the seven pages a human, and it has been watched doing it** — NFR-06, proven end to end
+by a deliberate trigger on 2026-08-02 (§8). That is the only SLO here that meets §8.4's standard.
 
 | | |
 |---|---|
-| **Detects, but does NOT notify** | NFR-06 crash-free sessions ⛔ |
+| **Live and PROVEN** | NFR-06 crash-free sessions ✅ |
 | **Measurable, no monitor yet** | NFR-07 crash-free users (same Sentry session data, no new instrumentation) |
 | **Blocked on engineering** | NFR-14 availability · NFR-10 sync success |
 | **Blocked on a gated feature** | NFR-05 AI latency · NFR-16 AI cost · refusal/groundedness (all Ask Guru) · NFR-11 push delivery |
 
-If the app breaks in a way that is not a crash, nothing detects it at all. If it breaks *by*
-crashing, Sentry notices and the operator is not told.
+If the app breaks **by crashing**, Sentry notices and the operator is emailed. If it breaks in any
+other way — a failing sync, a dead API, a notification never delivered — **nothing detects it at
+all.**
 
 ---
 
@@ -34,7 +35,7 @@ crashing, Sentry notices and the operator is not told.
 
 | SLO | NFR | Target | Instrument | Status |
 |---|---|---|---|---|
-| Crash-free sessions | NFR-06 | ≥ 99.5% | Sentry sessions | ⛔ **detects, does not notify** — monitor `7968827`, see §8 |
+| Crash-free sessions | NFR-06 | ≥ 99.5% | Sentry sessions | ✅ **live and proven** — see §2, §8 |
 | Availability (core reads) | NFR-14 | ≥ 99.9% | uptime monitor | ⛔ no pollable endpoint |
 | Sync success | NFR-10 | ≥ 99.5% | SVC_sync metrics | ⛔ no metric emitted |
 | AI first-token latency | NFR-05 | < 2 s | EVT_030 | ⛔ not emitted; feature gated |
@@ -44,17 +45,17 @@ crashing, Sentry notices and the operator is not told.
 
 ---
 
-## 2. NFR-06 — crash-free sessions ≥ 99.5% ⛔ detects, does not notify
+## 2. NFR-06 — crash-free sessions ≥ 99.5% ✅
 
-The only SLO that measures. It does **not** page — see §8.
+The only SLO that measures, alerts, and has been **observed to reach a human** (§8).
 
 | | |
 |---|---|
-| **Sentry monitor** | `7968827` — "crash_free_rate(session) below 99.5% over past 1 hour" |
+| **Sentry monitor** | *crash_free_rate(session) below 99.5% over past 1 hour* (metric monitor). **Recreated 2026-08-02**, replacing `7968827`, to give the alert an explicit recipient — see §8. |
 | **Project / environment** | `panchangpal-mobile` / **`production`** |
 | **Detect** | Dataset `Releases`, `crash_free_rate(session)`, 1-hour interval, static threshold |
 | **Thresholds** | High **< 99.5** (NFR-06) · Medium < 99.8 · Resolved ≥ 99.8 |
-| **Notification** | Connected alert *Notify Suggested Assignees* → Email; project alert *Send a notification for high priority issues* → Email |
+| **Notification** | Email to an explicit **Member**. ⚠️ NOT *Suggested Assignees* — that is what silently reached nobody (§8). |
 | **Assignee** | Solo operator |
 
 ### Why the environment filter is load-bearing
@@ -159,99 +160,76 @@ deliverable.
 
 ## 8. What was proven, and what was only configured
 
-§8.4's standard is that an alert nobody has seen fire is a plan. See the record of the deliberate
-trigger below; until that row is filled in, **treat NFR-06 alerting as configured rather than
-proven.**
+§8.4's standard: **an alert nobody has seen fire is a plan, not a capability.** This section records
+what has actually been watched happening.
 
-| Date | What was triggered | Result |
-|---|---|---|
-| 2026-08-02 | `scripts/slo-alert-drill.mjs` — 20 synthetic sessions, 3 crashed, into `environment=production`, release `0.1.0` | ✅ Submission accepted (HTTP 200) · ✅ **Detection fired** — issue `PANCHANGPAL-MOBILE-2` opened 12:31 IST, priority **high**, assigned · ⛔ **NO NOTIFICATION ARRIVED** |
+### ✅ NFR-06 IS PROVEN — AND THE FIRST ATTEMPT FAILED AT THE LAST STEP
 
-## ⛔ NFR-06 ALERTING IS BROKEN AT THE LAST STEP
+**Two drills. The first is the reason this section is worth reading.**
 
-**The monitor detects and tells nobody.** This is the finding, and the drill is the only reason it
-is known. Everything upstream is correct — threshold, `production` filter, 1-hour interval, an issue
-opened at high priority and assigned — and **no email reached the operator**.
+### Drill 1 — 2026-08-02 ~12:31 IST · detection fired, nobody was told ⛔
 
-**A monitor that opens an issue nobody sees is not an alert.** For a calm ritual app the failure is
-worse than it sounds: §8.4's worst unattended failure is a crash affecting every user going
-unnoticed, because users of this product do not file bug reports — they stop opening the app. That
-is precisely the scenario this SLO exists for, and it would have played out in full.
+Everything upstream was correct: threshold, `production` filter, 1-hour interval, issue
+`PANCHANGPAL-MOBILE-2` opened at **high** priority and assigned to the operator, evaluated value
+93.182. **No email arrived.**
 
-**Recorded as a launch blocker**, not a configuration note. Until an email is observed, treat NFR-06
-as **detected but unalerted**, which for operational purposes is unalerted.
+**Cause: both alert rows targeted *Suggested Assignees*.** Sentry resolves those from suspect commits
+and ownership rules, and a metric-monitor issue has **no stack trace and no suspect commit** — so the
+recipient set was empty. The issue *was* assigned, which made it look correct; that came from the
+monitor's own **Assign** field, a different mechanism from an alert's recipient resolution.
 
-### What it is most likely to be, in the order worth checking
+**A monitor that opens an issue nobody sees is not an alert.** Without a deliberate trigger this
+would have shipped as "alerting configured" — correct threshold, correct filter, two alert rows
+visibly attached, an issue opening on schedule, and no one told. For a calm ritual app that is
+§8.4's worst unattended failure exactly: a crash affecting every user goes unnoticed, because these
+users do not file bug reports, they stop opening the app.
 
-1. **The alert actions target *Suggested Assignees*, and a metric-monitor issue has none.** Both
-   attached rows — the connected *Notify Suggested Assignees* and the project's *Send a notification
-   for high priority issues* — resolve recipients from suspect commits and ownership rules. A metric
-   issue has **no stack trace and no suspect commit**, so the recipient set is plausibly empty. Note
-   the issue *was* assigned to the operator: that came from the monitor's own Assign field, which is
-   a different mechanism from an alert's recipient resolution. **Fix: change the action to notify a
-   specific Member (or Team) explicitly rather than suggested assignees.**
-2. **Personal notification settings** — Sentry Settings → Notifications → Issue Alerts must be
-   enabled for this project, and the account email verified.
-3. **Digest batching** — Sentry batches issue-alert email with a delay; a late arrival is a different
-   defect from no arrival, and distinguishing them costs only a re-check.
-4. **Spam/quarantine.**
+### Drill 2 — 2026-08-02 14:43 IST · proven end to end ✅
 
-**Whatever the cause, the fix must be re-proven by re-running the drill.** A configuration change
-that has not been observed to page anyone is the same class of claim this section exists to reject.
+Monitor recreated with the alert action set to an explicit **Member**. Drill re-run after
+**resolving** the previous issue (resolve, *not* archive — archiving mutes notifications and would
+have suppressed the very email under test).
 
-**What the issue recorded**, which is the proof that the monitor evaluates what it claims to:
-
-| Triggered Condition | |
+| Check | Result |
 |---|---|
-| Dataset | `Releases` |
-| Aggregate | `crash_free_rate(session)` |
-| **Environment** | **`production`** |
-| Interval | 1 hour |
-| Condition | Below 99.5 |
-| **Evaluated Value** | **93.182** |
+| A **new** issue opened | ✅ `PANCHANGPAL-MOBILE-4`, distinct from `-2` |
+| Evaluated Value | ✅ **85** — matching the predicted 85.0 (40 sessions, 6 crashed), so the window was uncontaminated |
+| **Email received** | ✅ *[Critical] crash_free_rate(session) below 99.5% over past 1 hour — panchangpal-mobile*, 14:43 |
 
-**The evaluated value is not the drill's 85%, and the discrepancy is worth keeping.** 41/44 = 93.18%,
-so the window held **44** production sessions: the drill's 20 plus **24 from run `30735155676`** —
-the broken E2E run earlier that morning that tagged its sessions `production` before the newline
-defect in `e2e.yml` was fixed. It is **not** an ongoing leak: both `main` runs after PR #98
-(`30736249752`, `30736362471`) log `env=ci`, 12 each.
+The email's own Alert Rule Details confirm the scope independently of the monitor's settings page:
+project `panchangpal-mobile`, **environment `production`**, threshold `< 99.5%`, interval `1 hour`,
+metric `percentage(sessions_crashed, sessions)`.
 
-Two things follow. **Sessions outnumber launches** — 24 sessions from 8 launches, consistent with
-`AppLifecycleIntegration` starting a session per foreground while `[telemetry] reporter=` logs once
-per process (inferred from the arithmetic, not measured). And **a drill's evaluated value will
-include whatever else is in the window**, so it should be read as a lower bound on the drill's
-effect rather than as its measurement.
+**This is the first alert in this project proven to reach a human.**
 
-**Reproduce with:**
+### Reproducing
 
 ```bash
 node scripts/slo-alert-drill.mjs --dsn "<panchangpal-mobile client DSN>" --confirm
 ```
 
-The script refuses without `--confirm` and rejects a malformed DSN, because its whole purpose is to
-write data that cannot be taken back.
+Refuses without `--confirm` and rejects a malformed DSN, because its purpose is to write data that
+cannot be taken back. **Resolve any open drill issue first**, or the new drop folds into the existing
+open period and sends nothing — which reads as a regression when it is not.
 
-### The three questions, which are not the same question
+### Three questions, not one
 
-Sentry aggregates sessions per interval, so allow ~1 hour (the monitor's interval) before judging.
-Then check **in this order** — each failing for a different reason:
+1. Did the data land? · 2. Did **detection** fire? · 3. Did **notification** reach a human?
 
-1. **Project → Releases/Sessions: does crash-free show the drop?** — did the data land at all.
-2. **Monitor `7968827`: is there an ongoing issue?** — did *detection* fire.
-3. **Inbox: did the connected alert email arrive?** — did *notification* work.
+**Only (3) settles it.** Drill 1 passed (1) and (2) and failed (3), which is precisely the state a
+settings page cannot show you.
 
-**Only (3) settles it.** (1) and (2) can both succeed while the alert reaches nobody — which is
-exactly the state this monitor was in before its §7 Alert section was filled in, and is the shape of
-every failure §8.4 is about. Until (3) is confirmed, NFR-06 alerting is **configured, not proven**.
+### What the drills cost, permanently
 
-⚠️ **This drill put 3 synthetic crashes into production session data permanently.** A crash-free dip
-dated 2026-08-02 is this, not a regression.
+⚠️ **Six synthetic crashes are now in production session data** (3 per drill, 2026-08-02) and cannot
+be removed. A crash-free dip on that date is the drills, not a regression. Cheap now — production had
+essentially no real sessions, and everything before 2026-08-02 is CI traffic mislabelled as
+production (PR #98) — and permanently expensive after launch, which is the argument for having done
+it today.
 
-**The trade-off in proving it, stated rather than buried:** the only way to make a
-production-scoped crash-free alert fire is to put crashed sessions into production telemetry, which
-pollutes the metric being measured. That cost is near zero **right now** — production has
-essentially no real sessions and the historical data is already meaningless — and rises permanently
-once real users exist. That is an argument for doing it before launch, not after.
+⚠️ **A drill's evaluated value includes whatever else is in the window**, so read it as a lower bound
+on the drill's effect rather than a measurement of it. Drill 1 read 93.182 rather than 85 because the
+window also held 24 sessions from a broken CI run.
 
 ---
 

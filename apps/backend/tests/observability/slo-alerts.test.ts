@@ -77,11 +77,27 @@ describe('SLO_ALERTS.md still describes the instruments that exist', () => {
     ).toEqual([]);
   });
 
-  it('records NFR-06 as the live one, with its Sentry monitor id', () => {
-    // The one SLO that pages. If this section is ever removed, the document has stopped describing
-    // the only alerting that exists.
+  it('records NFR-06 as the one live SLO, at its NFR threshold', () => {
+    // The one SLO that pages. If this goes missing, the document has stopped describing the only
+    // alerting that exists.
+    //
+    // Deliberately NOT pinned to a Sentry monitor id. The original `7968827` was recreated the same
+    // day to give its alert an explicit recipient, which minted a new id — so an id assertion
+    // asserts a fact that a routine fix invalidates, and would have to be edited to stay green
+    // rather than telling anyone anything. The threshold is the durable claim: it is the NFR.
     expect(sloText).toMatch(/NFR-06/);
-    expect(sloText).toMatch(/7968827/);
     expect(sloText).toMatch(/99\.5/);
+  });
+
+  it('does not claim NFR-06 is proven without recording a drill that reached a human', () => {
+    // The failure mode this whole document exists to reject: "alerting configured" with nobody ever
+    // having watched it page. If §8 stops recording an observed email, the ✅ must go too.
+    if (/live and proven|IS PROVEN/.test(sloText)) {
+      expect(
+        /Email received/i.test(sloText),
+        'SLO_ALERTS.md calls NFR-06 proven, but §8 no longer records a drill in which a ' +
+          'notification actually reached a human. Proven means observed, not configured.',
+      ).toBe(true);
+    }
   });
 });
