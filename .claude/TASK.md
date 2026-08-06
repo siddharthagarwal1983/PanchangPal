@@ -112,9 +112,25 @@ green in CI on a real native build. Canonical progress 0% → 13% (1 of 8 Beta s
 
 ## Title
 ✅ **RNTL 13 → 14 MIGRATED, AND THE TRACKING DOCS RECONCILED.** Branch
-`chore/rntl-14-migration`, commit **`9942763`** — **not merged, no PR opened.**
+`chore/rntl-14-migration` (`9942763` + `ebba6e2`) is pushed; **PR #107 is OPEN, not merged.**
 
 **Progress unchanged at 50%.** Neither piece advances a Beta slice.
+
+⛔ **PR #107 HAS NO CI VERDICT — GITHUB ACTIONS WAS IN A MAJOR OUTAGE ON 2026-08-06.** Do not read
+its red as a result, and do not re-run into it. Three runs produced reds with **zero repository code
+executed**: both CI attempts died in `Set up job` at `Getting action download info`
+(`Service Unavailable`, 16:36–16:46), taking the other four gates down as `skipping` via `needs:`;
+E2E run `31119803470` sat **queued 15 minutes with 0 steps** and was cancelled by the platform.
+`githubstatus.com` reported **Actions = `major_outage`**. E2E `31120798108` was dispatched into the
+same window and is expected to be equally uninformative.
+⚠️ **A RED CAN BE VACUOUS TOO.** The rule this repo learned in the green direction — *ask which gate
+would have to fail* — applies unchanged here: no gate reached the code, so the colour says nothing
+about RNTL 14.
+⚠️ **`in_progress` DOES NOT MEAN THE OUTAGE CLEARED.** A job enters it on runner assignment and can
+still fail inside `Set up job`. I misread it as recovery and re-ran once for nothing. **The status
+API is the instrument; the job state is not.**
+**Owed when Actions recovers:** re-dispatch **one** E2E run (sequential per ref) and let the five CI
+gates re-run, then judge against the bar below.
 
 ### What the migration actually was
 

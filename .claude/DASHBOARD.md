@@ -114,9 +114,24 @@ CURRENT_MILESTONE.md
 
 # Current Task
 
-✅ **TRACKING DOCS RECONCILED · RNTL 13 → 14 MIGRATED.** Branch `chore/rntl-14-migration`,
-commit **`9942763`** — not merged, no PR opened. **Progress unchanged at 50%**; neither piece
-advances a Beta slice.
+✅ **TRACKING DOCS RECONCILED · RNTL 13 → 14 MIGRATED.** Branch `chore/rntl-14-migration`
+(`9942763` + `ebba6e2`) is pushed and **PR #107 is open** against main. **Progress unchanged at
+50%**; neither piece advances a Beta slice.
+
+⛔ **CI CARRIES NO VERDICT YET — GITHUB ACTIONS WAS IN A MAJOR OUTAGE (2026-08-06, 16:36–16:46+).**
+Three runs went red without executing a single line of repository code, and all three reds are
+external: the CI gates failed in **`Set up job`** at `Getting action download info` with
+`Service Unavailable`, and the four downstream gates reported `skipping` only because they `needs:`
+that job. The E2E run sat **queued 15 minutes with ZERO steps** and was cancelled platform-side —
+*not* the `cancel-in-progress` hazard of 2026-07-19, which is deliberately `false` here.
+Confirmed against `githubstatus.com`: **Actions = `major_outage`**.
+⚠️ **A red is as capable of being vacuous as a green.** This repo has paid three times for reading a
+green that no gate could have failed (mmkv v2's native resolution · `@sentry/cli` with no gate
+running `sentry.gradle` · pnpm's unenforced peers). The same question settles both directions —
+**which gate actually exercised the thing?** Here none did, so the colour carries no information.
+⚠️ **And `in_progress` is NOT evidence that action resolution recovered** — a job reaches that state
+merely by being assigned a runner, then fails inside `Set up job`. Reading it as recovery cost one
+wasted re-run; the authority is the status API, not the job state.
 
 **The SLO count had drifted, and both numbers were right.** SESSION.md said three proven; five other
 docs said two. **TDD Part 5 §7.2 names SEVEN and does not include NFR-07** — that is from the Part 1

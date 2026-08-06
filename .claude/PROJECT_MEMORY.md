@@ -909,6 +909,26 @@ Stable, cross-cutting facts (permanent until an approved decision changes them):
      `device-logcat.txt` exist only there; grepping the run log finds nothing and reads as absence of
      evidence. Both defects above were diagnosed from the artifact. Same lesson the Pixel Launcher
      ANRs taught.
+  4. **A CLEAR RACES THE NEIGHBOUR'S TEARDOWN, NOT JUST ITS OWN LAUNCH — AND THE FLOWS STEP HAS NO
+     TIMEOUT, SO THE HANG GOES DARK** (established 2026-08-06, E2E `31120798108`). Rule 1's three
+     discrete steps are necessary and **not sufficient**. FLOW_SESSION_PERSISTENCE hung on
+     `Launch app "com.panchangpal.app"` — the command itself never returning, rather than Rule 1's
+     ~60 s assertion failure — 0.5 s after its own `clearState`, which itself followed
+     **FLOW_OFFLINE_SYNC's `onFlowComplete` teardown doing `stopApp` + `clearState`**. Two clear-states
+     ~0.5 s apart, with logcat showing `Destroy timeout of remove-task, attempt to kill
+     Task{... com.panchangpal.app}` 11 s earlier. So the hazard is **any** clear racing a
+     neighbouring flow's teardown, not only a fused `launchApp: clearState: true`.
+     ⛔ **`e2e.yml`'s `maestro test tests/flows/` was NOT wrapped in `timeout`** (fixed same day on
+     `fix/e2e-flow-timeout`: `timeout --kill-after=1m 25m`, exit 124/137 annotated as a HANG rather
+     than a flow failure), while `Build APK` already was
+     (`timeout --kill-after=2m 40m`, added 2026-07-25 after a hung Gradle burned to the job budget and
+     reported **`cancelled`** — "a red build wearing a timeout's costume"). The guard was applied to
+     one step and not the other, so a hung flow consumes all 90 minutes and reports `cancelled`, which
+     **is not read as red and tells nobody**. Same defect shape, one step over.
+     ⚠️ **The run still proved something**, and separating the two halves is the point: two flows
+     passed **completely** first (FLOW_MORNING_RITUAL 18/18, FLOW_OFFLINE_SYNC 39/39) on a green
+     `Build APK`, so a hang late in a suite is not evidence against the change under test. Read the
+     per-flow `commands.json` statuses before attributing anything.
 - **Assert a deletion by CONTENT, never by the foreign key** — restated here because it generalises
   past the deletion executor: a test written against the identifier a deletion removes cannot detect
   a deletion that only removed the identifier. `ON DELETE SET NULL` keeps the row and drops the link,
