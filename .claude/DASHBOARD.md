@@ -2,9 +2,10 @@
 
 # PanchangPal Dashboard
 
-Version: 1.32.0
+Version: 1.33.0
 
-Last Updated: 2026-08-02 (B4 CLOSED — three SLOs proven end to end, two of them §7.2's; 47% → 50%)
+Last Updated: 2026-08-06 (#107 opened, no CI verdict — GitHub Actions outage; E2E hang diagnosed;
+flows-step timeout gap fixed; 50% unchanged)
 
 Purpose:
 This is the first file Claude should read at the beginning of every session.

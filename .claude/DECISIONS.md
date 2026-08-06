@@ -2,7 +2,7 @@
 
 # PanchangPal — AI Decision Summary
 
-Version: 1.2.0
+Version: 1.3.0
 
 Purpose:
 This file contains a condensed summary of permanent project decisions.
@@ -20,6 +20,36 @@ docs/architecture/adr/
 ---
 
 # Product Decisions
+
+## 2026-08-06 — Every long-running CI step carries its own timeout, and a red is read for what it exercised
+
+**Decision.** Two conventions, both established by one GitHub Actions outage and one hung E2E run.
+
+**1. A step that can hang carries its own `timeout`, not just the job's.** `e2e.yml`'s
+`maestro test tests/flows/` now runs under `timeout --kill-after=1m 25m`, matching the
+`timeout --kill-after=2m 40m` `Build APK` has carried since 2026-07-25. Relying on
+`timeout-minutes: 90` is not equivalent: the job timeout reports **`cancelled`**, and *a cancelled run
+is not a red run, so nobody is told* — the same gate-goes-dark failure that hid the expo-updates build
+regression for six runs. The exit code must also **say what happened**: 124/137 is annotated as a
+**HANG, not a flow assertion failure**, because an unexplained red E2E sends the next reader hunting
+for a product defect that does not exist (the preference-write defect was misattributed four times
+for exactly this reason).
+
+**2. A red is evidence only about what it exercised.** This repo already knows a green can be
+vacuous — mmkv v2's native resolution, `@sentry/cli` with no gate running `sentry.gradle`, pnpm's
+unenforced peers. **The same question settles the other direction: which gate would have had to
+fail?** During the outage, five gates showed red/skipping while zero lines of repository code ran, and
+one flow suite hung *after* two flows had passed completely. Read the per-flow `commands.json` in the
+artifact before attributing a red to the change under test.
+
+**Corollary.** **Job state is not an instrument.** `in_progress` means a runner was assigned, nothing
+more — a job reaches it and still dies inside `Set up job`. When CI behaves inexplicably, check
+`githubstatus.com`'s Actions component before re-running; re-running into an outage produces more
+uninformative reds, not more information.
+
+**Deliberately NOT decided.** Whether the double-`clearState` race (a flow's opening clear against the
+previous flow's `onFlowComplete` teardown) gets a settle. A settle is the obvious fix and may be the
+wrong one — this repo's standing rule is that added settle time can mask a race real users hit.
 
 ## 2026-08-02 — The Node runtime tracks a SUPPORTED LTS, and the SDK pin picks which one
 

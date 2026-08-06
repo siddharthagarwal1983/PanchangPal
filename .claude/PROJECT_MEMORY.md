@@ -2,9 +2,10 @@
 
 # PanchangPal — Project Memory
 
-Version: 3.0.0
+Version: 3.1.0
 
-Last Updated: 2026-08-02 (B4 closed; SVC_health; observability proven not configured; Node 22 LTS)
+Last Updated: 2026-08-06 (Maestro rule 4 — a clear races the NEIGHBOUR's teardown, and a hung flows
+step reported `cancelled`; the timeout guard that fixes it)
 
 Current Phase:
 Beta Readiness & Platform Hardening (TDD Part 5)

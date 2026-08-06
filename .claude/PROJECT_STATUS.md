@@ -2,9 +2,10 @@
 
 # PanchangPal — Project Status Dashboard
 
-Version: 1.18.0
+Version: 1.19.0
 
-Last Updated: 2026-08-02 (session end — B4 CLOSED, three §7.2 SLOs proven; Node 22 LTS; 50%)
+Last Updated: 2026-08-06 (session end — #107 open with no CI verdict; E2E hang diagnosed; flows-step
+timeout fixed; 50% unchanged)
 
 Purpose:
 This document provides a high-level snapshot of the overall project.
@@ -90,6 +91,37 @@ builds/distribution, observability, DR, security/privacy, release mechanics, go/
 product scope. Sliced B1–B8; see CURRENT_MILESTONE.md.
 
 Current Focus
+
+- **🟡 PR #107 (RNTL 13 → 14) IS OPEN WITH NO CI VERDICT — GITHUB ACTIONS MAJOR OUTAGE, 2026-08-06.**
+  Progress unchanged at **50%**; test infrastructure advances no Beta slice. Both CI attempts died in
+  **`Set up job`** at `Getting action download info` (`Service Unavailable`), taking the other four
+  gates down as `skipping` via `needs:`; one E2E run sat queued 15 min with **0 steps** and was
+  cancelled platform-side. ⚠️ **A red can be vacuous exactly as a green can** — ask which gate would
+  have had to fail; here none reached the code. ⚠️ **`in_progress` is not recovery**: a job reaches it
+  on runner assignment and still dies in `Set up job`.
+  **What IS known about RNTL 14 from CI:** a second E2E run got through and passed
+  **FLOW_MORNING_RITUAL 18/18** and **FLOW_OFFLINE_SYNC 39/39** on a green **Build APK** before
+  hanging in an unrelated place — so the migration bundles, compiles and runs on a device. The five
+  gates still owe the stated bar (tsc ×11 · eslint 0 errors · both suites with **no test-count
+  reduction** · `expo export` both platforms).
+
+- **✅ `fix/e2e-flow-timeout` (`fb1a2fe`) — a hung E2E now fails red instead of going dark.**
+  `maestro test tests/flows/` ran with no timeout while `Build APK` has had
+  `timeout --kill-after=2m 40m` since 2026-07-25 — **the guard was applied to one step and never the
+  other.** A hang would have burned the full 90-minute budget and reported `cancelled`, which nobody
+  reads as red. Now capped at 25m with 124/137 annotated as **a HANG, not a flow assertion failure**,
+  proven against a shim reproducing GNU `timeout`'s exit semantics (hang → 124 + annotation · real
+  failure → 1 clean · pass → 0), with the logcat dump running in all three so the artifact survives.
+  **Not yet PR'd — deliberately held until Actions recovers**, because a workflow change whose point
+  is that CI signals mean something should not land on vacuous reds.
+
+- **⚠️ The Maestro launch race has a second form, and Rule 1 is necessary but NOT sufficient.**
+  FLOW_SESSION_PERSISTENCE hung on `Launch app` 0.5 s after its own `clearState`, which followed
+  FLOW_OFFLINE_SYNC's teardown doing `stopApp` + `clearState` — two clear-states ~0.5 s apart, with
+  `Destroy timeout of remove-task` in logcat 11 s earlier. **The hazard is any clear racing a
+  neighbouring flow's teardown**, not only a fused `launchApp: clearState: true`. Recorded as Maestro
+  rule 4; **deliberately not "fixed" with a settle**, since added settle time can mask a race real
+  users hit.
 
 - **✅ SENTRY IS LIVE AND VERIFIED ON DEVICE (2026-08-02).** Org `panchang`, projects
   `panchangpal-mobile` + `panchangpal-edge`, DSN placed in EAS (`preview` + `production`) and
@@ -335,16 +367,25 @@ Implementation: Mobile MVP Phase 1 is feature-complete (M1–M8).
 
 Priority 1
 
-**Engineering: close both Sentry blockers together on PR #79.** Resolve the telemetry adapter once
-at startup (AppProviders), with a test that fails when that resolution is removed, then re-run E2E
-for **two consecutive greens**. They are a single task because the fix changes *when* Sentry's
-network instrumentation installs — the leading suspect for the deterministic red that PR carries.
-Until then Sentry stays unmerged and **B4 does not close**.
+**When GitHub Actions recovers: get a real verdict on the two open branches.** In order — open a PR
+for **`fix/e2e-flow-timeout`** (`fb1a2fe`), re-run **#107**'s five gates, then dispatch **one** E2E
+run (`e2e.yml`'s concurrency permits one pending run per ref; a batch cancels itself). Merge #107 on
+that evidence, not on the local run.
+⚠️ **Nothing on #107 has been verified by CI**, and the reds currently on it are the outage, not the
+change. Do not read them as a result, and do not re-run into an outage — check
+`githubstatus.com`'s Actions component, because **job state is not an instrument**: `in_progress`
+only means a runner was assigned.
 
 Priority 2
 
-**Owner: a free-tier Sentry org + DSN.** Everything else in B4 is built; without a DSN the adapter
-resolves to Null, nothing has been observed reaching Sentry, and B4.4 cannot start.
+**Decide whether the double-`clearState` race needs fixing, and how.** FLOW_SESSION_PERSISTENCE's
+opening clear can race the previous flow's `onFlowComplete` teardown, which hung a run indefinitely.
+The `timeout` guard now converts that into a red rather than a dark `cancelled`, so this is no longer
+urgent — but it is not resolved. **A settle is the obvious fix and possibly the wrong one**: this
+repo's own rule is that adding settle time can hide a race real users hit.
+
+(~~Owner: a free-tier Sentry org + DSN~~ — **done 2026-08-02.** Org `panchang`, both projects live,
+verified on device; B4 closed.)
 
 Priority 3
 
@@ -448,6 +489,26 @@ prefs work today, so gating and prefs are real before the SDKs are wired.
 ---
 
 # Recently Completed
+
+- **PR #107 opened; the E2E hang diagnosed; the flows-step timeout gap fixed (2026-08-06).**
+  **Progress unchanged at 50%.** #107 carries the RNTL 14 migration and has **no CI verdict** —
+  GitHub Actions was in a **major outage** and three runs went red having executed zero lines of
+  repository code (`Set up job` → `Getting action download info` → `Service Unavailable`; one E2E run
+  queued 15 min with 0 steps, cancelled platform-side).
+  One E2E run did get through and was cancelled by the owner after hanging. **The artifact settles
+  it:** FLOW_MORNING_RITUAL **18/18** and FLOW_OFFLINE_SYNC **39/39** passed on a green **Build APK**,
+  then FLOW_SESSION_PERSISTENCE hung on `Launch app` 0.5 s after its own `clearState`, itself
+  following FLOW_OFFLINE_SYNC's teardown `stopApp` + `clearState`, with `Destroy timeout of
+  remove-task` in logcat 11 s earlier. **RNTL 14 is not implicated — on evidence, not on "it is
+  test-only".**
+  Fixed on **`fix/e2e-flow-timeout`** (`fb1a2fe`, not yet PR'd): `maestro test tests/flows/` ran
+  with no timeout while `Build APK` has had one since 2026-07-25, so a hang would have burned 90
+  minutes and reported `cancelled` — **which nobody reads as red**. Now capped at 25m, with 124/137
+  annotated as a HANG rather than a flow failure, proven against a shim reproducing GNU `timeout`'s
+  exit semantics and keeping the logcat dump in every branch so the artifact survives.
+  **Two rules recorded:** a red can be vacuous exactly as a green can (ask which gate would have had
+  to fail), and Maestro Rule 1's three discrete steps are **necessary but not sufficient** — the
+  clear can race a *neighbouring* flow's teardown.
 
 - **Tracking docs reconciled + RNTL 13 → 14 (2026-08-02, `9942763` on `chore/rntl-14-migration`; not
   merged).** **Progress unchanged at 50%** — neither advances a Beta slice.

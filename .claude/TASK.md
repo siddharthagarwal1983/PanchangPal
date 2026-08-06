@@ -2,7 +2,7 @@
 
 # PanchangPal — Current Task
 
-Version: 5.1.0
+Version: 5.2.0
 Last Updated: 2026-08-02 (tracking docs reconciled — NFR-07 is a third SLO, not one of §7.2's seven;
 current task set to the RNTL 13 → 14 migration)
 
@@ -111,7 +111,8 @@ green in CI on a real native build. Canonical progress 0% → 13% (1 of 8 Beta s
 # Current Task
 
 ## Title
-✅ **RNTL 13 → 14 MIGRATED, AND THE TRACKING DOCS RECONCILED.** Branch
+✅ **PR #107 OPENED (RNTL 13 → 14) — AWAITING A CI VERDICT · E2E HANG DIAGNOSED · FLOWS-STEP TIMEOUT
+FIXED.** Branch
 `chore/rntl-14-migration` (`9942763` + `ebba6e2`) is pushed; **PR #107 is OPEN, not merged.**
 
 **Progress unchanged at 50%.** Neither piece advances a Beta slice.
@@ -129,8 +130,28 @@ about RNTL 14.
 ⚠️ **`in_progress` DOES NOT MEAN THE OUTAGE CLEARED.** A job enters it on runner assignment and can
 still fail inside `Set up job`. I misread it as recovery and re-ran once for nothing. **The status
 API is the instrument; the job state is not.**
-**Owed when Actions recovers:** re-dispatch **one** E2E run (sequential per ref) and let the five CI
-gates re-run, then judge against the bar below.
+**Owed when Actions recovers:** open a PR for `fix/e2e-flow-timeout`, let #107's five CI gates re-run,
+re-dispatch **one** E2E run (sequential per ref), then judge against the bar below.
+
+### ✅ Also done 2026-08-06 — `fix/e2e-flow-timeout` (`fb1a2fe`), branched off `main`, pushed, NOT PR'd
+
+`maestro test tests/flows/` ran **bare** while `Build APK` has carried `timeout --kill-after=2m 40m`
+since 2026-07-25 — the guard was applied to one step and never the other. A hung flow therefore
+burned toward `timeout-minutes: 90` and would have reported **`cancelled`**, which nobody reads as
+red. Now `timeout --kill-after=1m 25m`, with **124/137 annotated as a HANG rather than a flow
+assertion failure**, so the next reader is not sent hunting for a product defect.
+**Proven, not asserted:** the fragment was run against a shim reproducing GNU `timeout`'s exit
+semantics — hang → 124 + annotation · real failure → 1 with no annotation · pass → 0 — and the logcat
+dump runs in **all three**, so a killed run still uploads the artifact holding the per-flow
+`commands.json`. 25m cannot clip a healthy suite; two flows completed inside 60 s in the hung run.
+**Held back from PR deliberately** until Actions recovers: a workflow change whose whole point is that
+CI signals mean something should not land on vacuous reds. Kept off the RNTL branch as #78 was split
+out of the Sentry branch.
+
+⚠️ **Deliberately NOT fixed: the double-`clearState` race.** A flow's opening clear can race the
+previous flow's `onFlowComplete` teardown. A settle is the obvious fix and may be the wrong one —
+this repo's standing rule is that added settle time can mask a race real users hit. The timeout guard
+downgrades it from "gate goes dark" to "gate goes red", so it is no longer urgent.
 
 ### What the migration actually was
 
@@ -252,10 +273,17 @@ unproven, none unfinished engineering: three behind the Ask Guru gate, one behin
 config~~ ✅ merged (#102) · ~~#97 zustand 5~~ ✅ merged · ~~#95~~ closed.
 **ADR-033 (Canonical Panchang Computation Engine) is now the only Proposed ADR.**
 
-1. **Open a PR for `9942763` and dispatch one E2E run.** Test infrastructure only — no app code, and
-   `test-renderer` never reaches the bundle — so this is judgement rather than ceremony. E2E runs
-   SEQUENTIALLY per ref; do not dispatch a batch.
-2. **B1 / B3 remainders** — all owner-gated on money or a store account.
+1. ~~Open a PR for `9942763`~~ ✅ **done 2026-08-06 — PR #107.** ⛔ **But it has NO CI VERDICT**, and
+   the outage reds on it are not a result. **When Actions is `operational` again, in this order:**
+   open a PR for **`fix/e2e-flow-timeout`** (`fb1a2fe`) · let #107's five gates re-run · dispatch
+   **one** E2E run (SEQUENTIALLY per ref — a batch cancels itself) · merge #107 on that evidence.
+   **Check `githubstatus.com`'s Actions component first** — `in_progress` is not recovery, and
+   re-running into an outage buys more uninformative reds, not more information.
+2. ⚠️ **Open, deliberately: the double-`clearState` race.** A flow's opening clear can race the
+   previous flow's `onFlowComplete` teardown (Maestro rule 4). The timeout guard makes it fail red
+   rather than go dark, so it is no longer urgent — but a settle is the obvious fix and may be the
+   wrong one, since added settle time can mask a race real users hit. Needs thought, not a sleep.
+3. **B1 / B3 remainders** — all owner-gated on money or a store account.
 3. ⚠️ **Named rather than fixed: `.github/dependabot.yml`'s `@types/node` block cites
    `NODE_VERSION: '20.11.0'` and `engines.node: >=20.11.0`, both stale after #106 moved CI to
    22.23.2.** That block's own rule is that the types follow the engine floor **deliberately**, so

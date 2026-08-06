@@ -2,9 +2,10 @@
 
 # PanchangPal — Current Milestone
 
-Version: 4.10.0
+Version: 4.11.0
 
-Last Updated: 2026-08-02 (B4 CLOSED — two §7.2 SLOs proven end to end, plus NFR-07; 50%)
+Last Updated: 2026-08-06 (no slice moved — #107 unverified on a GitHub Actions outage; B2's gate
+gained a hang guard; 50%)
 
 Purpose:
 This document defines the current milestone. Unlike SESSION.md (daily work) or TASK.md (current
@@ -25,6 +26,17 @@ Overall Progress
 
 50% (**4 of 8 slices COMPLETE — B2 ✅, B4 ✅, B5 ✅, B6 ✅**, the last three at verifiable scope;
 B1 ~85%, B3 ~80%)
+
+**2026-08-06 — no slice moved.** PR **#107** (RNTL 13 → 14, test infrastructure) is open with **no CI
+verdict**: GitHub Actions was in a **major outage** and three runs went red having executed zero lines
+of repository code. A fourth run did execute and passed **FLOW_MORNING_RITUAL 18/18** and
+**FLOW_OFFLINE_SYNC 39/39** on a green Build APK before hanging in FLOW_SESSION_PERSISTENCE's
+`Launch app` — so the migration runs on a device, but the stated bar (tsc ×11 · eslint · both suites
+with no test-count reduction · `expo export`) is still unverified by CI.
+**B2's gate gained a guard rather than scope:** `fix/e2e-flow-timeout` (`fb1a2fe`, not yet PR'd) caps
+the Maestro step at 25m so a hang fails **red** instead of burning 90 minutes and reporting
+`cancelled` — which nobody reads as red. The guard existed on `Build APK` since 2026-07-25 and had
+never been applied to the flows step.
 
 **B4 — Observability closed 2026-08-02**, the first slice completed since B6 on 2026-07-27. B4.4
 delivered two of §7.2's seven SLOs **proven end to end** rather than configured: NFR-06 crash-free
