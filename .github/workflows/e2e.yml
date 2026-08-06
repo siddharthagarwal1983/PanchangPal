@@ -249,10 +249,35 @@ jobs:
             # something other than the Google apps, and this line must not be what obscures it.
             adb shell settings put global hide_error_dialogs 1
             adb logcat -c
+            # A HUNG FLOW MUST FAIL RED, NOT GO DARK.
+            #
+            # `Build APK` above has carried `timeout --kill-after=2m 40m` since 2026-07-25, when a
+            # stuck Gradle sat until `timeout-minutes: 90` killed the whole job and it reported
+            # `cancelled` — a red wearing a timeout's costume. That guard was applied to the build
+            # step and NEVER to this one, and on 2026-08-06 this step collected the same defect:
+            # FLOW_SESSION_PERSISTENCE hung on `Launch app "com.panchangpal.app"` — the command
+            # itself never returning — 0.5s after its own `clearState`, which followed
+            # FLOW_OFFLINE_SYNC's teardown doing `stopApp` + `clearState`. Two clear-states ~0.5s
+            # apart, with `Destroy timeout of remove-task ... com.panchangpal.app` in logcat 11s
+            # earlier. It was only caught because a human noticed and cancelled by hand; otherwise it
+            # would have burned all 90 minutes and reported `cancelled`, WHICH NOBODY READS AS RED.
+            #
+            # 25m is deliberately generous: the six flows run in single-digit minutes (two completed
+            # inside 60s in the run above), so this cannot clip a healthy suite — it exists purely to
+            # convert an indefinite hang into an exit code. `timeout` returns 124 (137 after the
+            # --kill-after SIGKILL), which propagates through `flows_status` and fails the step.
+            #
+            # The logcat dump below still runs either way, and `Upload Maestro debug output` is
+            # `if: always()`, so a timed-out run keeps the artifact — which is the only place the
+            # per-flow `commands.json` statuses exist, and the only way to tell a late hang from a
+            # change that broke the suite.
             set +e
-            maestro test tests/flows/
+            timeout --kill-after=1m 25m maestro test tests/flows/
             flows_status=$?
             set -e
+            if [ "$flows_status" = "124" ] || [ "$flows_status" = "137" ]; then
+              echo "::error::Maestro exceeded its 25m budget and was killed (exit $flows_status). This is a HANG, not a flow assertion failure. Read the per-flow commands.json in the maestro-debug artifact to see which flow stopped and how far the suite got."
+            fi
             adb logcat -d > maestro-logcat.txt
             exit $flows_status
 
