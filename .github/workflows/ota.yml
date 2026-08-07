@@ -244,7 +244,13 @@ jobs:
             // log rather than from another dispatch — the first version of this step guessed two
             // shapes, found neither, and failed with nothing to go on.
             console.error("channel.json keys:", JSON.stringify(Object.keys(c)));
-            const branches = c.updateBranches || c.branches || c.updateChannel?.updateBranches || [];
+            // `currentPage` FIRST, because that is what eas-cli 21.2.0 actually returns —
+            // confirmed from run 31166490223, where the earlier guesses missed and the fallback
+            // below carried the rollback. The fallback must stay EXCEPTIONAL: a warning that fires
+            // on every rollback is one operators learn to ignore, which is the alert-fatigue
+            // failure §7 already cost this project once.
+            const branches =
+              c.currentPage || c.updateBranches || c.branches || c.updateChannel?.updateBranches || [];
             const b = Array.isArray(branches) ? branches[0] : null;
             process.stdout.write((b && (b.name || b.branchName)) || "");
           ')
