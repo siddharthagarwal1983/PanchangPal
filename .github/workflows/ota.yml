@@ -94,10 +94,31 @@ jobs:
         working-directory: .
         run: pnpm install --frozen-lockfile
 
+      # ⚠️ THE SUPABASE SECRETS ARE PREFLIGHT'S CONTRACT, NOT AN OTA DEPENDENCY.
+      #
+      # `preflight.sh <target>` answers "is this ENVIRONMENT fully configured", so its staging and
+      # production targets require the Supabase DB URL, project ref and access token. Publishing a
+      # JS bundle needs none of them — but the check is environment-shaped, and `release-build.yml`
+      # maps exactly the same four for exactly the same call. Consistency with that sibling beats a
+      # narrower `ota` target invented here (CLAUDE.md decision rule 5).
+      #
+      # This mapping is also the reason the OLD scaffold's failure message was UNREACHABLE. It
+      # passed only EXPO_ACCESS_TOKEN, so preflight died on SUPABASE_STAGING_DB_URL before the
+      # workflow reached its own `exit 1` — and its comment, "Preflight passed, so the channel's
+      # configuration is present", could never have been printed. Nobody noticed because nobody
+      # dispatched it. Found by running this for the first time on 2026-08-07.
       - name: Preflight (fail fast on missing config)
         working-directory: .
         run: bash scripts/preflight.sh "${{ inputs.channel }}"
         env:
+          SUPABASE_STAGING_DB_URL: ${{ secrets.SUPABASE_STAGING_DB_URL }}
+          SUPABASE_STAGING_REF: ${{ secrets.SUPABASE_STAGING_REF }}
+          SUPABASE_PROD_DB_URL: ${{ secrets.SUPABASE_PROD_DB_URL }}
+          SUPABASE_PROD_REF: ${{ secrets.SUPABASE_PROD_REF }}
+          SUPABASE_ACCESS_TOKEN: ${{ secrets.SUPABASE_ACCESS_TOKEN }}
+          REVENUECAT_WEBHOOK_SECRET: ${{ secrets.REVENUECAT_WEBHOOK_SECRET }}
+          SENTRY_DSN: ${{ secrets.SENTRY_DSN }}
+          SENTRY_AUTH_TOKEN: ${{ secrets.SENTRY_AUTH_TOKEN }}
           EXPO_ACCESS_TOKEN: ${{ secrets.EXPO_ACCESS_TOKEN }}
 
       # Same probe as release-build.yml: an unauthorized or expired token is reported in seconds
