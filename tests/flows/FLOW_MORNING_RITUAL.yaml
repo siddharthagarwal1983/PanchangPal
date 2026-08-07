@@ -9,8 +9,25 @@
 # a false pass. The app already exposes testIDs throughout; use them for anything tapped.
 appId: com.panchangpal.app
 ---
-- launchApp:
-    clearState: false
+# THREE DISCRETE STEPS — added 2026-08-07, and this flow is the reason the trailing clears elsewhere
+# could be removed safely.
+#
+# It used to open `launchApp: clearState: false`, which meant it depended on INHERITING a clean
+# device from whichever flow ran before it. That worked only because it happens to run first and
+# because its neighbours cleared on the way out — a hidden precondition of exactly the kind
+# FLOW_OFFLINE_SYNC's closing comment warns about, and one that Maestro's arbitrary ordering could
+# have removed at any time. A ritual session left completed by an earlier flow restores as
+# 'completed' and renders CompletionMoment, so this flow would fail at its first tap with a defect
+# that is nowhere near the cause.
+#
+# Clearing here costs nothing: the flow already skips the onboarding gate conditionally, and it
+# asserts the ritual from the beginning rather than resuming one. `stopApp` / `clearState` /
+# `launchApp` as three separate commands, never the fused `launchApp: clearState: true` — see
+# FLOW_OFFLINE_SYNC for the diagnosis of that race.
+- stopApp
+- clearState
+
+- launchApp
 
 # Pass the onboarding gate if it is showing. Making the gate real (PR #50) changed what a
 # FRESH DEVICE does on first launch: a CI emulator has no stored state, so the app correctly

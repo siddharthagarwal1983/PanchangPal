@@ -21,10 +21,20 @@
 # as a literal and reads resumeStep from useUiStore (Zustand, in-memory, wiped on restart), so
 # the card reads "Begin" regardless of what storage did. Only the ritual screen can answer this.
 #
-# clearState at BOTH ends: at the start so the run does not inherit a session from
-# FLOW_MORNING_RITUAL, and at the end so this flow does not leave a completed session behind for
-# whatever runs next. Alphabetical ordering puts this flow last today; the guards mean it does
-# not have to stay last.
+# clearState at the START ONLY, so the run does not inherit a session from whatever ran before.
+# It does NOT clear at the end — see the closing comment; a trailing clear collides with the next
+# flow's opening clear and is what hung this flow on E2E 31120798108.
+#
+# ⚠️ MAESTRO'S ORDER IS NOT ALPHABETICAL, and an earlier version of this comment asserted it was
+# ("alphabetical ordering puts this flow last today"). The observed order, read from the run log of
+# 31147599553, is:
+#
+#   FLOW_MORNING_RITUAL -> FLOW_OFFLINE_SYNC -> FLOW_SESSION_PERSISTENCE ->
+#   FLOW_AUTH_SESSION_PERSISTENCE -> FLOW_ONBOARDING -> FLOW_RETURNING
+#
+# This flow runs THIRD, immediately after FLOW_OFFLINE_SYNC — which is precisely the adjacency that
+# produced the double clear. Do not reason about which flow is "last"; treat the order as arbitrary
+# and make each flow establish its own preconditions.
 #
 # SELECTORS ARE testIDs, NOT TEXT — see FLOW_MORNING_RITUAL for why text matching silently
 # passes while navigating nowhere.
@@ -89,4 +99,8 @@ appId: com.panchangpal.app
 # write/read-back path itself is at fault.
 - assertVisible: 'Done for today'
 
-- clearState
+# NO TRAILING `clearState` — removed 2026-08-07. See FLOW_OFFLINE_SYNC's closing comment for the
+# full diagnosis: a trailing clear here plus the next flow's opening clear put two `pm clear` calls
+# ~0.5s apart on one boundary, and the second raced the teardown the first started. This flow was
+# the one that HUNG on it (E2E 31120798108). The completed session it leaves behind is now the next
+# flow's problem to clear, which every flow that cares already does at its own start.
