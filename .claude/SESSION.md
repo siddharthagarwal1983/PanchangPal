@@ -2,15 +2,16 @@
 
 # PanchangPal — Current Session
 
-Version: 11.0.0
-Last Updated: 2026-08-07 (four PRs merged: #108, #107, #110 double-clearState race, #111 streamed
-logcat — and #111's first diagnosis was wrong and shipped green)
+Version: 12.0.0
+Last Updated: 2026-08-07 (five PRs merged: #108, #107, #110, #111, #112 the jest worker leak — which
+was never noise, and which `--detectOpenHandles` cannot find)
 
 ---
 
 # Completed
 
-**Progress unchanged at 50%.** Nothing here advances a Beta slice. Main: `693c62f`. No open PRs.
+**Progress unchanged at 50%.** Nothing here advances a Beta slice. Main: `42a76f4`.
+Open: **#109** (Dependabot production-minor, 5 updates) — opened during the session, untriaged.
 
 ## 1. The outage cleared; #108 then #107 merged on real verdicts
 
@@ -45,7 +46,25 @@ nothing; it says nothing about whether it did what it claimed.** Fixed by **stre
 **12,508 lines**, full 148 s — which then independently confirmed #110 (six `clear data` events
 10–30 s apart, **zero** `Killing … remove task`).
 
-## 5. Recorded, not fixed
+## 5. #112 — the jest worker leak was never noise (`42a76f4`)
+
+`A worker process has failed to exit gracefully` printed on **every** mobile run, on main and in CI,
+for the life of the suite. **Three suites run alone HANG INDEFINITELY** — the force-exit path only
+applies to workers.
+
+**Cause:** TanStack Query schedules a garbage-collection `setTimeout` (**default 5 minutes**) per
+cached query/mutation when its last observer detaches — i.e. on unmount. `qc.clear()` does not
+retract them; nor does an explicit `unmount()`. Fixed with `gcTime: Infinity` in the four suites that
+build a QueryClient, pinned by `queryClientGcTime.test.ts`.
+**429 tests, warning gone, run 3.76 s → 1.28 s.**
+
+⚠️ **`--detectOpenHandles` cannot find this** — it implies `--runInBand`, so no worker exists and a
+warning *about a worker* cannot occur. `process.getActiveResourcesInfo()` in an `afterAll` found it.
+⚠️ **My first guard was VACUOUS** — it counted `gcTime:` in comments too, so deleting the code left
+the prose; the perturbation reproduced the hang while the guard passed. Now strips comments.
+⚠️ **`expect(value, message)` is vitest, not jest** — backend runs vitest, mobile runs jest-expo.
+
+## 6. Recorded, not fixed
 
 `worker process has failed to exit gracefully` (mobile suite) is **pre-existing on main**, confirmed
 against a control branch — not RNTL 14's async API.
@@ -68,7 +87,8 @@ disproved approach. Body and code are correct; amending needs a force-push.
 
 # Recommended next task
 
-1. **`--detectOpenHandles`** on the mobile jest suite for the pre-existing teardown leak.
+1. **Triage #109** (Dependabot production-minor, 5 updates) — read the declared peers against the
+   installed graph BEFORE looking at CI, and check the two-sided SDK pin.
 2. **Optionally retitle `693c62f`** (needs a force-push) — otherwise the correction stands here and
    in PROJECT_MEMORY rule 3.
 3. **Owner:** paid Supabase · store accounts · NFR-10's path · SHA-pin the nine Actions · whether

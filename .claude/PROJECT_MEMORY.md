@@ -2,11 +2,11 @@
 
 # PanchangPal — Project Memory
 
-Version: 3.3.0
+Version: 3.4.0
 
-Last Updated: 2026-08-07 (Maestro rules 5 and 6 — the emulator action runs one `sh -c` PER LINE; a
-flow owns its own preconditions and never cleans up for its successor; and the artifact's logcat held
-only the last ~20s of every run until it was streamed)
+Last Updated: 2026-08-07 (Maestro rules 5 and 6; the artifact's logcat held only the last ~20s of
+every run until it was streamed; and the jest worker leak — TanStack `gcTime` timers, which
+`--detectOpenHandles` structurally cannot find)
 
 Current Phase:
 Beta Readiness & Platform Hardening (TDD Part 5)
@@ -520,6 +520,30 @@ Stable, cross-cutting facts (permanent until an approved decision changes them):
   (EVT_001-EVT_055) contains **no sync event**, `events.ts` forbids inventing one, and
   `AnalyticsService` rejects unknown ids at runtime. Either PDD adds sync events or a server-side
   metrics sink is chosen; neither is typing.
+- **EVERY QueryClient BUILT IN A MOBILE TEST SETS `gcTime: Infinity`, AND IT IS TEARDOWN RATHER THAN
+  TUNING** (established 2026-08-07, PR #112). TanStack Query schedules a garbage-collection
+  `setTimeout` — **default 5 MINUTES** — for each cached query and mutation the moment its last
+  observer detaches, which is exactly what unmounting at the end of a test does. Those timers keep
+  Node's event loop alive, so the jest worker cannot exit. **`qc.clear()` in `afterEach` does NOT
+  retract them, and neither does an explicit `unmount()`** — both were tried and measured. Infinity
+  makes the timeout invalid so none is ever scheduled. Pinned by
+  `apps/mobile/src/data/__tests__/queryClientGcTime.test.ts`.
+  ⛔ **`A worker process has failed to exit gracefully` WAS NEVER NOISE.** It printed on every mobile
+  run, on main and in CI, for the life of the suite. Running any one of three suites **alone hangs
+  indefinitely** rather than warning, because the force-exit path only applies to workers. Fixing it
+  took the run from **3.76 s to 1.28 s**, since workers no longer wait to be killed.
+  ⚠️ **`--detectOpenHandles` CANNOT FIND THIS, despite being what the warning tells you to run.** It
+  implies `--runInBand`, so no worker exists and a warning *about a worker* cannot occur; on the full
+  suite it reports nothing, and on the hanging file it never prints at all, because it reports after
+  a run finishes and the run does not finish. **The instrument that works is
+  `process.getActiveResourcesInfo()` in an `afterAll`**, which named five leftover `Timeout` handles
+  in one run. And **the warning is the wrong criterion for LOCATING the leak** — bisecting on it
+  wrongly cleared a suite, because a single-file run may not use a worker. **Ask whether the jest
+  process exits on its own.**
+  ⚠️ **`expect(value, message)` IS VITEST, NOT JEST.** `apps/backend` and `packages/*` run **vitest**,
+  where the second argument is a failure message; **`apps/mobile` runs jest-expo**, which rejects it
+  with `Expect takes at most one argument.` Raise the message by throwing instead. The two suites are
+  not interchangeable and the idiom does not travel.
 - **AnalyticsService** (client, B4.2) — every `EVT_*` goes through this port (ADR-013); the launch
   sink is the Postgres `analytics_event` table, which is INSERT-ONLY for clients (policy
   `analytics_ins_own`, no select policy — rollups run service-side under pg_cron, ADR-025). Events

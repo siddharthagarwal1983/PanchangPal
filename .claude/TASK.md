@@ -2,9 +2,9 @@
 
 # PanchangPal — Current Task
 
-Version: 6.0.0
-Last Updated: 2026-08-07 (#108 and #107 MERGED; the flows guard was broken and CI caught it — the
-emulator action runs one `sh -c` PER LINE)
+Version: 7.0.0
+Last Updated: 2026-08-07 (five PRs merged — #108, #107, #110, #111, #112; the jest worker leak was
+never noise and `--detectOpenHandles` cannot find it)
 
 Purpose: the current implementation task. Stay focused; avoid unrelated work unless instructed.
 
@@ -111,6 +111,28 @@ green in CI on a real native build. Canonical progress 0% → 13% (1 of 8 Beta s
 # Current Task
 
 ## Title
+✅ **FIVE MERGED — #108 `610bf12` · #107 `21e8c13` · #110 `afce763` · #111 `693c62f` · #112
+`42a76f4`.** Main is at `42a76f4`; **#109** (Dependabot production-minor) is open and untriaged.
+
+### #112 — the jest worker leak (`42a76f4`)
+
+`A worker process has failed to exit gracefully` printed on **every** mobile run for the life of the
+suite. **Three suites run alone HANG INDEFINITELY** — the force-exit path only applies to workers.
+TanStack Query schedules a GC `setTimeout` (**default 5 minutes**) per cached query/mutation when its
+last observer detaches; `qc.clear()` does not retract it and neither does an explicit `unmount()`.
+Fixed with `gcTime: Infinity` in all four suites that build a QueryClient, pinned by
+`queryClientGcTime.test.ts`. **429 tests, warning gone, 3.76 s → 1.28 s.**
+⚠️ **`--detectOpenHandles` cannot find it** (implies `--runInBand`; no worker, so no worker warning).
+Use `process.getActiveResourcesInfo()` in an `afterAll`, and judge by whether the process EXITS.
+⚠️ **My first guard was vacuous** — counted `gcTime:` in comments; the perturbation reproduced the
+hang while it passed. ⚠️ **`expect(value, message)` is vitest, not jest.**
+
+### #110 and #111 — see DASHBOARD; both merged and verified on device.
+
+---
+
+## Superseded title — the first two of the five
+
 ✅ **BOTH MERGED — #108 `610bf12` (flows-step timeout guard) then #107 `21e8c13` (RNTL 13 → 14).**
 The GitHub Actions outage cleared (status API `operational`, 0 incidents), both branches were given
 **real** verdicts, and the guard PR turned out to be broken in a way only running it could reveal.

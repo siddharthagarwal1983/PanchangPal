@@ -2,10 +2,10 @@
 
 # PanchangPal Dashboard
 
-Version: 1.35.0
+Version: 1.36.0
 
-Last Updated: 2026-08-07 (four merged: #108, #107, #110 the double-clearState race, #111 streamed
-logcat — and #111's first diagnosis shipped GREEN and did nothing; 50% unchanged)
+Last Updated: 2026-08-07 (five merged: #108, #107, #110, #111, #112 the jest worker leak — never
+noise, and `--detectOpenHandles` structurally cannot find it; 50% unchanged)
 
 Purpose:
 This is the first file Claude should read at the beginning of every session.
@@ -115,8 +115,23 @@ CURRENT_MILESTONE.md
 
 # Current Task
 
-✅ **FOUR MERGED, QUEUE EMPTY — #108 `610bf12` (timeout guard) · #107 `21e8c13` (RNTL 13 → 14) ·
-#110 `afce763` (the double-`clearState` race) · #111 `693c62f` (streamed logcat).**
+✅ **FIVE MERGED — #108 `610bf12` (timeout guard) · #107 `21e8c13` (RNTL 13 → 14) · #110 `afce763`
+(the double-`clearState` race) · #111 `693c62f` (streamed logcat) · #112 `42a76f4` (the jest worker
+leak).** Open: **#109**, a Dependabot production-minor group, untriaged.
+
+⛔ **#112 — `A worker process has failed to exit gracefully` WAS NEVER NOISE.** It printed on every
+mobile run, on main and in CI, for the life of the suite, and **three suites run alone HANG
+INDEFINITELY** — the force-exit path only applies to workers. Cause: TanStack Query schedules a
+garbage-collection `setTimeout`, **default 5 MINUTES**, per cached query/mutation the moment its last
+observer detaches — which is what unmounting at the end of a test does. **`qc.clear()` does not
+retract them and neither does an explicit `unmount()`.** Fixed with `gcTime: Infinity` in the four
+suites that build a QueryClient: **429 tests, warning gone, run 3.76 s → 1.28 s.**
+⚠️ **`--detectOpenHandles` CANNOT FIND IT, despite being what the warning tells you to run** — the
+flag implies `--runInBand`, so no worker exists and a warning *about a worker* cannot occur. The
+instrument that worked was `process.getActiveResourcesInfo()` in an `afterAll`.
+⚠️ **And my first guard was VACUOUS**: it counted `gcTime:` in comments as well as code, so deleting
+the setting left the prose behind — the perturbation reproduced the hang while the guard still
+passed. **Third time this session a check looked convincing and measured nothing.**
 
 ⛔ **#110 — THE RACE'S CAUSE WAS THE DUPLICATE, NOT THE CLEAR.** Flows ended with a trailing
 `clearState` "so the next flow inherits nothing" while every flow needing a clean device already
