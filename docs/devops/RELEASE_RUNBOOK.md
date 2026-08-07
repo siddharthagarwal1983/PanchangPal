@@ -16,7 +16,7 @@ difference between "documented" and "performed" is the whole reason this milesto
 
 | Rollback path | Mechanism exists | Ever performed |
 |---|---|---|
-| **JS / OTA** — roll back to prior update | ✅ `ota.yml` → `action: rollback` | ⏳ see §2 |
+| **JS / OTA** — roll back to prior update | ✅ `ota.yml` → `action: rollback` | ✅ **yes — staging, 2026-08-07** |
 | **Feature** — disable an `FF_*` flag | ✅ `feature_flag` table, fail-closed client seam | ❌ never |
 | **Edge Function** — redeploy prior version | ✅ CD deploys are real | ❌ **never** (DR_RUNBOOKS §6 says so too) |
 | **AI** — revert to prior `AISET` bundle | ❌ no bundle exists | ❌ blocked: no corpus, `GURU_LIVE=false` |
@@ -27,6 +27,15 @@ difference between "documented" and "performed" is the whole reason this milesto
 **Nothing here should be read as "we can roll back."** Three of the seven paths have no mechanism at
 all, and only one has ever been exercised. That is the accurate position and it is written down so a
 go/no-go decision is made against reality rather than against a runbook's existence.
+
+**What "performed" means for the OTA row**, since it is the only ✅: on 2026-08-07 an update was
+published to the `staging` channel and then rolled back through this workflow — twice, plus a third
+run after the branch resolution was simplified. Runs `31166287897` (publish, group
+`1d67a505…`) and `31166824122` (rollback, `✔ Republished update group`, zero warnings).
+⚠️ **It has NOT been proven to reach a device.** No EAS build exists for the channel, so the publish
+job's own reachability check reported **0 matching builds** — correctly. What is proven is that the
+mechanism runs, resolves the right update, and republishes it. Delivery to an installed app is a
+separate claim and is not yet made.
 
 ---
 
