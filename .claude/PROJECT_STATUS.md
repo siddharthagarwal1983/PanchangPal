@@ -2,10 +2,10 @@
 
 # PanchangPal — Project Status Dashboard
 
-Version: 1.19.0
+Version: 1.20.0
 
-Last Updated: 2026-08-06 (session end — #107 open with no CI verdict; E2E hang diagnosed; flows-step
-timeout fixed; 50% unchanged)
+Last Updated: 2026-08-07 (#108 and #107 merged on real verdicts; the flows guard was broken and CI
+caught it — the emulator action runs one `sh -c` per line; 50% unchanged)
 
 Purpose:
 This document provides a high-level snapshot of the overall project.

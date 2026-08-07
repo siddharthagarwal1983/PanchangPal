@@ -2,10 +2,10 @@
 
 # PanchangPal — Project Memory
 
-Version: 3.1.0
+Version: 3.2.0
 
-Last Updated: 2026-08-06 (Maestro rule 4 — a clear races the NEIGHBOUR's teardown, and a hung flows
-step reported `cancelled`; the timeout guard that fixes it)
+Last Updated: 2026-08-07 (Maestro rule 5 — the emulator action runs its `script:` block one `sh -c`
+PER LINE, which failed a passing suite and silently dropped logcat from every red run)
 
 Current Phase:
 Beta Readiness & Platform Hardening (TDD Part 5)
@@ -930,6 +930,33 @@ Stable, cross-cutting facts (permanent until an approved decision changes them):
      passed **completely** first (FLOW_MORNING_RITUAL 18/18, FLOW_OFFLINE_SYNC 39/39) on a green
      `Build APK`, so a hang late in a suite is not evidence against the change under test. Read the
      per-flow `commands.json` statuses before attributing anything.
+  5. **THE EMULATOR ACTION RUNS ITS `script:` BLOCK ONE LINE AT A TIME, EACH IN ITS OWN `sh -c`**
+     (established 2026-08-07, E2E `31145793824`; fixed in `610bf12`). This is a property of
+     `reactivecircus/android-emulator-runner`, and the job log states it literally
+     (`[command]/usr/bin/sh -c set -e`). Two consequences, both of which bit:
+     **a multi-line shell construct is a SYNTAX ERROR** (`if` never sees its `fi`), and **a variable
+     assigned on one line is gone by the next**, so `set +e` / `flows_status=$?` are per-line no-ops.
+     The first attempt at the flows-step timeout guard therefore **failed a run in which all six
+     flows PASSED** — "6/6 Flows Passed in 2m 23s", step red with exit 2.
+     ⛔ **The second consequence is the dangerous one: the action ABORTS at the failing line**, so
+     `adb logcat -d > maestro-logcat.txt` never ran. The failed run's artifact holds the six
+     `commands.json` and **no `maestro-logcat.txt`**; the green run's holds it. **The device log
+     disappeared from exactly the runs that need it** — and rule 3 above says the artifact is where
+     the evidence lives, so this silently removed the project's main diagnostic.
+     It also means the **pre-existing** `set +e` / `exit $flows_status` plumbing had never worked:
+     failures propagated only because a non-zero line fails the action directly, while `e2e.yml`'s
+     comment claimed "the flows' exit status is preserved". A documented control, never implemented,
+     with nothing asserting it.
+     **The rule: any logic beyond a single command goes in a script file** (`scripts/run-maestro-flows.sh`)
+     invoked as one line. One shell parses one program, which makes the whole class unreachable
+     rather than avoided by careful one-lining — the same structural preference as `evaluateHealth()`
+     taking a boolean so no parameter exists through which an error could leak.
+     ⚠️ **And the verification lesson, which is the transferable half.** The guard had been "proven"
+     against a local GNU-`timeout` shim. That test was not wrong — **it tested the wrong layer**,
+     establishing the exit-code semantics while being structurally unable to see the per-line
+     `sh -c` execution. Identical shape to the `process.env` unit test that passed while the
+     gradle `export:embed` path delivered nothing. **When a change's whole purpose is how CI behaves,
+     the only sufficient test is running it in CI.**
 - **Assert a deletion by CONTENT, never by the foreign key** — restated here because it generalises
   past the deletion executor: a test written against the identifier a deletion removes cannot detect
   a deletion that only removed the identifier. `ON DELETE SET NULL` keeps the row and drops the link,

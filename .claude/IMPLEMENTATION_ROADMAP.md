@@ -2,8 +2,9 @@
 
 # PanchangPal — Implementation Roadmap
 
-Version: 2.7.0
-Last Updated: 2026-08-06 (no track advanced — #107 unverified on an Actions outage; E2E hang guard added)
+Version: 2.8.0
+Last Updated: 2026-08-07 (no track advanced — #108 and #107 merged; the E2E hang guard's first
+version was broken and CI caught it)
 
 Purpose: the forward plan from the current state. Complements PROJECT_STATUS.md (snapshot) and
 CURRENT_MILESTONE.md (active milestone). Updated when scope or sequencing changes — and at every
@@ -11,15 +12,16 @@ increment/milestone boundary per the Increment & Milestone Completion Checkpoint
 
 ---
 
-## Where we are (2026-08-06)
+## Where we are (2026-08-07)
 
 **Beta Readiness & Platform Hardening, 50%** — **B2 ✅, B4 ✅, B5 ✅, B6 ✅** (the last three at
 verifiable scope). B1 ~85%, B3 ~80%, all remainders owner-gated on money or a store account.
-**No track advanced on 2026-08-06.** PR **#107** (RNTL 13 → 14) is open with **no CI verdict** — a
-GitHub Actions **major outage** produced three reds in which zero repository code ran — and
-`fix/e2e-flow-timeout` (`fb1a2fe`) is committed but deliberately not PR'd until Actions recovers.
-Both are test/CI infrastructure and advance no slice; **B2's E2E gate is unchanged in scope but is now
-guarded against a hung suite reporting `cancelled` instead of red.**
+**No track advanced on 2026-08-07**, and the open queue is now empty: **#108** (`610bf12`, flows-step
+timeout guard) and **#107** (`21e8c13`, RNTL 13 → 14) both merged once the Actions outage cleared and
+real verdicts were available. Both are test/CI infrastructure and advance no slice.
+**B2's E2E gate is unchanged in scope and better instrumented:** a hung suite now fails **red**
+instead of burning 90 minutes and reporting `cancelled`, and the guard's own first version was caught
+failing a passing suite — see PROJECT_MEMORY's Maestro rule 5 for the `sh -c`-per-line mechanism.
 
 **B4 — Observability closed 2026-08-02.** B4.4 landed two §7.2 SLOs **proven end to end** — NFR-06
 crash-free sessions and NFR-14 availability — each watched to open an issue and email a human, which

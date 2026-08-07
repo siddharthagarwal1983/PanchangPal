@@ -2,7 +2,7 @@
 
 # PanchangPal — AI Decision Summary
 
-Version: 1.3.0
+Version: 1.4.0
 
 Purpose:
 This file contains a condensed summary of permanent project decisions.
@@ -20,6 +20,37 @@ docs/architecture/adr/
 ---
 
 # Product Decisions
+
+## 2026-08-07 — CI shell logic lives in a script file, and a CI change is only proven by running it in CI
+
+**Decision.** Any logic beyond a single command in an emulator `script:` block goes in a **script
+file** under `scripts/`, invoked as one line — today `scripts/run-maestro-flows.sh`.
+
+**Why it is structural rather than stylistic.** `reactivecircus/android-emulator-runner` executes its
+`script:` input **one line at a time, each in its own `sh -c`**. A multi-line `if`/`fi` is therefore a
+syntax error, and a variable assigned on one line is gone by the next. The first version of the
+flows-step timeout guard (`fb1a2fe`) hit both: it **failed a run in which all six flows passed**
+("6/6 Flows Passed in 2m 23s", step red with exit 2), and — because the action **aborts at the
+failing line** — `adb logcat -d > maestro-logcat.txt` never ran, so the device log vanished from
+exactly the runs that need it. A guard meant to make failures legible was deleting the evidence.
+
+Putting the logic in a file makes the class unreachable instead of avoided by careful one-lining:
+one shell parses one program. Same preference as `evaluateHealth()` taking a boolean so no parameter
+exists through which an error could leak.
+
+**Corollary, and the transferable half. A change whose purpose is how CI behaves is proven only by
+running it in CI.** The broken guard had been "proven" against a local GNU-`timeout` shim. That test
+was not wrong — **it tested the wrong layer**, establishing exit-code semantics while being
+structurally unable to observe the per-line `sh -c` execution. This is the third instance of the same
+shape, after the `process.env` unit test that passed while the gradle `export:embed` path delivered
+nothing, and jest setting `process.env` directly without ever exercising the bundler. **Ask which
+layer the test touches before calling something proven.**
+
+**Corollary.** The same run showed the **pre-existing** `set +e` / `flows_status=$?` /
+`exit $flows_status` plumbing had never worked — failures propagated only because a non-zero line
+fails the action directly, while `e2e.yml`'s comment asserted the exit status was preserved. A
+documented control, never implemented, with nothing asserting it: the milestone's signature defect,
+this time in the gate itself.
 
 ## 2026-08-06 — Every long-running CI step carries its own timeout, and a red is read for what it exercised
 

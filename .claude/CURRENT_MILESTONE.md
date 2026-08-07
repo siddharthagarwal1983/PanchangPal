@@ -2,10 +2,10 @@
 
 # PanchangPal — Current Milestone
 
-Version: 4.11.0
+Version: 4.12.0
 
-Last Updated: 2026-08-06 (no slice moved — #107 unverified on a GitHub Actions outage; B2's gate
-gained a hang guard; 50%)
+Last Updated: 2026-08-07 (no slice moved — #108 and #107 merged on real verdicts; B2's gate guard
+landed and its first version was broken; 50%)
 
 Purpose:
 This document defines the current milestone. Unlike SESSION.md (daily work) or TASK.md (current
@@ -27,16 +27,23 @@ Overall Progress
 50% (**4 of 8 slices COMPLETE — B2 ✅, B4 ✅, B5 ✅, B6 ✅**, the last three at verifiable scope;
 B1 ~85%, B3 ~80%)
 
-**2026-08-06 — no slice moved.** PR **#107** (RNTL 13 → 14, test infrastructure) is open with **no CI
-verdict**: GitHub Actions was in a **major outage** and three runs went red having executed zero lines
-of repository code. A fourth run did execute and passed **FLOW_MORNING_RITUAL 18/18** and
-**FLOW_OFFLINE_SYNC 39/39** on a green Build APK before hanging in FLOW_SESSION_PERSISTENCE's
-`Launch app` — so the migration runs on a device, but the stated bar (tsc ×11 · eslint · both suites
-with no test-count reduction · `expo export`) is still unverified by CI.
-**B2's gate gained a guard rather than scope:** `fix/e2e-flow-timeout` (`fb1a2fe`, not yet PR'd) caps
-the Maestro step at 25m so a hang fails **red** instead of burning 90 minutes and reporting
-`cancelled` — which nobody reads as red. The guard existed on `Build APK` since 2026-07-25 and had
-never been applied to the flows step.
+**2026-08-07 — no slice moved, and both open branches merged.** The Actions outage cleared, so
+**#107** (RNTL 13 → 14) got a real verdict and merged as `21e8c13`: all five CI gates **executed**
+(none `SKIPPED` via `needs:`), giving tsc ×11 · eslint 0 errors · **vitest 144 +2 skipped · ui 33/33
+· mobile 424/424, identical to baseline** · `expo export` both platforms · **E2E 6/6 on device**.
+Test infrastructure only — it advances no slice.
+
+**B2's gate gained a guard, and the guard's first version was broken.** `#108` merged as `610bf12`,
+but `fb1a2fe` — the version written on 2026-08-06 — **failed every E2E run, including one reporting
+"6/6 Flows Passed in 2m 23s"**, because `reactivecircus/android-emulator-runner` runs its `script:`
+block **one `sh -c` per line**, making the multi-line `if`/`fi` a syntax error (exit 2).
+⛔ **And because the action aborts at the failing line, `adb logcat -d` never ran** — the failed run's
+artifact holds the six `commands.json` and **no `maestro-logcat.txt`**. A gate change intended to
+make failures legible was instead deleting the evidence, which is the sharper half of the finding.
+It also established that the **pre-existing** exit-status plumbing had never worked. Fixed
+structurally in `scripts/run-maestro-flows.sh` (one line, one shell, one program) and **verified with
+a control** that reproduces the original syntax error, plus **6/6 in 2m 20s on device with logcat
+present at 927 KB**.
 
 **B4 — Observability closed 2026-08-02**, the first slice completed since B6 on 2026-07-27. B4.4
 delivered two of §7.2's seven SLOs **proven end to end** rather than configured: NFR-06 crash-free

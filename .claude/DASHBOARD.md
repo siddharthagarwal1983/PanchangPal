@@ -2,10 +2,10 @@
 
 # PanchangPal Dashboard
 
-Version: 1.33.0
+Version: 1.34.0
 
-Last Updated: 2026-08-06 (#107 opened, no CI verdict — GitHub Actions outage; E2E hang diagnosed;
-flows-step timeout gap fixed; 50% unchanged)
+Last Updated: 2026-08-07 (#108 and #107 MERGED on real verdicts; the flows guard was broken and CI
+caught it — the emulator action runs one `sh -c` PER LINE; 50% unchanged)
 
 Purpose:
 This is the first file Claude should read at the beginning of every session.
@@ -115,24 +115,39 @@ CURRENT_MILESTONE.md
 
 # Current Task
 
-✅ **TRACKING DOCS RECONCILED · RNTL 13 → 14 MIGRATED.** Branch `chore/rntl-14-migration`
-(`9942763` + `ebba6e2`) is pushed and **PR #107 is open** against main. **Progress unchanged at
-50%**; neither piece advances a Beta slice.
+✅ **BOTH MERGED ON REAL VERDICTS — #108 `610bf12` (flows-step timeout guard), then #107 `21e8c13`
+(RNTL 13 → 14).** The Actions outage cleared (status API `operational`, 0 incidents) and the three
+outage reds were discarded rather than re-read. **Progress unchanged at 50%**; neither merge advances
+a Beta slice.
 
-⛔ **CI CARRIES NO VERDICT YET — GITHUB ACTIONS WAS IN A MAJOR OUTAGE (2026-08-06, 16:36–16:46+).**
-Three runs went red without executing a single line of repository code, and all three reds are
-external: the CI gates failed in **`Set up job`** at `Getting action download info` with
-`Service Unavailable`, and the four downstream gates reported `skipping` only because they `needs:`
-that job. The E2E run sat **queued 15 minutes with ZERO steps** and was cancelled platform-side —
-*not* the `cancel-in-progress` hazard of 2026-07-19, which is deliberately `false` here.
-Confirmed against `githubstatus.com`: **Actions = `major_outage`**.
-⚠️ **A red is as capable of being vacuous as a green.** This repo has paid three times for reading a
-green that no gate could have failed (mmkv v2's native resolution · `@sentry/cli` with no gate
-running `sentry.gradle` · pnpm's unenforced peers). The same question settles both directions —
-**which gate actually exercised the thing?** Here none did, so the colour carries no information.
-⚠️ **And `in_progress` is NOT evidence that action resolution recovered** — a job reaches that state
-merely by being assigned a runner, then fails inside `Set up job`. Reading it as recovery cost one
-wasted re-run; the authority is the status API, not the job state.
+**#107 against the bar set before the work started:** all five CI gates **executed** — none `SKIPPED`
+via `needs:`, which is precisely what made the outage reds vacuous — giving tsc ×11 · eslint 0 errors
+· **vitest 144 +2 skipped · ui 33/33 · mobile 424/424, identical to the pre-migration baseline** ·
+`expo export` both platforms · **E2E 6/6 on device**. The counts are part of the bar because a
+migration that quietly drops tests passes every other gate. ⚠️ E2E is corroboration, not proof:
+`test-renderer` never reaches the shipped bundle.
+
+⛔ **THE GUARD PR WAS BROKEN, AND ONLY RUNNING IT COULD SHOW THAT.** `fb1a2fe` failed **every** E2E
+run — including run `31145793824`, which reported **"6/6 Flows Passed in 2m 23s"** and still went red
+with **exit 2**. `reactivecircus/android-emulator-runner` executes its `script:` input **ONE LINE AT
+A TIME, each in its own `sh -c`**, so the multi-line `if`/`fi` was a syntax error and
+`flows_status=$?` was assigned into a shell that exited immediately.
+**Worse than the false red: the action stops at the failing line, so `adb logcat -d` never ran.**
+Verified against the artifacts — the failed run holds the six `commands.json` and **no
+`maestro-logcat.txt`**; the green run holds it. **The device log went missing on exactly the runs
+that need it**, the opposite of what the PR body claimed.
+⚠️ **This also proves the PRE-EXISTING `set +e` / `exit $flows_status` plumbing never worked** —
+failures propagated only because a non-zero line fails the action directly, and `e2e.yml`'s comment
+that "the flows' exit status is preserved" described a mechanism that was not running. **The
+milestone's signature defect once more: a documented control, never implemented, nothing asserting
+it.**
+**Fixed structurally** in `scripts/run-maestro-flows.sh`, invoked as one line — one shell parses one
+program, so the bug class is unreachable rather than avoided by careful one-lining. **Verified with a
+control**: the old inline block replayed per-line **does** reproduce the syntax error, so the harness
+cannot pass vacuously; on device `31146852463` gave **6/6 in 2m 20s with `maestro-logcat.txt` present
+at 927 KB**.
+⚠️ **The earlier shim test was not wrong — it tested the wrong layer.** Same shape as the
+`process.env` unit test that passed while the bundler path failed.
 
 **The SLO count had drifted, and both numbers were right.** SESSION.md said three proven; five other
 docs said two. **TDD Part 5 §7.2 names SEVEN and does not include NFR-07** — that is from the Part 1

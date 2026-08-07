@@ -2,9 +2,9 @@
 
 # PanchangPal — Current Task
 
-Version: 5.2.0
-Last Updated: 2026-08-02 (tracking docs reconciled — NFR-07 is a third SLO, not one of §7.2's seven;
-current task set to the RNTL 13 → 14 migration)
+Version: 6.0.0
+Last Updated: 2026-08-07 (#108 and #107 MERGED; the flows guard was broken and CI caught it — the
+emulator action runs one `sh -c` PER LINE)
 
 Purpose: the current implementation task. Stay focused; avoid unrelated work unless instructed.
 
@@ -111,42 +111,81 @@ green in CI on a real native build. Canonical progress 0% → 13% (1 of 8 Beta s
 # Current Task
 
 ## Title
-✅ **PR #107 OPENED (RNTL 13 → 14) — AWAITING A CI VERDICT · E2E HANG DIAGNOSED · FLOWS-STEP TIMEOUT
-FIXED.** Branch
-`chore/rntl-14-migration` (`9942763` + `ebba6e2`) is pushed; **PR #107 is OPEN, not merged.**
+✅ **BOTH MERGED — #108 `610bf12` (flows-step timeout guard) then #107 `21e8c13` (RNTL 13 → 14).**
+The GitHub Actions outage cleared (status API `operational`, 0 incidents), both branches were given
+**real** verdicts, and the guard PR turned out to be broken in a way only running it could reveal.
 
-**Progress unchanged at 50%.** Neither piece advances a Beta slice.
+**Progress unchanged at 50%.** Neither merge advances a Beta slice.
 
-⛔ **PR #107 HAS NO CI VERDICT — GITHUB ACTIONS WAS IN A MAJOR OUTAGE ON 2026-08-06.** Do not read
-its red as a result, and do not re-run into it. Three runs produced reds with **zero repository code
-executed**: both CI attempts died in `Set up job` at `Getting action download info`
-(`Service Unavailable`, 16:36–16:46), taking the other four gates down as `skipping` via `needs:`;
-E2E run `31119803470` sat **queued 15 minutes with 0 steps** and was cancelled by the platform.
-`githubstatus.com` reported **Actions = `major_outage`**. E2E `31120798108` was dispatched into the
-same window and is expected to be equally uninformative.
-⚠️ **A RED CAN BE VACUOUS TOO.** The rule this repo learned in the green direction — *ask which gate
-would have to fail* — applies unchanged here: no gate reached the code, so the colour says nothing
-about RNTL 14.
-⚠️ **`in_progress` DOES NOT MEAN THE OUTAGE CLEARED.** A job enters it on runner assignment and can
-still fail inside `Set up job`. I misread it as recovery and re-ran once for nothing. **The status
-API is the instrument; the job state is not.**
-**Owed when Actions recovers:** open a PR for `fix/e2e-flow-timeout`, let #107's five CI gates re-run,
-re-dispatch **one** E2E run (sequential per ref), then judge against the bar below.
+### #107 — verified against the bar set before the work started
 
-### ✅ Also done 2026-08-06 — `fix/e2e-flow-timeout` (`fb1a2fe`), branched off `main`, pushed, NOT PR'd
+All five CI gates **executed** (none `SKIPPED` via `needs:` — the distinction that made the outage
+reds vacuous): tsc ×11 · eslint 0 errors · **vitest 144 +2 skipped · ui 33/33 · mobile 424/424,
+identical to the pre-migration baseline** · `expo export` both platforms · **E2E 6/6 on device**.
+The counts are part of the bar because a migration that quietly drops tests passes every other gate.
 
-`maestro test tests/flows/` ran **bare** while `Build APK` has carried `timeout --kill-after=2m 40m`
-since 2026-07-25 — the guard was applied to one step and never the other. A hung flow therefore
-burned toward `timeout-minutes: 90` and would have reported **`cancelled`**, which nobody reads as
-red. Now `timeout --kill-after=1m 25m`, with **124/137 annotated as a HANG rather than a flow
-assertion failure**, so the next reader is not sent hunting for a product defect.
-**Proven, not asserted:** the fragment was run against a shim reproducing GNU `timeout`'s exit
-semantics — hang → 124 + annotation · real failure → 1 with no annotation · pass → 0 — and the logcat
-dump runs in **all three**, so a killed run still uploads the artifact holding the per-flow
-`commands.json`. 25m cannot clip a healthy suite; two flows completed inside 60 s in the hung run.
-**Held back from PR deliberately** until Actions recovers: a workflow change whose whole point is that
-CI signals mean something should not land on vacuous reds. Kept off the RNTL branch as #78 was split
-out of the Sentry branch.
+⚠️ **E2E is corroboration here, not proof** — `test-renderer` never reaches the shipped bundle, so
+the CI gates carry this verdict.
+
+### ⛔ #108's first attempt (`fb1a2fe`) FAILED EVERY E2E RUN — including runs where all flows passed
+
+E2E `31145793824`: **"6/6 Flows Passed in 2m 23s"**, step **red, exit 2**.
+
+**`reactivecircus/android-emulator-runner` executes its `script:` input ONE LINE AT A TIME, each in
+its own `sh -c`:**
+
+```
+[command]/usr/bin/sh -c if [ "$flows_status" = "124" ] || [ "$flows_status" = "137" ]; then
+/usr/bin/sh: 1: Syntax error: end of file unexpected (expecting "fi")
+##[error]The process '/usr/bin/sh' failed with exit code 2
+```
+
+So a multi-line `if`/`fi` is a syntax error, and a variable assigned on one line is gone by the next.
+**The action stops at the failing line, so `adb logcat -d` never ran** — the failed run's artifact
+holds the six `commands.json` and **no `maestro-logcat.txt`**, while the green run's holds it. The
+device log went missing on exactly the runs that need it, the opposite of what the PR body claimed.
+
+**This also establishes that the PRE-EXISTING `set +e` / `flows_status=$?` / `exit $flows_status`
+plumbing never worked.** Failures propagated only because a non-zero line fails the action directly;
+`e2e.yml`'s comment that "the flows' exit status is preserved" described a mechanism that was not
+running. **The milestone's signature defect — a documented control, never implemented, with nothing
+asserting it.**
+
+**Fixed structurally**: the logic lives in `scripts/run-maestro-flows.sh`, invoked as **one line**.
+One shell parses one program, so the bug class is unreachable rather than avoided by careful
+one-lining — the same preference as `evaluateHealth()` taking a boolean so no parameter exists
+through which an error could leak.
+
+**Verified with a control, at both layers:** behaviour (pass → 0 · flow failure → 1 with **no** hang
+annotation · 124 and 137 → hang annotation · adb failure warns and does not mask the flow result ·
+logcat in every branch) · the workflow block replayed one `sh -c` per line · **the old inline block
+replayed the same way DOES reproduce the syntax error** · on device (`31146852463`) **6/6 in 2m 20s
+with `maestro-logcat.txt` present at 927 KB**.
+
+⚠️ **The earlier local shim test was not wrong — it tested the wrong layer.** It proved `timeout`'s
+exit-code semantics and could not see the per-line `sh -c` execution. Same shape as the `process.env`
+unit test that passed while the bundler path failed.
+
+### Recorded, not fixed
+
+The mobile jest suite's `worker process has failed to exit gracefully` warning is **pre-existing on
+main**, confirmed against a control branch (main + a workflow-only change). Attributing it to RNTL
+14's async API would have been the obvious and wrong call. Worth a `--detectOpenHandles` pass.
+
+### Resolved — the 2026-08-06 outage block, kept short rather than deleted
+
+~~"PR #107 has no CI verdict — Actions is in a major outage"~~ — **cleared 2026-08-07.** The status
+API read `operational` with 0 incidents; the three outage reds were confirmed vacuous and discarded
+rather than re-read. Two rules from that day survive and are worth keeping: **a red can be vacuous
+exactly as a green can** (ask which gate would have had to fail), and **`in_progress` is not
+recovery** — a job enters it on runner assignment and can still die inside `Set up job`, so the
+status API is the instrument and the job state is not.
+
+~~"`fix/e2e-flow-timeout` (`fb1a2fe`) is proven, held back from PR"~~ — **it was NOT proven, and the
+word is the lesson.** Its verification ran the fragment against a local GNU-`timeout` shim, which
+established the exit-code semantics correctly and **could not see the layer that broke** — the
+emulator action's per-line `sh -c` execution. See the Current Task block above. The claim that "the
+logcat dump runs in all three branches" was false in CI, where the action aborted before reaching it.
 
 ⚠️ **Deliberately NOT fixed: the double-`clearState` race.** A flow's opening clear can race the
 previous flow's `onFlowComplete` teardown. A settle is the obvious fix and may be the wrong one —
