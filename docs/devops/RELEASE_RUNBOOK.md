@@ -156,14 +156,33 @@ rollout" is a plan rather than a capability, and this runbook says so rather tha
 
 ## 7. Versioning & release trains (§3.1)
 
-- **Semantic versioning** per PDD §3.0A.4. `app.config.ts` holds `version` (currently `0.1.0`).
+- **Semantic versioning** per PDD §3.0A.4 — the bump is chosen by the *nature* of the change, not
+  its size. The rules are restated at the top of `CHANGELOG.md` so they are read where they are used.
 - **Build numbers are remote and auto-incremented** — `eas.json` sets
   `cli.appVersionSource: "remote"` with `autoIncrement: true` on the `staging` and `production`
   profiles, so build numbers are EAS's to allocate and cannot collide by hand-editing.
-- **Release train:** `main` is always releasable; cut a build when a shippable increment is ready
-  (`release-build.yml`, on a `v*` tag or dispatch). Hotfix via OTA where the change is JS-only.
-- **Every release is tagged with its change log.** The tag is what makes "which build is that
-  runtime version?" answerable later.
+- **Release train:** `main` is always releasable; cut a build when a shippable increment is ready —
+  weekly or on demand, not on a calendar. Hotfix via OTA where the change is JS-only (§2).
+
+### Cutting a release
+
+1. Move the `[Unreleased]` entries under a new `## [X.Y.Z] — YYYY-MM-DD` heading in `CHANGELOG.md`.
+2. Set the same `X.Y.Z` as `version` in `apps/mobile/app.config.ts`.
+3. Tag `vX.Y.Z` and push — `release-build.yml` triggers on `v*`.
+
+**All three are enforced, not merely asked for:**
+
+| Check | Where | Fails when |
+|---|---|---|
+| app version ↔ CHANGELOG | `apps/backend/tests/release/version-consistency.test.ts` (every PR) | the shipping version has no entry, or the newest entry is not it |
+| tag ↔ app version ↔ CHANGELOG | `release-build.yml`, first step | a `v*` tag disagrees with either |
+
+⚠️ **Why the tag mismatch matters beyond tidiness.** **Sentry sets no explicit release**, so it is
+derived from the native app version. A `v0.2.0` release built from an `app.config.ts` still saying
+`0.1.0` files its crashes under `0.1.0` — and the crash-free SLOs (NFR-06, NFR-07) are read *per
+release*, so the new build would look healthy because its crashes landed in the previous release's
+bucket. That is the same shape as CI reporting itself as `production` (#98): a real signal attributed
+to the wrong thing.
 
 ---
 
