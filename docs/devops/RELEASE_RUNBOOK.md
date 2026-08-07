@@ -17,18 +17,18 @@ difference between "documented" and "performed" is the whole reason this milesto
 | Rollback path | Mechanism exists | Ever performed |
 |---|---|---|
 | **JS / OTA** — roll back to prior update | ✅ `ota.yml` → `action: rollback` | ✅ **yes — staging, 2026-08-07** |
-| **Feature** — disable an `FF_*` flag | ✅ `feature_flag` table, fail-closed client seam | ❌ never |
-| **Edge Function** — redeploy prior version | ✅ CD deploys are real | ❌ **never** (DR_RUNBOOKS §6 says so too) |
+| **Feature** — disable an `FF_*` flag | ✅ `feature_flag` table, fail-closed client seam | ⛔ **blocked, not skipped** — see §3 |
+| **Edge Function** — redeploy prior version | ✅ CD deploys are real | ✅ **yes — staging, 2026-08-07** |
 | **AI** — revert to prior `AISET` bundle | ❌ no bundle exists | ❌ blocked: no corpus, `GURU_LIVE=false` |
 | **DB migration** — compensating migration | ✅ forward-only + expand/contract | ❌ never |
 | **DB migration** — PITR | ❌ **NOT AVAILABLE** (free tier, NFR-15) | ❌ launch blocker |
 | **Native binary** — halt phased rollout | ❌ needs a store presence | ❌ blocked on store accounts |
 
 **Nothing here should be read as "we can roll back."** Three of the seven paths have no mechanism at
-all, and only one has ever been exercised. That is the accurate position and it is written down so a
+all, and **two** have now been exercised — the OTA path and the Edge Function path, both on staging. That is the accurate position and it is written down so a
 go/no-go decision is made against reality rather than against a runbook's existence.
 
-**What "performed" means for the OTA row**, since it is the only ✅: on 2026-08-07 an update was
+**What "performed" means for the OTA row** (the Edge Function row is described in §4): on 2026-08-07 an update was
 published to the `staging` channel and then rolled back through this workflow — twice, plus a third
 run after the branch resolution was simplified. Runs `31166287897` (publish, group
 `1d67a505…`) and `31166824122` (rollback, `✔ Republished update group`, zero warnings).
@@ -105,7 +105,18 @@ and clients pick it up via Realtime without a release.
 Today, the ritual, or the checklist has no flag to pull — that is deliberate product design, not an
 oversight, and it means §2 or §6 is the path for the core experience.
 
-**Never performed.** Disabling a flag has not been exercised against a live client.
+⛔ **BLOCKED, AND THE DISTINCTION MATTERS — this is not "we haven't got round to it."**
+`FF_FAMILY_PLAN` gates exactly one thing: the Family **offering**, via `visibleOfferings`, which
+filters `o.kind !== 'family'`. **`react-native-purchases` is not installed**, so `NullPaymentAdapter`
+returns no offerings — and filtering an empty list yields an empty list whether the flag is on or
+off. The disable is therefore **unobservable end to end**, and would stay so even if the SDK were
+installed, because `getOfferings()` returns offerings a *store* defines and there is no Apple ($99/yr)
+or Play ($25) account with configured IAP products.
+**All four flags also seed `false`** (`apps/backend/seed/seed.sql`), so a "disable" drill would have
+to enable one first. Attempting it today would write to staging and demonstrate nothing.
+**Revisit when the store accounts land** — the same increment that installs the payments SDK, which
+must also move E2E back to a `google_apis` emulator image and reintroduces the Pixel Launcher ANR
+risk (`e2e.yml` says so at its `target:`).
 
 ---
 
@@ -114,12 +125,42 @@ oversight, and it means §2 or §6 is the path for the core experience.
 **Mechanism.** Re-run CD's deploy from the last-good commit. `cd.yml` passes an explicit function
 name list to `supabase functions deploy`.
 
+```bash
+git tag rollback-<sha> <last-good-sha> && git push origin rollback-<sha>
+gh workflow run cd.yml --ref rollback-<sha>     # leave `promote` FALSE
+# …verify, then restore:
+gh workflow run cd.yml --ref main
+git push origin --delete rollback-<sha>
+```
+
+A tag is needed because `gh workflow run --ref` takes a branch or tag, not a bare SHA. **Do not name
+it `v*`** — that triggers `release-build.yml`.
+
+✅ **PERFORMED — staging, 2026-08-07.** Runs `31169545892` (rolled back to `96ac23f`, seven functions
+redeployed from the older commit) and `31169842290` (restored all eight from `main`). This is the row
+DR_RUNBOOKS §6 had recorded as never exercised since 2026-07-25.
+⚠️ **What that proves and does not:** a prior version can be redeployed on demand. It is not a
+behavioural diff — the two commits had no observable difference in a deployed function, so "the older
+code is serving" rests on the deploy log naming the older SHA, not on a response changing.
+
+⚠️ **`migrate-staging` runs first and that is safe** — migrations are forward-only, so dispatching an
+older commit replays a strict subset and the newer migration is simply not re-run. It does **not**
+undo anything. Confirmed in the drill: the migrate job succeeded as a no-op.
+
+⛔ **BEFORE 2026-08-07, A MANUAL CD DISPATCH COULD NEVER REPORT GREEN — READ THIS IF YOU SEE AN OLD
+RED RUN.** `promote-production` fails by design (it once reported a completed promotion while
+deploying nothing) and used to run on *every* dispatch. So a **successful** rollback produced a
+**red** run, and the obvious reading mid-incident — "the rollback failed" — was wrong. Fixed by
+gating that job behind an explicit `promote` input, default false; the fail-loud behaviour is
+unchanged when promotion is actually requested. **On any run predating this, judge the rollback by
+the `Deploy Edge Functions (SVC_*) → staging` job, never by the run's colour.**
+
 ⚠️ **The deploy list is hardcoded and has been wrong before** — `health` was missing from it, which
 would have merged green and served nothing (fixed 2026-08-02, pinned by
 `tests/rls/edge-function-deploy-list.test.ts`). **Check the list covers the function you are rolling
-back**, or the redeploy will silently not touch it.
-
-**Never performed.** DR_RUNBOOKS §6 records the same gap.
+back**, or the redeploy will silently not touch it. Note also that `supabase functions deploy <list>`
+deploys only the named functions — it does **not** delete ones absent from the list, which is why
+rolling back to a commit predating `health` leaves `/health` (and NFR-14's probe) untouched.
 
 ---
 
