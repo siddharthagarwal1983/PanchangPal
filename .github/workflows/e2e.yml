@@ -249,12 +249,17 @@ jobs:
             # something other than the Google apps, and this line must not be what obscures it.
             adb shell settings put global hide_error_dialogs 1
             adb logcat -c
-            set +e
-            maestro test tests/flows/
-            flows_status=$?
-            set -e
-            adb logcat -d > maestro-logcat.txt
-            exit $flows_status
+            # A HUNG FLOW MUST FAIL RED, NOT GO DARK — see scripts/run-maestro-flows.sh, which
+            # runs the suite under a wall-clock budget, annotates a hang distinctly from a flow
+            # failure, captures logcat unconditionally, and re-raises the suite's exit status.
+            #
+            # ⚠️ THIS MUST STAY ONE LINE, AND THE LOGIC MUST STAY IN THE SCRIPT. This `script:`
+            # block is executed ONE LINE AT A TIME, each in its own `sh -c`, so a multi-line
+            # `if`/`then`/`fi` here is a syntax error and a variable assigned on one line is gone
+            # by the next. An earlier inline version of this guard failed the step with exit 2 on
+            # a run where all 6 flows PASSED, and skipped the logcat dump on every red run.
+            # The script's header records the evidence.
+            bash scripts/run-maestro-flows.sh tests/flows/
 
       # Maestro writes screenshots and a view hierarchy per failed step. Without these a
       # remote failure is nearly undiagnosable — the whole point of these flows is that
