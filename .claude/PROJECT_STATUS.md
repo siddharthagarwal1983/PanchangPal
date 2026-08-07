@@ -2,10 +2,10 @@
 
 # PanchangPal — Project Status Dashboard
 
-Version: 1.21.0
+Version: 1.22.0
 
-Last Updated: 2026-08-07 (four PRs merged — timeout guard, RNTL 14, the double-clearState race, and
-the streamed device log; #111's first diagnosis shipped green and did nothing; 50% unchanged)
+Last Updated: 2026-08-07 (six PRs merged and the queue is empty — the last, #109, had a green that
+described a tree four merges old; 50% unchanged)
 
 Purpose:
 This document provides a high-level snapshot of the overall project.

@@ -2,7 +2,7 @@
 
 # PanchangPal — AI Decision Summary
 
-Version: 1.5.0
+Version: 1.6.0
 
 Purpose:
 This file contains a condensed summary of permanent project decisions.
@@ -20,6 +20,34 @@ docs/architecture/adr/
 ---
 
 # Product Decisions
+
+## 2026-08-07 — A green describes the tree it ran against, and a dependency PR is triaged peer-graph-first
+
+**Decision 1. Re-run CI after updating a PR whose base has moved.** A green is a statement about the
+commit it ran on, not about what merging will produce. #109 sat while six PRs landed; its CI had run
+against base `21e8c13` and passed **424 mobile tests**, while main by then had **429** — the suite had
+changed underneath it. Updating the branch and re-running is what made the second green mean
+something, and the changed test count is the evidence that the update took effect.
+**This is the vacuous-green family again, in its third distinct form:** a gate that cannot fail
+(no consumer exercised), a change that shipped green while doing nothing (the logcat ring buffer),
+and now a gate that measured **a tree that no longer exists**. In each case the colour was real and
+the inference from it was not.
+
+**Decision 2. A dependency PR is triaged in this order: SDK pin → declared peers → what the release
+actually changed → CI last.** Established across #64/#65/#75/#82/#89/#91/#92 and applied cleanly to
+#109.
+- **The SDK check is two-sided and must be run from `apps/mobile`.** From the repo root, `require`
+  of `expo/bundledNativeModules.json` fails under pnpm's layout and returns `?` — **a failed lookup
+  that reads exactly like "not pinned"**. Confirm the manifest actually loaded (119 entries, 21 expo
+  deps) before believing a negative.
+- **Read the proposed versions' declared peers against the INSTALLED graph**, and check
+  `peerDependenciesMeta` for `optional: true` before treating an absent peer as a violation —
+  `@supabase/supabase-js@2.112.0` adds an optional `@opentelemetry/api` peer that needs nothing.
+- **A coupled group belongs in ONE PR.** The `typescript-eslint` trio moved together here, which is
+  precisely what #82/#62 got wrong by arriving as two independent PRs, one green and one red.
+- **Then ask which gate would have to fail.** `@supabase/supabase-js` carries `@supabase/auth-js` in
+  lockstep, and no CI gate exercises its storage adapter — only `FLOW_AUTH_SESSION_PERSISTENCE` on a
+  device does. That is why a dependency bump gets an E2E run rather than a reading of five greens.
 
 ## 2026-08-07 — A flow owns its preconditions, and a green run is not evidence a change worked
 

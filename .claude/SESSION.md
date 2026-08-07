@@ -2,79 +2,57 @@
 
 # PanchangPal — Current Session
 
-Version: 12.0.0
-Last Updated: 2026-08-07 (five PRs merged: #108, #107, #110, #111, #112 the jest worker leak — which
-was never noise, and which `--detectOpenHandles` cannot find)
+Version: 13.0.0
+Last Updated: 2026-08-07 (six PRs merged and the queue is empty — and three of them had a first
+version that was wrong, each caught by running it rather than reading it)
 
 ---
 
 # Completed
 
-**Progress unchanged at 50%.** Nothing here advances a Beta slice. Main: `42a76f4`.
-Open: **#109** (Dependabot production-minor, 5 updates) — opened during the session, untriaged.
+**Progress unchanged at 50%.** No Beta slice advanced. Main: `7b84844`. **No open PRs.**
 
-## 1. The outage cleared; #108 then #107 merged on real verdicts
+| PR | Commit | What |
+|---|---|---|
+| #108 | `610bf12` | Maestro flows-step timeout guard — a hang fails red instead of reporting `cancelled` |
+| #107 | `21e8c13` | RNTL 13 → 14, on a real verdict once the Actions outage cleared |
+| #110 | `afce763` | the double-`clearState` race, fixed at its cause |
+| #111 | `693c62f` | the device log, streamed instead of dumped |
+| #112 | `42a76f4` | the jest worker leak — TanStack `gcTime` timers |
+| #109 | `7b84844` | the dependency group, triaged peer-graph-first |
 
-**#107 RNTL 13 → 14 (`21e8c13`)** — all five gates **executed** (none `SKIPPED` via `needs:`, the
-distinction that made the outage reds vacuous): **vitest 144+2 · ui 33/33 · mobile 424/424, identical
-to baseline** · E2E 6/6. **#108 timeout guard (`610bf12`)**.
+## The through-line: three fixes were wrong on the first attempt, and running them showed it
 
-## 2. ⛔ The guard's first version failed EVERY E2E run — including one where all 6 flows passed
+1. **#108's first version failed EVERY E2E run**, including one reporting "6/6 Flows Passed". The
+   emulator action runs its `script:` block **one `sh -c` per line**, so the multi-line `if`/`fi` was
+   a syntax error — and because the action aborts at that line, `adb logcat -d` never ran and the
+   device log vanished from every red run. It also proved the **pre-existing** `exit $flows_status`
+   plumbing had never worked. PROJECT_MEMORY **rule 5**.
+2. **#111's first version shipped GREEN and did nothing.** The 256K-ring-buffer theory was disproved
+   by `adb logcat -g` (`16 MiB, 701 KiB consumed` — never full). Streaming fixed it properly:
+   **1471 → 12,508 lines**, the full 148 s.
+3. **#112's guard was VACUOUS** — it counted `gcTime:` in comments, so the perturbation reproduced
+   the hang while the guard still passed.
 
-The emulator action runs its `script:` block **one `sh -c` per line**, so the multi-line `if`/`fi`
-was a syntax error (exit 2); the action **aborts at that line**, so `adb logcat -d` never ran and the
-device log vanished from every red run. It also proved the **pre-existing** `exit $flows_status`
-plumbing had never worked. Fixed in `scripts/run-maestro-flows.sh`. PROJECT_MEMORY **rule 5**.
+**The rule this session earned:** *a green proves a change broke nothing; it says nothing about
+whether the change did what it claimed.* Name the number it should move, and read that number.
+Recorded in DECISIONS with a third variant — **#109's green described a tree four merges old**
+(424 tests where main had 429).
 
-## 3. #110 — the double-`clearState` race is fixed (`afce763`)
+## Two defects that were never noise
 
-**The duplicate was the cause, not the clear**: flows ended with a trailing `clearState` while every
-flow needing a clean device already cleared at its start — two `pm clear` calls ~0.5 s apart per
-boundary. **New invariant: a flow establishes its own preconditions and never cleans up for its
-successor.** Deleting duplicated work, not adding a settle.
-⚠️ It would have **stranded `FLOW_MORNING_RITUAL`**, which relied on inheriting a clean device.
-⛔ **Maestro's order is not alphabetical**, and a header claiming it was helped justify the trailing
-clear. Pinned by `flow-lifecycle.test.ts` (19 assertions, 4 perturbations). PROJECT_MEMORY **rule 6**.
-
-## 4. #111 — the device log was ~85% missing, and my first fix was wrong (`693c62f`)
-
-`adb logcat -d` held only the **last ~20 s of a ~2m20s run**. Past logcat diagnoses all concerned
-failures near the END of a suite; that was luck.
-⚠️ **The first diagnosis (256K buffer overflow) shipped GREEN and changed nothing** — `adb logcat -g`
-showed `16 MiB (701 KiB consumed)`: never full, nothing evicted. **A green run proves a change broke
-nothing; it says nothing about whether it did what it claimed.** Fixed by **streaming**: 1471 →
-**12,508 lines**, full 148 s — which then independently confirmed #110 (six `clear data` events
-10–30 s apart, **zero** `Killing … remove task`).
-
-## 5. #112 — the jest worker leak was never noise (`42a76f4`)
-
-`A worker process has failed to exit gracefully` printed on **every** mobile run, on main and in CI,
-for the life of the suite. **Three suites run alone HANG INDEFINITELY** — the force-exit path only
-applies to workers.
-
-**Cause:** TanStack Query schedules a garbage-collection `setTimeout` (**default 5 minutes**) per
-cached query/mutation when its last observer detaches — i.e. on unmount. `qc.clear()` does not
-retract them; nor does an explicit `unmount()`. Fixed with `gcTime: Infinity` in the four suites that
-build a QueryClient, pinned by `queryClientGcTime.test.ts`.
-**429 tests, warning gone, run 3.76 s → 1.28 s.**
-
-⚠️ **`--detectOpenHandles` cannot find this** — it implies `--runInBand`, so no worker exists and a
-warning *about a worker* cannot occur. `process.getActiveResourcesInfo()` in an `afterAll` found it.
-⚠️ **My first guard was VACUOUS** — it counted `gcTime:` in comments too, so deleting the code left
-the prose; the perturbation reproduced the hang while the guard passed. Now strips comments.
-⚠️ **`expect(value, message)` is vitest, not jest** — backend runs vitest, mobile runs jest-expo.
-
-## 6. Recorded, not fixed
-
-`worker process has failed to exit gracefully` (mobile suite) is **pre-existing on main**, confirmed
-against a control branch — not RNTL 14's async API.
-⚠️ **`693c62f`'s title on main is stale**: the squash used the PR's original title, which names the
-disproved approach. Body and code are correct; amending needs a force-push.
+- **#110** — flows ended with a trailing `clearState` while the next flow cleared at its start: two
+  `pm clear` calls ~0.5 s apart per boundary. **A flow now establishes its own preconditions and
+  never cleans up for its successor** (rule 6). Maestro's order is **not** alphabetical, and a header
+  claiming it was helped justify the trailing clear.
+- **#112** — `A worker process has failed to exit gracefully` printed on every mobile run for the
+  life of the suite. **Three suites run alone HANG INDEFINITELY.** `--detectOpenHandles` cannot find
+  it (it implies `--runInBand`, so no worker exists). 429 tests, run **3.76 s → 1.28 s**.
 
 # Modified
 
-`e2e.yml` · `scripts/run-maestro-flows.sh` · four `tests/flows/*.yaml` ·
-`apps/backend/tests/e2e/flow-lifecycle.test.ts` (new) · tracking docs
+`e2e.yml` · `scripts/run-maestro-flows.sh` · four `tests/flows/*.yaml` · five mobile test files ·
+two new conformance tests (`flow-lifecycle`, `queryClientGcTime`) · tracking docs
 
 # Blockers
 
@@ -87,10 +65,11 @@ disproved approach. Body and code are correct; amending needs a force-push.
 
 # Recommended next task
 
-1. **Triage #109** (Dependabot production-minor, 5 updates) — read the declared peers against the
-   installed graph BEFORE looking at CI, and check the two-sided SDK pin.
-2. **Optionally retitle `693c62f`** (needs a force-push) — otherwise the correction stands here and
-   in PROJECT_MEMORY rule 3.
+1. **Declare `@supabase/supabase-js` in `apps/backend`** — imported there as a bare specifier while
+   declared only in `apps/mobile`. Resolves today; same shape as the `@babel/runtime` /
+   `babel-preset-expo` defects that broke bundling during the Execution Gap.
+2. **Optionally retitle `693c62f`** (needs a force-push) — its squash title names the disproved
+   ring-buffer approach. The correction stands in PROJECT_MEMORY rule 3.
 3. **Owner:** paid Supabase · store accounts · NFR-10's path · SHA-pin the nine Actions · whether
    `@types/node` follows the engine floor 20 → 22.
 4. **Node 24 with the SDK 55 upgrade** — 22 is maintenance-only, EOL 2027-04-30.

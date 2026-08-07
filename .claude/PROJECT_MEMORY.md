@@ -2,11 +2,11 @@
 
 # PanchangPal — Project Memory
 
-Version: 3.4.0
+Version: 3.5.0
 
 Last Updated: 2026-08-07 (Maestro rules 5 and 6; the artifact's logcat held only the last ~20s of
-every run until it was streamed; and the jest worker leak — TanStack `gcTime` timers, which
-`--detectOpenHandles` structurally cannot find)
+every run until it was streamed; the jest worker leak — TanStack `gcTime` timers, which
+`--detectOpenHandles` structurally cannot find; and apps/backend importing supabase-js undeclared)
 
 Current Phase:
 Beta Readiness & Platform Hardening (TDD Part 5)
@@ -520,6 +520,14 @@ Stable, cross-cutting facts (permanent until an approved decision changes them):
   (EVT_001-EVT_055) contains **no sync event**, `events.ts` forbids inventing one, and
   `AnalyticsService` rejects unknown ids at runtime. Either PDD adds sync events or a server-side
   metrics sink is chosen; neither is typing.
+- **⚠️ `apps/backend` IMPORTS `@supabase/supabase-js` WITHOUT DECLARING IT** (found 2026-08-07 while
+  triaging #109; **not fixed**). `functions/_shared/supabase.ts` and the repos import it as a bare
+  specifier, but the package is declared **only** in `apps/mobile/package.json`. It resolves today, so
+  nothing is broken and no gate is red — which is exactly why it is worth writing down. **This is the
+  same shape as the two undeclared transitive dependencies that broke bundling during the Execution
+  Gap** (`@babel/runtime`, `babel-preset-expo`): a package that resolves through someone else's
+  declaration until a layout or hoisting change removes it. A consequence worth knowing: a bump to
+  the MOBILE manifest silently changes what the backend's typecheck and vitest suites resolve.
 - **EVERY QueryClient BUILT IN A MOBILE TEST SETS `gcTime: Infinity`, AND IT IS TEARDOWN RATHER THAN
   TUNING** (established 2026-08-07, PR #112). TanStack Query schedules a garbage-collection
   `setTimeout` — **default 5 MINUTES** — for each cached query and mutation the moment its last

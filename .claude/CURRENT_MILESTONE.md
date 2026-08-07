@@ -2,9 +2,9 @@
 
 # PanchangPal — Current Milestone
 
-Version: 4.13.0
+Version: 4.14.0
 
-Last Updated: 2026-08-07 (no slice moved — four PRs merged; B2's gate is materially better
+Last Updated: 2026-08-07 (no slice moved — six PRs merged, queue empty; B2's gate is materially better
 instrumented: hang guard, the double-clearState race fixed, and the device log no longer 85% missing;
 50%)
 

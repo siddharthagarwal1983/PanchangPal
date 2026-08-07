@@ -2,10 +2,10 @@
 
 # PanchangPal Dashboard
 
-Version: 1.36.0
+Version: 1.37.0
 
-Last Updated: 2026-08-07 (five merged: #108, #107, #110, #111, #112 the jest worker leak — never
-noise, and `--detectOpenHandles` structurally cannot find it; 50% unchanged)
+Last Updated: 2026-08-07 (six merged, queue EMPTY: #108, #107, #110, #111, #112, #109 — whose
+original green described a tree four merges old; 50% unchanged)
 
 Purpose:
 This is the first file Claude should read at the beginning of every session.
@@ -117,7 +117,20 @@ CURRENT_MILESTONE.md
 
 ✅ **FIVE MERGED — #108 `610bf12` (timeout guard) · #107 `21e8c13` (RNTL 13 → 14) · #110 `afce763`
 (the double-`clearState` race) · #111 `693c62f` (streamed logcat) · #112 `42a76f4` (the jest worker
-leak).** Open: **#109**, a Dependabot production-minor group, untriaged.
+leak) · #109 `7b84844` (the dependency group). **No open PRs.**
+
+**#109 — triaged peer-graph-first, the order this repo learned the hard way.** None of the five is
+SDK-pinned (two-sided check, run from `apps/mobile` — from the repo root the lookup returns `?`,
+a failed lookup that reads as "not pinned"); every peer is satisfied, with the `typescript-eslint`
+trio moving in ONE PR, which is exactly what #82/#62 got wrong by splitting a coupled change.
+`supabase-js` carries **`auth-js`** in lockstep, but 2.112.0's auth change is `accept uppercase UUIDs
+in validateUUID`, its postgrest change needs `throwOnError` (**used nowhere here**), and Supabase
+Storage is unused.
+⚠️ **Its green described a tree FOUR MERGES OLD** — base `21e8c13`, before #110–#112. Updated and
+re-run: **429 tests where the first green measured 424**, and that difference is the whole point.
+**E2E was dispatched as well**, because none of the five CI gates touches auth-js's storage adapter —
+only `FLOW_AUTH_SESSION_PERSISTENCE` does. **6/6, and 12,872 logcat lines**, the first dependency PR
+to carry a complete device log.
 
 ⛔ **#112 — `A worker process has failed to exit gracefully` WAS NEVER NOISE.** It printed on every
 mobile run, on main and in CI, for the life of the suite, and **three suites run alone HANG
