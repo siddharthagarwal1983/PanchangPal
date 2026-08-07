@@ -235,35 +235,27 @@ jobs:
         id: resolve
         run: |
           set -o pipefail
-          pnpm dlx eas-cli@${{ env.EAS_CLI_VERSION }} channel:view "${{ inputs.channel }}" --json --non-interactive > channel.json 2>channel.err || true
-          echo "channel:view returned $(wc -c < channel.json) bytes"
-          BRANCH=$(node -e '
-            const fs=require("fs");
-            let c={}; try { c = JSON.parse(fs.readFileSync("channel.json","utf8")) } catch {}
-            // Shapes tried, widest first. The names are printed so a miss is diagnosable from the
-            // log rather than from another dispatch — the first version of this step guessed two
-            // shapes, found neither, and failed with nothing to go on.
-            console.error("channel.json keys:", JSON.stringify(Object.keys(c)));
-            // `currentPage` FIRST, because that is what eas-cli 21.2.0 actually returns —
-            // confirmed from run 31166490223, where the earlier guesses missed and the fallback
-            // below carried the rollback. The fallback must stay EXCEPTIONAL: a warning that fires
-            // on every rollback is one operators learn to ignore, which is the alert-fatigue
-            // failure §7 already cost this project once.
-            const branches =
-              c.currentPage || c.updateBranches || c.branches || c.updateChannel?.updateBranches || [];
-            const b = Array.isArray(branches) ? branches[0] : null;
-            process.stdout.write((b && (b.name || b.branchName)) || "");
-          ')
-          # FALLBACK, and it is a documented convention rather than a guess: `eas update --channel X`
-          # creates a branch named X and points the channel at it, which is exactly how this
-          # channel's only update was published. Used only when the JSON yields nothing, and it says
-          # so, because a silent fallback is how a wrong branch would get rolled back.
-          if [ -z "$BRANCH" ]; then
-            BRANCH="${{ inputs.channel }}"
-            # NOTE: no backticks in this string — inside double quotes bash would treat them as
-            # command substitution and try to RUN the example.
-            echo "::warning::channel:view yielded no branch; falling back to the channel's own name ('${BRANCH}'), which is what 'eas update --channel' creates. Verify below that the resolved update group belongs to the intended branch."
-          fi
+          # THE BRANCH IS THE CHANNEL'S OWN NAME, BY CONSTRUCTION — not by inference.
+          #
+          # Every update here is published with `eas update --channel X`, which creates a branch
+          # named X and points the channel at it. `update:list --branch X` below then PROVES the
+          # branch is real: if it did not exist, or held no updates, the step fails with a clear
+          # message rather than rolling back something else.
+          #
+          # An earlier version parsed `eas channel:view --json` to discover the branch. Three
+          # successive shape guesses missed — the real payload is `{ currentPage: [...] }` whose
+          # entries carry neither `name` nor `branchName` at the top level — so a healthy rollback
+          # always emitted a "could not resolve a branch" warning. **A warning that fires every time
+          # is one operators learn to ignore**, which is the alert-fatigue failure §7 already cost
+          # this project. Deleting the parse removes both the fragility and the noise; nothing
+          # downstream needed it.
+          #
+          # ⚠️ LIMIT, STATED: this assumes a channel maps to a single same-named branch. That holds
+          # for every update this repo publishes. If §3.2's staged rollout is ever configured with a
+          # channel pointing at TWO branches (a canary split), this resolution must be revisited —
+          # it would pick the channel-named one and roll back only that side.
+          BRANCH="${{ inputs.channel }}"
+          echo "Branch (by channel convention): ${BRANCH}"
           pnpm dlx eas-cli@${{ env.EAS_CLI_VERSION }} update:list --branch "$BRANCH" --limit 1 --json --non-interactive > updates.json 2>updates.err || true
           GROUP=$(node -e '
             const fs=require("fs");
@@ -274,7 +266,7 @@ jobs:
             process.stdout.write((g && (g.group || g.updateGroup || g.id)) || "");
           ')
           if [ -z "$GROUP" ]; then
-            echo "::error::Channel '${{ inputs.channel }}' (branch '$BRANCH') has no update to roll back. Nothing was changed."
+            echo "::error::Branch '$BRANCH' has no update to roll back (or does not exist). Nothing was changed. This is also the check that proves the channel-to-branch convention held."
             exit 1
           fi
           echo "branch=$BRANCH" >> "$GITHUB_OUTPUT"
