@@ -9,6 +9,19 @@ on:
     branches:
       - main
   workflow_dispatch:
+    inputs:
+      # ⚠️ DEFAULT FALSE, AND THAT IS THE POINT — see `promote-production` below.
+      #
+      # This job is dispatched to deploy or ROLL BACK staging (TDD §3.4). Until 2026-08-07 the
+      # production-promotion job ran on every dispatch and failed by design, so a manual dispatch
+      # could never report green: a successful rollback showed a RED run. An operator mid-incident
+      # would reasonably read that as "the rollback failed" and escalate to something riskier.
+      # Found by performing the §3.4 Edge Function rollback for the first time.
+      promote:
+        description: 'Also attempt the production promotion (§10.1 go/no-go). Leave false to deploy or roll back staging.'
+        required: false
+        default: false
+        type: boolean
 
 permissions:
   contents: read
@@ -182,7 +195,12 @@ jobs:
     runs-on: ubuntu-latest
     needs: deploy-functions
     environment: production
-    if: github.event_name == 'workflow_dispatch'
+    # Requires the explicit `promote` input, not merely a dispatch. The fail-loud behaviour below is
+    # UNCHANGED when promotion is actually requested — what changed is that asking to roll back
+    # staging no longer implies asking to promote, so the run's colour now reflects what was
+    # attempted. A control that prevents a false green must not manufacture a false red on the
+    # recovery path.
+    if: github.event_name == 'workflow_dispatch' && inputs.promote
 
     steps:
       - uses: actions/checkout@v7
