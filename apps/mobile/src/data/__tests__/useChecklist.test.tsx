@@ -40,7 +40,19 @@ const clients: QueryClient[] = [];
 // RNTL 14: `renderHook` is async (React 19's async rendering model), so this helper is async too
 // and every call site awaits it.
 async function setup() {
-  const qc = new QueryClient({ defaultOptions: { mutations: { retry: false } } });
+  // `gcTime: Infinity` is TEARDOWN, not tuning. TanStack Query schedules a garbage-collection
+  // `setTimeout` — default 5 MINUTES — for every cached query and mutation the moment its last
+  // observer detaches, which is exactly what unmounting at the end of a test does. Those timers
+  // keep Node's event loop alive, so the jest worker cannot exit: it is force-killed with
+  // "A worker process has failed to exit gracefully", and a single-file run hangs outright.
+  // `qc.clear()` in afterEach does NOT retract them. Infinity makes the timeout invalid, so none
+  // is ever scheduled. Pinned by queryClientGcTime.test.ts.
+  const qc = new QueryClient({
+    defaultOptions: {
+      queries: { gcTime: Infinity },
+      mutations: { retry: false, gcTime: Infinity },
+    },
+  });
   clients.push(qc);
   qc.setQueryData(KEY, ITEMS);
   const wrapper = ({ children }: { children: ReactNode }) => (
