@@ -43,6 +43,11 @@ on:
         required: false
         default: '10'
         type: string
+      runtime_version:
+        description: 'Optional. Rollouts target one runtime version; left blank it is derived from the candidate branch''s latest update.'
+        required: false
+        default: ''
+        type: string
       rollout_outcome:
         description: 'How rollout-end finishes: revert abandons the candidate (the crash-spike action); republish-and-revert keeps it.'
         required: false
@@ -332,8 +337,33 @@ jobs:
             echo "::error::rollout-start needs a candidate branch to roll out TO. Publish the candidate with action=publish and a branch first — rolling a channel out to the branch it already points at splits nothing."
             exit 1
           fi
+          # `--runtime-version` IS REQUIRED for `--action create`, alongside --percent and --branch.
+          # The CLI says so plainly when it is missing ("All of the following must be provided"),
+          # which is how this was found on run 31171046705 — the flag is listed in --help with no
+          # indication that it is mandatory.
+          #
+          # DERIVED, not asked for. A rollout targets one runtime version, and the right one is the
+          # candidate's own — a 40-character fingerprint that no operator should be copying by hand
+          # mid-incident. Same reasoning as resolving the update group for a rollback.
+          RV="${{ inputs.runtime_version }}"
+          if [ -z "$RV" ]; then
+            pnpm dlx eas-cli@${{ env.EAS_CLI_VERSION }} update:list --branch "$BRANCH" --limit 1 \
+              --json --non-interactive > candidate.json 2>candidate.err || true
+            RV=$(node -e '
+              const fs=require("fs");
+              let a={}; try { a = JSON.parse(fs.readFileSync("candidate.json","utf8")) } catch {}
+              const rows = a.currentPage || a.updates || (Array.isArray(a) ? a : []);
+              process.stdout.write((rows[0] && rows[0].runtimeVersion) || "");
+            ')
+          fi
+          if [ -z "$RV" ]; then
+            echo "::error::Could not determine a runtime version for branch '$BRANCH'. Publish the candidate to it first (action=publish with this branch), or pass runtime_version explicitly. Nothing was rolled out."
+            exit 1
+          fi
+          echo "Rolling ${{ inputs.channel }} out to '$BRANCH' at ${{ inputs.percent }}% on runtime ${RV}"
           pnpm dlx eas-cli@${{ env.EAS_CLI_VERSION }} channel:rollout "${{ inputs.channel }}" \
-            --action create --branch "$BRANCH" --percent "${{ inputs.percent }}" --non-interactive
+            --action create --branch "$BRANCH" --percent "${{ inputs.percent }}" \
+            --runtime-version "$RV" --non-interactive
           {
             echo "### Staged rollout started → ${{ inputs.channel }}"
             echo ""
