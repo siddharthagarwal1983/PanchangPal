@@ -43,7 +43,16 @@ class FakeAdapter implements PaymentAdapter {
 }
 
 function wrapper() {
-  const qc = new QueryClient({ defaultOptions: { queries: { retry: false } } });
+  // `gcTime: Infinity` is TEARDOWN, not tuning — see useChecklist.test.tsx for the full note.
+  // TanStack schedules a 5-minute garbage-collection `setTimeout` per cached query/mutation when
+  // its last observer detaches, which keeps the jest worker's event loop alive.
+  // Pinned by queryClientGcTime.test.ts.
+  const qc = new QueryClient({
+    defaultOptions: {
+      queries: { retry: false, gcTime: Infinity },
+      mutations: { gcTime: Infinity },
+    },
+  });
   const Wrapper = ({ children }: { children: ReactNode }) => (
     <QueryClientProvider client={qc}>{children}</QueryClientProvider>
   );

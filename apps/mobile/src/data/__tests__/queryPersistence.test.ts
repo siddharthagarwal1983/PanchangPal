@@ -33,7 +33,14 @@ class MemoryStorage implements KeyValueStore {
 const clients: QueryClient[] = [];
 
 function newClient(): QueryClient {
-  const qc = new QueryClient();
+  // `gcTime: Infinity` in addition to the teardown below. The teardown alone is enough for this
+  // suite — it never mounts a Provider, so no observer ever detaches — but three sibling suites
+  // learned the hard way that the moment one does, TanStack schedules a 5-minute GC timeout that
+  // `clear()` does not retract and the worker can no longer exit. Infinity means no such timeout
+  // is ever scheduled, so the rule holds with no exception to remember.
+  const qc = new QueryClient({
+    defaultOptions: { queries: { gcTime: Infinity }, mutations: { gcTime: Infinity } },
+  });
   clients.push(qc);
   return qc;
 }
