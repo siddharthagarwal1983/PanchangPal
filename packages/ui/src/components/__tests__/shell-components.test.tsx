@@ -27,25 +27,25 @@ const wrapSafeArea = (ui: ReactElement) =>
   );
 
 describe('Application Shell components (a11y + states)', () => {
-  it('Screen renders loading, error, empty, and offline states', () => {
-    const { rerender } = wrap(<Screen loading testID="s" />);
+  it('Screen renders loading, error, empty, and offline states', async () => {
+    const { rerender } = await wrap(<Screen loading testID="s" />);
     expect(screen.getByTestId('screen-loading')).toBeTruthy();
 
-    rerender(
+    await rerender(
       <ThemeProvider>
         <Screen error={{ message: 'Something went wrong' }} />
       </ThemeProvider>,
     );
     expect(screen.getByRole('alert')).toBeTruthy();
 
-    rerender(
+    await rerender(
       <ThemeProvider>
         <Screen empty={{ title: 'Nothing here yet' }} />
       </ThemeProvider>,
     );
     expect(screen.getByText('Nothing here yet')).toBeTruthy();
 
-    rerender(
+    await rerender(
       <ThemeProvider>
         <Screen offline>{null}</Screen>
       </ThemeProvider>,
@@ -53,22 +53,22 @@ describe('Application Shell components (a11y + states)', () => {
     expect(screen.getByText(/offline/i)).toBeTruthy();
   });
 
-  it('AuthButton exposes button role, label, disabled/busy state', () => {
+  it('AuthButton exposes button role, label, disabled/busy state', async () => {
     const onPress = jest.fn();
-    wrap(<AuthButton provider="apple" label="Continue with Apple" onPress={onPress} />);
+    await wrap(<AuthButton provider="apple" label="Continue with Apple" onPress={onPress} />);
     const btn = screen.getByRole('button', { name: 'Continue with Apple' });
-    fireEvent.press(btn);
+    await fireEvent.press(btn);
     expect(onPress).toHaveBeenCalledTimes(1);
   });
 
-  it('AuthButton does not fire when loading', () => {
+  it('AuthButton does not fire when loading', async () => {
     const onPress = jest.fn();
-    wrap(<AuthButton provider="google" label="Continue with Google" onPress={onPress} loading />);
-    fireEvent.press(screen.getByRole('button'));
+    await wrap(<AuthButton provider="google" label="Continue with Google" onPress={onPress} loading />);
+    await fireEvent.press(screen.getByRole('button'));
     expect(onPress).not.toHaveBeenCalled();
   });
 
-  it('BottomTabBar renders a tablist with 4 selectable tabs', () => {
+  it('BottomTabBar renders a tablist with 4 selectable tabs', async () => {
     const items = ['Today', 'Calendar', 'Ask Guru', 'You'].map((label, i) => ({
       key: label,
       label,
@@ -76,22 +76,22 @@ describe('Application Shell components (a11y + states)', () => {
       onPress: jest.fn(),
       testID: `tab-${i}`,
     }));
-    wrapSafeArea(<BottomTabBar items={items} />);
+    await wrapSafeArea(<BottomTabBar items={items} />);
     // The tablist container is intentionally not an accessibility element (its tabs are the focus
     // stops), so it isn't role-queryable; asserting the 4 tabs covers "a tablist with 4 tabs".
     expect(screen.getAllByRole('tab')).toHaveLength(4);
     expect(screen.getByRole('tab', { name: /Today/ })).toBeTruthy();
   });
 
-  it('OfflineBanner is a polite alert', () => {
-    wrap(<OfflineBanner />);
+  it('OfflineBanner is a polite alert', async () => {
+    await wrap(<OfflineBanner />);
     expect(screen.getByRole('alert')).toBeTruthy();
   });
 
-  it('EmptyState/ErrorState render their content and retry', () => {
+  it('EmptyState/ErrorState render their content and retry', async () => {
     const onRetry = jest.fn();
-    wrap(<ErrorState message="Try later" onRetry={onRetry} />);
-    fireEvent.press(screen.getByRole('button', { name: 'Try again' }));
+    await wrap(<ErrorState message="Try later" onRetry={onRetry} />);
+    await fireEvent.press(screen.getByRole('button', { name: 'Try again' }));
     expect(onRetry).toHaveBeenCalled();
   });
 });

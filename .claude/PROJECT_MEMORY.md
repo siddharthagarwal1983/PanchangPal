@@ -2,9 +2,10 @@
 
 # PanchangPal — Project Memory
 
-Version: 3.0.0
+Version: 3.1.0
 
-Last Updated: 2026-08-02 (B4 closed; SVC_health; observability proven not configured; Node 22 LTS)
+Last Updated: 2026-08-06 (Maestro rule 4 — a clear races the NEIGHBOUR's teardown, and a hung flows
+step reported `cancelled`; the timeout guard that fixes it)
 
 Current Phase:
 Beta Readiness & Platform Hardening (TDD Part 5)
@@ -481,6 +482,14 @@ Stable, cross-cutting facts (permanent until an approved decision changes them):
   "blocked" after the instrument lands makes the gap invisible.
   **NFR-06** (crash-free sessions, mobile) and **NFR-14** (availability, via SVC_health) are live and
   were each **watched to open an issue and deliver mail to a human**.
+  ⚠️ **THERE ARE TWO DENOMINATORS HERE AND MERGING THEM IS HOW THE TRACKING DOCS DRIFTED** (found
+  and reconciled 2026-08-02). **§7.2 names SEVEN SLOs and NFR-07 is NOT one of them** — crash-free
+  users comes from the **Part 1 §8 NFR table**, and `SLO_ALERTS.md` tracks it deliberately because it
+  reuses NFR-06's session data and **binds tighter** (99.8% against a structurally lower metric), so
+  it is the page that arrives first. **"Two of §7.2's seven are proven" and "three SLOs are proven"
+  are BOTH TRUE.** Five tracking documents said two while SESSION.md said three, and neither was
+  wrong; `SLO_ALERTS.md` §1 now states why its table has eight rows. When a count in this project
+  disagrees across documents, check whether the denominators match before correcting either.
   ⚠️ **NFR-06's first drill detected perfectly and notified NOBODY**: both alert rows targeted
   *Suggested Assignees*, which Sentry resolves from suspect commits, and a **metric-monitor issue has
   no stack trace and no suspect commit** — the recipient set was empty. The issue was still assigned,
@@ -677,6 +686,27 @@ Stable, cross-cutting facts (permanent until an approved decision changes them):
   `@sentry/react-native@7.2.0` depends on it at **exactly `"2.55.0"`**, not a range; the top-level
   `^2.55.0` declaration exists only so `sentry.gradle`'s flat-`node_modules` fallback resolves under
   pnpm (added by #79).
+  **A SIXTH mechanism, found 2026-08-02 by the RNTL 14 migration, and the first where the constraint
+  lives in a TRANSITIVE dependency's peer rather than anywhere in this repo's graph:
+  `test-renderer`.** RNTL 14 replaced the `react-test-renderer` peer with `test-renderer@^1.0.0`, and
+  that range is not the constraint — the reconciler beneath it is:
+  `test-renderer@1.1.0 → react-reconciler@~0.32.0 → peer react ^19.1.0` (satisfied) versus
+  `test-renderer@1.2.0 → react-reconciler@~0.33.0 → peer react ^19.2.0` (**not** satisfiable against
+  the exactly-pinned 19.1.0). So it is **pinned by the REACT MINOR** — `1.1.0` in both
+  `apps/mobile` and `packages/ui` — and moves only with `react`, which moves only with the SDK.
+  ⚠️ **1.2.0 is peer-LEGAL as far as RNTL is concerned**, so Dependabot has every reason to propose
+  it and **pnpm records the unmet transitive peer and installs anyway** (the #82 mechanism): green
+  CI, with a reconciler built for a React the app does not run. **Read the reconciler's peer, not
+  RNTL's.** Neither side of the two-sided check reports this — `test-renderer` is not in
+  `bundledNativeModules.json` and is not an `expo` dependency; **RNTL's own migration guide is the
+  only place the coupling is written down** (React 19.1 → test-renderer 1.1, 19.2 → 1.2).
+  `react-test-renderer` nonetheless stays in the tree, because **`jest-expo@54.0.17` depends on it
+  directly** — it is simply no longer what RNTL renders with, and this repo never declared it.
+  **RNTL 14's breaking change is not the renderer swap: the API went ASYNC.** `render`, `renderHook`,
+  `fireEvent`, `act`, `rerender` and `unmount` all return Promises (React 19's rendering model);
+  queries stay synchronous. The bump alone fails every component test with "`render` function has not
+  been called", because `screen` is populated only after the awaits resolve — which reads like a
+  broken install and is not one.
   ⚠️ **#91 IS THE CLEAREST CASE THAT A GREEN GATE CAN BE VACUOUS RATHER THAN REASSURING.** It passed
   all five gates and *had to*: `e2e.yml` sets `SENTRY_DISABLE_AUTO_UPLOAD: 'true'` and **no gate runs
   `sentry.gradle` at all**, so the only consumer of `@sentry/cli` is never exercised. Before reading
@@ -880,6 +910,26 @@ Stable, cross-cutting facts (permanent until an approved decision changes them):
      `device-logcat.txt` exist only there; grepping the run log finds nothing and reads as absence of
      evidence. Both defects above were diagnosed from the artifact. Same lesson the Pixel Launcher
      ANRs taught.
+  4. **A CLEAR RACES THE NEIGHBOUR'S TEARDOWN, NOT JUST ITS OWN LAUNCH — AND THE FLOWS STEP HAS NO
+     TIMEOUT, SO THE HANG GOES DARK** (established 2026-08-06, E2E `31120798108`). Rule 1's three
+     discrete steps are necessary and **not sufficient**. FLOW_SESSION_PERSISTENCE hung on
+     `Launch app "com.panchangpal.app"` — the command itself never returning, rather than Rule 1's
+     ~60 s assertion failure — 0.5 s after its own `clearState`, which itself followed
+     **FLOW_OFFLINE_SYNC's `onFlowComplete` teardown doing `stopApp` + `clearState`**. Two clear-states
+     ~0.5 s apart, with logcat showing `Destroy timeout of remove-task, attempt to kill
+     Task{... com.panchangpal.app}` 11 s earlier. So the hazard is **any** clear racing a
+     neighbouring flow's teardown, not only a fused `launchApp: clearState: true`.
+     ⛔ **`e2e.yml`'s `maestro test tests/flows/` was NOT wrapped in `timeout`** (fixed same day on
+     `fix/e2e-flow-timeout`: `timeout --kill-after=1m 25m`, exit 124/137 annotated as a HANG rather
+     than a flow failure), while `Build APK` already was
+     (`timeout --kill-after=2m 40m`, added 2026-07-25 after a hung Gradle burned to the job budget and
+     reported **`cancelled`** — "a red build wearing a timeout's costume"). The guard was applied to
+     one step and not the other, so a hung flow consumes all 90 minutes and reports `cancelled`, which
+     **is not read as red and tells nobody**. Same defect shape, one step over.
+     ⚠️ **The run still proved something**, and separating the two halves is the point: two flows
+     passed **completely** first (FLOW_MORNING_RITUAL 18/18, FLOW_OFFLINE_SYNC 39/39) on a green
+     `Build APK`, so a hang late in a suite is not evidence against the change under test. Read the
+     per-flow `commands.json` statuses before attributing anything.
 - **Assert a deletion by CONTENT, never by the foreign key** — restated here because it generalises
   past the deletion executor: a test written against the identifier a deletion removes cannot detect
   a deletion that only removed the identifier. `ON DELETE SET NULL` keeps the row and drops the link,

@@ -2,9 +2,10 @@
 
 # PanchangPal Dashboard
 
-Version: 1.32.0
+Version: 1.33.0
 
-Last Updated: 2026-08-02 (B4 CLOSED — two SLOs proven end to end; 47% → 50%)
+Last Updated: 2026-08-06 (#107 opened, no CI verdict — GitHub Actions outage; E2E hang diagnosed;
+flows-step timeout gap fixed; 50% unchanged)
 
 Purpose:
 This is the first file Claude should read at the beginning of every session.
@@ -52,7 +53,15 @@ Counted at **verifiable scope**, the same basis as B5 (no PITR) and B6 (no ratif
 five unproven SLOs are blocked on things engineering does not own — three behind the Ask Guru gate
 (`GURU_LIVE = false`), one behind uninstalled `expo-notifications`, and **NFR-10 behind a PDD
 taxonomy decision**, since PDD §11's registry contains no sync event and inventing one is forbidden.
-Not one is unfinished code. NFR-07 is a free addition whenever wanted.
+Not one is unfinished code.
+✅ **NFR-07 crash-free users was since proven too, as a THIRD SLO — and it is not one of §7.2's
+seven.** It comes from the Part 1 §8 NFR table, runs on the session data NFR-06 already produces, and
+binds **tighter** (99.8% against a metric that is structurally lower), so it is the page that arrives
+first. **"Two of §7.2's seven" and "three SLOs proven" are both correct** — see `SLO_ALERTS.md` §1.
+⛔ Its drill produced the day's sharpest operational finding: it crossed **both** thresholds and only
+NFR-07 emailed, because **an open issue suppresses the next alert** — Sentry folds new occurrences
+into the existing open period. An issue left open means the next real incident of that kind pages
+nobody, and a **metric-monitor issue cannot be resolved or deleted by hand**. Hence blocker 5 below.
 **Two gaps stated rather than folded in:** `SVC_health`'s 503 branch is proven by unit test but never
 exercised end to end (it belongs with the DB-outage runbook drill), and §7.2's dashboards remain
 absent — the `analytics_event` rollup worker is still unbuilt.
@@ -106,14 +115,66 @@ CURRENT_MILESTONE.md
 
 # Current Task
 
+✅ **TRACKING DOCS RECONCILED · RNTL 13 → 14 MIGRATED.** Branch `chore/rntl-14-migration`
+(`9942763` + `ebba6e2`) is pushed and **PR #107 is open** against main. **Progress unchanged at
+50%**; neither piece advances a Beta slice.
+
+⛔ **CI CARRIES NO VERDICT YET — GITHUB ACTIONS WAS IN A MAJOR OUTAGE (2026-08-06, 16:36–16:46+).**
+Three runs went red without executing a single line of repository code, and all three reds are
+external: the CI gates failed in **`Set up job`** at `Getting action download info` with
+`Service Unavailable`, and the four downstream gates reported `skipping` only because they `needs:`
+that job. The E2E run sat **queued 15 minutes with ZERO steps** and was cancelled platform-side —
+*not* the `cancel-in-progress` hazard of 2026-07-19, which is deliberately `false` here.
+Confirmed against `githubstatus.com`: **Actions = `major_outage`**.
+⚠️ **A red is as capable of being vacuous as a green.** This repo has paid three times for reading a
+green that no gate could have failed (mmkv v2's native resolution · `@sentry/cli` with no gate
+running `sentry.gradle` · pnpm's unenforced peers). The same question settles both directions —
+**which gate actually exercised the thing?** Here none did, so the colour carries no information.
+⚠️ **And `in_progress` is NOT evidence that action resolution recovered** — a job reaches that state
+merely by being assigned a runner, then fails inside `Set up job`. Reading it as recovery cost one
+wasted re-run; the authority is the status API, not the job state.
+
+**The SLO count had drifted, and both numbers were right.** SESSION.md said three proven; five other
+docs said two. **TDD Part 5 §7.2 names SEVEN and does not include NFR-07** — that is from the Part 1
+§8 NFR table. So "two of §7.2's seven" and "three SLOs proven" are both true, and the denominators had
+been silently merged. Fixed by making the distinction explicit rather than by picking a number.
+Also corrected: `SLO_ALERTS.md`'s own header still described the pre-drill-2 state and contradicted
+its §0 · ADR-034 still recorded as Proposed · DECISIONS.md still calling the §6.6 rule UNRATIFIED and
+the SDK 54 pin set "complete".
+
+**RNTL 14's breaking change is not the renderer swap — the API went ASYNC.** `render`, `renderHook`,
+`fireEvent`, `act`, `rerender` and `unmount` all return Promises now (React 19's rendering model);
+queries stay sync. The bump alone failed all 33 `packages/ui` tests with "`render` function has not
+been called". 11 test files migrated, no behaviour changed.
+
+⚠️ **`test-renderer` is pinned at 1.1.0, two levels down, and that is a SIXTH pinning mechanism.**
+1.2.0 → `react-reconciler@~0.33.0` → peer `react ^19.2.0`, against the SDK-pinned **exact 19.1.0**
+(react-native 0.81.5's Fabric renderer is hardcoded to it). **1.2.0 is peer-LEGAL as far as RNTL is
+concerned** — its own peer is only `^1.0.0` — so Dependabot would propose it and **pnpm would record
+the unmet transitive peer and install anyway**, green, with a reconciler built for a React the app
+does not run. Read the reconciler's peer, not RNTL's. Ignored in `dependabot.yml` with evidence.
+**First instance where the constraint lives in a transitive dependency's peer rather than anywhere in
+our own graph** — neither side of the two-sided SDK check reports it.
+
+**Verified:** ui **33/33**, mobile **424/424** — *identical to the baseline taken before any change*,
+so nothing was quietly dropped · vitest 144 · tsc 11/11 · eslint 0 errors · `expo export` both
+platforms · one perturbation failing exactly the right 3 tests. **No native build or Maestro run** —
+test infrastructure only, and `test-renderer` never reaches the bundle.
+
+---
+
+**Previously — B4.**
+
 ✅ **B4 — OBSERVABILITY IS CLOSED. 47% → 50%.** The first slice completed since B6 on 2026-07-27.
 
-**B4.4 delivered two SLOs that are PROVEN, not configured** — the distinction §8.4 exists to enforce:
+**B4.4 delivered three SLOs that are PROVEN, not configured** — the distinction §8.4 exists to
+enforce. Two are §7.2's; **NFR-07 is an addition from the Part 1 §8 NFR table, not one of the seven**:
 
 | SLO | Proof |
 |---|---|
 | **NFR-06** crash-free sessions ≥ 99.5% | Synthetic crashed sessions → issue → **email received 14:43** |
 | **NFR-14** availability ≥ 99.9% | `SVC_health` probe forced red → issue `PANCHANGPAL-EDGE-3` → **email 16:17** |
+| **NFR-07** crash-free users ≥ 99.8% (+) | Same session data, one more monitor → issue → **email**; binds tighter than NFR-06 and pages first |
 
 ⚠️ **NFR-06 took TWO drills, and the first one is the more valuable half.** Drill 1 detected
 perfectly — correct threshold, correct `production` filter, high-priority issue opened and assigned
@@ -900,11 +961,21 @@ Verified end-to-end. **PR #36 merged to main as `e1e10d4`**; the docs checkpoint
 
 # Today's Objective
 
+Session of 2026-08-02 (part 4). **Fix the tracking-doc drift, then migrate RNTL 14.** Outcome: both
+done on `chore/rntl-14-migration` (`9942763`), **progress unchanged at 50%**. The drift turned out not
+to be a stale number but two **merged denominators** — §7.2's seven versus the Part 1 §8 NFR table —
+so both figures in circulation were correct. RNTL 14's real cost is that the API went **async**, not
+the renderer swap; and its `test-renderer` peer is pinned by the **React minor two levels down**, a
+sixth pinning mechanism that no existing check reports. Next: open the PR, dispatch one E2E.
+
+---
+
 Session of 2026-08-02 (part 3). **Close B4.** Outcome: **B4 CLOSED at verifiable scope, 47% → 50%** —
-the first slice completed since B6. Two SLOs proven end to end by deliberate trigger, the first of
-which **failed at the notification step and would otherwise have shipped as configured**. Three
-environment/deploy defects found on the way, all of the same shape. Next: **B1/B3 remainders** (all
-owner-gated on money or store accounts), or **NFR-07** for a third SLO.
+the first slice completed since B6. **Three SLOs proven end to end** by deliberate trigger (NFR-06 and
+NFR-14 from §7.2, plus NFR-07 from the Part 1 §8 NFR table), the first of which **failed at the
+notification step and would otherwise have shipped as configured**. Three environment/deploy defects
+found on the way, all of the same shape. Next: **B1/B3 remainders**, all owner-gated on money or
+store accounts.
 
 ---
 

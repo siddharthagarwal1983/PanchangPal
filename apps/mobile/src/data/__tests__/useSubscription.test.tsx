@@ -56,7 +56,7 @@ describe('usePlans', () => {
   it('returns store offerings from the adapter (empty = unavailable)', async () => {
     setPaymentAdapter(new FakeAdapter());
     const { Wrapper } = wrapper();
-    const { result } = renderHook(() => usePlans(), { wrapper: Wrapper });
+    const { result } = await renderHook(() => usePlans(), { wrapper: Wrapper });
     await waitFor(() => expect(result.current.isSuccess).toBe(true));
     expect(result.current.data).toHaveLength(2);
     expect(result.current.data?.[0].id).toBe('individual_monthly');
@@ -65,7 +65,7 @@ describe('usePlans', () => {
   it('surfaces an empty list when no offerings are available', async () => {
     setPaymentAdapter(new FakeAdapter([]));
     const { Wrapper } = wrapper();
-    const { result } = renderHook(() => usePlans(), { wrapper: Wrapper });
+    const { result } = await renderHook(() => usePlans(), { wrapper: Wrapper });
     await waitFor(() => expect(result.current.isSuccess).toBe(true));
     expect(result.current.data).toEqual([]);
   });
@@ -77,7 +77,7 @@ describe('usePurchase', () => {
     setPaymentAdapter(adapter);
     const { qc, Wrapper } = wrapper();
     const invalidate = jest.spyOn(qc, 'invalidateQueries');
-    const { result } = renderHook(() => usePurchase(), { wrapper: Wrapper });
+    const { result } = await renderHook(() => usePurchase(), { wrapper: Wrapper });
 
     result.current.mutate('family_yearly');
     await waitFor(() => expect(result.current.isSuccess).toBe(true));
@@ -92,7 +92,7 @@ describe('usePurchase', () => {
     setPaymentAdapter(adapter);
     const { qc, Wrapper } = wrapper();
     const invalidate = jest.spyOn(qc, 'invalidateQueries');
-    const { result } = renderHook(() => usePurchase(), { wrapper: Wrapper });
+    const { result } = await renderHook(() => usePurchase(), { wrapper: Wrapper });
 
     result.current.mutate('individual_monthly');
     await waitFor(() => expect(result.current.isSuccess).toBe(true));
@@ -108,7 +108,7 @@ describe('useRestore', () => {
     setPaymentAdapter(adapter);
     const { qc, Wrapper } = wrapper();
     const invalidate = jest.spyOn(qc, 'invalidateQueries');
-    const { result } = renderHook(() => useRestore(), { wrapper: Wrapper });
+    const { result } = await renderHook(() => useRestore(), { wrapper: Wrapper });
 
     result.current.mutate();
     await waitFor(() => expect(result.current.isSuccess).toBe(true));

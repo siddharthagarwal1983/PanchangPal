@@ -2,8 +2,9 @@
 
 # PanchangPal — Current Task
 
-Version: 5.0.0
-Last Updated: 2026-08-02 (session end — four PRs merged; Sentry live and verified)
+Version: 5.2.0
+Last Updated: 2026-08-02 (tracking docs reconciled — NFR-07 is a third SLO, not one of §7.2's seven;
+current task set to the RNTL 13 → 14 migration)
 
 Purpose: the current implementation task. Stay focused; avoid unrelated work unless instructed.
 
@@ -110,6 +111,123 @@ green in CI on a real native build. Canonical progress 0% → 13% (1 of 8 Beta s
 # Current Task
 
 ## Title
+✅ **PR #107 OPENED (RNTL 13 → 14) — AWAITING A CI VERDICT · E2E HANG DIAGNOSED · FLOWS-STEP TIMEOUT
+FIXED.** Branch
+`chore/rntl-14-migration` (`9942763` + `ebba6e2`) is pushed; **PR #107 is OPEN, not merged.**
+
+**Progress unchanged at 50%.** Neither piece advances a Beta slice.
+
+⛔ **PR #107 HAS NO CI VERDICT — GITHUB ACTIONS WAS IN A MAJOR OUTAGE ON 2026-08-06.** Do not read
+its red as a result, and do not re-run into it. Three runs produced reds with **zero repository code
+executed**: both CI attempts died in `Set up job` at `Getting action download info`
+(`Service Unavailable`, 16:36–16:46), taking the other four gates down as `skipping` via `needs:`;
+E2E run `31119803470` sat **queued 15 minutes with 0 steps** and was cancelled by the platform.
+`githubstatus.com` reported **Actions = `major_outage`**. E2E `31120798108` was dispatched into the
+same window and is expected to be equally uninformative.
+⚠️ **A RED CAN BE VACUOUS TOO.** The rule this repo learned in the green direction — *ask which gate
+would have to fail* — applies unchanged here: no gate reached the code, so the colour says nothing
+about RNTL 14.
+⚠️ **`in_progress` DOES NOT MEAN THE OUTAGE CLEARED.** A job enters it on runner assignment and can
+still fail inside `Set up job`. I misread it as recovery and re-ran once for nothing. **The status
+API is the instrument; the job state is not.**
+**Owed when Actions recovers:** open a PR for `fix/e2e-flow-timeout`, let #107's five CI gates re-run,
+re-dispatch **one** E2E run (sequential per ref), then judge against the bar below.
+
+### ✅ Also done 2026-08-06 — `fix/e2e-flow-timeout` (`fb1a2fe`), branched off `main`, pushed, NOT PR'd
+
+`maestro test tests/flows/` ran **bare** while `Build APK` has carried `timeout --kill-after=2m 40m`
+since 2026-07-25 — the guard was applied to one step and never the other. A hung flow therefore
+burned toward `timeout-minutes: 90` and would have reported **`cancelled`**, which nobody reads as
+red. Now `timeout --kill-after=1m 25m`, with **124/137 annotated as a HANG rather than a flow
+assertion failure**, so the next reader is not sent hunting for a product defect.
+**Proven, not asserted:** the fragment was run against a shim reproducing GNU `timeout`'s exit
+semantics — hang → 124 + annotation · real failure → 1 with no annotation · pass → 0 — and the logcat
+dump runs in **all three**, so a killed run still uploads the artifact holding the per-flow
+`commands.json`. 25m cannot clip a healthy suite; two flows completed inside 60 s in the hung run.
+**Held back from PR deliberately** until Actions recovers: a workflow change whose whole point is that
+CI signals mean something should not land on vacuous reds. Kept off the RNTL branch as #78 was split
+out of the Sentry branch.
+
+⚠️ **Deliberately NOT fixed: the double-`clearState` race.** A flow's opening clear can race the
+previous flow's `onFlowComplete` teardown. A settle is the obvious fix and may be the wrong one —
+this repo's standing rule is that added settle time can mask a race real users hit. The timeout guard
+downgrades it from "gate goes dark" to "gate goes red", so it is no longer urgent.
+
+### What the migration actually was
+
+**Not the renderer swap — the API went ASYNC.** `render`, `renderHook`, `fireEvent`, `act`,
+`rerender` and `unmount` all return Promises (React 19's rendering model); queries stay sync. The
+version bump alone failed all 33 `packages/ui` tests with "`render` function has not been called",
+because `screen` is populated only after the awaits resolve. 11 test files migrated; **no behaviour
+changed and no test was dropped** — counts are identical to a baseline taken before any edit.
+
+⚠️ **`test-renderer` is pinned at 1.1.0, and the constraint is two levels down:**
+
+```
+test-renderer@1.1.0 -> react-reconciler@~0.32.0 -> peer react ^19.1.0   satisfied
+test-renderer@1.2.0 -> react-reconciler@~0.33.0 -> peer react ^19.2.0   NOT satisfiable
+```
+
+`react` is pinned at exactly 19.1.0 (RN 0.81.5's Fabric renderer is hardcoded to it). **RNTL's own
+peer is only `^1.0.0`, so 1.2.0 is peer-LEGAL** and Dependabot has every reason to propose it —
+**pnpm would record the unmet transitive peer and install anyway**, green, with a reconciler built for
+a React the app does not run. **Read the reconciler's peer, not RNTL's.** Ignored in
+`.github/dependabot.yml` with the evidence inline. **Sixth pinning mechanism, and the first where the
+constraint lives in a transitive dependency's peer rather than anywhere in our own graph** — neither
+side of the two-sided SDK check reports it.
+
+`react-test-renderer` remains in the tree via **`jest-expo@54.0.17`'s direct dependency**. Expected;
+it is simply no longer what RNTL renders with, and it was never declared by us.
+
+### The docs half
+
+The SLO count drift was **two merged denominators, not a stale number**: §7.2 names seven and
+**NFR-07 is not among them** (Part 1 §8 NFR table), so both figures in circulation were correct.
+Fixed by making the distinction explicit in six documents. Three further staleness items corrected —
+`SLO_ALERTS.md`'s header describing its own pre-drill-2 state, ADR-034 recorded as Proposed, and
+DECISIONS.md calling the §6.6 rule UNRATIFIED and the SDK 54 set "complete".
+
+### Verified
+
+ui **33/33** · mobile **424/424** (both identical to baseline) · vitest 144 (+2 skipped) · tsc 11/11 ·
+eslint 0 errors · `expo export` both platforms · **one perturbation** — dropping a single
+`await wrap(...)` fails exactly those 3 tests and no others.
+
+**Not done, and stated:** no native build, no Maestro run. Test infrastructure only; `test-renderer`
+never reaches the shipped bundle.
+
+---
+
+## Superseded — the task as scoped at the start
+
+🚧 **RNTL 13 → 14 — the testing-infrastructure migration (`@testing-library/react-native`).**
+
+**Progress stays at 50%.** This advances no Beta slice; it is testing infrastructure, in the same
+category as the dependency queue. It is picked up now because it is the largest piece of bounded,
+credential-free engineering left — every other candidate is owner-gated on money or a store account.
+
+**Why it is a migration and not a bump.** RNTL 14 **replaces the `react-test-renderer` peer with
+`test-renderer@^1.0.0`**, so the whole `packages/ui` + `apps/mobile` component suite fails on the
+version bump alone. Scope recorded when #90 was triaged: **41 call sites across 14 files**, with
+upstream codemods available.
+
+⚠️ **#90 IS CLOSED, NOT OPEN — and the reason matters.** It was closed at 12:43 on 2026-08-02 because
+**RNTL 14 requires Node 22 and the repo ran Node 20** (`1e33869`). Node 22 landed ~30 minutes later
+(#106, `f5c018c`, merged 13:15), so the stated blocker is gone but the PR is not waiting to be
+merged — this is a fresh branch, and Dependabot's diff is only the starting point.
+
+⚠️ **`react` stays pinned.** RNTL's `ensure-peer-deps.js` asserting a renderer version is the **#75
+trap** this repo has already paid for once: satisfying the assertion is not the same as satisfying
+what the assertion defends. The SDK 54 pin on `react` / `@types/react` is unchanged by this work.
+
+**Verification bar, set before starting:** tsc across 11 projects · eslint at its 0-error baseline ·
+the full jest + vitest suites green with **no reduction in test count** · `expo export` both
+platforms. A migration that quietly drops tests passes every gate — so the count is part of the bar.
+
+---
+
+## Superseded — B4
+
 ✅ **B4 — OBSERVABILITY IS CLOSED (2026-08-02, part 3). 47% → 50%.**
 
 First slice completed since B6 on 2026-07-27. **B4.4 delivered two of §7.2's seven SLOs PROVEN end
@@ -120,10 +238,22 @@ to end**, which is §8.4's standard rather than "configured":
 | **NFR-06** crash-free sessions ≥ 99.5% | drill → issue → **email 14:43** |
 | **NFR-14** availability ≥ 99.9% | `SVC_health` forced red → `PANCHANGPAL-EDGE-3` → **email 16:17** |
 
+✅ **And NFR-07 crash-free users ≥ 99.8% was proven the same day — a THIRD SLO, but NOT one of §7.2's
+seven.** It is from the **Part 1 §8 NFR table**; SLO_ALERTS.md tracks it because it reuses NFR-06's
+session data and **binds tighter**, so it is the page that arrives first. "Two of §7.2's seven" and
+"three SLOs proven" are both correct — do not merge the denominators.
+
 ⚠️ **NFR-06 needed two drills and the first is the finding.** It detected perfectly and **told
 nobody** — both alert rows targeted *Suggested Assignees*, which a metric issue cannot resolve. Every
 visible signal said configured. **It would have shipped as done.** NFR-14 passed first time only
 because that lesson was applied: an explicit **Member** recipient.
+
+⛔ **NFR-07's drill found the other half: AN OPEN ISSUE SUPPRESSES THE NEXT ALERT.** It crossed both
+thresholds and only NFR-07 emailed — NFR-06's earlier issue was still open, and Sentry folds new
+occurrences into an existing open period. So an issue left open means **the next real incident of that
+kind pages nobody**, and a **metric-monitor issue cannot be resolved or deleted by hand** (no Resolve,
+Delete disabled; only Archive, which mutes). It closes only on a healthy reading; the only lever is
+recreating the monitor. **Pre-launch checklist item, not today's work.**
 
 **Shipped:** `docs/devops/SLO_ALERTS.md` (all seven SLOs, instrument/threshold/alert/blocker, pinned
 by `slo-alerts.test.ts` which fails when an instrument *appears* while the doc calls it missing) ·
@@ -137,17 +267,38 @@ unproven, none unfinished engineering: three behind the Ask Guru gate, one behin
 
 ## NEXT TASK
 
-1. **NFR-07 crash-free users** — same wizard, `crash_free_rate(user)` below 99.8, no new
-   instrumentation. A third SLO for ~2 minutes of owner time.
-2. **B1 / B3 remainders** — all owner-gated on money or a store account.
-3. **Owner decisions:** ratify **ADR-034** · rule on the **§6.6 `preferences`** rule (shipped
-   unratified as LWW) · decide **NFR-10's path** (PDD taxonomy vs a server metrics sink) · **SHA-pin
-   the nine GitHub Actions** (#87 records the case and left it open).
-4. **Deferred deliberately:** #90 (RNTL 14 migration), #95, #96 (eslint 9 flat config),
-   #97 (**zustand 5 — touches `STORE_offlineQueue`**, which produced two defects this week).
-5. **Owed, and named rather than absorbed:** `SVC_health`'s **503 branch** end to end (belongs with
+**Done since this block was written, and struck rather than deleted so the drift is visible:**
+~~NFR-07~~ ✅ proven the same day · ~~ratify ADR-034~~ ✅ ratified + implemented (#104) ·
+~~rule on §6.6 `preferences`~~ ✅ ratified as ADR-035, LWW on `local_ts` (#103) · ~~#96 eslint 9 flat
+config~~ ✅ merged (#102) · ~~#97 zustand 5~~ ✅ merged · ~~#95~~ closed.
+**ADR-033 (Canonical Panchang Computation Engine) is now the only Proposed ADR.**
+
+1. ~~Open a PR for `9942763`~~ ✅ **done 2026-08-06 — PR #107.** ⛔ **But it has NO CI VERDICT**, and
+   the outage reds on it are not a result. **When Actions is `operational` again, in this order:**
+   open a PR for **`fix/e2e-flow-timeout`** (`fb1a2fe`) · let #107's five gates re-run · dispatch
+   **one** E2E run (SEQUENTIALLY per ref — a batch cancels itself) · merge #107 on that evidence.
+   **Check `githubstatus.com`'s Actions component first** — `in_progress` is not recovery, and
+   re-running into an outage buys more uninformative reds, not more information.
+2. ⚠️ **Open, deliberately: the double-`clearState` race.** A flow's opening clear can race the
+   previous flow's `onFlowComplete` teardown (Maestro rule 4). The timeout guard makes it fail red
+   rather than go dark, so it is no longer urgent — but a settle is the obvious fix and may be the
+   wrong one, since added settle time can mask a race real users hit. Needs thought, not a sleep.
+3. **B1 / B3 remainders** — all owner-gated on money or a store account.
+3. ⚠️ **Named rather than fixed: `.github/dependabot.yml`'s `@types/node` block cites
+   `NODE_VERSION: '20.11.0'` and `engines.node: >=20.11.0`, both stale after #106 moved CI to
+   22.23.2.** That block's own rule is that the types follow the engine floor **deliberately**, so
+   raising them 20 → 22 is an owner call, not a silent edit.
+4. **Owner decisions still open:** **NFR-10's path** (a PDD §11 taxonomy addition vs a server metrics
+   sink — no sync event exists and inventing one is forbidden) · **SHA-pin the nine GitHub Actions**
+   (#87 records the case and deliberately left it open) · **~$25/mo paid Supabase** for NFR-15 PITR,
+   a stated launch blocker · **Apple $99 + Play $25**.
+3. **Owed, and named rather than absorbed:** `SVC_health`'s **503 branch** end to end (belongs with
    the DB-outage runbook drill), §7.2 **dashboards** (ADR-025's rollup worker is unbuilt), and the
    **deprecated Supabase key migration** (`readEnv` throws without them).
+4. **Pre-launch checklist:** confirm **no metric monitor has an open issue** — today's drills left
+   two, and a metric-monitor issue cannot be resolved by hand.
+5. **Node 24 with the SDK 55 upgrade** — Node 22 is maintenance-only, EOL 2027-04-30. A deliberate SDK
+   increment requiring a native build plus the six Maestro flows, not a bump.
 
 ---
 

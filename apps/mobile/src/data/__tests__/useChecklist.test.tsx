@@ -37,14 +37,16 @@ function memoryStore(): KeyValueStore {
 
 const clients: QueryClient[] = [];
 
-function setup() {
+// RNTL 14: `renderHook` is async (React 19's async rendering model), so this helper is async too
+// and every call site awaits it.
+async function setup() {
   const qc = new QueryClient({ defaultOptions: { mutations: { retry: false } } });
   clients.push(qc);
   qc.setQueryData(KEY, ITEMS);
   const wrapper = ({ children }: { children: ReactNode }) => (
     <QueryClientProvider client={qc}>{children}</QueryClientProvider>
   );
-  const { result } = renderHook(() => useToggleChecklistItem(LOCAL_DATE), { wrapper });
+  const { result } = await renderHook(() => useToggleChecklistItem(LOCAL_DATE), { wrapper });
   return { qc, result };
 }
 
@@ -70,7 +72,7 @@ describe('useToggleChecklistItem offline', () => {
       .spyOn(todayRepository, 'toggleChecklist')
       .mockRejectedValue(new Error('Network request failed'));
 
-    const { qc, result } = setup();
+    const { qc, result } = await setup();
     result.current.mutate('item-1');
 
     await waitFor(() => expect(result.current.isError).toBe(true));
@@ -89,7 +91,7 @@ describe('useToggleChecklistItem offline', () => {
       throw new Error('rejected');
     });
 
-    const { qc, result } = setup();
+    const { qc, result } = await setup();
     result.current.mutate('item-1');
 
     await waitFor(() => expect(result.current.isError).toBe(true));
@@ -102,7 +104,7 @@ describe('useToggleChecklistItem offline', () => {
       .spyOn(todayRepository, 'toggleChecklist')
       .mockRejectedValue(new Error('Network request failed'));
 
-    const { qc, result } = setup();
+    const { qc, result } = await setup();
     result.current.mutate('item-1');
 
     await waitFor(() => expect(result.current.isError).toBe(true));

@@ -2,8 +2,8 @@
 
 # PanchangPal — Implementation Roadmap
 
-Version: 2.6.0
-Last Updated: 2026-08-02 (preference durability fixed and merged; #79 verified and ready)
+Version: 2.7.0
+Last Updated: 2026-08-06 (no track advanced — #107 unverified on an Actions outage; E2E hang guard added)
 
 Purpose: the forward plan from the current state. Complements PROJECT_STATUS.md (snapshot) and
 CURRENT_MILESTONE.md (active milestone). Updated when scope or sequencing changes — and at every
@@ -11,18 +11,25 @@ increment/milestone boundary per the Increment & Milestone Completion Checkpoint
 
 ---
 
-## Where we are (2026-08-02)
+## Where we are (2026-08-06)
 
 **Beta Readiness & Platform Hardening, 50%** — **B2 ✅, B4 ✅, B5 ✅, B6 ✅** (the last three at
 verifiable scope). B1 ~85%, B3 ~80%, all remainders owner-gated on money or a store account.
+**No track advanced on 2026-08-06.** PR **#107** (RNTL 13 → 14) is open with **no CI verdict** — a
+GitHub Actions **major outage** produced three reds in which zero repository code ran — and
+`fix/e2e-flow-timeout` (`fb1a2fe`) is committed but deliberately not PR'd until Actions recovers.
+Both are test/CI infrastructure and advance no slice; **B2's E2E gate is unchanged in scope but is now
+guarded against a hung suite reporting `cancelled` instead of red.**
 
 **B4 — Observability closed 2026-08-02.** B4.4 landed two §7.2 SLOs **proven end to end** — NFR-06
 crash-free sessions and NFR-14 availability — each watched to open an issue and email a human, which
 is §8.4's standard rather than "configured". The first NFR-06 drill detected correctly and notified
 **nobody** (both alert rows targeted *Suggested Assignees*, which a metric issue cannot resolve), and
-would have shipped as done without a deliberate trigger. Five SLOs remain unproven, none of them
-unfinished engineering: three behind the Ask Guru gate, one behind uninstalled `expo-notifications`,
-NFR-10 behind a PDD taxonomy decision.
+would have shipped as done without a deliberate trigger. **NFR-07 crash-free users was proven the same
+day as a third SLO** — an addition from the Part 1 §8 NFR table, not one of §7.2's seven, and the one
+that binds tighter and pages first. Five of §7.2's seven remain unproven, none of them unfinished
+engineering: three behind the Ask Guru gate, one behind uninstalled `expo-notifications`, NFR-10
+behind a PDD taxonomy decision.
 
 **2026-08-02 — #86 merged (`080c710`) and #79 is verified and ready.** A **preference write had no
 durable path at all**: `useUpdatePreferences` went straight to the server, so an app kill inside the
