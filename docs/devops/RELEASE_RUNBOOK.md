@@ -22,11 +22,18 @@ difference between "documented" and "performed" is the whole reason this milesto
 | **AI** — revert to prior `AISET` bundle | ❌ no bundle exists | ❌ blocked: no corpus, `GURU_LIVE=false` |
 | **DB migration** — compensating migration | ✅ forward-only + expand/contract | ❌ never |
 | **DB migration** — PITR | ❌ **NOT AVAILABLE** (free tier, NFR-15) | ❌ launch blocker |
+| **Staged OTA rollout** — phase, then keep or revert | ✅ `ota.yml` → `rollout-*` | ✅ **yes — staging, 2026-08-07** (§2A) |
 | **Native binary** — halt phased rollout | ❌ needs a store presence | ❌ blocked on store accounts |
 
-**Nothing here should be read as "we can roll back."** Three of the seven paths have no mechanism at
-all, and **two** have now been exercised — the OTA path and the Edge Function path, both on staging. That is the accurate position and it is written down so a
-go/no-go decision is made against reality rather than against a runbook's existence.
+**Nothing here should be read as "we can roll back."** Of eight paths, **three have been exercised**
+— OTA rollback, Edge Function redeploy, and the staged OTA rollout, all on staging — one is
+**blocked**, and **three have no mechanism at all**. PITR does not exist. That is the accurate
+position, written down so a go/no-go decision is made against reality rather than against a runbook's
+existence.
+
+⛔ **And none of the three has been proven to reach a device**, because no EAS build exists for any
+channel. Each proves its mechanism runs and does the right thing in EAS or Supabase — not that a
+user's phone changed behaviour.
 
 **What "performed" means for the OTA row** (the Edge Function row is described in §4): on 2026-08-07 an update was
 published to the `staging` channel and then rolled back through this workflow — twice, plus a third
@@ -86,6 +93,57 @@ nothing, check that number before assuming the rollback failed.**
 ⚠️ **An OTA rollback cannot fix a native crash.** If the regression is in the binary, §6 applies.
 
 ---
+
+## 2A. Staged OTA rollout (§3.2, §2.4)
+
+**Mechanism.** `ota.yml` → `rollout-start` / `rollout-advance` / `rollout-end` / `rollout-view`,
+wrapping `eas channel:rollout`. A rollout splits a **channel's** traffic between its current branch
+and a **candidate branch**, so the candidate must be published to its own branch first — publishing
+with `--channel` puts the update on the branch the channel already points at, which splits nothing.
+
+```
+1. OTA → publish        channel: staging   branch: staging-canary
+2. OTA → rollout-start  channel: staging   branch: staging-canary   percent: 10
+   …watch NFR-06 / NFR-07 for this release…
+3. OTA → rollout-advance  percent: 50      …watch again…   percent: 100
+4. OTA → rollout-end      rollout_outcome: republish-and-revert   (keep it)
+             …or…         rollout_outcome: revert                 (abandon it)
+```
+
+`rollout_outcome` defaults to **`revert`**, because the dangerous default is the one that keeps a bad
+update live. `revert` is the crash-spike action: it returns every user to the branch they were on.
+
+⚠️ **THE MONITORING BETWEEN STAGES IS THE POINT, NOT THE PERCENTAGES.** Advancing on a timer is a
+slow deploy, not a staged rollout. What each stage buys is a bounded population to observe. NFR-06
+(crash-free sessions) and NFR-07 (crash-free users) are live and were each proven to reach a human
+(B4.4). **An OPEN Sentry issue suppresses the next alert of its kind**, so "no new alert" is not
+evidence of health if one is already open — check before advancing.
+
+⚠️ **`--runtime-version` is required to create a rollout**, and the workflow derives it from the
+candidate branch's latest update rather than asking for it. A rollout targets one runtime version,
+and a 40-character fingerprint is not something to copy by hand mid-incident.
+
+✅ **PERFORMED — staging, 2026-08-07**, the whole lifecycle:
+
+| Step | Evidence |
+|---|---|
+| publish candidate | run `31170893305` — `branch = staging-canary` |
+| rollout-start 10% | run `31171165323` — `staging branch (90%)` / `staging-canary branch (10%)` |
+| rollout-advance 50% | run `31171256503` — *"50% of users will be rolled out to the staging-canary branch and 50% will remain on the staging branch"* |
+| rollout-end revert | run `31171329608` — *"⬅️ Reverted all users back to branch staging"* |
+
+⚠️ **NOT proven: delivery to a device.** No EAS build exists for the channel, so the split is real in
+EAS and reaches nobody. What is proven is that the mechanism creates, advances and reverts a genuine
+two-branch split.
+
+⛔ **AUTO-ROLLBACK IS NOT AUTOMATED.** §2.4 says "auto-rollback on a crash spike". The **action**
+exists and is proven (`rollout-end` with `revert`), but **nothing triggers it** — that needs a Sentry
+alert webhook plus a credential to call GitHub, which is an owner action. A `repository_dispatch`
+receiver is deliberately **not** added: a trigger with no sender is the placeholder shape B1 spent
+its time removing. Today a crash spike pages a human (proven), and the human dispatches the revert.
+
+**`staging-canary` is kept** as the standing candidate branch. Publish a fresh candidate to it before
+each rollout; nothing points at it between rollouts.
 
 ## 3. Feature flag disable
 
@@ -190,8 +248,12 @@ Connect, and neither account exists (Play $25, Apple $99/yr). When they do:
 3. Otherwise expedite a fix build and resume the rollout from the lowest stage.
 
 §3.2 requires stages — internal → beta/canary → phased store (10% → 50% → 100%) — with crash-free,
-error-rate and key-funnel monitoring **between** stages. Until the store accounts exist, "staged
-rollout" is a plan rather than a capability, and this runbook says so rather than implying otherwise.
+error-rate and key-funnel monitoring **between** stages.
+
+⚠️ **Split the claim in two, because only one half is blocked.** The **store-side phased rollout of a
+binary** is blocked on a store presence: those percentages live in the Play Console / App Store
+Connect and neither account exists, so for a native release "staged rollout" remains a plan rather
+than a capability. The **OTA-side rollout is not blocked and has been performed** — see §2A.
 
 ---
 

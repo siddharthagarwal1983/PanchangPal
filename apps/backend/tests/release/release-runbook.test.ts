@@ -104,7 +104,48 @@ describe('release runbook is executable as written', () => {
     );
     expect(
       /staged rollout.{0,80}(plan rather than a capability|blocked on)/is.test(runbook),
-      'the runbook must keep stating that staged rollout is blocked on a store presence',
+      'the runbook must keep stating that the STORE-side staged rollout is blocked on a store ' +
+        'presence. The OTA-side rollout is performed (§2A); conflating the two would overstate ' +
+        'what exists at a go/no-go.',
+    ).toBe(true);
+  });
+
+  /**
+   * §3.2's staged rollout, added in B7.4. The OTA half is real, so the runbook's §2A instructions
+   * must remain executable — same contract as the rollback actions above.
+   */
+  it('OTA exposes the staged-rollout actions §2A instructs the operator to use', () => {
+    expect(inputOptions('action')).toEqual(
+      expect.arrayContaining(['rollout-start', 'rollout-advance', 'rollout-end']),
+    );
+    expect(
+      otaCode.includes('channel:rollout'),
+      'the rollout actions exist as inputs but no step runs `eas channel:rollout`',
+    ).toBe(true);
+  });
+
+  it('rollout-end defaults to revert, not to keeping the candidate', () => {
+    // The dangerous default is the one that KEEPS a bad update live. `revert` returns every user to
+    // the branch they were on; `republish-and-revert` keeps the candidate. If the default ever
+    // flips, a hurried operator ending a rollout during an incident would preserve the regression.
+    const block = /\n\s{6}rollout_outcome:\n([\s\S]*?)(?=\n\s{6}\w+:|\n\w)/.exec(ota);
+    expect(block, 'the rollout_outcome input is gone').not.toBeNull();
+    expect(
+      /default:\s*'?revert'?/.test(block?.[1] ?? ''),
+      'rollout_outcome no longer defaults to `revert` — ending a rollout in a hurry would now keep ' +
+        'the candidate live, which is the opposite of the crash-spike behaviour §2.4 asks for.',
+    ).toBe(true);
+  });
+
+  /**
+   * §2.4 says "auto-rollback on a crash spike". The action exists; nothing triggers it. That gap is
+   * deliberate — a `repository_dispatch` receiver with no sender is a placeholder — but it must stay
+   * VISIBLE, because "auto-rollback" in a TDD and a manually dispatched revert are different claims.
+   */
+  it('does not let "auto-rollback" imply automation that does not exist', () => {
+    expect(
+      /AUTO-ROLLBACK IS NOT AUTOMATED/.test(runbook),
+      'the runbook must keep stating that nothing triggers the rollback automatically',
     ).toBe(true);
   });
 });
