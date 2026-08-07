@@ -2,11 +2,11 @@
 
 # PanchangPal — Project Memory
 
-Version: 3.5.0
+Version: 3.6.0
 
 Last Updated: 2026-08-07 (Maestro rules 5 and 6; the artifact's logcat held only the last ~20s of
-every run until it was streamed; the jest worker leak — TanStack `gcTime` timers, which
-`--detectOpenHandles` structurally cannot find; and apps/backend importing supabase-js undeclared)
+every run until it was streamed; the jest worker leak; apps/backend importing supabase-js
+undeclared; and B7.1 — OTA publish/rollback performed, where a successful publish can reach nobody)
 
 Current Phase:
 Beta Readiness & Platform Hardening (TDD Part 5)
@@ -520,6 +520,44 @@ Stable, cross-cutting facts (permanent until an approved decision changes them):
   (EVT_001-EVT_055) contains **no sync event**, `events.ts` forbids inventing one, and
   `AnalyticsService` rejects unknown ids at runtime. Either PDD adds sync events or a server-side
   metrics sink is chosen; neither is typing.
+- **OTA SHIPS THROUGH `ota.yml`, AND A SUCCESSFUL PUBLISH CAN REACH NOBODY** (B7.1, 2026-08-07).
+  `eas update --channel <staging|production>` with an `action: rollback` counterpart; production is
+  behind a typed confirmation because §3.2's staged rollout cannot be expressed until a store
+  presence exists. `eas-cli` pinned at **21.2.0** across e2e/release-build/ota (§5.2).
+  ⚠️ **`runtimeVersion: { policy: 'fingerprint' }` is what MECHANICALLY enforces §2.4's "no native
+  changes over OTA"** — an update built against different native deps gets a different fingerprint
+  and is simply not delivered. **The same mechanism means a publish can succeed while no installed
+  app receives it**: the dashboard shows a new update and the job is green. The publish job counts
+  finished builds on the channel with a matching runtime version and warns at zero — a WARNING, not a
+  failure, because before a channel's first EAS build the count is legitimately zero and a
+  perpetually-red step is the placeholder shape B1 removed. **Read that number before believing an
+  OTA shipped.**
+  **PERFORMED, not just built** (§8.4's standard): publish `31166287897` + rollback `31166824122` on
+  staging, zero warnings. **NOT proven: delivery to a device** — no EAS build exists for the channel.
+  **THE eas-cli JSON SHAPES, confirmed from real output rather than `--help`** (four iterations paid
+  for these; `--help` documents flags, not schemas):
+  `eas update --json` → `[{ id, group, branch (**a STRING**, not an object), runtimeVersion,
+  platform, manifestPermalink, isRollBackToEmbedded, gitCommitHash }]` ·
+  `eas channel:view --json` → `{ currentPage: [...] }` whose entries carry **neither `name` nor
+  `branchName`** · `eas update:list --json` → `{ name, id, currentPage: [...] }`.
+  **The rollback resolves the branch as the CHANNEL'S OWN NAME by construction** — `eas update
+  --channel X` creates branch X — and `update:list --branch X` proves it exists. The `channel:view`
+  parse was deleted rather than guessed at a fourth time, because it made a warning fire on every
+  healthy rollback, and **a warning that always fires is one operators learn to ignore**.
+  ⚠️ **Limit:** assumes one same-named branch per channel. A §3.2 canary split pointing a channel at
+  two branches would roll back only the channel-named side.
+  ⛔ **The old scaffold's failure message was UNREACHABLE for three weeks.** It mapped only
+  `EXPO_ACCESS_TOKEN`, so `preflight.sh staging` died on `SUPABASE_STAGING_DB_URL` first and its
+  comment "Preflight passed, so the channel's configuration is present" could never print. A control
+  documented, wired, and inert — found the first time anyone dispatched it.
+- **Release rollback lives in `docs/devops/RELEASE_RUNBOOK.md`** (§3.4), separate from
+  `DR_RUNBOOKS.md` (§8.3 disaster recovery). Its §0 opens with what is NOT true: **three of seven
+  rollback paths have no mechanism at all and only the OTA one has ever been performed.** PITR is
+  unavailable (NFR-15), so a destructive migration against real user data has **no recovery**;
+  staged rollout is a plan, not a capability. Pinned by
+  `apps/backend/tests/release/release-runbook.test.ts`, which asserts the controls the runbook tells
+  an operator to use still exist — it deliberately does NOT assert that a rollback was performed,
+  because a test cannot check that and the gap is the point.
 - **⚠️ `apps/backend` IMPORTS `@supabase/supabase-js` WITHOUT DECLARING IT** (found 2026-08-07 while
   triaging #109; **not fixed**). `functions/_shared/supabase.ts` and the repos import it as a bare
   specifier, but the package is declared **only** in `apps/mobile/package.json`. It resolves today, so

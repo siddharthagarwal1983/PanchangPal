@@ -2,9 +2,9 @@
 
 # PanchangPal — Current Task
 
-Version: 7.0.0
-Last Updated: 2026-08-07 (five PRs merged — #108, #107, #110, #111, #112; the jest worker leak was
-never noise and `--detectOpenHandles` cannot find it)
+Version: 8.0.0
+Last Updated: 2026-08-07 (B7 STARTED — B7.1 OTA publish + rollback performed; seven PRs merged today
+and the queue is empty)
 
 Purpose: the current implementation task. Stay focused; avoid unrelated work unless instructed.
 
@@ -111,8 +111,63 @@ green in CI on a real native build. Canonical progress 0% → 13% (1 of 8 Beta s
 # Current Task
 
 ## Title
+🚧 **B7 — RELEASE MANAGEMENT IS STARTED. B7.1 MERGED (`3cee165`, PR #113).**
+Main is at `3cee165`; **no open PRs**. **Progress stays 50%** — a slice counts only when complete and
+B7 is **1 of 4** increments.
+
+### B7.1 — what shipped
+
+`ota.yml`'s publish step was an `echo` reporting SUCCESS while shipping nothing until 2026-07-19,
+then a deliberate `exit 1`. **It now runs `eas update`**, with the rollback half §3.4's flowchart
+requires (resolving the branch and latest update group itself, because `eas update:rollback` needs an
+explicit group id non-interactively and an incident is the worst moment to look one up) and a **typed
+confirmation** guarding production, since §3.2's staged rollout cannot be expressed until a store
+presence exists.
+
+**PERFORMED, not configured** (§8.4's standard): publish `31166287897` → `✔ Published!`, rollback
+`31166824122` → `✔ Republished update group`, zero warnings.
+⚠️ **NOT proven: delivery to a device.** No EAS build exists for the channel, so the reachability
+check correctly reports 0.
+
+⚠️ **THE GUARD THAT MATTERS.** `runtimeVersion: { policy: 'fingerprint' }` is what mechanically
+enforces §2.4's "no native changes over OTA" — and the same mechanism means an update whose
+fingerprint has moved reaches **no installed app** while the job goes green. The publish job counts
+finished builds with a matching runtime version and warns at zero. A warning, not a failure: before a
+channel's first EAS build the count is legitimately zero, and a perpetually-red step is the
+placeholder shape B1 removed.
+
+**`docs/devops/RELEASE_RUNBOOK.md`** covers §3.4's surfaces and opens with what is **not** true —
+three of seven rollback paths have no mechanism at all, PITR is unavailable (NFR-15), staged rollout
+is store-gated. Pinned by `release-runbook.test.ts`, 5 assertions / 5 perturbations.
+
+### ⛔ Verifying it found FIVE defects that every local check had passed
+
+1. **The old scaffold's error message was UNREACHABLE for three weeks** — it mapped only
+   `EXPO_ACCESS_TOKEN`, so preflight died on `SUPABASE_STAGING_DB_URL` before the workflow reached
+   its own `exit 1`. Documented, wired, inert; nobody had dispatched it.
+2. **`branch` is a STRING, not an object** — `first.branch.name` returned empty while `group` and
+   `runtimeVersion` worked. A parser that half-works and reports success.
+3. **`channel:view` returns `{currentPage: […]}`** whose entries carry no `name`. Three guesses
+   missed; the parse was **deleted** rather than guessed a fourth time — the branch is the channel's
+   name by construction and `update:list` proves it exists.
+4. **A warning fired on every HEALTHY rollback** — alert fatigue on an incident path.
+5. **A backtick inside a double-quoted bash string** would have **executed** the command it quoted.
+
+**All three eas-cli parsers were written from `--help`, and all three were wrong.** `--help`
+documents flags, not output schemas. Confirmed shapes are in PROJECT_MEMORY.
+
+### Next
+
+**B7.2** version trains + changelog/tag discipline (§3.1) · **B7.3** flag-disable and Edge Function
+rollback **performed** (DR_RUNBOOKS §6 has recorded that gap since 2026-07-25) · **B7.4** staged
+rollout + crash-spike auto-rollback, **owner-gated** on Play/Apple accounts.
+
+---
+
+## Superseded — the six merges that preceded B7
+
 ✅ **FIVE MERGED — #108 `610bf12` · #107 `21e8c13` · #110 `afce763` · #111 `693c62f` · #112
-`42a76f4`.** Main is at `42a76f4`; **#109** (Dependabot production-minor) is open and untriaged.
+`42a76f4`**, plus **#109** `7b84844` (the dependency group).
 
 ### #112 — the jest worker leak (`42a76f4`)
 

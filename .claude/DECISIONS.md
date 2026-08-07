@@ -2,7 +2,7 @@
 
 # PanchangPal — AI Decision Summary
 
-Version: 1.6.0
+Version: 1.7.0
 
 Purpose:
 This file contains a condensed summary of permanent project decisions.
@@ -20,6 +20,35 @@ docs/architecture/adr/
 ---
 
 # Product Decisions
+
+## 2026-08-07 — `--help` documents flags, not output; and a warning that always fires is a defect
+
+**Decision 1. A CLI's JSON output shape is discovered by running it, never inferred from `--help`.**
+B7.1 shipped three parsers written from `eas-cli --help`. **All three were wrong**: `branch` is a
+string and not an object, `channel:view` returns `{currentPage: […]}` whose entries carry no `name`,
+`update:list` returns `{name,id,currentPage}`. Two of them "worked" — extracting the fields that
+happened to be flat while silently returning empty for the rest, which is worse than failing. The
+confirmed shapes are recorded in PROJECT_MEMORY so the next author does not pay for them again.
+**This is the same failure as the timeout shim and the logcat buffer**, three times in one day: a
+test or an assumption exercised at a layer where the defect cannot appear. **Ask what layer your
+evidence comes from before calling something verified.**
+
+**Decision 2. A warning that fires on a healthy run is a defect, not documentation.** The rollback's
+branch-resolution fallback worked correctly and emitted "could not resolve a branch" on **every**
+successful rollback. That is the alert-fatigue failure §7 already cost this project, when an open
+Sentry issue silently suppressed the next alert of its kind. The fix was to **delete the parse the
+warning was compensating for** — the branch is the channel's name by construction — rather than to
+add a fourth guess. **Noise on an incident path is a defect on the incident path.**
+
+**Corollary — prefer deleting a mechanism to hardening one that buys nothing.** `channel:view` was
+three failure modes and a permanent warning in exchange for information already available two ways.
+
+**Decision 3. A control that has never been exercised is not a control.** `ota.yml`'s failure
+message had been **unreachable for three weeks** — preflight died on a Postgres URL it did not need
+before the workflow could reach its own `exit 1`, so its comment claiming "preflight passed" could
+never print. Nobody noticed because nobody had dispatched it. §8.4 already says an alert nobody has
+seen fire is a plan; this extends it to **every** operator-facing path, including the ones whose only
+job is to fail loudly.
 
 ## 2026-08-07 — A green describes the tree it ran against, and a dependency PR is triaged peer-graph-first
 

@@ -2,10 +2,10 @@
 
 # PanchangPal — Project Status Dashboard
 
-Version: 1.22.0
+Version: 1.23.0
 
-Last Updated: 2026-08-07 (six PRs merged and the queue is empty — the last, #109, had a green that
-described a tree four merges old; 50% unchanged)
+Last Updated: 2026-08-07 (seven PRs merged — **B7 Release Management started**: OTA publish and
+rollback are real and both performed; 50% unchanged, B7 is 1 of 4 increments)
 
 Purpose:
 This document provides a high-level snapshot of the overall project.

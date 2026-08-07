@@ -2,9 +2,9 @@
 
 # PanchangPal — Implementation Roadmap
 
-Version: 2.10.0
-Last Updated: 2026-08-07 (no track advanced — six PRs merged and the dependency queue is empty; B2's
-gate hardened three ways and the device log is no longer 85% missing)
+Version: 2.11.0
+Last Updated: 2026-08-07 (**B7 started** — B7.1 OTA publish/rollback performed; B2's gate hardened
+three ways and the device log is no longer 85% missing)
 
 Purpose: the forward plan from the current state. Complements PROJECT_STATUS.md (snapshot) and
 CURRENT_MILESTONE.md (active milestone). Updated when scope or sequencing changes — and at every
@@ -16,13 +16,23 @@ increment/milestone boundary per the Increment & Milestone Completion Checkpoint
 
 **Beta Readiness & Platform Hardening, 50%** — **B2 ✅, B4 ✅, B5 ✅, B6 ✅** (the last three at
 verifiable scope). B1 ~85%, B3 ~80%, all remainders owner-gated on money or a store account.
-**No track advanced on 2026-08-07**, and **the queue is now empty** — six merged: **#108**
-(`610bf12`, timeout guard) · **#107** (`21e8c13`, RNTL 13 → 14) · **#110** (`afce763`, the
-double-`clearState` race) · **#111** (`693c62f`, streamed device log) · **#112** (`42a76f4`, the jest
-worker leak) · **#109** (`7b84844`, the dependency group). All six are test/CI/dependency
-infrastructure and advance no slice — but B2's gate is materially more trustworthy: a hang fails red,
-the race that hung it is fixed at its cause, and the device log covers the whole run instead of its
-last 20 seconds.
+**B7 — RELEASE MANAGEMENT IS STARTED (2026-08-07).** `B7.1` merged as **`3cee165`** (PR #113): OTA
+publish and rollback are real, and **both were performed** on the staging channel (`31166287897`,
+`31166824122`) rather than merely configured — §8.4's standard. `docs/devops/RELEASE_RUNBOOK.md`
+covers §3.4's surfaces and opens with what is *not* true. **The percentage does not move**: a slice
+counts only when complete, and B7 is 1 of 4 increments. Remaining: **B7.2** version trains &
+changelog discipline · **B7.3** the flag-disable and Edge Function rollback paths *performed* ·
+**B7.4** staged rollout + crash-spike auto-rollback, whose store half is owner-gated.
+⚠️ **A successful OTA publish can reach nobody** — `runtimeVersion: fingerprint` enforces §2.4
+mechanically and, by the same mechanism, delivers nothing when the fingerprint has moved. The publish
+job counts matching builds and warns at zero.
+
+**The dependency queue is also empty** — six further merges: **#108** (`610bf12`, timeout guard) ·
+**#107** (`21e8c13`, RNTL 13 → 14) · **#110** (`afce763`, the double-`clearState` race) · **#111**
+(`693c62f`, streamed device log) · **#112** (`42a76f4`, the jest worker leak) · **#109** (`7b84844`,
+the dependency group). All six are test/CI/dependency infrastructure and advance no slice — but B2's
+gate is materially more trustworthy: a hang fails red, the race that hung it is fixed at its cause,
+and the device log covers the whole run instead of its last 20 seconds.
 ⚠️ **Three of the six had a first version that was WRONG, and running it is what caught each:** the
 timeout guard failed a suite in which all six flows passed (PROJECT_MEMORY rule 5, the
 `sh -c`-per-line mechanism); the logcat fix shipped **green while doing nothing** (the ring-buffer

@@ -2,11 +2,10 @@
 
 # PanchangPal — Current Milestone
 
-Version: 4.14.0
+Version: 4.15.0
 
-Last Updated: 2026-08-07 (no slice moved — six PRs merged, queue empty; B2's gate is materially better
-instrumented: hang guard, the double-clearState race fixed, and the device log no longer 85% missing;
-50%)
+Last Updated: 2026-08-07 (**B7 STARTED** — B7.1 OTA publish + rollback performed; no slice COMPLETED,
+so 50% is unchanged; B2's gate also materially better instrumented)
 
 Purpose:
 This document defines the current milestone. Unlike SESSION.md (daily work) or TASK.md (current
@@ -456,7 +455,7 @@ possible fix and would have caught defects 1–3 at M1.
 | B4 | Observability | Sentry, telemetry, SLO dashboards + alerts (§7) | 🟡 ~75% — B4.1 seam ✅ · B4.2 sink ✅ · B4.3 server seam + prod release gate ✅ · EVT_* daily-habit funnel emitting (§11.4, incl. the North Star input EVT_017). **The concrete Sentry implementation (PR #79) is verified and ready**: both blockers closed 2026-08-01/02 — the startup-init defect is fixed and guarded by a behavioural test, and the E2E red was never Sentry (it was the preference-durability defect, fixed in #86). **The DSN is now provisioned and VERIFIED on device (2026-08-02)** — org `panchang`, projects `panchangpal-mobile` + `panchangpal-edge`; `[telemetry] reporter=sentry` appears once per launch in the E2E artifact (12/12, where it read `none` before), with the native SDK installing NDK/ANR/uncaught-exception and — the one that matters — `AppLifecycleIntegration`, which is what crash-free sessions is computed from. **Crash-free sessions is therefore MEASURABLE for the first time.** **B4.4 is still the open increment and B4 does not close**: the §7.2 SLO dashboards and alerts do not exist, and §8.4's rule stands that alerting never triggered is a plan, not a capability. Also unverified: ingest into Sentry itself (needs the dashboard), the Edge Function path (needs a real server error), and the source-map upload (`e2e.yml` sets `SENTRY_DISABLE_AUTO_UPLOAD=true` deliberately; only `release-build.yml` exercises it) |
 | B5 | Reliability & DR | backups, restore drill, runbooks, graceful degradation (§8) | ✅ COMPLETE at verifiable scope — runbooks (§8.3) · mechanised restore drill · §8.2 degradation policy · §8.4 operator resilience. **One deliverable is NOT engineering-closable: NFR-15 needs PITR, which is a purchase.** Recorded as a launch blocker rather than counted as done. |
 | B6 | Security & privacy | OWASP Mobile review, CCPA export/delete verification, store privacy labels (§5, §6) | ✅ COMPLETE at verifiable scope — OWASP review ✅ (2 critical defects found + fixed, each proven by reintroducing it) · CCPA export + SVC_account authz ✅ · **B6.3 data inventory + privacy policy draft + store labels ✅**, the inventory pinned to the schema and the emitted `EVT_*` set by a conformance test proven to fail four ways · §5.2 SBOM/Dependabot/pinning ✅. **Two deliverables are NOT engineering-closed and are recorded rather than counted: (a) ⛔ deletion is never EXECUTED** — the request is written to `account_deletion` and nothing carries it out, which is ordinary engineering and a launch blocker; **(b)** nothing is legally reviewed, and no policy or label is publishable until (a) is fixed. Export remains at verifiable scope: unit-tested and proven-to-fail, never run against a live backend |
-| B7 | Release management | versioning/trains, OTA policy + channels, staged rollout, rollback verification (§3) | ⏳ |
+| B7 | Release management | versioning/trains, OTA policy + channels, staged rollout, rollback verification (§3) | 🟡 **STARTED — B7.1 ✅** (`3cee165`). OTA publish + rollback are real and **both PERFORMED** on staging (`31166287897`, `31166824122`), which is §8.4's standard rather than 'configured'; `RELEASE_RUNBOOK.md` covers §3.4 and is pinned by a conformance test. ⚠️ **A successful publish can reach NOBODY** — `runtimeVersion: fingerprint` enforces §2.4 mechanically and by the same mechanism delivers nothing once the fingerprint moves; the job counts matching builds and warns at zero. **NOT proven: delivery to a device** (no EAS build on the channel). Verifying it found **five defects every local check had passed**, incl. the old scaffold's error being **unreachable for three weeks**. Remaining: **B7.2** version trains · **B7.3** flag-disable + Edge Function rollback *performed* · **B7.4** staged rollout (store-gated) |
 | B8 | Go/no-go & launch | §10.1 checklist execution, internal → beta cohort, sign-off | ⏳ |
 
 One slice per session, same cadence as M1–M8: implemented, self-verified, reviewed, then the next.
@@ -517,6 +516,24 @@ One slice per session, same cadence as M1–M8: implemented, self-verified, revi
       - [ ] Legal review of the policy draft and the store answers (owner-held).
 - [ ] **B7** — version trains, OTA channels (`staging`/`prod`) with runtime-version binding and
       crash-spike auto-rollback; rollback paths verified (§3.4).
+      - [x] **B7.1 OTA publish + rollback** (`3cee165`) — `ota.yml`'s publish was an `echo`
+            reporting success while shipping nothing, then a deliberate `exit 1`; it now runs
+            `eas update` with a rollback counterpart and a typed production confirmation.
+            **Both halves PERFORMED on staging**, not configured. Runtime-version binding was
+            already mechanical via `runtimeVersion: fingerprint` — and the publish job now counts
+            builds that actually match it, because the same mechanism lets a green publish reach
+            nobody.
+      - [x] **§3.4 rollback runbook** — `docs/devops/RELEASE_RUNBOOK.md`, pinned by
+            `apps/backend/tests/release/release-runbook.test.ts` (5 assertions, 5 perturbations).
+            It records that **three of seven rollback paths have no mechanism at all** and only the
+            OTA one has been performed.
+      - [ ] **B7.2** — version trains + changelog/tag discipline (§3.1).
+      - [ ] **B7.3** — the flag-disable and Edge Function rollback paths **performed**, not just
+            documented. DR_RUNBOOKS §6 has recorded the Edge Function gap since 2026-07-25.
+      - [ ] **B7.4** — staged rollout + crash-spike auto-rollback (§3.2). **Owner-gated**: phased
+            percentages live in the Play Console / App Store Connect and neither account exists.
+      - [ ] **Delivery to a device is unproven** — no EAS build exists for either channel, so the
+            reachability check correctly reports 0. The mechanism is proven; delivery is not.
 - [ ] **B8** — the §10.1 checklist walked; internal smoke on TestFlight/Play Internal; beta cohort.
 
 ---

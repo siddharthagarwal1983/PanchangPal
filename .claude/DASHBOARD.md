@@ -2,10 +2,10 @@
 
 # PanchangPal Dashboard
 
-Version: 1.37.0
+Version: 1.38.0
 
-Last Updated: 2026-08-07 (six merged, queue EMPTY: #108, #107, #110, #111, #112, #109 — whose
-original green described a tree four merges old; 50% unchanged)
+Last Updated: 2026-08-07 (seven merged — **B7 STARTED** with B7.1: OTA publish and rollback are real
+and both PERFORMED; 50% unchanged, B7 is 1 of 4 increments)
 
 Purpose:
 This is the first file Claude should read at the beginning of every session.
