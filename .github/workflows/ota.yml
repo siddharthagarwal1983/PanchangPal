@@ -153,13 +153,26 @@ jobs:
             // group id and runtime version.
             const list = Array.isArray(raw) ? raw : [raw];
             const first = list[0] || {};
+            // The KEY NAMES ARE PRINTED, not assumed. The first version of this step guessed
+            // `branch.name` / `branchName` from --help and got the group and runtime version right
+            // while silently extracting an EMPTY branch — a parser that half-works and reports
+            // success. Printing the shape means the next mismatch is diagnosable from the log
+            // instead of costing another dispatch.
+            console.log("update.json keys:", JSON.stringify(Object.keys(first)));
+            const branch =
+              (first.branch && first.branch.name) ||
+              first.branchName ||
+              (first.updateBranch && first.updateBranch.name) ||
+              first.branch ||
+              "";
             const out = [
               ["group", first.group || ""],
               ["runtimeVersion", first.runtimeVersion || ""],
-              ["branch", (first.branch && first.branch.name) || first.branchName || ""],
+              ["branch", typeof branch === "string" ? branch : ""],
               ["platforms", list.map((u) => u.platform).filter(Boolean).join(",")],
             ];
             for (const [k, v] of out) fs.appendFileSync(process.env.GITHUB_OUTPUT, `${k}=${v}\n`);
+            for (const [k, v] of out) console.log(`${k} = ${v || "(empty)"}`);
           '
         env:
           EXPO_TOKEN: ${{ secrets.EXPO_ACCESS_TOKEN }}
@@ -222,14 +235,38 @@ jobs:
         id: resolve
         run: |
           set -o pipefail
-          BRANCH=$(pnpm dlx eas-cli@${{ env.EAS_CLI_VERSION }} channel:view "${{ inputs.channel }}" --json --non-interactive \
-            | node -e 'let s="";process.stdin.on("data",d=>s+=d).on("end",()=>{try{const c=JSON.parse(s);const b=(c.updateBranches||c.branches||[])[0];console.log((b&&b.name)||"")}catch{console.log("")}})')
+          pnpm dlx eas-cli@${{ env.EAS_CLI_VERSION }} channel:view "${{ inputs.channel }}" --json --non-interactive > channel.json 2>channel.err || true
+          echo "channel:view returned $(wc -c < channel.json) bytes"
+          BRANCH=$(node -e '
+            const fs=require("fs");
+            let c={}; try { c = JSON.parse(fs.readFileSync("channel.json","utf8")) } catch {}
+            // Shapes tried, widest first. The names are printed so a miss is diagnosable from the
+            // log rather than from another dispatch — the first version of this step guessed two
+            // shapes, found neither, and failed with nothing to go on.
+            console.error("channel.json keys:", JSON.stringify(Object.keys(c)));
+            const branches = c.updateBranches || c.branches || c.updateChannel?.updateBranches || [];
+            const b = Array.isArray(branches) ? branches[0] : null;
+            process.stdout.write((b && (b.name || b.branchName)) || "");
+          ')
+          # FALLBACK, and it is a documented convention rather than a guess: `eas update --channel X`
+          # creates a branch named X and points the channel at it, which is exactly how this
+          # channel's only update was published. Used only when the JSON yields nothing, and it says
+          # so, because a silent fallback is how a wrong branch would get rolled back.
           if [ -z "$BRANCH" ]; then
-            echo "::error::Could not resolve a branch for channel '${{ inputs.channel }}'. Nothing was rolled back."
-            exit 1
+            BRANCH="${{ inputs.channel }}"
+            # NOTE: no backticks in this string — inside double quotes bash would treat them as
+            # command substitution and try to RUN the example.
+            echo "::warning::channel:view yielded no branch; falling back to the channel's own name ('${BRANCH}'), which is what 'eas update --channel' creates. Verify below that the resolved update group belongs to the intended branch."
           fi
-          GROUP=$(pnpm dlx eas-cli@${{ env.EAS_CLI_VERSION }} update:list --branch "$BRANCH" --limit 1 --json --non-interactive \
-            | node -e 'let s="";process.stdin.on("data",d=>s+=d).on("end",()=>{try{const a=JSON.parse(s);const g=(a.currentPage||a)[0];console.log((g&&(g.group||g.id))||"")}catch{console.log("")}})')
+          pnpm dlx eas-cli@${{ env.EAS_CLI_VERSION }} update:list --branch "$BRANCH" --limit 1 --json --non-interactive > updates.json 2>updates.err || true
+          GROUP=$(node -e '
+            const fs=require("fs");
+            let a={}; try { a = JSON.parse(fs.readFileSync("updates.json","utf8")) } catch {}
+            console.error("updates.json shape:", Array.isArray(a) ? "array" : JSON.stringify(Object.keys(a)));
+            const rows = a.currentPage || a.updates || (Array.isArray(a) ? a : []);
+            const g = rows[0];
+            process.stdout.write((g && (g.group || g.updateGroup || g.id)) || "");
+          ')
           if [ -z "$GROUP" ]; then
             echo "::error::Channel '${{ inputs.channel }}' (branch '$BRANCH') has no update to roll back. Nothing was changed."
             exit 1
