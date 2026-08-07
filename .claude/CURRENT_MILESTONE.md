@@ -2,10 +2,11 @@
 
 # PanchangPal — Current Milestone
 
-Version: 4.12.0
+Version: 4.13.0
 
-Last Updated: 2026-08-07 (no slice moved — #108 and #107 merged on real verdicts; B2's gate guard
-landed and its first version was broken; 50%)
+Last Updated: 2026-08-07 (no slice moved — four PRs merged; B2's gate is materially better
+instrumented: hang guard, the double-clearState race fixed, and the device log no longer 85% missing;
+50%)
 
 Purpose:
 This document defines the current milestone. Unlike SESSION.md (daily work) or TASK.md (current
@@ -33,7 +34,17 @@ B1 ~85%, B3 ~80%)
 · mobile 424/424, identical to baseline** · `expo export` both platforms · **E2E 6/6 on device**.
 Test infrastructure only — it advances no slice.
 
-**B2's gate gained a guard, and the guard's first version was broken.** `#108` merged as `610bf12`,
+**B2's gate got three fixes, none of which change its scope.** The **double-`clearState` race** that
+hung the suite is fixed at its cause (#110 `afce763`): the trailing clears that collided with the next
+flow's opening clear are gone, under a new invariant — **a flow establishes its own preconditions and
+never cleans up for its successor** — pinned by a 19-assertion test with four perturbations. And the
+**device log, which had been ~85% missing on every run** (`adb logcat -d` held only the last ~20 s of
+a ~2m20s suite), is now streamed: **12,508 lines covering the full run** (#111 `693c62f`). ⚠️ That
+second fix's FIRST version shipped **green and did nothing** — the ring-buffer theory was disproved by
+`adb logcat -g` showing the buffer was never full. **A green run says nothing about whether a change
+did what it claimed.**
+
+**And the timeout guard's first version was broken.** `#108` merged as `610bf12`,
 but `fb1a2fe` — the version written on 2026-08-06 — **failed every E2E run, including one reporting
 "6/6 Flows Passed in 2m 23s"**, because `reactivecircus/android-emulator-runner` runs its `script:`
 block **one `sh -c` per line**, making the multi-line `if`/`fi` a syntax error (exit 2).

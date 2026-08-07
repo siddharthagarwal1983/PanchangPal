@@ -2,10 +2,10 @@
 
 # PanchangPal Dashboard
 
-Version: 1.34.0
+Version: 1.35.0
 
-Last Updated: 2026-08-07 (#108 and #107 MERGED on real verdicts; the flows guard was broken and CI
-caught it — the emulator action runs one `sh -c` PER LINE; 50% unchanged)
+Last Updated: 2026-08-07 (four merged: #108, #107, #110 the double-clearState race, #111 streamed
+logcat — and #111's first diagnosis shipped GREEN and did nothing; 50% unchanged)
 
 Purpose:
 This is the first file Claude should read at the beginning of every session.
@@ -115,8 +115,31 @@ CURRENT_MILESTONE.md
 
 # Current Task
 
-✅ **BOTH MERGED ON REAL VERDICTS — #108 `610bf12` (flows-step timeout guard), then #107 `21e8c13`
-(RNTL 13 → 14).** The Actions outage cleared (status API `operational`, 0 incidents) and the three
+✅ **FOUR MERGED, QUEUE EMPTY — #108 `610bf12` (timeout guard) · #107 `21e8c13` (RNTL 13 → 14) ·
+#110 `afce763` (the double-`clearState` race) · #111 `693c62f` (streamed logcat).**
+
+⛔ **#110 — THE RACE'S CAUSE WAS THE DUPLICATE, NOT THE CLEAR.** Flows ended with a trailing
+`clearState` "so the next flow inherits nothing" while every flow needing a clean device already
+cleared at its own start, so each boundary carried **two `pm clear` calls ~0.5 s apart** and the
+second raced the teardown the first began. **New invariant: a flow establishes its own preconditions
+and never cleans up for its successor** — deleting duplicated work rather than adding a settle, since
+a settle masks races real users hit. ⚠️ Removing them would have **stranded `FLOW_MORNING_RITUAL`**,
+which relied on *inheriting* a clean device and worked only because it runs first. ⛔ **Maestro's
+order is NOT alphabetical** — a header comment claiming it was helped justify the trailing clear.
+Pinned by `flow-lifecycle.test.ts`, 19 assertions, four perturbations.
+
+⛔ **#111 — THE DEVICE LOG HAD BEEN ~85% MISSING ON EVERY RUN, AND MY FIRST FIX WAS WRONG.**
+`adb logcat -d` held only the **last ~20 s of a ~2m20s suite**; every past logcat diagnosis concerned
+a failure near the END of a run, which was luck rather than design.
+⚠️ **The first diagnosis — a 256K ring buffer overflowing — SHIPPED GREEN AND CHANGED NOTHING**
+(1471 lines/20 s → 1444/21 s). `adb logcat -g` disproved it outright: `16 MiB (701 KiB consumed)`,
+never full, nothing evicted. **A GREEN RUN PROVES A CHANGE BROKE NOTHING; IT SAYS NOTHING ABOUT
+WHETHER THE CHANGE DID WHAT IT CLAIMED** — name the number it should move, and read that number.
+Fixed by **streaming** the log from before the suite starts: **1471 → 12,508 lines, the full 148 s**.
+That log then **independently confirmed #110**: six `clear data` events 10–30 s apart with no
+adjacent pair, and **zero** `Killing … remove task` / `failed to attach` — the actual hang signature.
+
+**Previously the same day:** The Actions outage cleared (status API `operational`, 0 incidents) and the three
 outage reds were discarded rather than re-read. **Progress unchanged at 50%**; neither merge advances
 a Beta slice.
 
