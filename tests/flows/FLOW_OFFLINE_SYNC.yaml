@@ -209,8 +209,31 @@ onFlowComplete:
 - assertNotVisible: "You're offline — showing saved content."
 - takeScreenshot: offline-sync-06-network-restored
 
-# Leave the device as this flow found it: online, and with no state for the next flow to inherit.
-# The ticked item and the drained queue must not become someone else's hidden precondition — the
-# mistake FLOW_SESSION_PERSISTENCE's closing comment warns about.
-- stopApp
-- clearState
+# NO TRAILING `clearState` — REMOVED 2026-08-07, AND ITS ABSENCE IS LOAD-BEARING.
+#
+# This flow used to end `stopApp` + `clearState` to "leave no state for the next flow to inherit".
+# That is the wrong invariant, and it is what produced the hang on E2E 31120798108: the next flow
+# opens with its own `stopApp` + `clearState`, so the boundary carried TWO `pm clear` calls ~0.5s
+# apart, and the second one raced the task teardown the first had just started. FLOW_SESSION_PERSISTENCE
+# then hung on `Launch app` — the command never returning — with `Destroy timeout of remove-task` in
+# logcat 11s earlier.
+#
+# THE INVARIANT IS NOW: A FLOW ESTABLISHES ITS OWN PRECONDITIONS AND NEVER CLEANS UP FOR ITS
+# SUCCESSOR. One clear per boundary, owned by the flow that needs it. Two flows both taking
+# responsibility for one boundary is what created the race, so the fix is to delete the duplicate
+# rather than to wait for it — this repo's standing rule is that added settle time can mask a race
+# real users hit, and a settle here would have done exactly that.
+#
+# Every flow that requires a clean device now opens with the three discrete steps, including
+# FLOW_MORNING_RITUAL, which previously relied on inheriting one. FLOW_RETURNING deliberately does
+# not clear, and is insensitive to what this flow leaves behind: it never opens the ritual screen,
+# and Today's card reads "Begin" from a hardcoded `completedToday: false`
+# (app/(tabs)/today/index.tsx), so a completed session cannot change what it asserts.
+#
+# The airplane-mode restore is unaffected — it lives in `onFlowComplete` above, runs whether this
+# flow passed or failed, and is about the DEVICE rather than about app state.
+#
+# The trailing `stopApp` went with the clear, for the same reason: the next flow force-stops the app
+# itself as the first of its three discrete steps, so stopping it here only adds a second teardown
+# at the one moment the boundary needs to be quiet. This flow now ends where it has finished proving
+# its point.

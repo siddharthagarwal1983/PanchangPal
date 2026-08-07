@@ -2,10 +2,10 @@
 
 # PanchangPal Dashboard
 
-Version: 1.33.0
+Version: 1.36.0
 
-Last Updated: 2026-08-06 (#107 opened, no CI verdict — GitHub Actions outage; E2E hang diagnosed;
-flows-step timeout gap fixed; 50% unchanged)
+Last Updated: 2026-08-07 (five merged: #108, #107, #110, #111, #112 the jest worker leak — never
+noise, and `--detectOpenHandles` structurally cannot find it; 50% unchanged)
 
 Purpose:
 This is the first file Claude should read at the beginning of every session.
@@ -115,24 +115,77 @@ CURRENT_MILESTONE.md
 
 # Current Task
 
-✅ **TRACKING DOCS RECONCILED · RNTL 13 → 14 MIGRATED.** Branch `chore/rntl-14-migration`
-(`9942763` + `ebba6e2`) is pushed and **PR #107 is open** against main. **Progress unchanged at
-50%**; neither piece advances a Beta slice.
+✅ **FIVE MERGED — #108 `610bf12` (timeout guard) · #107 `21e8c13` (RNTL 13 → 14) · #110 `afce763`
+(the double-`clearState` race) · #111 `693c62f` (streamed logcat) · #112 `42a76f4` (the jest worker
+leak).** Open: **#109**, a Dependabot production-minor group, untriaged.
 
-⛔ **CI CARRIES NO VERDICT YET — GITHUB ACTIONS WAS IN A MAJOR OUTAGE (2026-08-06, 16:36–16:46+).**
-Three runs went red without executing a single line of repository code, and all three reds are
-external: the CI gates failed in **`Set up job`** at `Getting action download info` with
-`Service Unavailable`, and the four downstream gates reported `skipping` only because they `needs:`
-that job. The E2E run sat **queued 15 minutes with ZERO steps** and was cancelled platform-side —
-*not* the `cancel-in-progress` hazard of 2026-07-19, which is deliberately `false` here.
-Confirmed against `githubstatus.com`: **Actions = `major_outage`**.
-⚠️ **A red is as capable of being vacuous as a green.** This repo has paid three times for reading a
-green that no gate could have failed (mmkv v2's native resolution · `@sentry/cli` with no gate
-running `sentry.gradle` · pnpm's unenforced peers). The same question settles both directions —
-**which gate actually exercised the thing?** Here none did, so the colour carries no information.
-⚠️ **And `in_progress` is NOT evidence that action resolution recovered** — a job reaches that state
-merely by being assigned a runner, then fails inside `Set up job`. Reading it as recovery cost one
-wasted re-run; the authority is the status API, not the job state.
+⛔ **#112 — `A worker process has failed to exit gracefully` WAS NEVER NOISE.** It printed on every
+mobile run, on main and in CI, for the life of the suite, and **three suites run alone HANG
+INDEFINITELY** — the force-exit path only applies to workers. Cause: TanStack Query schedules a
+garbage-collection `setTimeout`, **default 5 MINUTES**, per cached query/mutation the moment its last
+observer detaches — which is what unmounting at the end of a test does. **`qc.clear()` does not
+retract them and neither does an explicit `unmount()`.** Fixed with `gcTime: Infinity` in the four
+suites that build a QueryClient: **429 tests, warning gone, run 3.76 s → 1.28 s.**
+⚠️ **`--detectOpenHandles` CANNOT FIND IT, despite being what the warning tells you to run** — the
+flag implies `--runInBand`, so no worker exists and a warning *about a worker* cannot occur. The
+instrument that worked was `process.getActiveResourcesInfo()` in an `afterAll`.
+⚠️ **And my first guard was VACUOUS**: it counted `gcTime:` in comments as well as code, so deleting
+the setting left the prose behind — the perturbation reproduced the hang while the guard still
+passed. **Third time this session a check looked convincing and measured nothing.**
+
+⛔ **#110 — THE RACE'S CAUSE WAS THE DUPLICATE, NOT THE CLEAR.** Flows ended with a trailing
+`clearState` "so the next flow inherits nothing" while every flow needing a clean device already
+cleared at its own start, so each boundary carried **two `pm clear` calls ~0.5 s apart** and the
+second raced the teardown the first began. **New invariant: a flow establishes its own preconditions
+and never cleans up for its successor** — deleting duplicated work rather than adding a settle, since
+a settle masks races real users hit. ⚠️ Removing them would have **stranded `FLOW_MORNING_RITUAL`**,
+which relied on *inheriting* a clean device and worked only because it runs first. ⛔ **Maestro's
+order is NOT alphabetical** — a header comment claiming it was helped justify the trailing clear.
+Pinned by `flow-lifecycle.test.ts`, 19 assertions, four perturbations.
+
+⛔ **#111 — THE DEVICE LOG HAD BEEN ~85% MISSING ON EVERY RUN, AND MY FIRST FIX WAS WRONG.**
+`adb logcat -d` held only the **last ~20 s of a ~2m20s suite**; every past logcat diagnosis concerned
+a failure near the END of a run, which was luck rather than design.
+⚠️ **The first diagnosis — a 256K ring buffer overflowing — SHIPPED GREEN AND CHANGED NOTHING**
+(1471 lines/20 s → 1444/21 s). `adb logcat -g` disproved it outright: `16 MiB (701 KiB consumed)`,
+never full, nothing evicted. **A GREEN RUN PROVES A CHANGE BROKE NOTHING; IT SAYS NOTHING ABOUT
+WHETHER THE CHANGE DID WHAT IT CLAIMED** — name the number it should move, and read that number.
+Fixed by **streaming** the log from before the suite starts: **1471 → 12,508 lines, the full 148 s**.
+That log then **independently confirmed #110**: six `clear data` events 10–30 s apart with no
+adjacent pair, and **zero** `Killing … remove task` / `failed to attach` — the actual hang signature.
+
+**Previously the same day:** The Actions outage cleared (status API `operational`, 0 incidents) and the three
+outage reds were discarded rather than re-read. **Progress unchanged at 50%**; neither merge advances
+a Beta slice.
+
+**#107 against the bar set before the work started:** all five CI gates **executed** — none `SKIPPED`
+via `needs:`, which is precisely what made the outage reds vacuous — giving tsc ×11 · eslint 0 errors
+· **vitest 144 +2 skipped · ui 33/33 · mobile 424/424, identical to the pre-migration baseline** ·
+`expo export` both platforms · **E2E 6/6 on device**. The counts are part of the bar because a
+migration that quietly drops tests passes every other gate. ⚠️ E2E is corroboration, not proof:
+`test-renderer` never reaches the shipped bundle.
+
+⛔ **THE GUARD PR WAS BROKEN, AND ONLY RUNNING IT COULD SHOW THAT.** `fb1a2fe` failed **every** E2E
+run — including run `31145793824`, which reported **"6/6 Flows Passed in 2m 23s"** and still went red
+with **exit 2**. `reactivecircus/android-emulator-runner` executes its `script:` input **ONE LINE AT
+A TIME, each in its own `sh -c`**, so the multi-line `if`/`fi` was a syntax error and
+`flows_status=$?` was assigned into a shell that exited immediately.
+**Worse than the false red: the action stops at the failing line, so `adb logcat -d` never ran.**
+Verified against the artifacts — the failed run holds the six `commands.json` and **no
+`maestro-logcat.txt`**; the green run holds it. **The device log went missing on exactly the runs
+that need it**, the opposite of what the PR body claimed.
+⚠️ **This also proves the PRE-EXISTING `set +e` / `exit $flows_status` plumbing never worked** —
+failures propagated only because a non-zero line fails the action directly, and `e2e.yml`'s comment
+that "the flows' exit status is preserved" described a mechanism that was not running. **The
+milestone's signature defect once more: a documented control, never implemented, nothing asserting
+it.**
+**Fixed structurally** in `scripts/run-maestro-flows.sh`, invoked as one line — one shell parses one
+program, so the bug class is unreachable rather than avoided by careful one-lining. **Verified with a
+control**: the old inline block replayed per-line **does** reproduce the syntax error, so the harness
+cannot pass vacuously; on device `31146852463` gave **6/6 in 2m 20s with `maestro-logcat.txt` present
+at 927 KB**.
+⚠️ **The earlier shim test was not wrong — it tested the wrong layer.** Same shape as the
+`process.env` unit test that passed while the bundler path failed.
 
 **The SLO count had drifted, and both numbers were right.** SESSION.md said three proven; five other
 docs said two. **TDD Part 5 §7.2 names SEVEN and does not include NFR-07** — that is from the Part 1

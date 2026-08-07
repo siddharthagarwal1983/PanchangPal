@@ -2,10 +2,10 @@
 
 # PanchangPal — Project Status Dashboard
 
-Version: 1.19.0
+Version: 1.21.0
 
-Last Updated: 2026-08-06 (session end — #107 open with no CI verdict; E2E hang diagnosed; flows-step
-timeout fixed; 50% unchanged)
+Last Updated: 2026-08-07 (four PRs merged — timeout guard, RNTL 14, the double-clearState race, and
+the streamed device log; #111's first diagnosis shipped green and did nothing; 50% unchanged)
 
 Purpose:
 This document provides a high-level snapshot of the overall project.

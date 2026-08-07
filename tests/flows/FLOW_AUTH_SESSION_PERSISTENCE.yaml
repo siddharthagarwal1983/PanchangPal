@@ -144,4 +144,7 @@ appId: com.panchangpal.app
       selected: true
     timeout: 60000
 
-- clearState
+# NO TRAILING `clearState` — removed 2026-08-07. See FLOW_OFFLINE_SYNC's closing comment: a trailing
+# clear plus the next flow's opening clear puts two `pm clear` calls ~0.5s apart on one boundary, and
+# the second races the teardown the first started. The session and tradition this flow leaves behind
+# are cleared by the next flow that cares, at its own start.

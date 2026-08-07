@@ -2,7 +2,7 @@
 
 # PanchangPal — AI Decision Summary
 
-Version: 1.3.0
+Version: 1.5.0
 
 Purpose:
 This file contains a condensed summary of permanent project decisions.
@@ -20,6 +20,71 @@ docs/architecture/adr/
 ---
 
 # Product Decisions
+
+## 2026-08-07 — A flow owns its preconditions, and a green run is not evidence a change worked
+
+**Decision 1. A Maestro flow establishes its OWN preconditions and never cleans up for its
+successor.** One `clearState` per boundary, owned by the flow that needs it.
+
+Flows used to end with a trailing `clearState` "so the next flow inherits nothing", while every flow
+needing a clean device already cleared at its start — so each boundary carried **two `pm clear` calls
+~0.5 s apart**, and the second raced the task teardown the first had begun. **The duplicate was the
+cause, not the clear**, so the fix deletes the duplicated work rather than waiting for it: a settle
+would mask a race real users can hit, which this repo forbids.
+Corollary: **removing a trailing clear can strand the flow that relied on it.** `FLOW_MORNING_RITUAL`
+depended on *inheriting* a clean device and worked only because it happens to run first.
+Corollary: **Maestro's execution order is arbitrary** — it is not alphabetical, and a header comment
+asserting it was helped justify the trailing clear. Never reason about which flow is "last".
+
+**Decision 2. A green CI run proves a change broke nothing. It says NOTHING about whether the change
+did what it claimed.** Measure the quantity the change was supposed to move.
+
+Established the expensive way: the logcat-truncation fix shipped `adb logcat -G 16M` on the theory
+that the 256K ring buffer was overflowing, went **green**, and changed nothing — 1471 lines/20 s
+before, 1444/21 s after. `adb logcat -g` then disproved the premise outright
+(`16 MiB (701 KiB consumed)` — never full, nothing evicted); ~220K of captured log sitting close to
+the 256K default was a coincidence read as causation. Had it been merged on green it would have
+landed a no-op carrying a confident false explanation, which is worse than no fix: the next person to
+hit a missing log would have read it and looked elsewhere.
+**The generalisation:** this repo already knows a green gate can be vacuous *about the code*. This is
+the same failure aimed at the **change itself** — the gate had no way to fail, because the suite
+passes identically whether the log is 1400 lines or 12,000. Before believing a fix, name the number
+it should move and read that number.
+
+**Corollary — prefer not depending on state another process controls.** The working fix streams
+logcat to the artifact from before the suite starts, so whatever clears the ring buffer mid-run
+cannot take back what is already on disk. That removes the question rather than tuning it.
+
+## 2026-08-07 — CI shell logic lives in a script file, and a CI change is only proven by running it in CI
+
+**Decision.** Any logic beyond a single command in an emulator `script:` block goes in a **script
+file** under `scripts/`, invoked as one line — today `scripts/run-maestro-flows.sh`.
+
+**Why it is structural rather than stylistic.** `reactivecircus/android-emulator-runner` executes its
+`script:` input **one line at a time, each in its own `sh -c`**. A multi-line `if`/`fi` is therefore a
+syntax error, and a variable assigned on one line is gone by the next. The first version of the
+flows-step timeout guard (`fb1a2fe`) hit both: it **failed a run in which all six flows passed**
+("6/6 Flows Passed in 2m 23s", step red with exit 2), and — because the action **aborts at the
+failing line** — `adb logcat -d > maestro-logcat.txt` never ran, so the device log vanished from
+exactly the runs that need it. A guard meant to make failures legible was deleting the evidence.
+
+Putting the logic in a file makes the class unreachable instead of avoided by careful one-lining:
+one shell parses one program. Same preference as `evaluateHealth()` taking a boolean so no parameter
+exists through which an error could leak.
+
+**Corollary, and the transferable half. A change whose purpose is how CI behaves is proven only by
+running it in CI.** The broken guard had been "proven" against a local GNU-`timeout` shim. That test
+was not wrong — **it tested the wrong layer**, establishing exit-code semantics while being
+structurally unable to observe the per-line `sh -c` execution. This is the third instance of the same
+shape, after the `process.env` unit test that passed while the gradle `export:embed` path delivered
+nothing, and jest setting `process.env` directly without ever exercising the bundler. **Ask which
+layer the test touches before calling something proven.**
+
+**Corollary.** The same run showed the **pre-existing** `set +e` / `flows_status=$?` /
+`exit $flows_status` plumbing had never worked — failures propagated only because a non-zero line
+fails the action directly, while `e2e.yml`'s comment asserted the exit status was preserved. A
+documented control, never implemented, with nothing asserting it: the milestone's signature defect,
+this time in the gate itself.
 
 ## 2026-08-06 — Every long-running CI step carries its own timeout, and a red is read for what it exercised
 

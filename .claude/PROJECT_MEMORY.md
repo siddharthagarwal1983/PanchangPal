@@ -2,10 +2,11 @@
 
 # PanchangPal — Project Memory
 
-Version: 3.1.0
+Version: 3.4.0
 
-Last Updated: 2026-08-06 (Maestro rule 4 — a clear races the NEIGHBOUR's teardown, and a hung flows
-step reported `cancelled`; the timeout guard that fixes it)
+Last Updated: 2026-08-07 (Maestro rules 5 and 6; the artifact's logcat held only the last ~20s of
+every run until it was streamed; and the jest worker leak — TanStack `gcTime` timers, which
+`--detectOpenHandles` structurally cannot find)
 
 Current Phase:
 Beta Readiness & Platform Hardening (TDD Part 5)
@@ -519,6 +520,30 @@ Stable, cross-cutting facts (permanent until an approved decision changes them):
   (EVT_001-EVT_055) contains **no sync event**, `events.ts` forbids inventing one, and
   `AnalyticsService` rejects unknown ids at runtime. Either PDD adds sync events or a server-side
   metrics sink is chosen; neither is typing.
+- **EVERY QueryClient BUILT IN A MOBILE TEST SETS `gcTime: Infinity`, AND IT IS TEARDOWN RATHER THAN
+  TUNING** (established 2026-08-07, PR #112). TanStack Query schedules a garbage-collection
+  `setTimeout` — **default 5 MINUTES** — for each cached query and mutation the moment its last
+  observer detaches, which is exactly what unmounting at the end of a test does. Those timers keep
+  Node's event loop alive, so the jest worker cannot exit. **`qc.clear()` in `afterEach` does NOT
+  retract them, and neither does an explicit `unmount()`** — both were tried and measured. Infinity
+  makes the timeout invalid so none is ever scheduled. Pinned by
+  `apps/mobile/src/data/__tests__/queryClientGcTime.test.ts`.
+  ⛔ **`A worker process has failed to exit gracefully` WAS NEVER NOISE.** It printed on every mobile
+  run, on main and in CI, for the life of the suite. Running any one of three suites **alone hangs
+  indefinitely** rather than warning, because the force-exit path only applies to workers. Fixing it
+  took the run from **3.76 s to 1.28 s**, since workers no longer wait to be killed.
+  ⚠️ **`--detectOpenHandles` CANNOT FIND THIS, despite being what the warning tells you to run.** It
+  implies `--runInBand`, so no worker exists and a warning *about a worker* cannot occur; on the full
+  suite it reports nothing, and on the hanging file it never prints at all, because it reports after
+  a run finishes and the run does not finish. **The instrument that works is
+  `process.getActiveResourcesInfo()` in an `afterAll`**, which named five leftover `Timeout` handles
+  in one run. And **the warning is the wrong criterion for LOCATING the leak** — bisecting on it
+  wrongly cleared a suite, because a single-file run may not use a worker. **Ask whether the jest
+  process exits on its own.**
+  ⚠️ **`expect(value, message)` IS VITEST, NOT JEST.** `apps/backend` and `packages/*` run **vitest**,
+  where the second argument is a failure message; **`apps/mobile` runs jest-expo**, which rejects it
+  with `Expect takes at most one argument.` Raise the message by throwing instead. The two suites are
+  not interchangeable and the idiom does not travel.
 - **AnalyticsService** (client, B4.2) — every `EVT_*` goes through this port (ADR-013); the launch
   sink is the Postgres `analytics_event` table, which is INSERT-ONLY for clients (policy
   `analytics_ins_own`, no select policy — rollups run service-side under pg_cron, ADR-025). Events
@@ -910,6 +935,26 @@ Stable, cross-cutting facts (permanent until an approved decision changes them):
      `device-logcat.txt` exist only there; grepping the run log finds nothing and reads as absence of
      evidence. Both defects above were diagnosed from the artifact. Same lesson the Pixel Launcher
      ANRs taught.
+     ⛔ **AND UNTIL 2026-08-07 THAT ARTIFACT HELD ONLY THE LAST ~20 SECONDS OF A ~2m20s RUN.**
+     `adb logcat -d` dumps the ring buffer, and something clears it during a run, so the dump held
+     about **one flow's worth** — 1471 lines out of ~12,500. Every logcat diagnosis this repo has
+     made (the launch race, the `Destroy timeout of remove-task` hang, MMKV's memory fallback)
+     concerned a failure near the END of the suite, where the tail still held it. **That was luck.**
+     A flow failing early — FLOW_MORNING_RITUAL runs first, ~2 minutes before the dump — would have
+     produced an artifact with no relevant log, and the absence would have read as "nothing wrong in
+     the log", which is exactly what this rule warns against.
+     **Fixed by STREAMING**: `scripts/run-maestro-flows.sh` attaches `adb logcat -v threadtime` to
+     the output file before the suite starts and stops it after, so a mid-run clear cannot take back
+     what is already on disk. Result: **12,508 lines spanning the full 148 s**, beginning before the
+     APK is even installed. The script echoes the captured line count and warns under 100 lines, so a
+     silently empty log is visible in the job output.
+     ⚠️ **THE FIRST DIAGNOSIS WAS WRONG AND SHIPPED GREEN.** It was read as the 256K default buffer
+     overflowing, because 1471 lines × ~150 bytes ≈ 220K sits suspiciously close to it.
+     `adb logcat -G 16M` was applied, went green, and **changed nothing** (1444 lines/21 s) —
+     `adb logcat -g` then showed `16 MiB (701 KiB consumed)`, i.e. the buffer was **never full** and
+     nothing was ever evicted. The coincidence had been read as causation. **A green run proves a
+     change did not break anything; it says nothing about whether the change did what it claimed.**
+     Measure the thing the change was supposed to move.
   4. **A CLEAR RACES THE NEIGHBOUR'S TEARDOWN, NOT JUST ITS OWN LAUNCH — AND THE FLOWS STEP HAS NO
      TIMEOUT, SO THE HANG GOES DARK** (established 2026-08-06, E2E `31120798108`). Rule 1's three
      discrete steps are necessary and **not sufficient**. FLOW_SESSION_PERSISTENCE hung on
@@ -930,6 +975,60 @@ Stable, cross-cutting facts (permanent until an approved decision changes them):
      passed **completely** first (FLOW_MORNING_RITUAL 18/18, FLOW_OFFLINE_SYNC 39/39) on a green
      `Build APK`, so a hang late in a suite is not evidence against the change under test. Read the
      per-flow `commands.json` statuses before attributing anything.
+  6. **A FLOW ESTABLISHES ITS OWN PRECONDITIONS AND NEVER CLEANS UP FOR ITS SUCCESSOR** (established
+     2026-08-07, PR #110 — the fix for rule 4's race). **One `clearState` per boundary, owned by the
+     flow that needs it.**
+     Several flows used to END with a trailing `clearState` "so the next flow inherits nothing",
+     while every flow needing a clean device already cleared at its own START. Both sides of each
+     boundary cleared, so a boundary carried **two `pm clear` calls ~0.5 s apart** — and the second
+     raced the task teardown the first had begun. **The cause was the DUPLICATE, not the clear.**
+     The fix deletes the duplicated work rather than waiting for it: a settle would have masked a
+     race real users can hit, which this repo forbids.
+     ⚠️ **Removing a trailing clear can STRAND the flow that was relying on it.**
+     `FLOW_MORNING_RITUAL` opened `launchApp: clearState: false` and depended on *inheriting* a clean
+     device — a hidden precondition that held only because it happens to run first. It now clears for
+     itself. A completed ritual session restores as `completed` and renders CompletionMoment, so it
+     would have failed at its first tap, nowhere near the cause.
+     **`FLOW_RETURNING` deliberately does not clear**, and is safe because it never opens the ritual
+     screen and Today's card reads "Begin" from a hardcoded `completedToday: false`
+     (`app/(tabs)/today/index.tsx`) — verified in the source, not taken from the comment asserting
+     it.
+     ⛔ **MAESTRO'S EXECUTION ORDER IS NOT ALPHABETICAL.** Read from the run log it is
+     **MORNING_RITUAL → OFFLINE_SYNC → SESSION_PERSISTENCE → AUTH_SESSION_PERSISTENCE → ONBOARDING →
+     RETURNING**. `FLOW_SESSION_PERSISTENCE`'s header claimed alphabetical ordering put it last; it
+     runs **third**, immediately after OFFLINE_SYNC — precisely the adjacency that hung. **Treat the
+     order as arbitrary**; the invariant above is deliberately order-independent for that reason.
+     Pinned by `apps/backend/tests/e2e/flow-lifecycle.test.ts` (19 assertions, four perturbations).
+     It lives under `apps/backend/tests/` because that is the only place the root vitest config
+     would actually RUN it — a test beside the flows would never execute, which is a gate that
+     cannot fail.
+  5. **THE EMULATOR ACTION RUNS ITS `script:` BLOCK ONE LINE AT A TIME, EACH IN ITS OWN `sh -c`**
+     (established 2026-08-07, E2E `31145793824`; fixed in `610bf12`). This is a property of
+     `reactivecircus/android-emulator-runner`, and the job log states it literally
+     (`[command]/usr/bin/sh -c set -e`). Two consequences, both of which bit:
+     **a multi-line shell construct is a SYNTAX ERROR** (`if` never sees its `fi`), and **a variable
+     assigned on one line is gone by the next**, so `set +e` / `flows_status=$?` are per-line no-ops.
+     The first attempt at the flows-step timeout guard therefore **failed a run in which all six
+     flows PASSED** — "6/6 Flows Passed in 2m 23s", step red with exit 2.
+     ⛔ **The second consequence is the dangerous one: the action ABORTS at the failing line**, so
+     `adb logcat -d > maestro-logcat.txt` never ran. The failed run's artifact holds the six
+     `commands.json` and **no `maestro-logcat.txt`**; the green run's holds it. **The device log
+     disappeared from exactly the runs that need it** — and rule 3 above says the artifact is where
+     the evidence lives, so this silently removed the project's main diagnostic.
+     It also means the **pre-existing** `set +e` / `exit $flows_status` plumbing had never worked:
+     failures propagated only because a non-zero line fails the action directly, while `e2e.yml`'s
+     comment claimed "the flows' exit status is preserved". A documented control, never implemented,
+     with nothing asserting it.
+     **The rule: any logic beyond a single command goes in a script file** (`scripts/run-maestro-flows.sh`)
+     invoked as one line. One shell parses one program, which makes the whole class unreachable
+     rather than avoided by careful one-lining — the same structural preference as `evaluateHealth()`
+     taking a boolean so no parameter exists through which an error could leak.
+     ⚠️ **And the verification lesson, which is the transferable half.** The guard had been "proven"
+     against a local GNU-`timeout` shim. That test was not wrong — **it tested the wrong layer**,
+     establishing the exit-code semantics while being structurally unable to see the per-line
+     `sh -c` execution. Identical shape to the `process.env` unit test that passed while the
+     gradle `export:embed` path delivered nothing. **When a change's whole purpose is how CI behaves,
+     the only sufficient test is running it in CI.**
 - **Assert a deletion by CONTENT, never by the foreign key** — restated here because it generalises
   past the deletion executor: a test written against the identifier a deletion removes cannot detect
   a deletion that only removed the identifier. `ON DELETE SET NULL` keeps the row and drops the link,

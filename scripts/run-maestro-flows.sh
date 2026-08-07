@@ -59,8 +59,35 @@ BUDGET="${MAESTRO_BUDGET:-25m}"
 KILL_AFTER="${MAESTRO_KILL_AFTER:-1m}"
 LOGCAT_OUT="${MAESTRO_LOGCAT_OUT:-maestro-logcat.txt}"
 
+# STREAM THE DEVICE LOG, DO NOT DUMP IT AT THE END.
+#
+# `adb logcat -d` dumps whatever is in the ring buffer *now*, and something clears that buffer
+# during a run: across four runs the dump held only the last ~20s of a ~2m20s suite — almost exactly
+# one flow's duration, which is the tell.
+#
+# ⚠️ THIS WAS FIRST MISDIAGNOSED AS THE BUFFER BEING TOO SMALL. `adb logcat -G 16M` was applied and
+# changed nothing (1471 lines/20s before, 1444 lines/21s after), and `adb logcat -g` then disproved
+# the hypothesis outright: `16 MiB (701 KiB consumed, 1 MiB readable)` — the buffer was never full,
+# so nothing was ever being evicted. ~220K of captured log matching the 256K default was a
+# coincidence read as causation.
+#
+# A reader attached from the start is immune to the whole question: lines are captured as they are
+# emitted, so whatever clears the buffer cannot take back what has already been written. It also
+# removes the dependency on a buffer size this script does not control.
+#
+# `-v threadtime` matches the format every existing diagnosis in PROJECT_MEMORY was read in
+# (`Destroy timeout of remove-task`, `[ritual] Persistent storage unavailable`).
+: > "$LOGCAT_OUT"
+adb logcat -v threadtime >> "$LOGCAT_OUT" 2>/dev/null &
+logcat_pid=$!
+
 timeout --kill-after="$KILL_AFTER" "$BUDGET" maestro test "$FLOWS_DIR"
 flows_status=$?
+
+# Stop the reader before the artifact is uploaded. `kill` on an already-dead reader is not a
+# failure worth surfacing — the log it produced is still on disk either way.
+kill "$logcat_pid" 2>/dev/null || true
+wait "$logcat_pid" 2>/dev/null || true
 
 # `timeout` reports 124 when it sends TERM, and the shell reports 137 (128+SIGKILL) when the
 # --kill-after KILL was needed. Either way the suite did not finish on its own.
@@ -68,11 +95,15 @@ if [ "$flows_status" = "124" ] || [ "$flows_status" = "137" ]; then
   echo "::error::Maestro exceeded its ${BUDGET} budget and was killed (exit ${flows_status}). This is a HANG, not a flow assertion failure. Read the per-flow commands.json in the maestro-debug artifact to see which flow stopped and how far the suite got."
 fi
 
-# Unconditional, and deliberately tolerant of its own failure: losing the device log must not
-# convert a flow result into an adb error. `Upload Maestro debug output` is `if: always()`, so
-# a timed-out or failed run still keeps the artifact — the only place the per-flow
-# commands.json statuses exist, and the only way to tell a late hang from a change that broke
-# the suite.
-adb logcat -d > "$LOGCAT_OUT" || echo "::warning::adb logcat -d failed; ${LOGCAT_OUT} may be missing or truncated."
+# Report what was actually captured, so a silently empty log is visible in the job output rather
+# than discovered later in an artifact nobody opens until something fails. `Upload Maestro debug
+# output` is `if: always()`, so a timed-out or failed run still keeps the artifact — the only place
+# the per-flow commands.json statuses exist, and the only way to tell a late hang from a change that
+# broke the suite.
+logcat_lines=$(wc -l < "$LOGCAT_OUT" 2>/dev/null || echo 0)
+echo "[e2e] captured ${logcat_lines} logcat lines to ${LOGCAT_OUT}"
+if [ "$logcat_lines" -lt 100 ]; then
+  echo "::warning::Only ${logcat_lines} logcat lines were captured. The device log is the primary diagnostic for a flow failure (Maestro rule 3); if this is low the streaming reader did not attach."
+fi
 
 exit "$flows_status"

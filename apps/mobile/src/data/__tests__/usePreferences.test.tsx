@@ -35,7 +35,15 @@ const clients: QueryClient[] = [];
 // RNTL 14: `renderHook` is async (React 19's async rendering model), so this helper is async too
 // and every call site awaits it.
 async function setup() {
-  const qc = new QueryClient({ defaultOptions: { mutations: { retry: false } } });
+  // `gcTime: Infinity` is TEARDOWN, not tuning — see useChecklist.test.tsx for the full note.
+  // Without it this suite left five 5-minute GC timers and the jest process hung outright.
+  // Pinned by queryClientGcTime.test.ts.
+  const qc = new QueryClient({
+    defaultOptions: {
+      queries: { gcTime: Infinity },
+      mutations: { retry: false, gcTime: Infinity },
+    },
+  });
   clients.push(qc);
   const wrapper = ({ children }: { children: ReactNode }) => (
     <QueryClientProvider client={qc}>{children}</QueryClientProvider>
