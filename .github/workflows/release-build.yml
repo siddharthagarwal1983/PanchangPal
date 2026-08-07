@@ -47,6 +47,40 @@ jobs:
     steps:
       - uses: actions/checkout@v7
 
+      # THE TAG MUST MATCH THE VERSION THE BINARY WILL REPORT (TDD Part 5 §3.1).
+      #
+      # This job triggers on `v*`, but nothing made the tag agree with `app.config.ts`. A tag
+      # `v0.2.0` pushed while the config still says `0.1.0` produces a build that calls itself
+      # 0.1.0 — and **Sentry sets no explicit release**, so `@sentry/react-native` derives it from
+      # the native app version. The new release's crashes would file under the OLD release's name,
+      # and the crash-free SLOs (NFR-06/NFR-07) are read per release: the new build looks healthy
+      # because its crashes landed in someone else's bucket. Same class as CI reporting itself as
+      # `production` (#98) — a real signal attributed to the wrong thing.
+      #
+      # Only a tag push can violate this, which is why it lives here rather than in the unit suite.
+      # `version-consistency.test.ts` covers the other half (config ↔ CHANGELOG) on every PR.
+      #
+      # Skipped on `workflow_dispatch`, where there is no tag to compare against.
+      - name: Tag must match the app version
+        if: startsWith(github.ref, 'refs/tags/v')
+        run: |
+          TAG="${GITHUB_REF#refs/tags/v}"
+          APP=$(sed -n "s/^[[:space:]]*version:[[:space:]]*'\([^']*\)'.*/\1/p" apps/mobile/app.config.ts | head -1)
+          echo "tag=${TAG}  app.config.ts=${APP}"
+          if [ -z "$APP" ]; then
+            echo "::error::Could not read \`version\` from apps/mobile/app.config.ts. Nothing was built."
+            exit 1
+          fi
+          if [ "$TAG" != "$APP" ]; then
+            echo "::error::Tag v${TAG} does not match apps/mobile/app.config.ts version ${APP}. The build would report ${APP} and Sentry would file its crashes under ${APP}, not ${TAG}. Set the version, add its CHANGELOG entry, then re-tag."
+            exit 1
+          fi
+          if ! grep -q "^## \[${TAG}\]" CHANGELOG.md; then
+            echo "::error::CHANGELOG.md has no '## [${TAG}]' entry. §3.1 requires each release to be tagged with its change log."
+            exit 1
+          fi
+          echo "Tag, app version and CHANGELOG agree on ${TAG}."
+
       - uses: pnpm/action-setup@v6
         with: { version: '${{ env.PNPM_VERSION }}' }
 
