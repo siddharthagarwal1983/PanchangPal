@@ -248,6 +248,12 @@ jobs:
             # removes the processes that were ANRing. A third occurrence would mean the cause is
             # something other than the Google apps, and this line must not be what obscures it.
             adb shell settings put global hide_error_dialogs 1
+            # The device log is captured by a STREAMING READER inside scripts/run-maestro-flows.sh,
+            # not by an `adb logcat -d` dump at the end. Something clears the ring buffer during a
+            # run — the dump only ever held the last ~20s of a ~2m20s suite, about one flow's worth.
+            # Enlarging the buffer (`adb logcat -G 16M`) was tried and changed nothing, and
+            # `adb logcat -g` disproved that hypothesis: the buffer was never full. See the script's
+            # header for the evidence. `-c` still runs here so the stream starts from a clean slate.
             adb logcat -c
             # A HUNG FLOW MUST FAIL RED, NOT GO DARK — see scripts/run-maestro-flows.sh, which
             # runs the suite under a wall-clock budget, annotates a hang distinctly from a flow
