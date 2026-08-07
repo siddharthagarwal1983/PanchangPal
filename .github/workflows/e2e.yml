@@ -248,36 +248,12 @@ jobs:
             # removes the processes that were ANRing. A third occurrence would mean the cause is
             # something other than the Google apps, and this line must not be what obscures it.
             adb shell settings put global hide_error_dialogs 1
-            # GROW THE RING BUFFER BEFORE CLEARING IT — WITHOUT THIS, MOST OF THE RUN'S LOG IS GONE
-            # BY THE TIME WE DUMP IT.
-            #
-            # `adb logcat -d` (in scripts/run-maestro-flows.sh) dumps whatever is still in the ring
-            # buffer, and Android's default is 256K per buffer. Measured across three consecutive
-            # runs on 2026-08-07, the captured log covered only the LAST ~20 SECONDS of a ~2m23s
-            # suite:
-            #
-            #   run 31145785282 (#107)  1380 lines  04:06:13 -> 04:06:35   21s
-            #   run 31147599553 (main)  1406 lines  04:42:23 -> 04:42:43   20s
-            #   run 31149760781 (#110)  1471 lines  05:23:17 -> 05:23:37   20s
-            #
-            # ~1471 lines x ~150 bytes is ~220K, which is the 256K default almost exactly — the
-            # buffer had wrapped, and every line older than ~20s had already been evicted.
-            #
-            # THIS MATTERS BECAUSE THE ARTIFACT IS THE PROJECT'S PRIMARY DIAGNOSTIC (Maestro rule 3:
-            # the screen hierarchy and device log exist ONLY in the artifact, and grepping the run
-            # log finds nothing and reads as absence of evidence). Every logcat diagnosis this repo
-            # has made — the launch race, the `Destroy timeout of remove-task` hang, MMKV's memory
-            # fallback — happened to concern a failure near the END of the suite, where the tail
-            # still held it. A flow failing EARLY (FLOW_MORNING_RITUAL runs first, ~2 minutes before
-            # the dump) would have produced an artifact with no relevant log at all, and the absence
-            # would have looked like "nothing was wrong in the log".
-            #
-            # 16M is ~64x the default: at the observed ~74 lines/sec that is ~20 minutes of dense
-            # logging, comfortably more than the 25m budget's realistic output, and far more for a
-            # hung run, which logs very little while it waits. Set BEFORE `-c` because resizing can
-            # itself flush the buffer.
-            adb logcat -G 16M
-            adb logcat -g | head -5
+            # The device log is captured by a STREAMING READER inside scripts/run-maestro-flows.sh,
+            # not by an `adb logcat -d` dump at the end. Something clears the ring buffer during a
+            # run — the dump only ever held the last ~20s of a ~2m20s suite, about one flow's worth.
+            # Enlarging the buffer (`adb logcat -G 16M`) was tried and changed nothing, and
+            # `adb logcat -g` disproved that hypothesis: the buffer was never full. See the script's
+            # header for the evidence. `-c` still runs here so the stream starts from a clean slate.
             adb logcat -c
             # A HUNG FLOW MUST FAIL RED, NOT GO DARK — see scripts/run-maestro-flows.sh, which
             # runs the suite under a wall-clock budget, annotates a hang distinctly from a flow
