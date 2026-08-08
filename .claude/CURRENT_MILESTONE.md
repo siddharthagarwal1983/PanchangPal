@@ -2,10 +2,10 @@
 
 # PanchangPal — Current Milestone
 
-Version: 4.18.0
+Version: 4.19.0
 
-Last Updated: 2026-08-08 (**B8.2** — the first performance gate this repo has ever had: a
-release-blocking bundle-size budget on NFR-01. Item 8 stays ⚠️; the latency half is store-gated)
+Last Updated: 2026-08-08 (**B8.3** — the monetization funnel emits, and the privacy inventory caught
+the new collection unprompted. Item 19 stays ⚠️: EVT_051 waits on payments)
 
 Purpose:
 This document defines the current milestone. Unlike SESSION.md (daily work) or TASK.md (current
@@ -26,6 +26,41 @@ Overall Progress
 
 63% (**5 of 8 slices COMPLETE — B2 ✅, B4 ✅, B5 ✅, B6 ✅, B7 ✅**, the last four at verifiable
 scope; B1 ~85%, B3 ~80%; **B8 🚧 STARTED**)
+
+**2026-08-08 (part 4) — B8.3: THE MONETIZATION FUNNEL EMITS.** Progress stays 63%. EVT_049/050/051/052
+are wired across both upgrade surfaces, derived purely in `subscriptionEvents.ts` (the
+`ritualEvents.ts` pattern — inline `track()` double-fires on re-render, and an inflated denominator is
+worse than no rate). **EVT_051/052 come from the purchase seam, not the screens**, so a third surface
+cannot join the funnel silently.
+
+⛔ **THE ANCHORS HAD BEEN COMMENTS FOR MONTHS**, including an **empty `useEffect` whose entire body was
+`/* analytics: EVT_049 */`** — a no-op effect existing only to hold a comment, which is this
+milestone's signature defect in miniature. They were written while the Analytics Adapter was deferred;
+**B4.2 shipped it and nothing went back.** A test now fails if either anchor returns.
+
+⛔ **`unavailable` DELIBERATELY EMITS NOTHING.** `NullPaymentAdapter` returns it for every purchase
+today. Mapping it to `fail` — the easy choice — would have fired EVT_051 on every tap and permanently
+poisoned §11.3's free→paid rate with failures that only meant "payments are unbuilt", reading as a
+**broken** checkout rather than an **unbuilt** one. **A metric wrong in a plausible direction is worse
+than one that is absent, because nobody goes looking for it.**
+
+✅ **THE PRIVACY INVENTORY CAUGHT THE NEW COLLECTION BY ITSELF.** `data-inventory.test.ts` went red the
+moment the events became real — *"these EVT_* ids reach `AnalyticsService.track()` but are not listed
+in §4"*. **Adding analytics is a privacy change**, and B6.3's conformance test enforced disclosure
+before CI would go green, on the first occasion it could. `DATA_INVENTORY.md` now lists all four with
+their props and records that **no price, store SKU, receipt or vendor error text** reaches analytics.
+
+✅ **And B8.1's guard fired a second time in one day**, re-pointed rather than deleted — it now fails
+if the emission is *removed* while the document claims a funnel.
+
+⚠️ **Item 19 stays ⚠️**: EVT_051 — the metric §11.3 computes free→paid from — cannot fire until
+payments ship, and the events are **recordable, not readable** while ADR-025's rollup worker is
+unbuilt (item 21's blocker as well).
+
+**Verified:** mobile jest **450 (+21)** · vitest **219** · tsc **11/11** · eslint **0 errors** ·
+**four perturbations**, controls green.
+
+---
 
 **2026-08-08 (part 3) — B8.2: THE FIRST PERFORMANCE GATE THIS REPOSITORY HAS EVER HAD.** Progress
 stays 63%. `scripts/check-bundle-budget.mjs` runs in the Bundle gate as one line and weighs each
@@ -725,9 +760,20 @@ One slice per session, same cadence as M1–M8: implemented, self-verified, revi
             3m20s observed on one commit). Instruments are TDD-named — **Sentry app-start** (NFR-01)
             and a **client trace on EVT_012** (NFR-02) — and both need real device traffic, so this
             belongs with the capabilities blocked on §10.2 step 1, not with unfinished engineering.
-      - [ ] **B8.3 — emit `EVT_049`** from the subscription surface (§10.1 item 19). The paywall is
-            fully built and emits nothing, so the MRD's NZ pricing signal test has no signal. The id
-            is already in PDD §11, so this invents nothing.
+      - [x] **B8.3 — the monetization funnel emits** (2026-08-08). EVT_049/050/051/052 across both
+            upgrade surfaces, derived purely in `subscriptionEvents.ts`; EVT_051/052 from the
+            purchase seam so a third surface cannot join silently. The anchors had been comments for
+            months, including an **empty `useEffect` holding only `/* analytics: EVT_049 */`**.
+            ⛔ **`unavailable` emits nothing on purpose** — mapping it to `fail` would have fired
+            EVT_051 on every tap and poisoned §11.3's free→paid rate with failures that only meant
+            payments were unbuilt. ✅ **`data-inventory.test.ts` caught the new collection unprompted**
+            and forced disclosure before CI would pass — adding analytics is a privacy change.
+      - [ ] ⛔ **EVT_051 still cannot fire, and it is the metric that matters.** §11.3 computes
+            free→paid from it; `react-native-purchases` is uninstalled, so every purchase resolves
+            `unavailable`. Unblocked by the store accounts, not by engineering.
+      - [ ] ⛔ **And nothing reads the rows.** `analytics_event` is INSERT-only for clients and
+            ADR-025's rollup worker is unbuilt — the same blocker as item 21. The events are
+            recordable, not readable.
       - [ ] **Internal smoke on TestFlight / Play Internal** (§10.2 step 1) — **owner-gated**: Apple
             ($99) + Google Play ($25). The single highest-leverage purchase in the project: it also
             converts every "proven in EAS, not on a device" caveat into a real answer.

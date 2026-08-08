@@ -2,9 +2,55 @@
 
 # PanchangPal — Current Session
 
-Version: 17.0.0
-Last Updated: 2026-08-08 (**B8.2** — the first performance gate in the repo; B8.1's own guard fired
-within hours and was re-pointed rather than deleted)
+Version: 18.0.0
+Last Updated: 2026-08-08 (**B8.3** — the monetization funnel emits; the privacy inventory caught the
+new collection unprompted, and no credential-free blocking engineering remains on §10.1)
+
+---
+
+# Part 4 — B8.3: the monetization funnel emits
+
+**Progress stays 63%.** EVT_049/050/051/052 are wired across both upgrade surfaces, derived purely in
+`src/domain/analytics/subscriptionEvents.ts` — the `ritualEvents.ts` pattern, because a screen calling
+`track()` inline **double-fires on re-render** and a conversion rate with an inflated denominator is
+worse than none. **EVT_051/052 come from the `usePurchase`/`useRestore` seam rather than the screens**:
+two surfaces open a purchase, and a funnel a third could join without reporting has a silent hole.
+
+## ⛔ The anchors had been comments for months
+
+Including an **empty `useEffect` whose entire body was `/* analytics: EVT_049 */`** — a no-op effect
+existing only to hold a comment. They were written while the Analytics Adapter was deferred; **B4.2
+shipped it and nothing went back to finish them.** A test now fails if either anchor returns.
+
+## ⛔ `unavailable` deliberately emits nothing
+
+`NullPaymentAdapter` returns `{outcome: 'unavailable'}` for every purchase today. Mapping it to
+`fail` was the easy choice and would have fired EVT_051 on **every tap**, permanently poisoning
+§11.3's free→paid rate with failures that only meant "payments are unbuilt" — reading as a **broken**
+checkout rather than an **unbuilt** one. **A metric that is wrong in a plausible direction is worse
+than one that is absent, because nobody goes looking for it.**
+
+## ✅ The privacy inventory caught the new collection by itself
+
+`data-inventory.test.ts` went red the moment the events became real: *"these EVT_* ids reach
+`AnalyticsService.track()` but are not listed in §4."* **Adding analytics is a privacy change**, and
+B6.3's conformance test enforced disclosure before CI would go green — the first occasion it could,
+doing exactly the job it was built for. `DATA_INVENTORY.md` now lists all four with their props and
+records that **no price, store SKU, receipt or vendor error text** reaches analytics.
+
+**And B8.1's guard fired a second time in one day** (after B8.2's), re-pointed rather than deleted —
+it now fails if the emission is *removed* while the document claims an instrumented funnel.
+
+## ⚠️ Item 19 stays ⚠️
+
+**EVT_051 — the metric §11.3 computes free→paid from — cannot fire until payments ship**; EVT_049
+fires today, and the top of a funnel is not its answer. The events are also **recordable, not
+readable**: `analytics_event` is INSERT-only and ADR-025's rollup worker is unbuilt (item 21's blocker
+too).
+
+**Verified:** mobile jest **450 (+21)** · vitest **219** · tsc **11/11 uncached** · eslint **0
+errors** (16-warning baseline) · **four perturbations**, incl. the tempting `unavailable → fail`,
+each failing exactly the intended tests with controls green.
 
 ---
 
@@ -168,11 +214,18 @@ green on #116 · four perturbations each failing exactly one assertion
 
 # Recommended next task
 
-1. **B8.3 — emit `EVT_049`** from the subscription surface (§10.1 item 19). Now the **last
-   credential-free blocking item on the whole checklist**. The id is already in PDD §11's registry, so
-   it invents nothing. ⚠️ **Honest limit:** emitting it makes the funnel *recordable*, not *readable*
-   — `analytics_event` is INSERT-only and ADR-025's rollup worker is unbuilt (item 21), so the NZ
-   pricing test needs both before it can answer anything.
+⛔ **No credential-free BLOCKING engineering remains on the §10.1 checklist.** Every remaining item
+needs money, content, legal review, or a business decision. That makes the order unusually clear:
+
+1. **Owner — Apple ($99) + Google Play ($25).** The highest-leverage action in the project: unblocks
+   §10.2 step 1 (internal smoke), converts B7's "proven in EAS, not on a device" caveats into real
+   answers, and is what lets **EVT_051** fire at all.
+2. **Owner — ~$25/mo paid Supabase** for PITR (NFR-15), the plain launch blocker.
+3. **ADR-025's `analytics_event` rollup worker** — the one genuinely useful *unblocked* engineering
+   task left, and the shared blocker behind items 11, 19 and 21. The app now records events that
+   **nothing reads**.
+4. **Declare `@supabase/supabase-js` in `apps/backend`** — ⚠️ note it has **no `package.json` at
+   all**, so this is a slightly larger question than adding a line.
 3. **Declare `@supabase/supabase-js` in `apps/backend`** — imported as a bare specifier, declared
    only in `apps/mobile`. ⚠️ Note `apps/backend` has **no `package.json` at all**, so this is a
    slightly larger question than adding a line. It resolves today, which is why it is worth fixing

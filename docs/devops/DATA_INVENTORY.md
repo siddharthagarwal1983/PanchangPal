@@ -164,8 +164,8 @@ ADR-031 forbids cross-session AI memory in v1: context does not survive a thread
 
 ## 4. Analytics events actually emitted
 
-Nine `EVT_*` ids reach `AnalyticsService.track()` in the built app. This is **not** the full PDD §11
-registry — the registry is the permitted vocabulary; this is the emitted subset.
+**Thirteen** `EVT_*` ids reach `AnalyticsService.track()` in the built app. This is **not** the full
+PDD §11 registry — the registry is the permitted vocabulary; this is the emitted subset.
 
 | Event | Meaning | Props sent |
 |---|---|---|
@@ -177,15 +177,38 @@ registry — the registry is the permitted vocabulary; this is the emitted subse
 | `EVT_019` | Checklist item completed | `screen_id`, `item_id` |
 | `EVT_020` | Streak advanced | `streak_len`, `grace_remaining` |
 | `EVT_021` | Streak grace used | `streak_len`, `grace_remaining` |
+| `EVT_049` | Upgrade surface viewed | `source` (screen/contextual), `screen_id` (null on the sheet) |
+| `EVT_050` | Plan selected | `plan` (individual/family), `source` |
+| `EVT_051` | Purchase result | `plan`, `result` (success/fail/cancel), `error_code?` (`ERR_*`) |
+| `EVT_052` | Purchases restored | `result` |
 | `EVT_054` | Client error | `error_code` (`ERR_*`), `screen_id`, `recoverable`, `correlation_id` |
 
 Every envelope additionally carries `app_version` and `platform` (from `contextProps()`), plus
 `user_pseudo_id`, optional `household_id`, optional `session_id`, and a timestamp.
 
-**Events named in source comments but not emitted:** `EVT_041` (notification opened), `EVT_045`
-(anon→auth merge), `EVT_049`–`EVT_052` (subscription funnel). Each sits beside a `//` comment
-marking where it will fire; none reaches `track()`. They are excluded here because this inventory
-records collection, not intent.
+⚠️ **`EVT_049`–`EVT_052` were added on 2026-08-08 (B8.3), and this row is here because a test refused
+to let them ship undisclosed.** They had sat for months as comment-only anchors in the subscription
+surfaces; making them real is **new collection**, and `data-inventory.test.ts` failed with *"these
+EVT_* ids reach AnalyticsService.track() but are not listed in §4"* until this table was updated. An
+analytics addition is a privacy change, and that is the point of pinning this document to the source
+in both directions.
+
+**What they do and do not reveal.** They record that an upgrade offer was *seen*, which *plan kind*
+was chosen, and whether a purchase *succeeded, failed, or was cancelled* — all against the
+pseudonymous `user_pseudo_id`, never an account identity. **No price, no store product id, no
+receipt, no payment instrument, and no vendor error text** reaches analytics: `plan` is the
+`individual`/`family` kind rather than the store SKU (asserted by a test), and a failure carries the
+shared `ERR_PAYMENT_FAILED` code rather than the SDK's message. Payment data itself never touches the
+device seam at all — RevenueCat and `SVC_revenuecat_webhook` hold it (F-4).
+
+⛔ **`EVT_051` and `EVT_052` do not fire yet.** `react-native-purchases` is uninstalled, so every
+purchase resolves `unavailable`, which the mapper deliberately reports as *no event* rather than as a
+failure. They will begin emitting when payments ship — **no further disclosure change is needed then,
+because the props are already inventoried here.**
+
+**Events named in source comments but not emitted:** `EVT_041` (notification opened) and `EVT_045`
+(anon→auth merge). Each sits beside a `//` comment marking where it will fire; neither reaches
+`track()`. They are excluded from the table because this inventory records collection, not intent.
 
 ### 4.1 Why no PII can reach analytics
 

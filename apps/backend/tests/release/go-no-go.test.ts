@@ -239,18 +239,38 @@ describe('the verdicts have not gone stale in the dangerous direction', () => {
     expect(docFlat).toMatch(/per-screen latency budgets|latency budgets/i);
   });
 
-  it('still correctly reports the paywall as uninstrumented', () => {
-    // EVT_049 is already defined in PDD §11, so emitting it invents nothing and is likely to happen
-    // soon. The moment it does, items 19 and 21 change and §7.2 is wrong.
+  it('reports the paywall as instrumented, for as long as it emits', () => {
+    // ⚠️ INVERTED BY B8.3, exactly as the performance-gate assertion was by B8.2. Its first form
+    // asserted the paywall emitted nothing; B8.3 wired the funnel, this test failed with a message
+    // naming §10.1 item 19 and §7.2, and this is that update. The guard stays, the polarity flips.
     const emitted = eventsEmitted();
 
     expect(
       emitted.has('EVT_049'),
-      'EVT_049 is now emitted, so the subscription surface has instrumentation. Update §10.1 ' +
-        'item 19 and §7.2 of GO_NO_GO.md — do not delete this assertion.',
-    ).toBe(false);
+      'EVT_049 is no longer emitted, but GO_NO_GO.md item 19 describes an instrumented paywall. ' +
+        'Either restore the emission or revert item 19 — the document must not claim a funnel that ' +
+        'does not report.',
+    ).toBe(true);
 
     expect(docFlat).toContain('EVT_049');
+  });
+
+  it('still correctly reports EVT_051 as unable to fire while payments are unbuilt', () => {
+    // The half of item 19 that remains open, and the one §11.3 actually computes free→paid from.
+    // `react-native-purchases` landing is what changes it — at which point `unavailable` stops
+    // being every purchase's outcome and EVT_051 starts reporting real results.
+    const manifest = JSON.parse(readFileSync(MOBILE_MANIFEST, 'utf8')) as {
+      dependencies?: Record<string, string>;
+    };
+
+    expect(
+      Object.keys(manifest.dependencies ?? {}),
+      'react-native-purchases is installed, so EVT_051 can now carry real store outcomes. Item 19 ' +
+        'of GO_NO_GO.md says it cannot fire — re-walk it, and check whether the rollup worker ' +
+        '(item 21) is still the remaining blocker.',
+    ).not.toContain('react-native-purchases');
+
+    expect(docFlat).toMatch(/EVT_051/);
   });
 
   it('still correctly reports Ask Guru as gated off', () => {

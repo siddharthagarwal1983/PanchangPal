@@ -110,7 +110,7 @@ follow)."*
 
 | # | §10.1 item | Verdict | Evidence, and the gap |
 |---|---|---|---|
-| 19 | NZ paywall/pricing signal test instrumented (MRD §13) | ⛔ | **No paywall, subscription or pricing event is emitted anywhere in the app.** The emitted set is nine ids — `EVT_012`, `015`–`021`, `054` — the daily-habit funnel plus the error event. PDD §11 defines `EVT_049` (Subscription row viewed) and it is never fired; SCR_SUBSCRIPTION_001 and the contextual paywall sheet at `app/modal/paywall` are fully built and **emit nothing**. A pricing signal test with no signal cannot run, and this would have been discovered only after launch, when the data was expected. **Owner: ENG — see §7** |
+| 19 | NZ paywall/pricing signal test instrumented (MRD §13) | ⚠️ | **Instrumented as of B8.3 (2026-08-08); the test still cannot run.** All four registry events are wired — `EVT_049` (upgrade surface viewed), `EVT_050` (plan selected), `EVT_051` (purchase result), `EVT_052` (restored) — across **both** surfaces, with `EVT_051`/`EVT_052` emitted by the `usePurchase`/`useRestore` seam so a third surface cannot join the funnel silently. **`EVT_049` fires today.** ⛔ **`EVT_051` does not, and it is the one §11.3 computes free→paid from:** `react-native-purchases` is uninstalled, so every purchase resolves `unavailable`, which is deliberately reported as *no event* rather than as a failure — mapping it to `fail` would have poisoned the metric with failures that only meant "payments are unbuilt". ⛔ **And the events are recordable, not readable:** `analytics_event` is INSERT-only for clients and ADR-025's rollup worker is unbuilt (item 21). So the pricing test needs **payments + a reader**, neither of which is instrumentation. **Owner: $ (payments) + ENG (rollup) — see §7.2** |
 | 20 | Temple-partnership pilot ready | ⏳ | Business relationship; no engineering dependency. **Owner: BIZ** |
 | 21 | Activation/retention dashboards live | ⛔ | Same root cause as item 11: events are written INSERT-only to `analytics_event` and **nothing reads them back**. ADR-025's rollup worker is unbuilt, and no `job_type` has a consumer. The North Star (Weekly Household Ritual Completions) is computable in principle — `EVT_017` grouped by `household_id` — and is computed by nothing. **Owner: ENG** |
 | 22 | Runway confirmed | ⏳ | The MRD's standing Go/No-Go condition, `[PRD FOLLOW-UP]`, business-owned and the sole business input still open across the entire plan (§10.4). **Owner: BIZ** |
@@ -160,20 +160,41 @@ need real device traffic, which is store-gated. This belongs with the other capa
 **So item 8 stays ⚠️.** Calling it closed because a bundle gate exists would be the overstatement this
 whole document was written to avoid.
 
-### 7.2 ⛔ The paywall is fully built and emits no analytics at all
+### 7.2 ⚠️ The paywall now emits — and instrumenting it showed the funnel needs two more things
 
-SCR_SUBSCRIPTION_001, `CMP_PLAN_CARD`, the contextual paywall sheet, `visibleOfferings` and the
-`FF_FAMILY_PLAN` gate are all implemented and tested. **Not one of them emits an event.** PDD §11
-defines `EVT_049` for the subscription surface and nothing fires it.
+**When this document was first written the paywall emitted nothing at all.** SCR_SUBSCRIPTION_001,
+`CMP_PLAN_CARD`, the contextual sheet, `visibleOfferings` and the `FF_FAMILY_PLAN` gate were fully
+implemented and tested, and not one of them fired an event. PDD §11 had defined `EVT_049`–`EVT_052`
+all along; the surfaces carried them as **comment-only anchors** — including an *empty `useEffect`
+whose entire body was `/* analytics: EVT_049 */`* — because the Analytics Adapter was deferred when
+they were written. It shipped with B4.2; nothing went back to finish them.
 
-The consequence is item 19, but the shape is worth stating on its own: **the pricing question the MRD
-wants answered is unanswerable with the data the app currently produces**, and that would surface
-only after a launch, when someone went looking for the funnel. Adding the event is small; noticing
-that it is missing is the whole value of walking this list.
+**What B8.3 built.** All four events, derived purely in `src/domain/analytics/subscriptionEvents.ts`
+(the `ritualEvents.ts` pattern — a screen that calls `track()` inline double-fires on re-render, and
+a conversion rate with an inflated denominator is worse than none). `EVT_051`/`EVT_052` are emitted by
+the **purchase seam** rather than the screens, because two surfaces open a purchase and a funnel a
+third could join without reporting is a funnel with a silent hole.
 
-⚠️ **Both fixes are in-scope engineering under an existing taxonomy.** `EVT_049` is already in PDD
-§11, so emitting it invents nothing — unlike NFR-10's sync metric, which has **no** event in the
-registry and is therefore genuinely blocked on a PDD decision rather than on typing.
+⛔ **`unavailable` deliberately emits nothing, and this is the decision that mattered most.**
+`NullPaymentAdapter` returns `{outcome: 'unavailable'}` for every purchase today. Mapping it to
+`fail` was the easy choice and would have fired `EVT_051` on every tap, permanently poisoning the one
+metric this work exists to produce — §11.3's free→paid rate would have carried a failure for every
+attempt made before payments shipped, looking like a broken checkout rather than an unbuilt one. **A
+metric that is wrong in a plausible direction is worse than one that is absent, because nobody goes
+looking for it.**
+
+⚠️ **So item 19 is ⚠️, not ✅, for two reasons that are not instrumentation:**
+
+1. **`EVT_051` — the metric §11.3 computes free→paid from — cannot fire until payments ship.**
+   `EVT_049` fires today; the top of a funnel is not its answer.
+2. **The events are recordable, not readable.** `analytics_event` is INSERT-only for clients and
+   ADR-025's rollup worker is unbuilt, which is item 21's blocker too. Nothing reads these rows.
+
+**A finding from doing it: adding analytics is a privacy change, and the repository enforced that
+without being asked.** `data-inventory.test.ts` failed the moment the events became real — *"these
+`EVT_*` ids reach `AnalyticsService.track()` but are not listed in §4"* — so `DATA_INVENTORY.md` had
+to disclose the new collection before CI would go green. That is B6.3's conformance test doing
+exactly the job it was built for, on the first occasion it could.
 
 ---
 

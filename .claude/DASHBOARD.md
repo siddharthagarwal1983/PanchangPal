@@ -2,11 +2,11 @@
 
 # PanchangPal Dashboard
 
-Version: 1.41.0
+Version: 1.42.0
 
-Last Updated: 2026-08-08 (**B8.2** — a release-blocking **bundle-size budget** now gates NFR-01, the
-first performance gate this repo has ever had. Item 8 stays ⚠️: the per-screen *latency* budgets are
-still unmeasured and a CI emulator cannot measure them honestly)
+Last Updated: 2026-08-08 (**B8.3** — the monetization funnel emits; the comment-only anchors are gone.
+Item 19 stays ⚠️: **EVT_051 cannot fire until payments ship**, and the privacy inventory refused to
+let the new collection go undisclosed)
 
 Purpose:
 This is the first file Claude should read at the beginning of every session.
@@ -137,6 +137,54 @@ CURRENT_MILESTONE.md
 ---
 
 # Current Task
+
+✅ **B8.3 — THE MONETIZATION FUNNEL EMITS. Progress stays 63%.**
+
+All four registry events are wired — **EVT_049** (upgrade surface viewed), **EVT_050** (plan
+selected), **EVT_051** (purchase result), **EVT_052** (restored) — derived purely in
+`src/domain/analytics/subscriptionEvents.ts`, following `ritualEvents.ts` because a screen that calls
+`track()` inline **double-fires on re-render**, and a conversion rate with an inflated denominator is
+worse than none. **EVT_051/052 are emitted by the `usePurchase`/`useRestore` seam, not the screens**:
+two surfaces open a purchase, and a funnel a third could join without reporting is a funnel with a
+silent hole.
+
+⛔ **THE ANCHORS HAD BEEN COMMENTS FOR MONTHS — INCLUDING AN EMPTY `useEffect` WHOSE ENTIRE BODY WAS
+`/* analytics: EVT_049 */`.** A no-op effect existing only to hold a comment is this milestone's
+signature defect in miniature: documented, wired, inert. They were written when the Analytics Adapter
+was deferred; **it shipped with B4.2 and nothing went back to finish them.** A test now fails if
+either anchor returns.
+
+⛔ **`unavailable` DELIBERATELY EMITS NOTHING, and this was the decision that mattered.**
+`NullPaymentAdapter` returns `{outcome: 'unavailable'}` for every purchase today. Mapping it to
+`fail` was the easy choice and would have fired EVT_051 on **every tap**, permanently poisoning the
+one metric the work exists to produce — §11.3's free→paid rate would carry a failure for every
+attempt made before payments shipped, reading as a **broken** checkout rather than an **unbuilt**
+one. **A metric that is wrong in a plausible direction is worse than one that is absent, because
+nobody goes looking for it.**
+
+✅ **AND THE PRIVACY INVENTORY CAUGHT THE NEW COLLECTION BY ITSELF — the sharpest moment of the
+increment.** `data-inventory.test.ts` went red the instant the events became real: *"these EVT_* ids
+reach `AnalyticsService.track()` but are not listed in §4."* **Adding analytics is a privacy change**,
+and B6.3's conformance test enforced disclosure before CI would go green — the first occasion it
+could, doing exactly the job it was built for. `DATA_INVENTORY.md` now records all four with their
+props, and states that **no price, store SKU, receipt or vendor error text** reaches analytics.
+
+✅ **B8.1's guard fired for the SECOND time in a day.** It asserted the paywall emitted nothing;
+wiring it failed the test with a message naming item 19 and §7.2. **Re-pointed, not deleted** — as
+B8.2's was — so it now fails if the emission is *removed* while the doc claims a funnel.
+
+⚠️ **Item 19 stays ⚠️, for two reasons that are not instrumentation.** **EVT_051 — the metric §11.3
+computes free→paid from — cannot fire until payments ship** (EVT_049 fires today; the top of a funnel
+is not its answer). And the events are **recordable, not readable**: `analytics_event` is INSERT-only
+and ADR-025's rollup worker is unbuilt, which is item 21's blocker too.
+
+**Verified:** mobile jest **450 (+21)** · vitest **219** · tsc **11/11 uncached** · eslint **0
+errors** (16-warning baseline) · **four perturbations**, incl. the tempting `unavailable → fail`,
+each failing exactly the intended tests with controls green.
+
+---
+
+**Previously — B8.2.**
 
 ✅ **B8.2 — THE FIRST PERFORMANCE GATE THIS REPOSITORY HAS EVER HAD.** **Progress stays 63%.**
 
@@ -1221,6 +1269,18 @@ Verified end-to-end. **PR #36 merged to main as `e1e10d4`**; the docs checkpoint
 (`45f1b0d`). Main's E2E is green again (run 30156615768). See TASK.md.
 
 # Today's Objective
+
+Session of 2026-08-08 (part 4). **B8.3 — emit the monetization funnel.** Outcome: all four events
+wired, the comment-only anchors gone, **progress stays 63%**. Two things worth carrying forward.
+**The privacy inventory caught the new collection unprompted** — adding analytics is a privacy
+change, and `data-inventory.test.ts` refused to go green until `DATA_INVENTORY.md` disclosed it.
+And **`unavailable` deliberately emits nothing**: mapping it to `fail` would have fired EVT_051 on
+every tap and poisoned §11.3's free→paid rate with failures that only meant payments were unbuilt.
+**Item 19 stays ⚠️** — EVT_051 can't fire until payments ship, and nothing reads the rows anyway.
+Next: the store accounts. Every remaining checklist item now needs money, content, legal, or a
+business decision.
+
+---
 
 Session of 2026-08-08 (part 3). **B8.2 — build the performance gate.** Outcome: **the first one this
 repository has ever had** — a release-blocking bundle-size budget on NFR-01, wired into the Bundle

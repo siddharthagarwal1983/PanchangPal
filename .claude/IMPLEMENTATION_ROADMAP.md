@@ -2,9 +2,9 @@
 
 # PanchangPal — Implementation Roadmap
 
-Version: 2.14.0
-Last Updated: 2026-08-08 (**B8.2** — a bundle-size budget now gates NFR-01, the first performance gate
-in the repo; **B8.3 `EVT_049` is the last credential-free blocking item**)
+Version: 2.15.0
+Last Updated: 2026-08-08 (**B8.3** — the monetization funnel emits. **No credential-free blocking
+engineering remains on the §10.1 checklist**; the store accounts are now the critical path)
 
 Purpose: the forward plan from the current state. Complements PROJECT_STATUS.md (snapshot) and
 CURRENT_MILESTONE.md (active milestone). Updated when scope or sequencing changes — and at every
@@ -34,9 +34,23 @@ caveat from B7 into a real answer. Nothing else on the checklist is reachable be
 **B8.2 closed the first of the two (2026-08-08)** — a release-blocking **bundle-size budget** on
 NFR-01, at the layer CI can measure honestly. ⚠️ **Item 8 is only half closed and stays ⚠️:** PDD's
 per-screen *latency* budgets need real device traffic, so they moved from "unbuilt engineering" to the
-same store-gated queue as the rest. **`EVT_049` (B8.3) is now the last credential-free blocking item
-on the entire checklist** — after it, every remaining item needs money, content, legal review, or a
-business decision.
+same store-gated queue as the rest.
+
+**B8.3 closed the second (2026-08-08)** — the monetization funnel emits: EVT_049/050/051/052 across
+both upgrade surfaces, with EVT_051/052 from the purchase seam. ⚠️ **Item 19 also stays ⚠️**, because
+the metric §11.3 computes free→paid from (**EVT_051**) cannot fire until payments ship, and nothing
+reads the rows while ADR-025's rollup worker is unbuilt.
+
+⛔ **WITH THAT, NO CREDENTIAL-FREE BLOCKING ENGINEERING REMAINS ON THE §10.1 CHECKLIST.** Every
+remaining item needs money, content, legal review, or a business decision — which makes the sequencing
+unusually simple:
+
+1. **Apple ($99) + Google Play ($25)** — unblocks §10.2 step 1, converts B7's "proven in EAS, not on a
+   device" caveats into real answers, and is what lets EVT_051 fire at all.
+2. **~$25/mo paid Supabase** — PITR, the plain launch blocker (NFR-15).
+3. **ADR-025's `analytics_event` rollup worker** — the one genuinely useful *unblocked* engineering
+   task left, and the shared blocker behind items 11, 19 and 21: events are now recorded and read by
+   nothing.
 
 **B7 — RELEASE MANAGEMENT IS COMPLETE (2026-08-08).** Merged: `B7.1` **`3cee165`** (#113) · `B7.2`
 **`76e9764`** (#114) · `B7.3` **`fd1aa83`** (#115) · `B7.4` **`9667600`** (#116). Every increment was
