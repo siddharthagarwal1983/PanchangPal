@@ -1594,7 +1594,22 @@ for B3's remainder, and for the store half of B7.
    a phone's behaviour. B3's store accounts are what unblock this.
 3. ⚠️ **Auto-rollback on a crash spike is not automated** — the action is proven, nothing triggers
    it. Needs a Sentry alert webhook plus a GitHub credential.
-4. ⛔ **Pre-launch: confirm no metric monitor has an open issue.** Two remain from B4.4's drills, and
+4. ✅ **CLEARED 2026-08-08 — no metric monitor has an open issue.** Both crash-free monitors were
+   **recreated**, which is the only lever that works, and `PANCHANGPAL-MOBILE-4`/`-5` cleared
+   automatically with them — confirming the documented mechanism and settling a contradiction in
+   `SLO_ALERTS.md`, which had recorded drill 2 as re-run "after *resolving*" an issue that offers no
+   Resolve button. ✅ **Both are also DRILL-PROVEN and target an explicit `Member`** — each watched
+   delivering **its own** email to a human, and the Member field is the precise thing drill 1 got
+   wrong, where detection fired, the issue opened and was assigned, and the recipient set still
+   resolved **empty**.
+   **All three properties therefore hold at once — proven · correctly addressed · no open issue —
+   which is the strongest alerting state this project has recorded.**
+   ⚠️ **Re-check before launch anyway**, since a later drill re-opens an issue. The two properties are
+   in genuine tension (drilling opens an issue that no healthy reading can close without traffic;
+   recreating clears it but hands the proof to a dead instance), and `SLO_ALERTS.md` §9 records how
+   they are reached together. The trap also dissolves after launch if the first traffic is healthy: a
+   clean monitor plus healthy data simply stays closed.
+   *Prior state, for the record:* ⛔ **Two remained open from B4.4's drills**, and
    a metric-monitor issue **cannot be cleared by hand** — it closes only on a healthy reading, so the
    only lever is recreating the monitor. Harmless now; if the *first* real traffic is unhealthy the
    metric never recovers and a genuine incident pages nobody.

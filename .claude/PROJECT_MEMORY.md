@@ -512,6 +512,26 @@ Stable, cross-cutting facts (permanent until an approved decision changes them):
   launch-day trap: if the FIRST real traffic is unhealthy, the metric never recovers, the drill issue
   never closes, and a genuine incident never pages. **Pre-launch checklist: confirm no metric monitor
   has an open issue.**
+  ✅ **CONFIRMED IN PRACTICE 2026-08-08: recreating the monitor clears the issue automatically**, with
+  no resolve step, because a fresh monitor has no open period. Both crash-free monitors were recreated
+  and `PANCHANGPAL-MOBILE-4`/`-5` went with them. This also **corrected `SLO_ALERTS.md`**, which had
+  recorded drill 2 as re-run "after *resolving* the previous issue" while the same document stated
+  those issues offer no Resolve button — the recreation had done it, and the wording was loose. When
+  two sections of one document disagree, the mechanism is the arbiter, not the more recent sentence.
+  ⚠️ **"PROVEN" AND "CLEAN" PULL AGAINST EACH OTHER, and it is worth knowing before the next drill.**
+  Drilling opens an issue that closes only on a healthy reading — and with no production traffic none
+  can arrive. Recreating clears the issue but hands the proof to an instance that no longer exists.
+  Chased one at a time the loop does not terminate. **They are reached together by proving the RECIPE
+  rather than the instance:** drill, watch the email arrive, then recreate from that same
+  configuration if an issue is left open.
+  ✅ **STATE AS OF 2026-08-08: all three properties hold at once on both crash-free monitors** —
+  drill-proven (each watched delivering **its own** email), alert action confirmed to target an
+  explicit `Member` rather than *Suggested Assignees*, and no open issue. That `Member` field was the
+  entirety of drill 1's failure and is readable without triggering anything, so it is always worth
+  checking by eye.
+  ⚠️ **And the trap dissolves after launch if the first traffic is healthy** — a clean monitor plus
+  healthy production data simply stays closed. The danger was only ever an *already-open* issue
+  swallowing the first real incident, so **a clean monitor at launch is the correct state.**
   **`scripts/slo-alert-drill.mjs`** makes the crash-free drill repeatable, guarded behind `--confirm`
   because it writes unremovable synthetic crashes into production session data — cheap before launch,
   permanently expensive after.

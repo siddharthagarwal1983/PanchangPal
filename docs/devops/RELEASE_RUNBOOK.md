@@ -295,7 +295,12 @@ to the wrong thing.
 
 1. **Verify the metrics recover.** Not "the error stopped appearing" — the metric that detected it.
    ⚠️ **An open Sentry issue suppresses the next alert of its kind.** Resolve the issue (never
-   *archive*, which mutes), or the next occurrence pages nobody. A metric-monitor issue cannot be
-   resolved by hand at all; it closes only on a healthy reading.
+   *archive*, which mutes), or the next occurrence pages nobody.
+   ⛔ **A metric-monitor issue cannot be resolved by hand at all** — no Resolve button, Delete
+   disabled — and it closes only on a healthy reading. **The lever is to RECREATE THE MONITOR**, which
+   clears the issue automatically because a fresh monitor has no open period (confirmed 2026-08-08).
+   ⚠️ Mid-incident this matters twice over: recreating also **discards the proof** that the monitor
+   notifies anyone, so set the new alert action to an explicit **Member** — *Suggested Assignees*
+   resolves to nobody for a metric issue, which is how one drill detected perfectly and told no one.
 2. **Blameless postmortem** (Part 1 §1.10). What was the surface, what did we roll back, how long did
    detection take, and what would have caught it earlier.

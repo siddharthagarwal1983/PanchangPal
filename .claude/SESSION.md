@@ -208,7 +208,13 @@ green on #116 · four perturbations each failing exactly one assertion
 2. ⚠️ **No release path is proven to reach a device** — no EAS build on any channel.
 3. **~$25/mo paid Supabase** (NFR-15 PITR, launch blocker) · **Apple $99 + Play $25** (B1/B3/B7 store
    half).
-4. ⚠️ **Pre-launch: no metric monitor may have an open issue** (two remain, not clearable by hand).
+4. ~~⚠️ **Pre-launch: no metric monitor may have an open issue** (two remain)~~ — ✅ **CLEARED
+   2026-08-08.** Both crash-free monitors recreated, which is the only lever; `-4` and `-5` went with
+   them. ✅ **Both are drill-proven and target an explicit Member** — each watched delivering its own
+   email, and the Member field was drill 1's exact failure. **All three properties hold at once**
+   (proven · correctly addressed · no open issue), the strongest alerting state this project has
+   recorded. ⚠️ A later drill re-opens an issue, so re-check before launch; `SLO_ALERTS.md` §9 records
+   how both properties are reached together.
 5. **NFR-10** needs a PDD §11 taxonomy addition or a server metrics sink · **§7.2 dashboards** need
    ADR-025's unbuilt rollup worker.
 
