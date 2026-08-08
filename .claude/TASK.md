@@ -2,9 +2,9 @@
 
 # PanchangPal — Current Task
 
-Version: 8.0.0
-Last Updated: 2026-08-07 (B7 STARTED — B7.1 OTA publish + rollback performed; seven PRs merged today
-and the queue is empty)
+Version: 10.0.0
+Last Updated: 2026-08-08 (**B8 STARTED** — the §10.1 checklist is walked and the verdict is
+**⛔ NO-GO, 3 of 22**; next are the two credential-free findings it produced)
 
 Purpose: the current implementation task. Stay focused; avoid unrelated work unless instructed.
 
@@ -111,6 +111,151 @@ green in CI on a real native build. Canonical progress 0% → 13% (1 of 8 Beta s
 # Current Task
 
 ## Title
+🚧 **B8 STARTED — THE §10.1 CHECKLIST IS WALKED. VERDICT: ⛔ NO-GO, 3 OF 22.**
+Main is at `9667600`. **Progress stays 63%** — a slice counts only when complete, and B8's remaining
+deliverables are owner-gated on store accounts.
+
+### B8.1 — what shipped
+
+**`docs/devops/GO_NO_GO.md`** walks all 22 `[MANDATORY]` items across five categories — **3 met · 10
+partial · 7 not met · 2 business-owned** — each with its verdict, evidence and owner, and **each
+derived from the repository rather than from another document** (the rule B7's close earned).
+**`apps/backend/tests/release/go-no-go.test.ts`** (30 assertions) parses §10.1 **out of the TDD** and
+checks coverage **both ways** — an item dropped fails, an item invented fails — then pins the claims
+that will rot **in the dangerous direction**: it fails when a performance gate appears, when
+`EVT_049` starts being emitted, when `GURU_LIVE` flips, or when `react-native-purchases` is
+installed. A doc that keeps saying "blocked" after the blocker clears makes the gap **invisible**,
+which is how TDD Part 4 §6 stayed unimplemented across two milestones.
+
+**Saying NO-GO is the deliverable, not a setback.** §10.4 always read "ready for launch, *conditional
+on* the §10.1 checklist". Of the 19 items not fully met, **7 are content/AI readiness, 6 are owner
+purchases, 2 are business decisions, and 4 are engineering.**
+
+⚠️ **"Partial" is the column that matters** — *"traditions/festivals/rituals seeded"* looks ticked
+because the four traditions are seeded, while the seed carries one ritual and one festival named
+`sample-festival` whose significance is *"Placeholder significance (reviewer content to follow)."*
+
+### The two findings
+
+1. ⛔ **NO PERFORMANCE GATE EXISTS**, though §10.1 calls it release-blocking. PDD sets numeric
+   budgets (Today cached render < 500 ms · checklist ack < 100 ms · ritual "Begin"→first step
+   < 400 ms · completion ack < 100 ms) and **nothing in the eight workflows measures any of them**.
+   Accessibility has a gate because it was expressible as a unit assertion; performance never was.
+2. ⛔ **THE PAYWALL IS FULLY BUILT AND EMITS NOTHING.** SCR_SUBSCRIPTION_001, CMP_PLAN_CARD, the
+   contextual sheet and `visibleOfferings` are implemented and tested; `EVT_049` is defined in PDD
+   §11 and never fired. **The MRD's NZ pricing question is therefore unanswerable with the data the
+   app produces** — discoverable only after launch, when someone went looking for the funnel.
+
+### ⛔ A perturbation caught a defect in my own document
+
+§9 and §10 of GO_NO_GO both told the reader the verbatim appendix was "the machine-checked surface",
+while the test's first version checked coverage against the **whole file** — so deleting an appendix
+item still passed, because the human-readable table above quotes the same words and the assertion
+matched there instead. **The appendix was decorative while two sections claimed it was
+load-bearing.** Fixed by scoping the check to the appendix, plus a guard that fails if its heading is
+renamed — tripping it takes all 22 coverage assertions down, which proves they are not vacuous.
+**Third time this milestone that a guard looked convincing and measured nothing.**
+
+**Verified:** vitest **206 (+30)** · tsc **11/11 uncached** · eslint **0 errors** (14 warnings) ·
+**seven perturbations**, each failing exactly the intended assertion, controls green at both ends.
+
+### Next, in order
+
+1. **B8.2 — a performance gate.** ⚠️ Carries a real design question and should not be rushed: a
+   threshold measured on a CI emulator says little about a mid-range phone, which is exactly why this
+   gate has never been written. Likely instrument — a Maestro assertion on the already-green device
+   runs, since PDD's budgets are user-visible latencies the flows already wait on.
+2. **B8.3 — emit `EVT_049`.** Small, and it invents nothing: the id is already in PDD §11, unlike
+   NFR-10's sync metric, which has no event in the taxonomy and is genuinely blocked on a PDD
+   decision.
+3. **Owner — the store accounts now outrank every other purchase.** Apple ($99) + Google Play ($25)
+   unblock §10.2 step 1 (internal smoke), and simultaneously convert every *"proven in EAS, not on a
+   device"* caveat from B7 into a real answer. Nothing else on the checklist is reachable first.
+
+**Still owed, and named rather than absorbed:** `SVC_health`'s 503 branch end to end · §7.2
+dashboards (ADR-025's rollup worker is unbuilt) · the deprecated Supabase key migration ·
+**`@supabase/supabase-js` undeclared in `apps/backend`** — ⚠️ and note `apps/backend` has **no
+`package.json` at all**, so that fix is a slightly larger question than adding a line.
+
+---
+
+## ✅ Previous Task — B7, COMPLETE 2026-08-08
+
+**Merged: #114 `76e9764` (B7.2) · #115 `fd1aa83` (B7.3) · #116 `9667600` (B7.4)**, joining B7.1
+`3cee165`. All four increments **PERFORMED** against real infrastructure rather than configured.
+`RELEASE_RUNBOOK.md` §0 now counts **eight** rollback paths: **three exercised**, one blocked, **three
+with no mechanism at all**, PITR absent.
+
+### ⛔ The docs had been three increments stale — and were internally consistent throughout
+
+B7.2, B7.3 and B7.4 each completed without the Increment Checkpoint running, so all six status files
+still said "B7 is 1 of 4" while the work sat merged on main. **No file contradicted another, because
+each had been written from the previous one.** `git log` is the instrument; a status file is not
+evidence about the repository.
+
+### ⛔ And B7.4's recorded blocker was half false
+
+Every document had B7.4 as owner-gated on Play/Apple accounts. §2.4's requirement is about **OTA**,
+and `eas channel:rollout` does exactly what §3.2 describes — only the phased rollout of a **binary**
+needed a store account. **A blocker recorded once propagates through every document that cites it**,
+the same shape as the merged SLO denominator across five files.
+
+### B7.2 — the stake was the crash-free SLOs, not tidiness
+
+Sentry sets no explicit release, so `@sentry/react-native` derives it from the **native app version**.
+A build tagged `v0.2.0` from an `app.config.ts` still saying `0.1.0` files its crashes under
+**`0.1.0`** — and NFR-06/NFR-07 are read **per release**, so the new build **looks healthy** because
+its crashes landed in the previous bucket. Same class as CI reporting itself as `production` (#98).
+`CHANGELOG.md` did not exist. `release-build.yml` now fails **before building** on disagreement, split
+deliberately by what can violate each half: config↔changelog in the unit suite (checkable per PR),
+tag↔config in the workflow (only a tag push can violate it, and it must fail rather than produce a
+mislabelled artifact).
+
+### B7.3 — a successful rollback produced a RED run
+
+Performed: `31169545892` (seven functions redeployed from an older commit) → `31169842290` (all eight
+restored from `main`). ⚠️ That proves redeploy-on-demand, **not** a behavioural diff — the two commits
+had no observable difference, so "the older code is serving" rests on the deploy log naming the older
+SHA, and the runbook says so.
+⛔ **`promote-production` fails by design and ran on every `workflow_dispatch`**, so asking to roll
+back staging implied asking to promote — and a successful rollback went red. Mid-incident the obvious
+reading of red is "the rollback failed," and the next move is riskier. **A control built to prevent a
+false green was manufacturing a false red on the recovery path.** Gated behind an explicit `promote`
+input, default `false`; fail-loud behaviour unchanged when promotion is actually requested.
+**The flag-disable path moved to BLOCKED, not "never performed"** — `FF_FAMILY_PLAN` gates only the
+Family offering and `react-native-purchases` is uninstalled, so filtering an empty offering list
+proves nothing either way, and would not even with the SDK installed.
+
+### B7.4 — the staged OTA rollout, whole lifecycle
+
+`31170893305` publish candidate → `31171165323` 10% → `31171256503` 50% → `31171329608` revert.
+Staging is back where it started. `publish` gained an optional `--branch`, because a rollout splits
+traffic between **two** branches and publishing with `--channel` targets the one the channel already
+points at. **`rollout_outcome` defaults to `revert`**, pinned by a test — the dangerous default is the
+one that keeps a bad update live.
+⚠️ **The monitoring between stages is the point, not the percentages**; advancing on a timer is a slow
+deploy. And an open Sentry issue suppresses the next alert, so "no new alert" is not health.
+⚠️ **`--runtime-version` is required to create a rollout** — unmarked in `--help`, found only by run
+`31171046705` failing, and **derived** from the candidate branch rather than typed. The **fourth**
+eas-cli assumption this slice got wrong (three JSON shapes, one mandatory flag), every one surfaced by
+running against real EAS.
+
+### ⛔ Auto-rollback is not automated, and the runbook says so in those words
+
+§2.4 says "auto-rollback on a crash spike". The **action** is proven; **nothing triggers it** — that
+needs a Sentry alert webhook plus a credential to call GitHub, an owner action. A
+`repository_dispatch` receiver was deliberately **not** added: a trigger with no sender is the
+placeholder shape B1 spent its time removing, the same reasoning that left the `job` table worker
+unbuilt. A test holds the disclosure in place, because "auto-rollback" in a TDD and a manually
+dispatched revert are different claims.
+
+**Verified:** vitest **176** · tsc **11/11 uncached** · eslint **0 errors** at its 16-warning baseline
+· five CI gates green on #116 · four perturbations each failing exactly one assertion.
+
+---
+
+## Superseded — B7 as scoped at its start
+
 🚧 **B7 — RELEASE MANAGEMENT IS STARTED. B7.1 MERGED (`3cee165`, PR #113).**
 Main is at `3cee165`; **no open PRs**. **Progress stays 50%** — a slice counts only when complete and
 B7 is **1 of 4** increments.

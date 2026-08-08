@@ -2,10 +2,11 @@
 
 # PanchangPal Dashboard
 
-Version: 1.38.0
+Version: 1.40.0
 
-Last Updated: 2026-08-07 (seven merged — **B7 STARTED** with B7.1: OTA publish and rollback are real
-and both PERFORMED; 50% unchanged, B7 is 1 of 4 increments)
+Last Updated: 2026-08-08 (**B7 COMPLETE** → 63%, then **B8 STARTED** — the §10.1 checklist is walked
+and the answer is **NO-GO**: 3 of 22 met. Two findings: no performance gate, and the paywall emits
+nothing)
 
 Purpose:
 This is the first file Claude should read at the beginning of every session.
@@ -42,9 +43,31 @@ PanchangPal
 
 Progress
 
-50%
+63%
 
-(Canonical progress metric — **4 of 8 Beta Readiness slices COMPLETE: B2, B4, B5, B6.**
+(Canonical progress metric — **5 of 8 Beta Readiness slices COMPLETE: B2, B4, B5, B6, B7.**
+**B7 closed 2026-08-08** with all four increments merged. Its standard was the same one B4 set: a
+release control is counted only when it has been **performed**, not when it has been written. Three
+rollback paths have now been exercised against real infrastructure — the OTA rollback, the Edge
+Function redeploy, and the staged OTA rollout — each on staging, each with run ids in
+`RELEASE_RUNBOOK.md`.
+⚠️ **None of the three is proven to reach a device.** No EAS build exists for any channel, so each
+proves its mechanism runs correctly in EAS or Supabase, not that a user's phone changed behaviour.
+That distinction belongs in a go/no-go conversation and is written into the runbook rather than left
+to be inferred.
+⛔ **And "auto-rollback on a crash spike" (§2.4) is NOT automated.** The revert action is proven and
+**nothing triggers it**: that needs a Sentry alert webhook plus a credential to call GitHub, an owner
+action. A `repository_dispatch` receiver was deliberately not added — a trigger with no sender is the
+placeholder shape B1 spent its time removing. Today a crash spike pages a human (proven in B4.4) and
+the human dispatches the revert. A test holds that sentence in the runbook, because "auto-rollback"
+in a TDD and a manually dispatched revert are different claims.
+Counted at **verifiable scope**, the same basis as B5 (no PITR) and B6 (no ratified ADR-034): the
+store-side phased rollout of a binary stays blocked on Play/Apple accounts, and the feature-flag
+disable path is **blocked rather than skipped** — `FF_FAMILY_PLAN` gates only the Family offering,
+`react-native-purchases` is not installed, so filtering an empty offering list demonstrates nothing
+whether the flag is on or off.
+
+Prior detail — **4 of 8 slices COMPLETE: B2, B4, B5, B6.**
 **B4 closed 2026-08-02** when B4.4 landed: two of §7.2's seven SLOs — NFR-06 crash-free sessions and
 NFR-14 availability — are live AND **proven end to end by deliberate triggers**, each watched to open
 an issue and deliver mail to a human. §8.4's standard is that an alert nobody has seen fire is a
@@ -114,6 +137,131 @@ CURRENT_MILESTONE.md
 ---
 
 # Current Task
+
+🚧 **B8 STARTED — THE §10.1 GO/NO-GO CHECKLIST IS WALKED. The answer is ⛔ NO-GO.**
+**Progress stays 63%** — a slice counts only when complete, and B8's other two deliverables
+(internal smoke on TestFlight/Play Internal, beta cohort) are owner-gated on store accounts.
+
+**`docs/devops/GO_NO_GO.md`** walks all **22** `[MANDATORY]` items across five categories:
+**3 met · 10 partial · 7 not met · 2 business-owned.** Pinned by
+`apps/backend/tests/release/go-no-go.test.ts` (30 assertions), which parses §10.1 **out of the TDD**
+and checks coverage **both ways** — an item dropped fails, an item invented fails.
+
+⚠️ **"Partial" is the column that matters**, because a partly-met item looks ticked from a distance.
+The clearest case: *"traditions/festivals/rituals seeded"* — traditions **are** seeded (4 of them), so
+a quick read passes it, while the festival is literally named `sample-festival` with the significance
+text *"Placeholder significance (reviewer content to follow)."*
+
+**Almost none of the gap is unfinished engineering.** Of the 19 items not fully met: **7 content/AI
+readiness · 6 owner purchases · 2 business decisions · 4 engineering** — and two of those four are
+the findings below.
+
+⛔ **FINDING 1 — THERE IS NO PERFORMANCE GATE, AND §10.1 CALLS IT RELEASE-BLOCKING.** PDD specifies
+numeric per-screen budgets (Today cached render < 500 ms · checklist ack < 100 ms · ritual
+"Begin"→first step < 400 ms) and **nothing measures any of them** — no performance, bundle-size or
+budget check exists in any of the eight workflows. Accessibility has a gate because it was
+expressible as a unit assertion; performance never was. **Deliberately not bolted on here**: a
+threshold measured on a CI emulator says little about a mid-range phone, and that design question is
+the reason the gate has never been written. Recommendation recorded, not implemented.
+
+⛔ **FINDING 2 — THE PAYWALL IS FULLY BUILT AND EMITS NO ANALYTICS AT ALL.** SCR_SUBSCRIPTION_001,
+CMP_PLAN_CARD, the contextual sheet and `visibleOfferings` are implemented and tested; **not one
+emits an event.** PDD §11 defines `EVT_049` for that surface and nothing fires it. The consequence is
+that **the NZ pricing question the MRD wants answered is unanswerable with the data the app
+produces** — which would have surfaced only after launch, when someone went looking for the funnel.
+⚠️ Unlike NFR-10 (no sync event exists in the taxonomy, so it is genuinely blocked on a PDD
+decision), `EVT_049` is **already in the registry**, so emitting it invents nothing.
+
+⛔ **AND THE TEST CAUGHT A DEFECT IN MY OWN DOCUMENT — the same class it exists to find.** §9/§10
+told the reader the verbatim appendix was "the machine-checked surface", and the first version of the
+test checked coverage against the **whole file**, so deleting an appendix item still passed: the
+human-readable table above quotes the same words and the assertion matched there instead. **The
+appendix was decorative while two sections claimed it was load-bearing** — a documented control that
+nothing implements, one layer inside the document written to catalogue exactly that. Found by
+perturbation, not by review. Scoped to the appendix, with a guard that fails if the heading is
+renamed (which takes all 22 coverage assertions down with it, proving they are not vacuous).
+
+**§10.2's step 1 is the highest-leverage purchase in the project.** Internal smoke on TestFlight /
+Play Internal needs only Apple ($99) + Play ($25) — the build pipeline, signing, source maps and six
+flows already work — and it converts every *"proven in EAS, not on a device"* caveat in the rollback
+section into a real answer.
+
+**Verified:** vitest **206 (+30)** · tsc **11/11 uncached** · eslint **0 errors** (14 warnings) ·
+**seven perturbations**, each failing exactly the intended assertion, controls green at both ends.
+
+---
+
+**Previously — B7.**
+
+✅ **B7 — RELEASE MANAGEMENT IS COMPLETE. 50% → 63%.** Three increments merged since the last
+checkpoint: **#114 `76e9764`** (B7.2 version trains) · **#115 `fd1aa83`** (B7.3 Edge Function
+rollback) · **#116 `9667600`** (B7.4 staged OTA rollout). Main is at `9667600`; **no open PRs.**
+
+⚠️ **THE TRACKING DOCS HAD BEEN THREE INCREMENTS STALE.** B7.2, B7.3 and B7.4 each completed without
+the Increment & Milestone Completion Checkpoint being run, so every status file still read "B7 is 1 of
+4" while the work was done and merged. The drift was invisible from inside the docs — each one agreed
+with the others. **The instrument is `git log`, not the previous document.**
+
+⛔ **B7.4's RECORDED SCOPE WAS WRONG, AND THE CORRECTION IS THE FINDING.** Every tracking file had
+B7.4 as owner-gated on Play/Apple accounts. **Only half of it was.** §2.4's requirement — *"OTA
+rollouts are staged and monitored (Sentry crash-free), auto-rollback on a crash spike"* — is about
+**OTA**, and `eas channel:rollout` does exactly what §3.2 describes. The store-side phased rollout of
+a *binary* is genuinely blocked; the OTA side never was, and had been deferred on an assumption
+nobody had tested. **A blocker recorded once propagates through every document that cites it** — the
+same shape as the SLO count drift, where five files repeated one merged denominator.
+
+**PERFORMED on staging — the whole lifecycle, not a subset:**
+
+| Run | Step | Evidence |
+|---|---|---|
+| `31170893305` | publish candidate | `branch = staging-canary` |
+| `31171165323` | rollout-start 10% | `staging (90%)` / `staging-canary (10%)` |
+| `31171256503` | rollout-advance 50% | *"50% … and 50% will remain on the staging branch"* |
+| `31171329608` | rollout-end revert | *"⬅️ Reverted all users back to branch staging"* |
+
+Staging is back where it started. **`rollout_outcome` defaults to `revert`**, pinned by a test: the
+dangerous default is the one that *keeps* a bad update live, so a hurried operator ending a rollout
+mid-incident must not **preserve** the regression.
+
+⚠️ **THE MONITORING BETWEEN STAGES IS THE POINT, NOT THE PERCENTAGES.** Advancing on a timer is a
+slow deploy, not a staged rollout; what each stage buys is a bounded population to observe. And
+because **an open Sentry issue suppresses the next alert** (B4.4's finding), *"no new alert"* is not
+evidence of health if one is already open — the runbook says to check before advancing.
+
+⛔ **B7.3's drill found that a MANUAL CD DISPATCH COULD NEVER REPORT GREEN.** `promote-production`
+fails by design — it once reported a completed promotion while deploying nothing — and it ran on
+**every** `workflow_dispatch`, so a **successful rollback produced a red run**. Mid-incident the
+obvious reading of red is "the rollback failed," and the next move is something riskier. **A control
+built to prevent a false green was manufacturing a false red on the recovery path**, which is worse,
+because that is where a misread costs most. Fixed by gating the job behind an explicit `promote`
+input, default `false`; the fail-loud behaviour is unchanged when promotion is actually requested.
+
+⚠️ **B7.2: A VERSION MISMATCH WOULD HAVE CORRUPTED THE CRASH-FREE SLOs.** Sentry sets no explicit
+release, so `@sentry/react-native` derives it from the **native app version**. A release tagged
+`v0.2.0` built from an `app.config.ts` still saying `0.1.0` files its crashes under **`0.1.0`** — and
+NFR-06 / NFR-07 are read **per release**, so the new build would look healthy because its crashes
+landed in the previous release's bucket. Same class as CI reporting itself as `production` (#98): a
+real signal attributed to the wrong thing, with nothing visibly broken. `CHANGELOG.md` did not exist;
+`release-build.yml` now fails **before building** if a `v*` tag disagrees with `app.config.ts` or the
+changelog has no entry for it. Split deliberately by what can violate each half — config↔changelog is
+checkable on every PR and lives in the unit suite; tag↔config can only be violated by a tag push and
+lives in the workflow, where it fails rather than producing a mislabelled artifact.
+
+⚠️ **`--runtime-version` is REQUIRED to create a rollout** — listed in `--help` with nothing marking
+it mandatory, found only by run `31171046705` failing. It is **derived** from the candidate branch
+rather than typed, because a 40-character fingerprint is not something to copy by hand mid-incident.
+That is the **fourth** eas-cli assumption this slice got wrong (three JSON shapes, one mandatory
+flag), every one surfaced by running against real EAS rather than by reading documentation.
+
+**Runbook §0 now reads:** of **eight** paths — **three exercised**, **one blocked**, **three with no
+mechanism at all**, **PITR absent**.
+
+**Verified:** vitest **176** · tsc **11/11 uncached** · eslint **0 errors** at its 16-warning
+baseline · all five CI gates green on #116 · four perturbations each failing exactly one assertion.
+
+---
+
+**Previously — the five test/CI merges.**
 
 ✅ **FIVE MERGED — #108 `610bf12` (timeout guard) · #107 `21e8c13` (RNTL 13 → 14) · #110 `afce763`
 (the double-`clearState` race) · #111 `693c62f` (streamed logcat) · #112 `42a76f4` (the jest worker
@@ -1027,6 +1175,33 @@ Verified end-to-end. **PR #36 merged to main as `e1e10d4`**; the docs checkpoint
 
 # Today's Objective
 
+Session of 2026-08-08 (part 2). **Start B8 — walk the §10.1 go/no-go checklist.** Outcome: the walk
+is done and the answer is **⛔ NO-GO — 3 of 22 items met**, recorded in `docs/devops/GO_NO_GO.md` and
+pinned by a 30-assertion conformance test. **Progress stays 63%**; B8's other two deliverables are
+owner-gated. Two findings, both the milestone's signature shape: **no performance gate exists** though
+§10.1 calls it release-blocking, and **the fully-built paywall emits no analytics**, making the MRD's
+NZ pricing question unanswerable. The sharpest moment was a perturbation catching **my own document**
+claiming a verbatim appendix was "the machine-checked surface" while the test checked the whole file —
+so the appendix was decorative while two sections said it was load-bearing.
+Next: the two findings, in either order; both are credential-free.
+
+---
+
+Session of 2026-08-08 (part 1). **Resume from the last saved session, then run the checkpoint that
+three increments had skipped.** Outcome: **B7 CLOSED, 50% → 63%** — the fifth of eight Beta slices and the
+first completed since B4 on 2026-08-02. B7.2 and B7.3 were already on main and B7.4 was open and
+green; merging #116 (`9667600`) completed the slice.
+**The finding is about the tracking system rather than the code: the docs had been three increments
+stale and were internally consistent the whole time.** Every file agreed with every other file and
+all of them were wrong, because each was written from the previous one. `git log` is the instrument.
+The second finding is the same shape one level down — **B7.4 was recorded as store-gated in every
+document, and only half of it was**: §2.4's staged-rollout requirement is about OTA, which was never
+blocked. **A blocker recorded once propagates through every document that cites it**, exactly as the
+merged SLO denominator did across five files.
+Next: **B8**, the last unstarted Beta slice.
+
+---
+
 Session of 2026-08-02 (part 4). **Fix the tracking-doc drift, then migrate RNTL 14.** Outcome: both
 done on `chore/rntl-14-migration` (`9942763`), **progress unchanged at 50%**. The drift turned out not
 to be a stale number but two **merged denominators** — §7.2's seven versus the Part 1 §8 NFR table —
@@ -1187,7 +1362,7 @@ No new product scope.
 | Mobile — Subscription | ✅ M8 |
 | AI Platform | 🟡 adapters done; corpus + eval pending |
 | Testing | 🟢 452 unit/component/domain (350 mobile + 102 vitest) + 43 pgTAP (17 RLS + 9 DB + **17 for the F-3 deletion executor**) + a monthly DR restore drill + **6 Maestro flows, all green** · bundle gate per PR · 🟢 **E2E green in CI** — **6/6** on a real native Android build (RETURNING · MORNING_RITUAL · SESSION_PERSISTENCE · AUTH_SESSION_PERSISTENCE · ONBOARDING · **OFFLINE_SYNC**) in 5m16s, run 30207484940 on `a05760d`, 2026-07-26. (The count read "4" until this session: FLOW_AUTH_SESSION_PERSISTENCE was added in B6 and never counted. `e2e.yml`'s echo is now DERIVED from the flows directory, so the count cannot drift again.); gate fails fast (PR #35) and the launcher-ANR false-red is removed at its cause (PR #55 — `hide_error_dialogs` alone had stopped being sufficient) · AI-eval de-declared (owed: §9.4 harness); api-contract restored |
-| Beta | 🚧 In progress — **B2 ✅**; **B5 ✅ at verifiable scope** (NFR-15 blocked on PITR — a purchase); **B6 ✅ at verifiable scope** (OWASP review ✅ · CCPA export + SVC_account authz ✅ · B6.3 inventory/policy/labels ✅ · §5.2 controls ✅ — ⛔ **but deletion is never executed**, an engineering-closable launch blocker); **B4 🟡 ~75%** (owner-gated on a Sentry org); B1/B3 owner-gated; B7–B8 pending |
+| Beta | 🚧 **63% — 5 of 8 slices complete: B2 ✅ · B4 ✅ · B5 ✅ · B6 ✅ · B7 ✅** (the last four at verifiable scope). **B5** — NFR-15 blocked on PITR, a purchase. **B6** — OWASP review · CCPA export + SVC_account authz · B6.3 inventory/policy/labels · §5.2 controls, and deletion **is** now executed (executor + sweep + pg_cron, 2026-07-27; ADR-034 ratified and implemented in #104). **B4** — three SLOs proven end to end by deliberate trigger; five unproven, none of them unfinished code. **B7 ✅ closed 2026-08-08** — B7.1 OTA publish/rollback · B7.2 version trains + changelog gate · B7.3 Edge Function rollback · B7.4 staged OTA rollout, all four **performed** rather than configured; ⚠️ none proven to reach a device (no EAS build on any channel) and ⛔ auto-rollback is **not** automated (no trigger — an owner action). B1 ~85% / B3 ~80%, remainders owner-gated on money or a store account; **B8 is the last unstarted slice** |
 | Production | ⏳ |
 
 ---
@@ -1270,26 +1445,52 @@ resolved (PR #14).
 
 # Next Deliverable
 
-**Engineering: close both Sentry blockers together on `feat/sentry-telemetry` (PR #79).** Resolve
-the telemetry adapter once at startup in AppProviders — with a test that fails when that resolution
-is removed — then re-run E2E for **two consecutive greens**. They are one task because the fix
-changes when Sentry's network instrumentation installs, which is the leading suspect for the
-deterministic red.
+**The §10.1 walk is DONE (`GO_NO_GO.md`, ⛔ NO-GO). The two credential-free items it produced are
+next**, and they are the only entries on the whole checklist that are both blocking and buildable
+today:
 
-**Then owner action: a free-tier Sentry org + DSN.** Everything else in B4 is built; without a DSN
-the adapter resolves to Null, nothing has been observed reaching Sentry, and B4.4 (SLO dashboards +
-alerts) cannot start.
+1. **A performance gate (§10.1 item 8, release-blocking).** PDD's budgets are numeric and nothing
+   measures them. ⚠️ **This has a real design question in it and should not be rushed**: a threshold
+   measured on a CI emulator says little about a mid-range phone, which is precisely why the gate has
+   never been written. The cheapest instrument that is not misleading is probably a Maestro assertion
+   on the already-green device runs, since those budgets are user-visible latencies the flows already
+   wait on.
+2. **Emit `EVT_049` from the subscription surface (§10.1 item 19).** Small, and it invents nothing —
+   the id is already in PDD §11's registry, unlike NFR-10's sync metric, which has no event and is
+   genuinely blocked on a PDD decision. Without it the MRD's NZ pricing signal test cannot run.
 
-⚠️ **Also worth an hour: install a JDK 17.** Only JDK 26 is present and Kotlin's version parser
-rejects `"26.0.1"`, so local Gradle builds fail before compiling. That is why this session's two
-Sentry defects cost CI round trips instead of minutes.
+**Then the highest-leverage purchase in the project: Apple ($99) + Google Play ($25)**, which unblocks
+§10.2 step 1 (internal smoke on TestFlight / Play Internal). The build pipeline, signing, source maps
+and six Maestro flows already work, so this is the step that converts every *"proven in EAS, not on a
+device"* caveat into a real answer — and it is a precondition for B8's two remaining deliverables,
+for B3's remainder, and for the store half of B7.
 
-**Then: ratify ADR-034** — Security/Privacy on what identifies the subject of a completed
-erasure, Legal on whether a records-of-request retention obligation applies and for how long. The
-implementation behind it is small and entirely blocked on that answer; building the recommended
-option first would be inventing the privacy decision the ADR exists to surface.
+**Four residuals decide the eventual go/no-go, and none is unfinished code:**
 
-**Credential-free engineering is now genuinely thin, and that is worth stating plainly rather than
+1. ⛔ **PITR is unavailable** (NFR-15, free-tier Supabase, ~$25/mo). A destructive migration against
+   real user data has **no recovery**. This is a launch blocker in the plain sense.
+2. ⚠️ **No release path is proven to reach a device.** Three rollback mechanisms are exercised, all
+   in EAS or Supabase; **no EAS build exists for any channel**, so nothing has been shown to change
+   a phone's behaviour. B3's store accounts are what unblock this.
+3. ⚠️ **Auto-rollback on a crash spike is not automated** — the action is proven, nothing triggers
+   it. Needs a Sentry alert webhook plus a GitHub credential.
+4. ⛔ **Pre-launch: confirm no metric monitor has an open issue.** Two remain from B4.4's drills, and
+   a metric-monitor issue **cannot be cleared by hand** — it closes only on a healthy reading, so the
+   only lever is recreating the monitor. Harmless now; if the *first* real traffic is unhealthy the
+   metric never recovers and a genuine incident pages nobody.
+
+**Also owed, and named rather than absorbed:** `SVC_health`'s **503 branch** end to end (it belongs
+with the DB-outage runbook drill) · §7.2 **dashboards** (ADR-025's `analytics_event` rollup worker is
+unbuilt) · the **deprecated Supabase key migration** (`readEnv` throws without the legacy keys) ·
+**`@supabase/supabase-js` undeclared in `apps/backend`**, imported as a bare specifier while declared
+only in `apps/mobile` — it resolves today, which is precisely why it is worth fixing before a
+hoisting change removes it.
+
+⚠️ **Still worth an hour: install a JDK 17.** Only JDK 26 is present and Kotlin's version parser
+rejects `"26.0.1"`, so local Gradle builds fail before compiling — which turns a five-minute local
+check into a CI round trip.
+
+**Credential-free engineering is genuinely thin, and that is worth stating plainly rather than
 filling with hygiene work.** Still blocked, deliberately: the **in-app deletion screen** Apple
 5.1.1(v) requires needs a PDD affordance and SVC_household; the **`job` table worker** stays unbuilt
 because every `job_type` is blocked on a product or vendor decision; **PDD owes approved copy for

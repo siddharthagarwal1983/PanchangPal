@@ -2,10 +2,10 @@
 
 # PanchangPal — Project Status Dashboard
 
-Version: 1.23.0
+Version: 1.25.0
 
-Last Updated: 2026-08-07 (seven PRs merged — **B7 Release Management started**: OTA publish and
-rollback are real and both performed; 50% unchanged, B7 is 1 of 4 increments)
+Last Updated: 2026-08-08 (**B7 COMPLETE** → 63%, then **B8 STARTED** — §10.1 walked, verdict
+**⛔ NO-GO, 3 of 22**; no performance gate exists and the paywall emits nothing)
 
 Purpose:
 This document provides a high-level snapshot of the overall project.
@@ -40,7 +40,7 @@ Overall Progress
 
 ░░░░░░░░░░░░░░░░░░░░
 
-**Mobile MVP — Phase 1: ✅ 100% (all 8 slices, merged)** · **Beta Readiness & Platform Hardening: 🚧 50% (4 of 8 slices — B2, B4, B5, B6)**
+**Mobile MVP — Phase 1: ✅ 100% (all 8 slices, merged)** · **Beta Readiness & Platform Hardening: 🚧 63% (5 of 8 slices — B2, B4, B5, B6, B7)**
 
 Project Health
 
@@ -75,7 +75,7 @@ TBD
 | Mobile Development (feature slices) | ✅ Complete | 100% (M1–M8 done) |
 | AI Platform | 🟡 In Progress | Adapters + RAG pipeline done; corpus + eval pending |
 | Testing | 🟢 Healthy | 452 green (350 mobile jest + 102 vitest) + 43 pgTAP (incl. **17 on the F-3 deletion executor**) + 17 pgTAP RLS/DB assertions; bundle gate per PR; **6 Maestro FLOW_* green on main** (incl. FLOW_OFFLINE_SYNC); the emulator-ANR false-red is now fixed at its cause (AOSP image, PR #55) after PR #41's `hide_error_dialogs` proved a symptom patch — 3 of the last 4 failures were launcher ANRs; API contract gate restored and proven to fail; AI eval harness still owed |
-| Beta | 🚧 In progress | 50% (B2 ✅; **B4 ✅ CLOSED 2026-08-02 at verifiable scope** — B4.4 landed two §7.2 SLOs *proven end to end*, NFR-06 crash-free sessions and NFR-14 availability, each watched to open an issue and email a human, **plus NFR-07 crash-free users as a third SLO** (Part 1 §8, not one of §7.2's seven; binds tighter and pages first); the first NFR-06 drill detected correctly and notified **nobody** and would have shipped as configured, and NFR-07's drill proved that **an open issue suppresses the next alert**; five of §7.2's seven remain unproven, none of them unfinished engineering — three behind the Ask Guru gate, one behind uninstalled `expo-notifications`, NFR-10 behind a PDD taxonomy decision; B5 ✅ at verifiable scope — NFR-15 still needs PITR; **B6 ✅ at verifiable scope** — OWASP review + 2 critical fixes + CCPA export + B6.3 inventory/policy/labels + §5.2 controls, and ✅ **deletion is now executed** — the executor, sweep and pg_cron schedule shipped 2026-07-27 and the extension is enabled on both hosted projects; residual closed: `executed_at` was unwritable, and **ADR-034 is now RATIFIED and implemented** (#104) — a completed erasure leaves a one-way-digest audit record; **ADR-035** ratified the §6.6 `preferences` LWW rule (#103); **ADR-033 is the last Proposed ADR**; B1/B3 owner-gated; B7–B8 pending) |
+| Beta | 🚧 In progress | 63% (**B7 ✅ CLOSED 2026-08-08** — Release Management, all four increments **performed** rather than configured: B7.1 OTA publish/rollback, B7.2 version trains + a changelog/tag gate that fails *before* building, B7.3 the Edge Function rollback, B7.4 the staged OTA rollout through its whole lifecycle on staging. ⚠️ **Three rollback paths exercised, none proven to reach a device** — no EAS build exists for any channel. ⛔ **Auto-rollback is not automated**: the revert action is proven and nothing triggers it, which needs a Sentry webhook plus a GitHub credential — an owner action, deliberately not stubbed. Its store half (phased rollout of a binary) and the flag-disable drill stay **blocked** on Play/Apple accounts and an uninstalled payments SDK. B7.2's finding is the sharpest: **a version mismatch would have corrupted the crash-free SLOs**, because Sentry derives the release from the native app version and NFR-06/NFR-07 are read per release, so a mislabelled build looks healthy while its crashes land in the previous release's bucket. B7.3's: **`promote-production` ran on every dispatch and failed by design, so a successful rollback produced a red run** — a control built against a false green was manufacturing a false red on the recovery path; B2 ✅; **B4 ✅ CLOSED 2026-08-02 at verifiable scope** — B4.4 landed two §7.2 SLOs *proven end to end*, NFR-06 crash-free sessions and NFR-14 availability, each watched to open an issue and email a human, **plus NFR-07 crash-free users as a third SLO** (Part 1 §8, not one of §7.2's seven; binds tighter and pages first); the first NFR-06 drill detected correctly and notified **nobody** and would have shipped as configured, and NFR-07's drill proved that **an open issue suppresses the next alert**; five of §7.2's seven remain unproven, none of them unfinished engineering — three behind the Ask Guru gate, one behind uninstalled `expo-notifications`, NFR-10 behind a PDD taxonomy decision; B5 ✅ at verifiable scope — NFR-15 still needs PITR; **B6 ✅ at verifiable scope** — OWASP review + 2 critical fixes + CCPA export + B6.3 inventory/policy/labels + §5.2 controls, and ✅ **deletion is now executed** — the executor, sweep and pg_cron schedule shipped 2026-07-27 and the extension is enabled on both hosted projects; residual closed: `executed_at` was unwritable, and **ADR-034 is now RATIFIED and implemented** (#104) — a completed erasure leaves a one-way-digest audit record; **ADR-035** ratified the §6.6 `preferences` LWW rule (#103); **ADR-033 is the last Proposed ADR**; B1/B3 owner-gated; B7–B8 pending) |
 | Production Launch | ⏳ Pending | 0% |
 
 ---
@@ -92,28 +92,51 @@ product scope. Sliced B1–B8; see CURRENT_MILESTONE.md.
 
 Current Focus
 
-- **🟡 PR #107 (RNTL 13 → 14) IS OPEN WITH NO CI VERDICT — GITHUB ACTIONS MAJOR OUTAGE, 2026-08-06.**
-  Progress unchanged at **50%**; test infrastructure advances no Beta slice. Both CI attempts died in
-  **`Set up job`** at `Getting action download info` (`Service Unavailable`), taking the other four
-  gates down as `skipping` via `needs:`; one E2E run sat queued 15 min with **0 steps** and was
-  cancelled platform-side. ⚠️ **A red can be vacuous exactly as a green can** — ask which gate would
-  have had to fail; here none reached the code. ⚠️ **`in_progress` is not recovery**: a job reaches it
-  on runner assignment and still dies in `Set up job`.
-  **What IS known about RNTL 14 from CI:** a second E2E run got through and passed
-  **FLOW_MORNING_RITUAL 18/18** and **FLOW_OFFLINE_SYNC 39/39** on a green **Build APK** before
-  hanging in an unrelated place — so the migration bundles, compiles and runs on a device. The five
-  gates still owe the stated bar (tsc ×11 · eslint 0 errors · both suites with **no test-count
-  reduction** · `expo export` both platforms).
+- **🚧 B8 STARTED — THE §10.1 GO/NO-GO IS WALKED, AND THE ANSWER IS ⛔ NO-GO (2026-08-08).**
+  `docs/devops/GO_NO_GO.md`: **3 of 22 `[MANDATORY]` items met**, 10 partial, 7 unmet, 2
+  business-owned. **Progress stays 63%** — B8's remaining deliverables (internal smoke, beta cohort)
+  are owner-gated on store accounts. Pinned by `go-no-go.test.ts` (30 assertions), which parses
+  §10.1 **out of the TDD** and checks coverage **both ways**.
+  **This is the expected answer and saying it is the deliverable** — §10.4 always called the
+  milestone "ready for launch, *conditional on* the §10.1 checklist". Of the 19 items not fully met,
+  **7 are content/AI readiness, 6 are owner purchases, 2 are business decisions, and 4 are
+  engineering.**
+  ⚠️ **"Partial" is the dangerous column** — *"traditions/festivals/rituals seeded"* looks ticked
+  because the four traditions are seeded, while the festival is named `sample-festival` with the
+  significance text *"Placeholder significance (reviewer content to follow)."*
+  ⛔ **Finding 1: there is NO performance gate**, though §10.1 calls it release-blocking and PDD
+  sets numeric budgets (Today cached render < 500 ms · checklist ack < 100 ms). Accessibility has a
+  gate because it was expressible as a unit assertion; performance never was.
+  ⛔ **Finding 2: the fully-built paywall emits no analytics.** `EVT_049` is defined in PDD §11 and
+  never fired, so **the MRD's NZ pricing question is unanswerable with the data the app produces** —
+  discoverable only after launch, when someone went looking for the funnel.
+  ⛔ **And a perturbation caught a defect in the new document itself**: §9/§10 called the verbatim
+  appendix "the machine-checked surface" while the test checked the whole file, so deleting an
+  appendix item still passed against the table above it. **Decorative while two sections claimed it
+  was load-bearing** — the same class the document exists to catalogue.
 
-- **✅ `fix/e2e-flow-timeout` (`fb1a2fe`) — a hung E2E now fails red instead of going dark.**
-  `maestro test tests/flows/` ran with no timeout while `Build APK` has had
-  `timeout --kill-after=2m 40m` since 2026-07-25 — **the guard was applied to one step and never the
-  other.** A hang would have burned the full 90-minute budget and reported `cancelled`, which nobody
-  reads as red. Now capped at 25m with 124/137 annotated as **a HANG, not a flow assertion failure**,
-  proven against a shim reproducing GNU `timeout`'s exit semantics (hang → 124 + annotation · real
-  failure → 1 clean · pass → 0), with the logcat dump running in all three so the artifact survives.
-  **Not yet PR'd — deliberately held until Actions recovers**, because a workflow change whose point
-  is that CI signals mean something should not land on vacuous reds.
+- **✅ B7 — RELEASE MANAGEMENT IS COMPLETE (2026-08-08). 50% → 63%**, the fifth of eight Beta slices
+  and the first completed since B4 on 2026-08-02. Merged: **#114 `76e9764`** (B7.2) · **#115
+  `fd1aa83`** (B7.3) · **#116 `9667600`** (B7.4). Main is at `9667600`; **no open PRs.**
+  Every increment was **performed** against real infrastructure rather than configured — §8.4's
+  standard — with run ids recorded in `docs/devops/RELEASE_RUNBOOK.md`. Runbook §0 now reads: of
+  **eight** rollback paths, **three exercised**, **one blocked**, **three with no mechanism at all**,
+  **PITR absent**.
+  ⚠️ **None of the three is proven to reach a device** — no EAS build exists for any channel, so each
+  proves its mechanism runs correctly in EAS or Supabase, not that a phone changed behaviour.
+  ⛔ **Auto-rollback (§2.4) is NOT automated.** The revert action is proven; **nothing triggers it**.
+  A `repository_dispatch` receiver was deliberately not added — a trigger with no sender is the
+  placeholder shape B1 removed. A crash spike pages a human today, and the human dispatches.
+
+- **⚠️ THE TRACKING DOCS HAD BEEN THREE INCREMENTS STALE, AND WERE INTERNALLY CONSISTENT THROUGHOUT.**
+  B7.2, B7.3 and B7.4 each completed without the Increment & Milestone Completion Checkpoint running,
+  so every status file still said "B7 is 1 of 4" while the work sat merged on main. No document
+  contradicted another, because each was written from the previous one. **`git log` is the
+  instrument; a status file is not evidence about the repository.**
+  The same shape appeared one level down: **B7.4 was recorded as store-gated in every document and
+  only half of it was.** §2.4's staged-rollout requirement is about **OTA**, which was never blocked
+  — `eas channel:rollout` does exactly what §3.2 describes. **A blocker recorded once propagates
+  through every document that cites it**, exactly as the merged SLO denominator did across five files.
 
 - **⚠️ The Maestro launch race has a second form, and Rule 1 is necessary but NOT sufficient.**
   FLOW_SESSION_PERSISTENCE hung on `Launch app` 0.5 s after its own `clearState`, which followed
@@ -345,8 +368,8 @@ Implementation: Mobile MVP Phase 1 is feature-complete (M1–M8).
 | Linting | ✅ ESLint + Prettier configured |
 | Testing Pipeline | 🟢 Vitest + pgTAP suites; CI db-tests now installs psql + pg_prove (first live run pending) |
 | Build Pipeline | ✅ Turborepo defined |
-| OTA Strategy | ✅ Defined |
-| Release Automation | 🟡 Defined + preflight validator (scripts/preflight.sh); deploy steps scaffolded until EAS/projects provisioned |
+| OTA Strategy | ✅ **Defined and PERFORMED** — `ota.yml` publish · rollback · staged rollout (start/advance/end/view), all exercised on the staging channel 2026-08-07. `runtimeVersion: fingerprint` mechanically enforces §2.4's "no native changes over OTA"; ⚠️ by the same mechanism **a successful publish can reach nobody**, so the publish job counts matching finished builds and warns at zero |
+| Release Automation | 🟢 **B7 complete (2026-08-08)** — preflight validator (`scripts/preflight.sh`) · version trains with a tag↔`app.config.ts`↔`CHANGELOG.md` gate that fails **before** building · Edge Function rollback performed · staged OTA rollout performed. ⛔ **Auto-rollback on a crash spike is NOT automated** — the action is proven, nothing triggers it (needs a Sentry webhook + a GitHub credential, an owner action). ⚠️ Nothing is proven to reach a **device**: no EAS build exists for any channel |
 
 ---
 
@@ -367,14 +390,27 @@ Implementation: Mobile MVP Phase 1 is feature-complete (M1–M8).
 
 Priority 1
 
-**When GitHub Actions recovers: get a real verdict on the two open branches.** In order — open a PR
-for **`fix/e2e-flow-timeout`** (`fb1a2fe`), re-run **#107**'s five gates, then dispatch **one** E2E
-run (`e2e.yml`'s concurrency permits one pending run per ref; a batch cancels itself). Merge #107 on
-that evidence, not on the local run.
-⚠️ **Nothing on #107 has been verified by CI**, and the reds currently on it are the outage, not the
-change. Do not read them as a result, and do not re-run into an outage — check
-`githubstatus.com`'s Actions component, because **job state is not an instrument**: `in_progress`
-only means a runner was assigned.
+**Close the two credential-free findings the §10.1 walk produced** — the only items on the whole
+checklist that are both blocking and buildable today.
+1. **A performance gate** (§10.1 item 8, *release-blocking*): none exists in any of the eight
+   workflows while PDD sets numeric per-screen budgets. ⚠️ **Has a real design question and should
+   not be rushed** — a CI-emulator threshold says little about a mid-range phone, which is why the
+   gate has never been written. Likely instrument: a Maestro assertion on the already-green device
+   runs, since those budgets are user-visible latencies the flows already wait on.
+2. **Emit `EVT_049`** from the subscription surface (§10.1 item 19). The paywall is fully built and
+   emits nothing. Small, and it invents nothing — the id is already in PDD §11, unlike NFR-10's sync
+   metric, which has no event at all and is genuinely blocked on a PDD decision.
+
+**Then the highest-leverage purchase in the project: Apple ($99) + Google Play ($25)**, unblocking
+§10.2 step 1 (internal smoke). The build pipeline, signing, source maps and six Maestro flows already
+work, so this converts every *"proven in EAS, not on a device"* caveat into a real answer, and it is
+a precondition for B8's remaining deliverables, B3's remainder, and B7's store half.
+
+**The four residuals that decide the eventual verdict:** ⛔ **PITR is unavailable** (NFR-15, ~$25/mo),
+so a destructive migration against real user data has no recovery · ⚠️ **no release path is proven to
+reach a device** · ⚠️ **auto-rollback is not automated** · ⛔ **two metric monitors have open
+issues**, which **cannot be cleared by hand** — they close only on a healthy reading, so if the
+*first* real traffic is unhealthy the metric never recovers and a genuine incident pages nobody.
 
 Priority 2
 
@@ -489,6 +525,36 @@ prefs work today, so gating and prefs are real before the SDKs are wired.
 ---
 
 # Recently Completed
+
+- **B7 — RELEASE MANAGEMENT CLOSED (2026-08-08). 50% → 63%, the fifth of eight Beta slices.**
+  Three increments merged since the previous checkpoint: **#114 `76e9764`** (B7.2 version trains),
+  **#115 `fd1aa83`** (B7.3 Edge Function rollback), **#116 `9667600`** (B7.4 staged OTA rollout).
+  **B7.2 — a version mismatch would have corrupted the crash-free SLOs.** Sentry sets no explicit
+  release, so `@sentry/react-native` derives it from the **native app version**; a build tagged
+  `v0.2.0` from an `app.config.ts` still saying `0.1.0` files its crashes under `0.1.0`, and NFR-06 /
+  NFR-07 are read **per release** — the new build would look healthy because its crashes landed in the
+  previous release's bucket. `CHANGELOG.md` did not exist; `release-build.yml` now fails **before
+  building** on a tag/config/changelog disagreement. Split deliberately by what can violate each half.
+  **B7.3 — a successful rollback produced a RED run.** `promote-production` fails by design (it once
+  reported a completed promotion while deploying nothing) and ran on **every** `workflow_dispatch`.
+  Mid-incident the obvious reading of red is "the rollback failed," and the next move is riskier: **a
+  control built against a false green was manufacturing a false red on the recovery path.** Now gated
+  behind an explicit `promote` input, default `false`, with the fail-loud behaviour unchanged when
+  promotion is actually requested. The flag-disable path moved to **BLOCKED, not "never performed"** —
+  `FF_FAMILY_PLAN` gates only the Family offering, `react-native-purchases` is uninstalled, so
+  filtering an empty offering list demonstrates nothing either way.
+  **B7.4 — the staged OTA rollout, performed through its whole lifecycle** on staging: publish
+  candidate (`31170893305`) → 10% (`31171165323`) → 50% (`31171256503`) → revert (`31171329608`),
+  leaving staging where it started. `rollout_outcome` defaults to **`revert`**, pinned by a test,
+  because the dangerous default is the one that keeps a bad update live. ⚠️ **The monitoring between
+  stages is the point, not the percentages** — and since an open Sentry issue suppresses the next
+  alert, "no new alert" is not evidence of health.
+  ⚠️ **`--runtime-version` is required to create a rollout** — unmarked in `--help`, found only by a
+  failing run, and **derived** from the candidate branch rather than typed. The **fourth** eas-cli
+  assumption this slice got wrong (three JSON shapes, one mandatory flag), every one surfaced by
+  running against real EAS.
+  **Verified:** vitest 176 · tsc 11/11 uncached · eslint 0 errors at its 16-warning baseline · five
+  CI gates green on #116 · four perturbations each failing exactly one assertion.
 
 - **PR #107 opened; the E2E hang diagnosed; the flows-step timeout gap fixed (2026-08-06).**
   **Progress unchanged at 50%.** #107 carries the RNTL 14 migration and has **no CI verdict** —
@@ -798,9 +864,25 @@ The Mobile MVP Phase 1 feature-slice milestone is **complete (100%)** and merged
 slices — App Shell, Today, Guided Ritual, Calendar Shell, Ask Guru Client, Profile/Household,
 Notifications, and Subscription (M1–M8) — are implemented, tsc/eslint clean, and green in CI.
 
-The project is now in **Beta Readiness & Platform Hardening** (TDD Part 5), sliced B1–B8, at **50%
-(4 of 8 — B2, B4, B5 and B6, the last three at verifiable scope)**. The milestone opened on a known
+The project is now in **Beta Readiness & Platform Hardening** (TDD Part 5), sliced B1–B8, at **63%
+(5 of 8 — B2, B4, B5, B6 and B7, the last four at verifiable scope)**. The milestone opened on a known
 gap: CD reported green while its Maestro E2E and EAS build jobs were placeholders.
+
+**B7 — Release Management closed on 2026-08-08**, and it closed on the standard B4 set: a release
+control counts only when it has been **performed**. Four increments — OTA publish/rollback, version
+trains with a tag/config/changelog gate, the Edge Function rollback, and the staged OTA rollout — were
+each exercised against real infrastructure, with run ids in `RELEASE_RUNBOOK.md`. Of **eight**
+rollback paths the runbook now names, **three are exercised**, one is blocked, **three have no
+mechanism at all**, and PITR does not exist.
+⚠️ **Two honest limits sit on top of that.** None of the three exercised paths is proven to reach a
+**device** — no EAS build exists for any channel, so each proves its mechanism works in EAS or
+Supabase, not that a user's phone changed behaviour. And **"auto-rollback on a crash spike" (§2.4) is
+not automated**: the revert action is proven and nothing triggers it. A `repository_dispatch`
+receiver was deliberately not added, on the same reasoning that left the `job` table worker unbuilt —
+a trigger with no sender is the placeholder shape this milestone opened by removing.
+**Closing it also found that the tracking documents had been three increments stale while remaining
+internally consistent**, each written from the previous one; and that B7.4's recorded "store-gated"
+blocker was only half true, since §2.4's staged rollout is about OTA and was never blocked.
 
 **B4 — Observability closed on 2026-08-02**, the first slice since B6. B4.4 delivered two of §7.2's
 seven SLOs **proven end to end** — NFR-06 crash-free sessions and NFR-14 availability — each watched

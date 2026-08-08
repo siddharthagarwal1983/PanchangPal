@@ -2,7 +2,7 @@
 
 # PanchangPal — AI Decision Summary
 
-Version: 1.7.0
+Version: 1.8.0
 
 Purpose:
 This file contains a condensed summary of permanent project decisions.
@@ -20,6 +20,46 @@ docs/architecture/adr/
 ---
 
 # Product Decisions
+
+## 2026-08-08 — a status document is not evidence; and the safe default is the one that abandons
+
+**Decision 1. A tracking document is not evidence about the repository; `git log` is the instrument.**
+B7.2, B7.3 and B7.4 each shipped without the Increment Checkpoint running, so all six status files
+read "B7 is 1 of 4" while the work sat merged on main. **No file contradicted another** — each had
+been written from the previous one, so the set was internally consistent and uniformly wrong. This is
+the documentation form of the rule already recorded for green CI: **consistency among derived
+artifacts is not corroboration.** On resuming a session, reconcile the docs against the repository
+before trusting either.
+
+**Decision 2. A blocker is re-read against the tool before it is inherited.** B7.4 was recorded as
+owner-gated on Play/Apple accounts in every document; §2.4's staged-rollout requirement is about
+**OTA**, which `eas channel:rollout` does today, and only the phased rollout of a **binary** needed a
+store account. A blocker recorded once propagates through every document that cites it, and the cost
+is deferred work that was never blocked. **Second time in this milestone** — the merged SLO
+denominator sat in five files the same way.
+
+**Decision 3. Where an operator action has a safe and an unsafe outcome, the safe one is the
+default.** `rollout_outcome` defaults to **`revert`**, pinned by a test. Ending a rollout can either
+keep the candidate or abandon it, and the dangerous default is the one that **keeps a bad update
+live** — an operator ending a rollout mid-incident is hurrying, and the default is what they will
+get. Same family as `evaluateHealth()` taking a boolean and preflight refusing everyone when its
+secret is unconfigured: **make the failure mode structural rather than conventional.**
+
+**Decision 4. A capability with no trigger is described as such, not stubbed.** §2.4 asks for
+"auto-rollback on a crash spike"; the revert action is proven and **nothing invokes it**. A
+`repository_dispatch` receiver was deliberately **not** added, because a trigger with no sender is
+the placeholder shape B1 spent its time removing — the same reasoning that left the `job` table
+worker unbuilt. The runbook states the gap in words and **a test holds the sentence in place**, since
+"auto-rollback" in a TDD and a manually dispatched revert are different claims and only the
+documentation can carry the difference.
+
+**Decision 5. A control on the recovery path is judged by how it reads mid-incident.**
+`promote-production` fails by design and ran on every `workflow_dispatch`, so a **successful** Edge
+Function rollback produced a **red run**. A control built to prevent a false green was manufacturing
+a false red exactly where a misread costs most — the operator's next move after "the rollback failed"
+is something riskier. Recovery paths get the stricter review, not the looser one.
+
+---
 
 ## 2026-08-07 — `--help` documents flags, not output; and a warning that always fires is a defect
 
