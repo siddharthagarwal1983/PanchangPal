@@ -26,6 +26,12 @@
     "is how the headroom here was first written as 13% instead of 19%. All values are bytes; the",
     "MiB labels are presentation only.",
     "",
+    "⚠️ `measured` WAS TAKEN ON macOS, AND CI MEASURES SLIGHTLY LESS. The first CI run of this gate",
+    "reported 5.02 MiB against the 5.04 MiB recorded here — a ~21 KB gap between a macOS and an",
+    "Ubuntu build, three orders of magnitude larger than the ~32-byte run-to-run jitter above. So",
+    "do NOT read a CI number below `measured` as an improvement; it is the build platform. This",
+    "field is a dated note on where the budget came from, not a baseline to diff against.",
+    "",
     "RAISING THIS NUMBER IS THE POINT, NOT A NUISANCE. The gate exists to make bundle growth a",
     "decision someone makes on purpose, in a reviewed diff, rather than something that happens.",
     "If a change genuinely needs the room, raise it here and say why in the PR."

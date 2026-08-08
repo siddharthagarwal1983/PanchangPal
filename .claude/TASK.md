@@ -2,9 +2,9 @@
 
 # PanchangPal — Current Task
 
-Version: 11.0.0
-Last Updated: 2026-08-08 (**B8.2 DONE** — a bundle-size budget gates NFR-01, the repo's first
-performance gate; **B8.3 `EVT_049` is the last credential-free blocking item**)
+Version: 12.0.0
+Last Updated: 2026-08-08 (**B8.3 DONE** — the monetization funnel emits. **No credential-free blocking
+engineering remains on §10.1**; the store accounts are the critical path)
 
 Purpose: the current implementation task. Stay focused; avoid unrelated work unless instructed.
 
@@ -111,27 +111,68 @@ green in CI on a real native build. Canonical progress 0% → 13% (1 of 8 Beta s
 # Current Task
 
 ## Title
-⏳ **B8.3 — EMIT `EVT_049`. The last credential-free blocking item on the §10.1 checklist.**
-Main is at `4a56fe0`. **Progress stays 63%.**
+⏳ **OWNER-GATED — no credential-free blocking engineering remains on the §10.1 checklist.**
+**Progress stays 63%** (5 of 8; B8 started with B8.1–B8.3 done).
 
-The subscription surface is fully built — SCR_SUBSCRIPTION_001, CMP_PLAN_CARD, the contextual paywall
-sheet at `app/modal/paywall`, `visibleOfferings`, the `FF_FAMILY_PLAN` gate — and **emits nothing**.
-PDD §11 defines **`EVT_049`** for it, so this invents nothing (contrast NFR-10, which has no sync
-event in the taxonomy at all and is genuinely blocked on a PDD decision).
+Every remaining §10.1 item needs **money, content, legal review, or a business decision.** The order:
 
-⚠️ **State the limit when it ships:** emitting `EVT_049` makes the funnel **recordable, not
-readable**. `analytics_event` is INSERT-only for clients and ADR-025's rollup worker is unbuilt
-(§10.1 item 21), so the MRD's NZ pricing signal test needs **both** before it can answer anything.
-Claiming item 19 closed on the event alone would be the overstatement this slice keeps rejecting.
+1. **Apple ($99) + Google Play ($25)** — the highest-leverage action in the project. Unblocks §10.2
+   step 1 (internal smoke on TestFlight / Play Internal), converts every B7 *"proven in EAS, not on a
+   device"* caveat into a real answer, and is what lets **EVT_051** fire at all. The build pipeline,
+   signing, source maps and six Maestro flows already work.
+2. **~$25/mo paid Supabase** — PITR (NFR-15). A destructive migration against real user data
+   currently has **no recovery**; this is the plain launch blocker.
+3. **ADR-025's `analytics_event` rollup worker** — the one genuinely useful *unblocked* engineering
+   task left. It is the shared blocker behind §10.1 items **11** (dashboards), **19** (pricing test)
+   and **21** (activation/retention): the app now records events that **nothing reads**.
+4. **Content / AI readiness** — the RAG corpus + reviewer sign-off (items 1, 6) and reviewer-approved
+   festival/ritual content (item 2, where the seed is one placeholder festival).
+5. **Legal** — the privacy policy and store labels are drafted from a machine-checked inventory and
+   **not reviewed** (item 15).
+6. **ADR-033** — still the only Proposed ADR, and panchang accuracy (item 3) cannot be worked before
+   it is ratified.
 
-**Constraints that already exist and must hold:** every `EVT_*` goes through `AnalyticsService`
-(ADR-013); props are **primitives only** (objects/arrays are dropped at the boundary — that is how a
-server response would carry PII in); an id outside PDD §11's registry is rejected at runtime.
-
-**After this, every remaining checklist item needs money, content, legal review, or a business
-decision.** The store accounts (Apple $99 + Google Play $25) are the highest-leverage next step.
+**Also owed, and named rather than absorbed:** `SVC_health`'s 503 branch end to end · the deprecated
+Supabase key migration · **`@supabase/supabase-js` undeclared in `apps/backend`** (⚠️ which has **no
+`package.json` at all**) · ⛔ **two metric monitors with open issues**, which cannot be cleared by
+hand and will suppress the next alert of their kind.
 
 ---
+
+## ✅ Previous Task — B8.3, DONE 2026-08-08
+
+**The monetization funnel emits.** EVT_049/050/051/052 across both upgrade surfaces, derived purely in
+`src/domain/analytics/subscriptionEvents.ts` — the `ritualEvents.ts` pattern, because a screen calling
+`track()` inline **double-fires on re-render** and a conversion rate with an inflated denominator is
+worse than none. **EVT_051/052 come from the `usePurchase`/`useRestore` seam**, since two surfaces open
+a purchase and a funnel a third could join without reporting has a silent hole.
+
+### ⛔ The anchors had been comments for months
+
+Including an **empty `useEffect` whose entire body was `/* analytics: EVT_049 */`**. Written while the
+Analytics Adapter was deferred; **B4.2 shipped it and nothing went back.** A test fails if either
+anchor returns.
+
+### ⛔ `unavailable` deliberately emits nothing
+
+`NullPaymentAdapter` returns it for every purchase today. Mapping it to `fail` would have fired
+EVT_051 on **every tap** and permanently poisoned §11.3's free→paid rate with failures that only meant
+"payments are unbuilt" — a **broken** checkout rather than an **unbuilt** one. **A metric wrong in a
+plausible direction is worse than one that is absent, because nobody goes looking for it.**
+
+### ✅ The privacy inventory caught the new collection by itself
+
+`data-inventory.test.ts` went red the moment the events became real. **Adding analytics is a privacy
+change**, and B6.3's conformance test enforced disclosure before CI would pass — the first occasion it
+could. `DATA_INVENTORY.md` now lists all four with their props and records that **no price, store SKU,
+receipt or vendor error text** reaches analytics.
+
+**Verified:** mobile jest **450 (+21)** · vitest **219** · tsc **11/11** · eslint **0 errors** ·
+**four perturbations**, controls green.
+
+---
+
+## Superseded — B8.3 as scoped
 
 ## ✅ Previous Task — B8.2, DONE 2026-08-08
 

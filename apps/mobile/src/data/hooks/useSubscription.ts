@@ -6,16 +6,41 @@
  * successful purchase/restore the client does NOT grant entitlement; it invalidates the entitlement
  * query so the webhook-driven grant (also pushed via Realtime, see useEntitlement) is reflected.
  *
- * Analytics anchors: EVT_049 (screen viewed — fired by the screen), EVT_050 (plan selected),
- * EVT_051 (purchase result), EVT_052 (purchases restored). The Analytics Adapter is a deferred
- * deliverable across slices, so these are named call sites, not a fabricated analytics API.
+ * Analytics: EVT_051 (purchase result) and EVT_052 (purchases restored) are emitted HERE rather than
+ * at the call sites, because two surfaces open a purchase — SCR_SUBSCRIPTION_001 and the contextual
+ * paywall — and §11.3 computes free→paid from EVT_051. A funnel that a third surface could join
+ * without reporting is a funnel with a silent hole, so the seam that performs the purchase is the
+ * one that reports it. EVT_049/EVT_050 stay at the surfaces: being *seen* and choosing a plan are
+ * properties of a surface, not of this mutation.
+ *
+ * (Until 2026-08-08 these were comment-only anchors reading "the Analytics Adapter is a deferred
+ * deliverable, so these are named call sites, not a fabricated analytics API". The adapter shipped
+ * with B4.2; B8.3 made them real.)
  */
 import { useEffect } from 'react';
 import { useMutation, useQuery, useQueryClient } from '@tanstack/react-query';
 import { getPaymentAdapter } from '../paymentAdapter';
+import { getAnalyticsService } from '../analyticsAdapter';
 import { ENTITLEMENT_KEY } from './useEntitlement';
-import type { PlanOffering, PurchaseResult } from '../../domain/subscription';
+import type { EntitlementKind, PlanOffering, PurchaseResult } from '../../domain/subscription';
+import {
+  purchaseResultEvent,
+  purchaseThrewEvent,
+  purchasesRestoredEvent,
+} from '../../domain/analytics/subscriptionEvents';
 import { useSessionStore } from '../../store/session';
+
+/**
+ * What a purchase needs: the store product to buy, and the plan KIND it represents.
+ *
+ * The kind is carried rather than derived because §11.2 defines EVT_051's `plan` as
+ * individual/family, while `planId` is an opaque store product identifier — reporting the latter
+ * would make the monetization metric unreadable and leak store SKUs into analytics.
+ */
+export interface PurchaseRequest {
+  planId: string;
+  plan: EntitlementKind;
+}
 
 export const PLANS_KEY = ['subscription', 'plans'] as const;
 
@@ -50,12 +75,22 @@ export function usePlans() {
 export function usePurchase() {
   const qc = useQueryClient();
   const userId = useSessionStore((s) => s.userId);
-  return useMutation<PurchaseResult, unknown, string>({
-    mutationFn: (planId: string) => getPaymentAdapter().purchase(planId), // EVT_051 (result)
-    onSuccess: (result) => {
+  return useMutation<PurchaseResult, unknown, PurchaseRequest>({
+    mutationFn: ({ planId }) => getPaymentAdapter().purchase(planId),
+    // EVT_051 Purchase Result. `onSuccess` covers every RESOLVED outcome — the adapter contract
+    // resolves `cancelled`/`failed`/`unavailable` rather than rejecting — and `onError` covers a
+    // vendor SDK that throws. `purchaseResultEvent` returns null for `unavailable`, so no event is
+    // recorded while payments are unbuilt; see subscriptionEvents.ts for why that matters.
+    onSuccess: (result, { plan }) => {
+      const event = purchaseResultEvent(plan, result.outcome);
+      if (event) getAnalyticsService().track(event.eventId, event.props);
       if (result.outcome === 'success') {
         void qc.invalidateQueries({ queryKey: ENTITLEMENT_KEY(userId ?? 'anon') });
       }
+    },
+    onError: (_err, { plan }) => {
+      const event = purchaseThrewEvent(plan);
+      getAnalyticsService().track(event.eventId, event.props);
     },
   });
 }
@@ -65,8 +100,10 @@ export function useRestore() {
   const qc = useQueryClient();
   const userId = useSessionStore((s) => s.userId);
   return useMutation<PurchaseResult, unknown, void>({
-    mutationFn: () => getPaymentAdapter().restore(), // EVT_052 (restored)
+    mutationFn: () => getPaymentAdapter().restore(),
     onSuccess: (result) => {
+      const event = purchasesRestoredEvent(result.outcome);
+      if (event) getAnalyticsService().track(event.eventId, event.props);
       if (result.outcome === 'success') {
         void qc.invalidateQueries({ queryKey: ENTITLEMENT_KEY(userId ?? 'anon') });
       }

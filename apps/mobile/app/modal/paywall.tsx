@@ -11,7 +11,7 @@
  * Purchase flows through the PaymentAdapter seam; entitlement is NEVER granted on device (F-4).
  * The Family plan is hidden unless FF_FAMILY_PLAN is on (ADR-021).
  */
-import { useState } from 'react';
+import { useEffect, useState } from 'react';
 import { View } from 'react-native';
 import { router, useLocalSearchParams } from 'expo-router';
 import {
@@ -34,6 +34,11 @@ import {
 import { useFeatureFlag } from '../../src/data/hooks/useFeatureFlag';
 import { usePlans, usePurchase } from '../../src/data/hooks/useSubscription';
 import { useOnline } from '../../src/data/useOnline';
+import { getAnalyticsService } from '../../src/data/analyticsAdapter';
+import {
+  planSelectedEvent,
+  subscriptionViewedEvent,
+} from '../../src/domain/analytics/subscriptionEvents';
 import { t } from '../../src/i18n';
 
 /** Capability-specific framing — falls back to the generic upgrade copy for anything else. */
@@ -79,6 +84,14 @@ export default function PaywallSheet() {
   const purchase = usePurchase();
   const [selectedId, setSelectedId] = useState<string | null>(null);
 
+  // EVT_049 Subscription Viewed (AC-SUB-01 — "given the upgrade surface, when it appears"). The
+  // sheet is the OTHER surface that shows the offer, and omitting it would leave §11.3's free→paid
+  // denominator counting only the screen while conversions arrived from both.
+  useEffect(() => {
+    const event = subscriptionViewedEvent('contextual');
+    getAnalyticsService().track(event.eventId, event.props);
+  }, []);
+
   const prompt = promptFor(asCapability(capability));
   const offerings = visibleOfferings(plans.data, familyPlanEnabled);
   const purchaseFailed = purchase.data?.outcome === 'failed' || purchase.data?.outcome === 'unavailable';
@@ -88,12 +101,16 @@ export default function PaywallSheet() {
 
   // On success the webhook grants entitlement (Realtime propagates it) — close on the warm note.
   const onPurchase = () => {
-    if (!selectedId) return;
-    purchase.mutate(selectedId, {
-      onSuccess: (result) => {
-        if (result.outcome === 'success') dismiss();
+    const chosen = offerings.find((o) => o.id === selectedId);
+    if (!chosen) return;
+    purchase.mutate(
+      { planId: chosen.id, plan: chosen.kind },
+      {
+        onSuccess: (result) => {
+          if (result.outcome === 'success') dismiss();
+        },
       },
-    });
+    );
   };
 
   return (
@@ -133,7 +150,11 @@ export default function PaywallSheet() {
                 bestValueLabel={view.bestValueLabel}
                 selected={selectedId === offering.id}
                 loading={purchase.isPending}
-                onSelect={(id) => setSelectedId(id) /* EVT_050 (Plan Selected) */}
+                onSelect={(id) => {
+                  setSelectedId(id);
+                  const event = planSelectedEvent(offering.kind, 'contextual');
+                  getAnalyticsService().track(event.eventId, event.props);
+                }}
                 testID={`paywall-plan-${offering.kind}`}
               />
             );

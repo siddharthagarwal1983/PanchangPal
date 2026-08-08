@@ -2,10 +2,11 @@
 
 # PanchangPal — Project Status Dashboard
 
-Version: 1.26.0
+Version: 1.27.0
 
-Last Updated: 2026-08-08 (**B8.2** — the first performance gate this repo has ever had: a
-release-blocking bundle-size budget on NFR-01, decided by measurement rather than preference)
+Last Updated: 2026-08-08 (**B8.3** — the monetization funnel emits; the privacy inventory caught the
+new collection unprompted. Every remaining checklist item now needs money, content, legal, or a
+business decision)
 
 Purpose:
 This document provides a high-level snapshot of the overall project.
@@ -91,6 +92,22 @@ builds/distribution, observability, DR, security/privacy, release mechanics, go/
 product scope. Sliced B1–B8; see CURRENT_MILESTONE.md.
 
 Current Focus
+
+- **✅ B8.3 — THE MONETIZATION FUNNEL EMITS (2026-08-08).** Progress stays **63%**.
+  EVT_049/050/051/052 wired across both upgrade surfaces, derived purely in `subscriptionEvents.ts`;
+  EVT_051/052 come from the `usePurchase`/`useRestore` seam so a third surface cannot join the funnel
+  silently.
+  ⛔ **The anchors had been comments for months** — including an **empty `useEffect` whose entire body
+  was `/* analytics: EVT_049 */`**. Written while the Analytics Adapter was deferred; B4.2 shipped it
+  and nothing went back. A test now fails if either anchor returns.
+  ⛔ **`unavailable` emits nothing deliberately.** Mapping it to `fail` would have fired EVT_051 on
+  every tap and poisoned §11.3's free→paid rate with failures that only meant payments were unbuilt.
+  **A metric wrong in a plausible direction is worse than one that is absent.**
+  ✅ **The privacy inventory caught the new collection by itself** — `data-inventory.test.ts` went red
+  until `DATA_INVENTORY.md` disclosed the four events and their props. **Adding analytics is a privacy
+  change**, and B6.3's guard enforced it on the first occasion it could.
+  ⚠️ **Item 19 stays ⚠️** — EVT_051 cannot fire until payments ship, and nothing reads the rows while
+  ADR-025's rollup worker is unbuilt.
 
 - **✅ B8.2 — THE FIRST PERFORMANCE GATE THIS REPOSITORY HAS EVER HAD (2026-08-08).** Progress stays
   **63%**. `scripts/check-bundle-budget.mjs` runs in the Bundle gate as one line, weighing each
@@ -411,13 +428,18 @@ Priority 1
 **~~A performance gate~~ ✅ DONE (B8.2)** at the layer CI can measure honestly — a bundle-size budget
 on NFR-01. Its latency half stays open and is store-gated, not unfinished engineering.
 
-**B8.3 — emit `EVT_049`** from the subscription surface (§10.1 item 19) is now the **last
-credential-free blocking item on the whole checklist.** The paywall is fully built and emits nothing.
-Small, and it invents nothing — the id is already in PDD §11, unlike NFR-10's sync metric, which has
-no event at all and is genuinely blocked on a PDD decision.
-⚠️ Note the honest limit: emitting it makes the funnel *recordable*, not *readable* — `analytics_event`
-is INSERT-only and ADR-025's rollup worker is unbuilt (item 21). Both are needed before the NZ pricing
-test can actually answer anything.
+**~~B8.3 — emit the monetization funnel~~ ✅ DONE.** With it, **every remaining §10.1 item needs
+money, content, legal review, or a business decision.** There is no credential-free blocking
+engineering left on the checklist.
+
+**So the highest-leverage action is now a purchase: Apple ($99) + Google Play ($25).** It unblocks
+§10.2 step 1 (internal smoke), converts every *"proven in EAS, not on a device"* caveat from B7 into a
+real answer, and is what lets **EVT_051** — the metric §11.3 computes free→paid from — fire at all.
+**Then ~$25/mo paid Supabase** for PITR, which is the plain launch blocker.
+
+**The one piece of engineering that remains genuinely useful and unblocked** is ADR-025's
+`analytics_event` **rollup worker**: it is the shared blocker behind item 11 (dashboards), item 21
+(activation/retention) and half of item 19, since the events now being recorded are read by nothing.
 
 **Then the highest-leverage purchase in the project: Apple ($99) + Google Play ($25)**, unblocking
 §10.2 step 1 (internal smoke). The build pipeline, signing, source maps and six Maestro flows already

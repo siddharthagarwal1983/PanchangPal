@@ -7,7 +7,9 @@
  * the client never grants entitlement locally. All documented states are handled:
  * default / skeleton (loading) / empty (unavailable) / offline / error (ERR_PAYMENT_FAILED) /
  * success. No business logic lives here — the screen composes approved CMP_* with tokens-only
- * styling and localized strings. Analytics anchors: EVT_049/050/051/052 (Analytics Adapter deferred).
+ * styling and localized strings. Analytics: EVT_049 on show and EVT_050 on selection fire here;
+ * EVT_051/EVT_052 are emitted by the `usePurchase`/`useRestore` seam, so both upgrade surfaces
+ * report the same funnel (§11.3 computes free→paid from EVT_051).
  */
 import { useEffect, useState } from 'react';
 import { View } from 'react-native';
@@ -35,6 +37,11 @@ import {
   useRestore,
 } from '../../../src/data/hooks/useSubscription';
 import { useOnline } from '../../../src/data/useOnline';
+import { getAnalyticsService } from '../../../src/data/analyticsAdapter';
+import {
+  planSelectedEvent,
+  subscriptionViewedEvent,
+} from '../../../src/domain/analytics/subscriptionEvents';
 import { t } from '../../../src/i18n';
 
 /** Map a store offering to its localized display fields (prices always come from the store). */
@@ -67,9 +74,11 @@ export default function SubscriptionScreen() {
   const restore = useRestore();
   const [selectedId, setSelectedId] = useState<string | null>(null);
 
-  // EVT_049 (Subscription Viewed) — Analytics Adapter deferred; named anchor on first paint.
+  // EVT_049 Subscription Viewed (AC-SUB-01). Empty dependency list so it fires ONCE per mount: this
+  // is the denominator of §11.3's free→paid rate, and a view counted twice understates conversion.
   useEffect(() => {
-    /* analytics: EVT_049 */
+    const event = subscriptionViewedEvent('screen');
+    getAnalyticsService().track(event.eventId, event.props);
   }, []);
 
   const alreadyPremium = isEntitled(entitlement.data);
@@ -136,7 +145,11 @@ export default function SubscriptionScreen() {
                       bestValueLabel={view.bestValueLabel}
                       selected={selectedId === offering.id}
                       loading={purchase.isPending}
-                      onSelect={(id) => setSelectedId(id) /* EVT_050 (Plan Selected) */}
+                      onSelect={(id) => {
+                        setSelectedId(id);
+                        const event = planSelectedEvent(offering.kind, 'screen');
+                        getAnalyticsService().track(event.eventId, event.props);
+                      }}
                       testID={`plan-${offering.kind}`}
                     />
                   );
@@ -144,7 +157,10 @@ export default function SubscriptionScreen() {
 
                 <PrimaryButton
                   label={t('subscription.subscribe')}
-                  onPress={() => selectedId && purchase.mutate(selectedId)}
+                  onPress={() => {
+                    const chosen = offerings.find((o) => o.id === selectedId);
+                    if (chosen) purchase.mutate({ planId: chosen.id, plan: chosen.kind });
+                  }}
                   disabled={!selectedId || !online}
                   loading={purchase.isPending}
                   testID="subscription-subscribe"
