@@ -1,7 +1,7 @@
 # SLOs & Alerts — PanchangPal
 
 **Status:** Active · **Owner:** Solo operator · **Source:** TDD Part 5 §7.2; NFR table at Part 1 §8
-**Last verified:** 2026-08-02 (NFR-06, NFR-07 and NFR-14 each proven end to end by drill — detection *and* notification; the remaining five audited against the code)
+**Last verified:** 2026-08-08 — **the best state this document has ever recorded.** Both crash-free monitors are **drill-proven** (each watched delivering its own email), target an explicit **Member**, and carry **no open issue**, the last two having cleared when the monitors were recreated (§9). NFR-14 remains proven from 2026-08-02.
 
 §7.2 names seven SLOs. This document records, for each one, **the instrument, the threshold, the
 alert, and — where it does not exist — precisely what is blocking it.**
@@ -22,6 +22,9 @@ that meet §8.4's standard.
 | | |
 |---|---|
 | **Live and PROVEN** | NFR-06 crash-free sessions ✅ · NFR-07 crash-free users ✅ · NFR-14 availability ✅ |
+| **✅ No open metric-monitor issue** | Both crash-free monitors recreated 2026-08-08; `-4` and `-5` cleared with them. Nothing is suppressing the next alert. ⚠️ A future drill re-opens one — re-check before launch. |
+| **✅ Recipient verified on both** | Each monitor's alert action targets an explicit **Member** (verified 2026-08-08), which is the precise field drill 1 got wrong. The known failure mode is ruled out. |
+| **✅ Drill-proven on both** | Each monitor has been watched delivering **its own** email to a human. Detection *and* notification are observed, which is §8.4's standard in full. |
 | **Blocked on a decision** | NFR-10 sync success — no sync event exists in the PDD §11 taxonomy |
 | **Blocked on a gated feature** | NFR-05 AI latency · NFR-16 AI cost · refusal/groundedness (all Ask Guru) · NFR-11 push delivery |
 
@@ -313,9 +316,14 @@ users do not file bug reports, they stop opening the app.
 
 ### Drill 2 — 2026-08-02 14:43 IST · proven end to end ✅
 
-Monitor recreated with the alert action set to an explicit **Member**. Drill re-run after
-**resolving** the previous issue (resolve, *not* archive — archiving mutes notifications and would
-have suppressed the very email under test).
+Monitor recreated with the alert action set to an explicit **Member** — and that recreation is also
+what cleared the previous issue, since a fresh monitor starts with no open period.
+
+⚠️ **This paragraph previously said the drill was re-run "after *resolving* the previous issue".**
+That was wrong, and it contradicted §9's finding that a metric-monitor issue offers **no Resolve
+button**. Confirmed on 2026-08-08, when recreating both monitors cleared `-4` and `-5` automatically:
+**recreation is the only lever, and there is no hand-resolve step to describe.** What matters about
+archive is unchanged — never use it, because it mutes.
 
 | Check | Result |
 |---|---|
@@ -454,13 +462,59 @@ outlasts exactly the period in which it was safe.
 
 **The only lever is to RECREATE THE MONITOR**, which starts it with no open issue. That is what
 accidentally happened to the original NFR-06 monitor (`7968827`), and the replacement fired cleanly
-on its next drill. Recreating now would not help — a fresh monitor returns to the same state after
-one drill — so this belongs on the **pre-launch checklist**, not in today's work.
+on its next drill.
+
+✅ **DONE — 2026-08-08. Both monitors were recreated and both issues cleared.** `PANCHANGPAL-MOBILE-4`
+(NFR-06) and `-5` (NFR-07) are gone; there is **no open metric-monitor issue on
+`panchangpal-mobile`.** The clearance was automatic on recreation, exactly as the mechanism above
+predicts — a fresh monitor has no open period, so there is nothing left to resolve.
+
+**This also settles a contradiction that stood in this document.** §8 recorded drill 2 as re-run
+*"after **resolving** the previous issue"*, while the paragraph above states that `-4` and `-5` offer
+**no Resolve button**. Both could not be true. The 2026-08-08 recreation confirms the second: a
+metric-monitor issue is never resolved by hand, and what cleared `PANCHANGPAL-MOBILE-2` on 2026-08-02
+was the monitor being **recreated** in the same step. §8's wording has been corrected.
+
+⚠️ **THIS IS NOT PERMANENT, AND THE RULE BELOW STILL STANDS.** Any future drill re-opens an issue on
+the monitor it triggers, returning the project to the state just cleared. Re-check immediately before
+launch rather than trusting this line's date.
+
+✅ **AND BOTH MONITORS ARE DRILL-PROVEN AS WELL AS CLEAN.** Each has been watched delivering **its
+own** email to a human, so §8.4's standard is met in full — detection *and* notification observed, not
+inferred — and each alert action was separately confirmed to target an explicit **Member** rather than
+*Suggested Assignees*. That field was the entirety of drill 1's failure: detection fired, the issue
+opened at high priority and was assigned, every visible signal said "configured", and the recipient
+set resolved **empty**, because a metric-monitor issue has no stack trace and no suspect commit.
+
+**So all three properties hold at once, which is the strongest state this document has recorded:**
+proven · correctly addressed · no open issue suppressing the next alert.
+
+### The two properties are in tension, and it is worth knowing why
+
+Proven and clean pull against each other. **Drilling opens an issue** that closes only on a healthy
+reading — and with no production traffic, no healthy reading can arrive. **Recreating clears the
+issue** but hands the proof to an instance that no longer exists. Chasing them one at a time never
+terminates: drill, then clear, then the proof is gone; drill again, and the issue is back.
+
+**They are reached together by proving the RECIPE rather than the instance:**
+
+1. Drill the monitor and watch the email arrive — this proves the *configuration* notifies a human.
+2. If an issue is left open, **recreate the monitor from that same configuration**, which clears it.
+3. The result is clean, and built from a recipe observed to work.
+
+⚠️ **Anyone re-drilling later inherits the tension**, so decide in advance which property matters more
+at that moment and use the sequence above rather than discovering the loop under time pressure.
+
+⚠️ **And the trap dissolves after launch if the first traffic is healthy.** A clean monitor plus
+healthy production data simply stays closed; the danger was only ever that an already-open issue would
+swallow the first real incident.
 
 **Three rules follow:**
 
 1. **Before launch, confirm no metric monitor has an open issue.** If one does, recreate the monitor.
-   Do not archive; archiving mutes.
+   Do not archive; archiving mutes. ✅ **Clear as of 2026-08-08** — both were recreated and both
+   issues went with them. ⚠️ **Re-check anyway**: any drill run after that date re-opens one, so the
+   check is cheap and the date on this line is not a substitute for it.
 2. **A silent alert is not evidence the threshold held.** Check whether the issue is already open.
 3. **Prefer error-issue drills where a choice exists** — those can be resolved by hand, so they leave
    no residue. A metric-monitor drill cannot be cleaned up.

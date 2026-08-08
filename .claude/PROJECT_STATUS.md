@@ -446,11 +446,15 @@ real answer, and is what lets **EVT_051** — the metric §11.3 computes free→
 work, so this converts every *"proven in EAS, not on a device"* caveat into a real answer, and it is
 a precondition for B8's remaining deliverables, B3's remainder, and B7's store half.
 
-**The four residuals that decide the eventual verdict:** ⛔ **PITR is unavailable** (NFR-15, ~$25/mo),
-so a destructive migration against real user data has no recovery · ⚠️ **no release path is proven to
-reach a device** · ⚠️ **auto-rollback is not automated** · ⛔ **two metric monitors have open
-issues**, which **cannot be cleared by hand** — they close only on a healthy reading, so if the
-*first* real traffic is unhealthy the metric never recovers and a genuine incident pages nobody.
+**The residuals that decide the eventual verdict:** ⛔ **PITR is unavailable** (NFR-15, ~$25/mo), so a
+destructive migration against real user data has no recovery · ⚠️ **no release path is proven to reach
+a device** · ⚠️ **auto-rollback is not automated**.
+✅ **The fourth is closed: no metric monitor has an open issue (2026-08-08).** Both crash-free monitors
+were **recreated** — the only lever, since such an issue offers no Resolve button — and `-4`/`-5`
+cleared with them. ✅ **Both are drill-proven and target an explicit `Member`** — each watched
+delivering its own email, and the Member field was drill 1's exact failure. **All three properties
+hold at once: proven · correctly addressed · no open issue.** ⚠️ Re-check before launch, because a
+later drill re-opens one; `SLO_ALERTS.md` §9 records how both properties are reached together.
 
 Priority 2
 

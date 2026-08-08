@@ -777,12 +777,16 @@ One slice per session, same cadence as M1–M8: implemented, self-verified, revi
       - [ ] **Internal smoke on TestFlight / Play Internal** (§10.2 step 1) — **owner-gated**: Apple
             ($99) + Google Play ($25). The single highest-leverage purchase in the project: it also
             converts every "proven in EAS, not on a device" caveat into a real answer.
-      - [ ] **Beta cohort / canary** (§10.2 step 2) — needs step 1, §7.2's dashboards, and the two
-            open metric-monitor issues cleared.
-      **Four residuals decide the eventual verdict, none of them unfinished code:** PITR absent
-      (NFR-15) · no release path proven to reach a device · auto-rollback not automated · **two metric
-      monitors with open issues**, which cannot be cleared by hand and will suppress the next alert of
-      their kind.
+      - [ ] **Beta cohort / canary** (§10.2 step 2) — needs step 1 and §7.2's dashboards. ✅ The two
+            open metric-monitor issues that also stood here are **cleared (2026-08-08)** by recreating
+            both monitors; ⚠️ re-check before launch, since a drill re-opens one.
+      **Residuals that decide the eventual verdict, none of them unfinished code:** PITR absent
+      (NFR-15) · no release path proven to reach a device · auto-rollback not automated.
+      ~~**two metric monitors with open issues**~~ — ✅ **closed 2026-08-08**; recreation cleared both,
+      confirming that is the only lever. ✅ Both are also **drill-proven** (each watched delivering its
+      own email) and target an explicit **Member**, so all three properties hold at once: proven ·
+      correctly addressed · no open issue. ⚠️ The *rule* survives the fix — a later drill re-opens an
+      issue, so re-check before launch.
 
 ---
 

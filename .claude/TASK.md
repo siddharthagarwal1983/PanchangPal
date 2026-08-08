@@ -134,8 +134,13 @@ Every remaining §10.1 item needs **money, content, legal review, or a business 
 
 **Also owed, and named rather than absorbed:** `SVC_health`'s 503 branch end to end · the deprecated
 Supabase key migration · **`@supabase/supabase-js` undeclared in `apps/backend`** (⚠️ which has **no
-`package.json` at all**) · ⛔ **two metric monitors with open issues**, which cannot be cleared by
-hand and will suppress the next alert of their kind.
+`package.json` at all**).
+✅ **No longer owed: the two open metric-monitor issues are CLEARED (2026-08-08)** — both crash-free
+monitors recreated, which is the only lever, and `-4`/`-5` cleared automatically with them. ⚠️ Two
+✅ **Both are drill-proven and target an explicit `Member`** — each watched delivering its own email,
+and the Member field was drill 1's exact failure. **All three properties hold at once: proven ·
+correctly addressed · no open issue.** ⚠️ One caveat survives: **a later drill re-opens an issue**, so
+re-check before launch — `SLO_ALERTS.md` §9 records how both properties are reached together.
 
 ---
 
