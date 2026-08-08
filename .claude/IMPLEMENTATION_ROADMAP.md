@@ -2,9 +2,9 @@
 
 # PanchangPal — Implementation Roadmap
 
-Version: 2.13.0
-Last Updated: 2026-08-08 (**B7 COMPLETE** → 63%, then **B8 STARTED** — §10.1 walked, verdict
-**⛔ NO-GO, 3 of 22**; the two credential-free findings are the next work)
+Version: 2.14.0
+Last Updated: 2026-08-08 (**B8.2** — a bundle-size budget now gates NFR-01, the first performance gate
+in the repo; **B8.3 `EVT_049` is the last credential-free blocking item**)
 
 Purpose: the forward plan from the current state. Complements PROJECT_STATUS.md (snapshot) and
 CURRENT_MILESTONE.md (active milestone). Updated when scope or sequencing changes — and at every
@@ -30,6 +30,13 @@ MRD's NZ pricing test has no signal.
 items that are also credential-free, so they come first; then **Apple ($99) + Google Play ($25)**,
 which unblocks §10.2 step 1 and simultaneously converts every *"proven in EAS, not on a device"*
 caveat from B7 into a real answer. Nothing else on the checklist is reachable before that purchase.
+
+**B8.2 closed the first of the two (2026-08-08)** — a release-blocking **bundle-size budget** on
+NFR-01, at the layer CI can measure honestly. ⚠️ **Item 8 is only half closed and stays ⚠️:** PDD's
+per-screen *latency* budgets need real device traffic, so they moved from "unbuilt engineering" to the
+same store-gated queue as the rest. **`EVT_049` (B8.3) is now the last credential-free blocking item
+on the entire checklist** — after it, every remaining item needs money, content, legal review, or a
+business decision.
 
 **B7 — RELEASE MANAGEMENT IS COMPLETE (2026-08-08).** Merged: `B7.1` **`3cee165`** (#113) · `B7.2`
 **`76e9764`** (#114) · `B7.3` **`fd1aa83`** (#115) · `B7.4` **`9667600`** (#116). Every increment was

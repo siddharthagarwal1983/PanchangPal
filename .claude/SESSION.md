@@ -2,9 +2,60 @@
 
 # PanchangPal — Current Session
 
-Version: 16.0.0
-Last Updated: 2026-08-08 (**B7 COMPLETE → 63%**, then **B8 STARTED** — §10.1 walked, verdict
-**⛔ NO-GO, 3 of 22**)
+Version: 17.0.0
+Last Updated: 2026-08-08 (**B8.2** — the first performance gate in the repo; B8.1's own guard fired
+within hours and was re-pointed rather than deleted)
+
+---
+
+# Part 3 — B8.2: a performance gate, at the layer CI can measure honestly
+
+**Progress stays 63%.** `scripts/check-bundle-budget.mjs` runs in the Bundle gate as **one line** and
+weighs each platform's Hermes bytecode — what a device downloads, parses and executes before the first
+frame (**NFR-01**) — against a checked-in ceiling in `apps/mobile/performance-budget.json`.
+**5.04 MiB against 6 MiB** (~19% headroom). `expo export` already ran there and its output was
+**discarded**, so the marginal cost is a `stat`.
+
+## ⚠️ A ceiling, not a ratchet — decided by measuring, not by preference
+
+I proposed this as "same source → same bytecode". **That was wrong.** Two exports of the *same commit*
+gave **5,279,878 vs 5,279,857** (android) and **5,286,013 vs 5,286,045** (ios). The bundle is not
+byte-reproducible, so a zero-tolerance ratchet would fail at random, get switched off, and leave the
+documentation claiming a release-blocking control that no longer runs — **worse than having none.** A
+ceiling ignores ~32 bytes and still catches a heavy dependency.
+
+## ⛔ Every "measured nothing" path exits 1
+
+Missing export dir · a budgeted platform with no bundle · an empty platform dir · **two** bundles for
+one platform (ambiguity fails rather than picking the biggest) · an unreadable budget file · **a
+platform that built with no budget**, since an unbudgeted platform is an ungated one — the
+`cd.yml`-omitting-`health` shape. A size gate that passes because it found nothing to weigh goes green
+forever the first time a refactor moves the output path.
+
+## ✅ B8.1's guard fired on its own, within hours
+
+`go-no-go.test.ts` asserted no performance gate existed. Adding one **failed that test**, with a
+message naming the two document sections to update. **The assertion was re-pointed, not deleted** —
+the dangerous direction inverted, so it now fails if the gate is *removed* while GO_NO_GO still
+describes it. First time this milestone a doc-rot guard caught the rot before a human did.
+
+## ⚠️ Item 8 stays ⚠️, deliberately
+
+PDD's per-screen **latency** budgets are still unmeasured. A threshold on a shared-vCPU emulator would
+measure the runner — this suite has recorded **2m20s and 3m20s for the same commit**. The instruments
+are TDD-named (**Sentry app-start**, a **client trace on EVT_012**) and need real device traffic, so
+they moved from "unbuilt engineering" to the store-gated queue. **Calling item 8 closed because a
+bundle gate exists would be the overstatement GO_NO_GO exists to avoid.**
+
+**Two of my own errors, both caught by running things:** a missing comma left the budget JSON invalid
+(the gate's own "cannot read budget file" path would have failed CI correctly), and I wrote "~13%
+headroom" by **mixing decimal MB with binary MiB** — Expo prints 5.29 MB for the same 5.04 MiB bundle.
+Actual headroom is 19%; the file now states its units. Also corrected: the eslint baseline is **16**
+warnings, not the 14 recorded in Part 2 — turbo had cached the `@panchangpal/ai` task and only
+mobile's output showed.
+
+**Verified:** vitest **218 (+12)** · tsc **11/11 uncached** · eslint **0 errors** (16-warning
+baseline) · **11 perturbations**, controls green at both ends.
 
 ---
 
@@ -50,7 +101,7 @@ to the appendix plus a heading guard, which takes all 22 coverage assertions dow
 proving they are not vacuous. **Third time this milestone a guard looked convincing and measured
 nothing.**
 
-**Verified:** vitest **206 (+30)** · tsc **11/11 uncached** · eslint **0 errors** (14 warnings) ·
+**Verified:** vitest **206 (+30)** · tsc **11/11 uncached** · eslint **0 errors** (16-warning baseline) ·
 **seven perturbations**, each failing exactly the intended assertion, controls green at both ends.
 
 ---
@@ -117,12 +168,11 @@ green on #116 · four perturbations each failing exactly one assertion
 
 # Recommended next task
 
-1. **B8.2 — a performance gate** (§10.1 item 8, release-blocking). ⚠️ Has a genuine design question:
-   a CI-emulator threshold says little about a mid-range phone. Likely instrument — a Maestro
-   assertion on the already-green device runs, since PDD's budgets are user-visible latencies the
-   flows already wait on. **Do not add a threshold that measures the runner.**
-2. **B8.3 — emit `EVT_049`** from the subscription surface (§10.1 item 19). Small; the id is already
-   in PDD §11's registry, so it invents nothing, and without it the NZ pricing test has no signal.
+1. **B8.3 — emit `EVT_049`** from the subscription surface (§10.1 item 19). Now the **last
+   credential-free blocking item on the whole checklist**. The id is already in PDD §11's registry, so
+   it invents nothing. ⚠️ **Honest limit:** emitting it makes the funnel *recordable*, not *readable*
+   — `analytics_event` is INSERT-only and ADR-025's rollup worker is unbuilt (item 21), so the NZ
+   pricing test needs both before it can answer anything.
 3. **Declare `@supabase/supabase-js` in `apps/backend`** — imported as a bare specifier, declared
    only in `apps/mobile`. ⚠️ Note `apps/backend` has **no `package.json` at all**, so this is a
    slightly larger question than adding a line. It resolves today, which is why it is worth fixing

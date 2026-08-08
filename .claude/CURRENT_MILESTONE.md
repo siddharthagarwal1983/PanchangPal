@@ -2,10 +2,10 @@
 
 # PanchangPal — Current Milestone
 
-Version: 4.17.0
+Version: 4.18.0
 
-Last Updated: 2026-08-08 (**B7 COMPLETE** → 63%, then **B8 STARTED** — the §10.1 checklist is walked
-and the verdict is **⛔ NO-GO, 3 of 22**; two findings, and one of them was in my own document)
+Last Updated: 2026-08-08 (**B8.2** — the first performance gate this repo has ever had: a
+release-blocking bundle-size budget on NFR-01. Item 8 stays ⚠️; the latency half is store-gated)
 
 Purpose:
 This document defines the current milestone. Unlike SESSION.md (daily work) or TASK.md (current
@@ -26,6 +26,42 @@ Overall Progress
 
 63% (**5 of 8 slices COMPLETE — B2 ✅, B4 ✅, B5 ✅, B6 ✅, B7 ✅**, the last four at verifiable
 scope; B1 ~85%, B3 ~80%; **B8 🚧 STARTED**)
+
+**2026-08-08 (part 3) — B8.2: THE FIRST PERFORMANCE GATE THIS REPOSITORY HAS EVER HAD.** Progress
+stays 63%. `scripts/check-bundle-budget.mjs` runs in the Bundle gate as one line and weighs each
+platform's Hermes bytecode — what a device downloads, parses and executes before the first frame
+(**NFR-01**) — against a checked-in ceiling. Currently **5.04 MiB against 6 MiB** (~19% headroom).
+`expo export` already ran there and its output was discarded, so the marginal cost is a `stat`.
+
+⚠️ **THE BUNDLE IS NOT BYTE-REPRODUCIBLE, AND THE DESIGN TURNED ON MEASURING THAT RATHER THAN
+ASSUMING IT.** Two exports of the **same commit** produced **5,279,878 vs 5,279,857** (android) and
+**5,286,013 vs 5,286,045** (ios). So: **a ceiling, never a ratchet.** A zero-tolerance ratchet would
+fail at random, be switched off, and leave the docs claiming a release-blocking control that no longer
+runs — worse than having none. (The proposal that won approval said "same source → same bytecode".
+That was wrong, and running it twice is what showed it.)
+
+⛔ **EVERY PATH WHERE IT MEASURES NOTHING EXITS 1** — missing export dir · a budgeted platform with no
+bundle · an empty platform dir · **two** bundles for one platform · an unreadable budget file · **a
+platform that built with no budget**, since an unbudgeted platform is an ungated one (the
+`cd.yml`-omitting-`health` shape). A size gate that passes because it found nothing to weigh would go
+green forever the first time a refactor moved the output path.
+
+✅ **AND B8.1's GUARD FIRED ON ITS OWN, WITHIN HOURS.** `go-no-go.test.ts` asserted that no
+performance gate existed; building one **failed that test**, with a message naming the two document
+sections to update. **The assertion was re-pointed, not deleted** — the dangerous direction inverted,
+so it now fails if the gate is *removed* while GO_NO_GO still describes it. First time in this
+milestone a doc-rot guard caught the rot before a human did.
+
+⚠️ **ITEM 8 STAYS ⚠️, DELIBERATELY.** PDD's per-screen **latency** budgets still have nothing
+measuring them, and asserting them on a shared-vCPU emulator would measure the runner — this suite has
+recorded **2m20s and 3m20s for the same commit**. Their instruments are TDD-named (Sentry app-start,
+a client trace on EVT_012) and need real device traffic. **Calling item 8 closed because a bundle gate
+exists would be exactly the overstatement GO_NO_GO was written to avoid.**
+
+**Verified:** vitest **218 (+12)** · tsc **11/11 uncached** · eslint **0 errors** (16-warning
+baseline) · **11 perturbations**, controls green at both ends.
+
+---
 
 **2026-08-08 (part 2) — B8 IS STARTED AND THE ANSWER IS ⛔ NO-GO.** `docs/devops/GO_NO_GO.md` walks
 all 22 of §10.1's `[MANDATORY]` items: **3 met · 10 partial · 7 not met · 2 business-owned**. Pinned
@@ -74,7 +110,7 @@ all 22 coverage assertions down with it, proving they are not vacuous. Found by 
 perturbation, not by review; **the third time this milestone that a guard looked convincing and
 measured nothing.**
 
-**Verified:** vitest **206 (+30)** · tsc **11/11 uncached** · eslint **0 errors** (14 warnings) ·
+**Verified:** vitest **206 (+30)** · tsc **11/11 uncached** · eslint **0 errors** (16-warning baseline) ·
 **seven perturbations**, each failing exactly the intended assertion, controls green at both ends.
 
 **Prior position — B7's close:**
@@ -675,10 +711,20 @@ One slice per session, same cadence as M1–M8: implemented, self-verified, revi
             direction** — it fails when a performance gate appears, when `EVT_049` starts being
             emitted, when `GURU_LIVE` flips, or when `react-native-purchases` is installed, because a
             document that keeps saying "blocked" after the blocker clears makes the gap invisible.
-      - [ ] **B8.2 — a performance gate** (§10.1 item 8, *release-blocking*). None exists in any of
-            the eight workflows while PDD sets numeric budgets. ⚠️ Has a genuine design question:
-            a CI-emulator threshold says little about a mid-range phone. Likely instrument — a
-            Maestro assertion on the already-green device runs.
+      - [x] **B8.2 — a performance gate, at the layer CI can measure honestly** (2026-08-08).
+            `scripts/check-bundle-budget.mjs` in the Bundle gate: Hermes bytecode against a
+            checked-in ceiling (`apps/mobile/performance-budget.json`), 5.04 MiB / 6 MiB today.
+            **A ceiling rather than a ratchet, because the bundle is not byte-reproducible** — two
+            exports of the same commit differ by ~32 bytes, and a ratchet would fail at random, get
+            disabled, and leave the docs claiming a control that no longer runs. Every
+            measured-nothing path exits 1. Pinned by `bundle-budget.test.ts`, which runs the real
+            script and reads its **exit code**, because the gate is the exit code and this repo has
+            twice been burned by tests that proved the wrong layer.
+      - [ ] ⛔ **The per-screen LATENCY budgets remain unmeasured**, and this is the half §10.1 most
+            plainly means. A threshold on a shared-vCPU emulator would measure the runner (2m20s vs
+            3m20s observed on one commit). Instruments are TDD-named — **Sentry app-start** (NFR-01)
+            and a **client trace on EVT_012** (NFR-02) — and both need real device traffic, so this
+            belongs with the capabilities blocked on §10.2 step 1, not with unfinished engineering.
       - [ ] **B8.3 — emit `EVT_049`** from the subscription surface (§10.1 item 19). The paywall is
             fully built and emits nothing, so the MRD's NZ pricing signal test has no signal. The id
             is already in PDD §11, so this invents nothing.

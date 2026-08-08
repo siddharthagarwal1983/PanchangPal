@@ -2,9 +2,9 @@
 
 # PanchangPal — Current Task
 
-Version: 10.0.0
-Last Updated: 2026-08-08 (**B8 STARTED** — the §10.1 checklist is walked and the verdict is
-**⛔ NO-GO, 3 of 22**; next are the two credential-free findings it produced)
+Version: 11.0.0
+Last Updated: 2026-08-08 (**B8.2 DONE** — a bundle-size budget gates NFR-01, the repo's first
+performance gate; **B8.3 `EVT_049` is the last credential-free blocking item**)
 
 Purpose: the current implementation task. Stay focused; avoid unrelated work unless instructed.
 
@@ -111,6 +111,74 @@ green in CI on a real native build. Canonical progress 0% → 13% (1 of 8 Beta s
 # Current Task
 
 ## Title
+⏳ **B8.3 — EMIT `EVT_049`. The last credential-free blocking item on the §10.1 checklist.**
+Main is at `4a56fe0`. **Progress stays 63%.**
+
+The subscription surface is fully built — SCR_SUBSCRIPTION_001, CMP_PLAN_CARD, the contextual paywall
+sheet at `app/modal/paywall`, `visibleOfferings`, the `FF_FAMILY_PLAN` gate — and **emits nothing**.
+PDD §11 defines **`EVT_049`** for it, so this invents nothing (contrast NFR-10, which has no sync
+event in the taxonomy at all and is genuinely blocked on a PDD decision).
+
+⚠️ **State the limit when it ships:** emitting `EVT_049` makes the funnel **recordable, not
+readable**. `analytics_event` is INSERT-only for clients and ADR-025's rollup worker is unbuilt
+(§10.1 item 21), so the MRD's NZ pricing signal test needs **both** before it can answer anything.
+Claiming item 19 closed on the event alone would be the overstatement this slice keeps rejecting.
+
+**Constraints that already exist and must hold:** every `EVT_*` goes through `AnalyticsService`
+(ADR-013); props are **primitives only** (objects/arrays are dropped at the boundary — that is how a
+server response would carry PII in); an id outside PDD §11's registry is rejected at runtime.
+
+**After this, every remaining checklist item needs money, content, legal review, or a business
+decision.** The store accounts (Apple $99 + Google Play $25) are the highest-leverage next step.
+
+---
+
+## ✅ Previous Task — B8.2, DONE 2026-08-08
+
+**The first performance gate this repository has ever had.** `scripts/check-bundle-budget.mjs`, wired
+into the Bundle gate as **one line**, weighs each platform's Hermes bytecode — what a device
+downloads, parses and executes before the first frame (**NFR-01**) — against a checked-in ceiling in
+`apps/mobile/performance-budget.json`. **5.04 MiB against 6 MiB**, ~19% headroom. `expo export`
+already ran in that job and its output was **thrown away**; the marginal cost is a `stat`.
+
+### ⚠️ A ceiling, not a ratchet — and that was measured, not assumed
+
+The proposal that won approval said *"same source → same bytecode"*. **It was wrong.** Two exports of
+the *same commit*: **5,279,878 vs 5,279,857** (android), **5,286,013 vs 5,286,045** (ios). A
+zero-tolerance ratchet would fail at random, be switched off, and leave the documentation claiming a
+release-blocking control that no longer runs — **worse than having none.**
+
+### ⛔ Every path where it measures nothing exits 1
+
+Missing export dir · a budgeted platform with no bundle · an empty platform dir · **two** bundles for
+one platform (ambiguity fails rather than guessing which ships) · an unreadable budget file · **a
+platform that built with no budget** — an unbudgeted platform is an ungated one, the
+`cd.yml`-omitting-`health` shape. A size gate that passes because it found nothing to weigh goes green
+forever the first time a refactor moves the output path.
+
+### ✅ B8.1's guard fired on its own, within hours
+
+`go-no-go.test.ts` asserted no performance gate existed. Building one **failed that test**, with a
+message naming the two document sections to update. **Re-pointed, not deleted** — the dangerous
+direction inverted, so it now fails if the gate is *removed* while GO_NO_GO still describes it.
+
+### ⚠️ Item 8 stays ⚠️
+
+PDD's per-screen **latency** budgets remain unmeasured; a threshold on a shared-vCPU emulator would
+measure the runner (**2m20s and 3m20s observed on one commit**). Instruments are TDD-named — Sentry
+app-start, a client trace on EVT_012 — and need real device traffic, so they moved from unbuilt
+engineering to the store-gated queue.
+
+`bundle-budget.test.ts` runs the **real script and reads its exit code**, because the gate *is* the
+exit code — this repo has twice been burned by tests proving the wrong layer.
+
+**Verified:** vitest **218 (+12)** · tsc **11/11 uncached** · eslint **0 errors** (16-warning
+baseline) · **11 perturbations**, controls green at both ends.
+
+---
+
+## Superseded — B8.1
+
 🚧 **B8 STARTED — THE §10.1 CHECKLIST IS WALKED. VERDICT: ⛔ NO-GO, 3 OF 22.**
 Main is at `9667600`. **Progress stays 63%** — a slice counts only when complete, and B8's remaining
 deliverables are owner-gated on store accounts.
@@ -156,7 +224,7 @@ load-bearing.** Fixed by scoping the check to the appendix, plus a guard that fa
 renamed — tripping it takes all 22 coverage assertions down, which proves they are not vacuous.
 **Third time this milestone that a guard looked convincing and measured nothing.**
 
-**Verified:** vitest **206 (+30)** · tsc **11/11 uncached** · eslint **0 errors** (14 warnings) ·
+**Verified:** vitest **206 (+30)** · tsc **11/11 uncached** · eslint **0 errors** (16-warning baseline) ·
 **seven perturbations**, each failing exactly the intended assertion, controls green at both ends.
 
 ### Next, in order
