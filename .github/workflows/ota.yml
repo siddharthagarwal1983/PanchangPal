@@ -28,11 +28,32 @@ on:
         type: choice
         options: [staging, production]
       action:
-        description: 'publish a new update, or roll back the latest one'
+        description: 'publish, roll back, or drive a staged rollout (§3.2)'
         required: true
         default: 'publish'
         type: choice
-        options: [publish, rollback]
+        options: [publish, rollback, rollout-start, rollout-advance, rollout-end, rollout-view]
+      branch:
+        description: 'Candidate branch. Publish targets it; rollout-start rolls the channel out to it. Defaults to the channel name.'
+        required: false
+        default: ''
+        type: string
+      percent:
+        description: 'Percent of users on the candidate branch (rollout-start / rollout-advance). §3.2 suggests 10 → 50 → 100.'
+        required: false
+        default: '10'
+        type: string
+      runtime_version:
+        description: 'Optional. Rollouts target one runtime version; left blank it is derived from the candidate branch''s latest update.'
+        required: false
+        default: ''
+        type: string
+      rollout_outcome:
+        description: 'How rollout-end finishes: revert abandons the candidate (the crash-spike action); republish-and-revert keeps it.'
+        required: false
+        default: 'revert'
+        type: choice
+        options: [revert, republish-and-revert]
       confirm_production:
         description: "Type PUBLISH TO PRODUCTION to allow a production OTA (ignored for staging)"
         required: false
@@ -137,13 +158,23 @@ jobs:
       # ---------------------------------------------------------------------------------
       # PUBLISH
       # ---------------------------------------------------------------------------------
+      # `--branch` when one is given, `--channel` otherwise.
+      #
+      # A STAGED ROLLOUT SPLITS TRAFFIC BETWEEN TWO BRANCHES, which is why the branch input exists.
+      # `eas update --channel X` publishes onto a branch named X and points the channel at it — fine
+      # for a straight release, but there is then nothing to roll *toward*. To stage a rollout
+      # (§3.2), publish the candidate to its own branch first, then `rollout-start` moves a
+      # percentage of the channel's traffic onto it while everyone else stays on the old one.
       - name: Publish update
         if: inputs.action == 'publish'
         id: publish
         run: |
           set -o pipefail
+          TARGET_ARGS="--channel ${{ inputs.channel }}"
+          if [ -n "${{ inputs.branch }}" ]; then TARGET_ARGS="--branch ${{ inputs.branch }}"; fi
+          echo "Publishing with: ${TARGET_ARGS}"
           pnpm dlx eas-cli@${{ env.EAS_CLI_VERSION }} update \
-            --channel "${{ inputs.channel }}" \
+            ${TARGET_ARGS} \
             --message "OTA ${GITHUB_SHA::7} via ${GITHUB_WORKFLOW}#${GITHUB_RUN_NUMBER}" \
             --non-interactive --json | tee update.json
           node -e '
@@ -272,6 +303,118 @@ jobs:
           echo "branch=$BRANCH" >> "$GITHUB_OUTPUT"
           echo "group=$GROUP"   >> "$GITHUB_OUTPUT"
           echo "Will roll back branch '$BRANCH', update group '$GROUP'."
+        env:
+          EXPO_TOKEN: ${{ secrets.EXPO_ACCESS_TOKEN }}
+
+      # ---------------------------------------------------------------------------------
+      # STAGED ROLLOUT — §3.2 [MANDATORY], and §2.4's "rollouts are staged and monitored
+      # (Sentry crash-free), auto-rollback on a crash spike".
+      #
+      # §3.2 requires internal → beta/canary → phased (10% → 50% → 100%) with crash-free,
+      # error-rate and key-funnel monitoring BETWEEN stages. The store-side phase of that is
+      # owner-gated (percentages live in the Play Console / App Store Connect and neither account
+      # exists), but the OTA phase is not — `eas channel:rollout` splits a channel's traffic
+      # between the current branch and a candidate one.
+      #
+      # ⚠️ THE MONITORING BETWEEN STAGES IS THE POINT, NOT THE PERCENTAGES. Advancing on a timer
+      # is not a staged rollout, it is a slow deploy. What each stage buys is a bounded population
+      # to observe: NFR-06 crash-free sessions and NFR-07 crash-free users are live and were each
+      # proven to reach a human (B4.4). Do not advance while an alert is open — and note that an
+      # OPEN Sentry issue SUPPRESSES the next alert of its kind, so "no new alert" is not evidence
+      # of health if one is already open.
+      #
+      # ⚠️ AUTO-ROLLBACK IS NOT AUTOMATED, AND CALLING IT SO WOULD BE THE LIE THIS MILESTONE KEEPS
+      # FINDING. The ACTION exists and is one dispatch away (`rollout-end` with `revert`), but
+      # nothing triggers it: that needs a Sentry alert webhook plus a credential to call GitHub,
+      # which is an owner action. A `repository_dispatch` receiver is deliberately NOT added here —
+      # a trigger with no sender is the placeholder shape B1 spent its time removing.
+      # ---------------------------------------------------------------------------------
+      - name: Start a staged rollout
+        if: inputs.action == 'rollout-start'
+        run: |
+          BRANCH="${{ inputs.branch }}"
+          if [ -z "$BRANCH" ]; then
+            echo "::error::rollout-start needs a candidate branch to roll out TO. Publish the candidate with action=publish and a branch first — rolling a channel out to the branch it already points at splits nothing."
+            exit 1
+          fi
+          # `--runtime-version` IS REQUIRED for `--action create`, alongside --percent and --branch.
+          # The CLI says so plainly when it is missing ("All of the following must be provided"),
+          # which is how this was found on run 31171046705 — the flag is listed in --help with no
+          # indication that it is mandatory.
+          #
+          # DERIVED, not asked for. A rollout targets one runtime version, and the right one is the
+          # candidate's own — a 40-character fingerprint that no operator should be copying by hand
+          # mid-incident. Same reasoning as resolving the update group for a rollback.
+          RV="${{ inputs.runtime_version }}"
+          if [ -z "$RV" ]; then
+            pnpm dlx eas-cli@${{ env.EAS_CLI_VERSION }} update:list --branch "$BRANCH" --limit 1 \
+              --json --non-interactive > candidate.json 2>candidate.err || true
+            RV=$(node -e '
+              const fs=require("fs");
+              let a={}; try { a = JSON.parse(fs.readFileSync("candidate.json","utf8")) } catch {}
+              const rows = a.currentPage || a.updates || (Array.isArray(a) ? a : []);
+              process.stdout.write((rows[0] && rows[0].runtimeVersion) || "");
+            ')
+          fi
+          if [ -z "$RV" ]; then
+            echo "::error::Could not determine a runtime version for branch '$BRANCH'. Publish the candidate to it first (action=publish with this branch), or pass runtime_version explicitly. Nothing was rolled out."
+            exit 1
+          fi
+          echo "Rolling ${{ inputs.channel }} out to '$BRANCH' at ${{ inputs.percent }}% on runtime ${RV}"
+          pnpm dlx eas-cli@${{ env.EAS_CLI_VERSION }} channel:rollout "${{ inputs.channel }}" \
+            --action create --branch "$BRANCH" --percent "${{ inputs.percent }}" \
+            --runtime-version "$RV" --non-interactive
+          {
+            echo "### Staged rollout started → ${{ inputs.channel }}"
+            echo ""
+            echo "| Field | Value |"
+            echo "|---|---|"
+            echo "| Candidate branch | \`${BRANCH}\` |"
+            echo "| Percent on candidate | **${{ inputs.percent }}%** |"
+            echo ""
+            echo "> **Do not advance on a timer.** Watch NFR-06 (crash-free sessions) and NFR-07"
+            echo "> (crash-free users) for this release before the next stage. An OPEN Sentry issue"
+            echo "> suppresses the next alert of its kind — silence is not health if one is open."
+          } >> "$GITHUB_STEP_SUMMARY"
+        env:
+          EXPO_TOKEN: ${{ secrets.EXPO_ACCESS_TOKEN }}
+
+      - name: Advance the rollout
+        if: inputs.action == 'rollout-advance'
+        run: |
+          pnpm dlx eas-cli@${{ env.EAS_CLI_VERSION }} channel:rollout "${{ inputs.channel }}" \
+            --action edit --percent "${{ inputs.percent }}" --non-interactive
+          echo "### Rollout advanced → ${{ inputs.percent }}% on ${{ inputs.channel }}" >> "$GITHUB_STEP_SUMMARY"
+        env:
+          EXPO_TOKEN: ${{ secrets.EXPO_ACCESS_TOKEN }}
+
+      # `revert` is the crash-spike action: it abandons the candidate and returns every user to the
+      # branch they were on. `republish-and-revert` is the SUCCESS path — it keeps the candidate by
+      # republishing it onto the original branch first. The default is `revert`, because the
+      # dangerous default is the one that keeps a bad update live.
+      - name: End the rollout
+        if: inputs.action == 'rollout-end'
+        run: |
+          pnpm dlx eas-cli@${{ env.EAS_CLI_VERSION }} channel:rollout "${{ inputs.channel }}" \
+            --action end --outcome "${{ inputs.rollout_outcome }}" --non-interactive
+          {
+            echo "### Rollout ended → ${{ inputs.channel }} (\`${{ inputs.rollout_outcome }}\`)"
+            echo ""
+            if [ "${{ inputs.rollout_outcome }}" = "revert" ]; then
+              echo "> Candidate abandoned; all users returned to the previous branch. Verify the"
+              echo "> metric that detected the problem recovers, then hold a blameless postmortem (§3.4)."
+            else
+              echo "> Candidate kept and republished onto the original branch."
+            fi
+          } >> "$GITHUB_STEP_SUMMARY"
+        env:
+          EXPO_TOKEN: ${{ secrets.EXPO_ACCESS_TOKEN }}
+
+      - name: View the rollout
+        if: inputs.action == 'rollout-view'
+        run: |
+          pnpm dlx eas-cli@${{ env.EAS_CLI_VERSION }} channel:rollout "${{ inputs.channel }}" \
+            --action view --non-interactive
         env:
           EXPO_TOKEN: ${{ secrets.EXPO_ACCESS_TOKEN }}
 
