@@ -3,7 +3,8 @@
   "compilerOptions": {
     "jsx": "react-jsx",
     "moduleResolution": "Bundler",
-    "noEmit": true
+    "noEmit": true,
+    "lib": ["ES2022", "DOM"]
   },
   "include": [
     "app",

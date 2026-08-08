@@ -20,10 +20,12 @@ const config: ExpoConfig = {
   // `com.panchangpal.*` deliberately does not claim a domain the project may not own.
   android: { package: 'com.panchangpal.app' },
   ios: { bundleIdentifier: 'com.panchangpal.app' },
-  // Hermes is MANDATORY per TDD Part 5 §2.3. It is already the SDK 54 default (and the
-  // only engine supported under the New Architecture) — `expo export` emits .hbc bytecode —
-  // but it is stated explicitly so a future default change cannot silently drop it.
-  jsEngine: 'hermes',
+  // Hermes is MANDATORY per TDD Part 5 §2.3, and `expo export` emits .hbc bytecode.
+  // ⚠️ The explicit `jsEngine: 'hermes'` that stood here was REMOVED in the SDK 57 upgrade:
+  // the key no longer exists on `ExpoConfig`, because Hermes is now the only engine Expo
+  // supports. Its stated purpose — "so a future default change cannot silently drop it" — is
+  // moot once there is no alternative to fall back to, and the bundle-size gate would notice
+  // a bytecode-to-plain-JS change regardless.
   // Config plugins required from SDK 54 — these packages now ship native config that must
   // be declared explicitly (previously autolinked). `expo install` cannot write to a
   // dynamic (.ts) config, so they are maintained here by hand.

@@ -73,7 +73,9 @@ export function BottomSheet({
           accessible={false}
           importantForAccessibility="no-hide-descendants"
           onPress={requestDismiss}
-          style={{ ...StyleSheet.absoluteFillObject, backgroundColor: theme.colors.scrim }}
+          // RN 0.86 removed `StyleSheet.absoluteFillObject`; `absoluteFill` is the supported
+          // equivalent and composes as an array rather than a spread.
+          style={[StyleSheet.absoluteFill, { backgroundColor: theme.colors.scrim }]}
           testID={testID ? `${testID}-scrim` : undefined}
         />
 

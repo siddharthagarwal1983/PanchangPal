@@ -26,10 +26,41 @@ updates:
         update-types: ['minor', 'patch']
         patterns: ['*']
     ignore:
+      # ⚠️ THE BASELINE IS NOW EXPO SDK 57 (re-based 2026-08-08, from SDK 54).
+      #
+      # The RULE and the patterns below are version-independent and unchanged. The worked examples
+      # further down still cite SDK 54 versions ON PURPOSE: they are the evidence for WHY each
+      # pattern exists (PRs #64/#65/#75/#81/#89/#91/#92, and the RNTL/test-renderer coupling), and
+      # rewriting them to SDK 57 numbers would delete the history without adding a fact. Read them
+      # as "this is how the rule leaked, and how it was found", not as the current versions.
+      #
+      # Current pins after the SDK 57 upgrade, each read from the installed graph rather than from
+      # release notes:
+      #   expo 57.0.11 · react-native 0.86.2 · react 19.2.3 · @types/react ~19.2.0
+      #   expo-router ~57.0.11 · @expo/metro-runtime ~57.0.8 · babel-preset-expo ~57.0.6
+      #   jest-expo ~57.0.3 · test-renderer 1.2.0 · @sentry/cli ^2.58.4
+      #
+      # Two of those moved for reasons the two-sided check predicts, and are worth naming:
+      #   test-renderer  1.1.0 → 1.2.0 because REACT'S MINOR moved 19.1 → 19.2. The constraint is
+      #                  two levels down (test-renderer@1.2.0 → react-reconciler@~0.33.0 → peer
+      #                  react ^19.2.0) and appears in neither `bundledNativeModules.json` nor
+      #                  expo's own dependencies. RNTL's migration guide is the only place the
+      #                  mapping is written down. It moves with `react`, which moves with the SDK.
+      #   @sentry/cli    `@sentry/react-native@7.11.0` pins it at EXACTLY 2.58.4 (it was 2.55.0
+      #                  under 7.2.0). The top-level declaration exists only so `sentry.gradle`'s
+      #                  flat-node_modules fallback resolves under pnpm, so it must track that
+      #                  exact version or the Gradle path and the SDK disagree.
+      #
       # Expo SDK packages are upgraded together via `expo install --fix`, never individually —
       # a lone expo-* bump against a pinned SDK produces a build that resolves and then fails
       # natively. SDK upgrades stay a deliberate, whole-platform exercise (see the SDK 54
-      # re-baseline).
+      # re-baseline, and the SDK 57 one that replaced it).
+      #
+      # ⚠️ `expo install --fix` DID NOT MOVE babel-preset-expo, jest-expo OR @types/react during
+      # the SDK 57 upgrade — it follows `bundledNativeModules.json`, which lists NATIVE modules.
+      # That is the two-sided check proving itself in practice rather than in a comment: the three
+      # build/test packages had to be resolved from `expo`'s own dependency ranges and bumped by
+      # hand. Expect the same on the next SDK increment.
       - dependency-name: expo
       - dependency-name: expo-*
       - dependency-name: react-native
