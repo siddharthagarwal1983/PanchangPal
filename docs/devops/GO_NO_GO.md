@@ -1,7 +1,8 @@
 # PanchangPal — Pre-launch Go/No-Go (TDD Part 5 §10.1)
 
-Version: 1.0.0
-Last Updated: 2026-08-08
+Version: 1.1.0
+Last Updated: 2026-08-08 (B8.2 — a bundle-size budget now gates NFR-01; item 8's latency half is
+still open and §7.1 says so)
 Slice: **B8 — Go/no-go & launch**
 Pinned by: `apps/backend/tests/release/go-no-go.test.ts`
 
@@ -30,7 +31,12 @@ visible, and inert, and that failure is invisible from inside any single documen
 **Almost none of the gap is unfinished engineering.** Of the 19 items not fully met:
 **7 are content or AI-readiness**, **6 are owner purchases** (a paid Supabase plan, Apple, Google
 Play), **2 are business decisions**, and **4 are engineering** — of which two (a performance gate,
-paywall instrumentation) are the findings this walk produced.
+paywall instrumentation) were the findings this walk produced.
+
+**Update, B8.2 (2026-08-08):** the first of those two is **half closed**. A release-blocking
+bundle-size budget now gates NFR-01 (§7.1). Item 8 stays ⚠️ rather than ✅, because PDD's per-screen
+**latency** budgets still have nothing measuring them and a CI emulator cannot measure them honestly
+— the counts above are unchanged.
 
 ---
 
@@ -72,7 +78,7 @@ follow)."*
 | 5 | RLS policy suite green | ✅ | `apps/backend/tests/rls/rls_policies.test.sql` (pgTAP) runs in the §4.4 security gate against a real Postgres 17 with migrations applied from scratch. Joined by `unauthenticated-surface.test.ts`, which fails if a **second** Edge Function goes anonymous — Edge Functions run with the service role, so RLS is not a backstop. |
 | 6 | AI §10B passed for `AISET-2026.07` | ⛔ | No evaluation harness exists (TDD Part 3 §9.4 owes it) and no `AISET` bundle has been built. Same root as item 1. **Owner: CONTENT + ENG** |
 | 7 | E2E `FLOW_*` pass on staging | ⚠️ | **6 flows green on a real native Android build**, against **staging** config (`e2e.yml` pulls the EAS `preview` environment, which `eas.json` binds to the staging profile; the flows assert seeded staging content). ⚠️ **Two flows named in B2's scope do not exist**: household invite (needs `SVC_household`) and live Ask Guru (gated off). So the daily loop, ritual, onboarding, both persistence paths and offline sync are covered; two product surfaces are not. **Owner: ENG, blocked on other slices** |
-| 8 | Performance + accessibility gates pass (**release-blocking**) | ⚠️ | **Accessibility: yes** — a11y assertions ride in the "Unit + Component + Accessibility" gate and every delivered slice carries them. ⛔ **Performance: THERE IS NO GATE AT ALL.** `grep` across all eight workflows finds no performance, bundle-size or budget check. PDD specifies per-screen budgets in detail — Today cached render < 500 ms, checklist toggle ack < 100 ms, ritual "Begin"→first step < 400 ms, completion ack < 100 ms — and **nothing measures any of them**. §10.1 calls this gate *release-blocking*, which makes it the one place this checklist names a control the repository does not have. **Owner: ENG — see §7** |
+| 8 | Performance + accessibility gates pass (**release-blocking**) | ⚠️ | **Accessibility: yes** — a11y assertions ride in the "Unit + Component + Accessibility" gate and every delivered slice carries them. **Performance: PARTLY, as of B8.2 (2026-08-08).** A release-blocking **bundle-size budget** now runs in the Bundle gate (`scripts/check-bundle-budget.mjs`): the Hermes bytecode a device must download, parse and execute before the first frame is weighed against a checked-in 6 MiB ceiling, currently 5.04 MiB. That is the largest single lever engineering holds on **NFR-01**, and it fails loudly on every path where it measures nothing. ⛔ **Still absent: PDD's per-screen latency budgets** — Today cached render < 500 ms, checklist toggle ack < 100 ms, ritual "Begin"→first step < 400 ms, completion ack < 100 ms. Those are user-perceived timings on real hardware and **a shared-vCPU CI emulator cannot measure them honestly**; their named instruments (Sentry app-start for NFR-01, a client trace for NFR-02) need real device traffic, which is store-gated. **Owner: ENG + $ — see §7.1** |
 | 9 | Offline loop + sync verified | ⚠️ | Built and covered: `STORE_offlineQueue` → `syncService` → `syncRepository` → `SVC_sync`, the §6.1 persisted read cache, and `FLOW_OFFLINE_SYNC` green on device — including the assertion its header exists for (a completion made offline survives an app kill). ⚠️ **Never exercised against a live backend.** The drain has only ever run against staging seed data through the emulator; no real user has ever synced. **Owner: ENG** |
 
 ---
@@ -117,22 +123,42 @@ Everything above was already known somewhere except these two, and both are the 
 shape — a control specified in an approved document, with nothing implementing it and nothing
 noticing.
 
-### 7.1 ⛔ There is no performance gate, and §10.1 calls it release-blocking
+### 7.1 ⚠️ The performance gate — half of it now exists (B8.2), and the honest half is the one that does not
 
-PDD specifies numeric per-screen budgets (Today cached render < 500 ms · checklist toggle ack < 100
-ms · ritual "Begin"→first step < 400 ms · completion ack < 100 ms · network refresh < 2 s). §10.1
-lists "performance + accessibility gates pass" as **release-blocking**. Accessibility has a gate.
-**Performance has none** — not in `ci.yml`, not in `e2e.yml`, not anywhere in the eight workflows.
+**When this document was first written there was no performance gate at all** — not in `ci.yml`, not
+in `e2e.yml`, nowhere in the eight workflows — while §10.1 lists "performance + accessibility gates
+pass" as **release-blocking** and PDD specifies numeric budgets throughout. The asymmetry was worth
+naming: accessibility became real because it was expressible as an assertion in the unit suite, and
+performance never was.
 
-The asymmetry is worth naming: accessibility became real because it was expressible as an assertion
-in the unit suite, and performance never did. It is also the harder of the two to add honestly — a
-threshold measured on a CI emulator says little about a mid-range phone, which is precisely the
-argument that keeps such a gate from being written at all.
+**What B8.2 built.** A bundle-size budget in the Bundle gate. `expo export` already ran there and its
+output was discarded; the gate now weighs each platform's Hermes bytecode — what a device downloads,
+parses and executes before the first frame — against a checked-in ceiling in
+`apps/mobile/performance-budget.json` (6 MiB; currently **5.04 MiB**, ~19% headroom).
 
-**Recommendation, not implemented here:** the cheapest instrument that is not misleading is a Maestro
-flow assertion on the *already-green* device runs, since those budgets are user-visible latencies the
-flows already wait on. That is B8 engineering work with a real design question in it, and it should
-not be bolted on inside a checklist walk.
+**Why a ceiling rather than a ratchet, and why that was measured rather than assumed.** Two exports
+of the *same commit* produced **different bytes**: 5,279,878 vs 5,279,857 (android) and 5,286,013 vs
+5,286,045 (ios). The bundle is not byte-reproducible, so a zero-tolerance ratchet would fail at
+random and be switched off — and a disabled release-blocking gate is worse than none, because the
+documentation goes on claiming a control that no longer runs. A ceiling with real headroom is
+unaffected by ~32 bytes of jitter and still catches a heavy dependency.
+
+**Every path where it measures nothing exits non-zero** — a missing export directory, a platform with
+no bundle, two bundles for one platform, an unreadable budget file, or a platform that built without
+a budget. A size gate that passes because it found nothing to weigh is this milestone's signature
+defect wearing a new hat, and it would go green forever the moment a refactor moved the output path.
+
+⛔ **What is still missing, and it is the part §10.1 most plainly means.** PDD's per-screen budgets —
+Today cached render < 500 ms · checklist toggle ack < 100 ms · ritual "Begin"→first step < 400 ms —
+are **user-perceived latencies on real hardware, and nothing measures any of them.** A threshold
+asserted against a shared-vCPU GitHub emulator would measure the runner: this repository's own E2E
+suite has recorded 2m20s and 3m20s for the *same* commit. Their instruments are already named by the
+TDD — **Sentry app-start** for NFR-01 and a **client trace / EVT_012 timing** for NFR-02 — and both
+need real device traffic, which is store-gated. This belongs with the other capabilities blocked on
+§10.2 step 1, not with unfinished engineering.
+
+**So item 8 stays ⚠️.** Calling it closed because a bundle gate exists would be the overstatement this
+whole document was written to avoid.
 
 ### 7.2 ⛔ The paywall is fully built and emits no analytics at all
 

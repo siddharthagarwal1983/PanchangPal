@@ -112,6 +112,14 @@ jobs:
       - name: Export iOS + Android bundles
         working-directory: apps/mobile
         run: pnpm exec expo export --platform all --output-dir "$RUNNER_TEMP/expo-export"
+      # §10.1's performance gate is release-blocking, and until B8.2 the repository had none: the
+      # export above was produced and thrown away. This weighs the Hermes bytecode a device must
+      # download, parse and execute before the first frame (NFR-01) against a checked-in ceiling.
+      # It does NOT measure PDD's per-screen latencies — those are user-perceived timings on real
+      # hardware, which a shared-vCPU runner cannot measure honestly. See GO_NO_GO.md §7.1.
+      # Logic lives in the script and is invoked as ONE line, so no multi-line shell can misparse.
+      - name: Bundle size budget (NFR-01)
+        run: node scripts/check-bundle-budget.mjs "$RUNNER_TEMP/expo-export"
       - name: Summary
         if: always()
         run: |

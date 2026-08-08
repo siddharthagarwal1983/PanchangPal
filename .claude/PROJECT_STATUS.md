@@ -2,10 +2,10 @@
 
 # PanchangPal — Project Status Dashboard
 
-Version: 1.25.0
+Version: 1.26.0
 
-Last Updated: 2026-08-08 (**B7 COMPLETE** → 63%, then **B8 STARTED** — §10.1 walked, verdict
-**⛔ NO-GO, 3 of 22**; no performance gate exists and the paywall emits nothing)
+Last Updated: 2026-08-08 (**B8.2** — the first performance gate this repo has ever had: a
+release-blocking bundle-size budget on NFR-01, decided by measurement rather than preference)
 
 Purpose:
 This document provides a high-level snapshot of the overall project.
@@ -91,6 +91,24 @@ builds/distribution, observability, DR, security/privacy, release mechanics, go/
 product scope. Sliced B1–B8; see CURRENT_MILESTONE.md.
 
 Current Focus
+
+- **✅ B8.2 — THE FIRST PERFORMANCE GATE THIS REPOSITORY HAS EVER HAD (2026-08-08).** Progress stays
+  **63%**. `scripts/check-bundle-budget.mjs` runs in the Bundle gate as one line, weighing each
+  platform's Hermes bytecode — what a device downloads, parses and executes before the first frame
+  (**NFR-01**) — against a checked-in ceiling. **5.04 MiB against 6 MiB today.** `expo export`
+  already ran in that job and its output was discarded, so the marginal cost is a `stat`.
+  ⚠️ **A ceiling, not a ratchet — and that was measured, not assumed.** Two exports of the **same
+  commit** differ (5,279,878 vs 5,279,857 android; 5,286,013 vs 5,286,045 ios). A zero-tolerance
+  ratchet would fail at random, be switched off, and leave the docs claiming a release-blocking
+  control that no longer runs — worse than having none.
+  ⛔ **Every path where it measures nothing exits 1**, including a platform that builds with **no
+  budget**: an unbudgeted platform is an ungated one, the same shape as `cd.yml` omitting `health`.
+  ✅ **B8.1's guard fired on its own within hours** — it asserted no performance gate existed,
+  building one failed it, and the message named the sections to update. **Re-pointed, not deleted**:
+  it now fails if the gate is removed while the document still describes it.
+  ⚠️ **Item 8 stays ⚠️ deliberately** — PDD's per-screen **latency** budgets are still unmeasured, and
+  a shared-vCPU emulator would measure the runner. Their instruments are TDD-named and need real
+  device traffic.
 
 - **🚧 B8 STARTED — THE §10.1 GO/NO-GO IS WALKED, AND THE ANSWER IS ⛔ NO-GO (2026-08-08).**
   `docs/devops/GO_NO_GO.md`: **3 of 22 `[MANDATORY]` items met**, 10 partial, 7 unmet, 2
@@ -390,16 +408,16 @@ Implementation: Mobile MVP Phase 1 is feature-complete (M1–M8).
 
 Priority 1
 
-**Close the two credential-free findings the §10.1 walk produced** — the only items on the whole
-checklist that are both blocking and buildable today.
-1. **A performance gate** (§10.1 item 8, *release-blocking*): none exists in any of the eight
-   workflows while PDD sets numeric per-screen budgets. ⚠️ **Has a real design question and should
-   not be rushed** — a CI-emulator threshold says little about a mid-range phone, which is why the
-   gate has never been written. Likely instrument: a Maestro assertion on the already-green device
-   runs, since those budgets are user-visible latencies the flows already wait on.
-2. **Emit `EVT_049`** from the subscription surface (§10.1 item 19). The paywall is fully built and
-   emits nothing. Small, and it invents nothing — the id is already in PDD §11, unlike NFR-10's sync
-   metric, which has no event at all and is genuinely blocked on a PDD decision.
+**~~A performance gate~~ ✅ DONE (B8.2)** at the layer CI can measure honestly — a bundle-size budget
+on NFR-01. Its latency half stays open and is store-gated, not unfinished engineering.
+
+**B8.3 — emit `EVT_049`** from the subscription surface (§10.1 item 19) is now the **last
+credential-free blocking item on the whole checklist.** The paywall is fully built and emits nothing.
+Small, and it invents nothing — the id is already in PDD §11, unlike NFR-10's sync metric, which has
+no event at all and is genuinely blocked on a PDD decision.
+⚠️ Note the honest limit: emitting it makes the funnel *recordable*, not *readable* — `analytics_event`
+is INSERT-only and ADR-025's rollup worker is unbuilt (item 21). Both are needed before the NZ pricing
+test can actually answer anything.
 
 **Then the highest-leverage purchase in the project: Apple ($99) + Google Play ($25)**, unblocking
 §10.2 step 1 (internal smoke). The build pipeline, signing, source maps and six Maestro flows already

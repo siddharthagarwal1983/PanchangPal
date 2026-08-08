@@ -1,0 +1,42 @@
+{
+  "$comment": [
+    "Performance budgets for the shipped JS bundle — TDD Part 5 §10.1 (performance gate,",
+    "release-blocking) and Part 1 §8 NFR-01 (cold start → first meaningful frame < 1 s).",
+    "Enforced per PR by scripts/check-bundle-budget.mjs, wired into ci.yml's Bundle gate.",
+    "",
+    "WHAT THIS MEASURES, AND WHAT IT DOES NOT. This is the size of the Hermes bytecode Metro",
+    "produces — the artifact a device must download, parse and execute before the first frame.",
+    "It is the largest single lever engineering controls on NFR-01. It is NOT a latency",
+    "measurement: PDD's per-screen budgets (Today cached render < 500 ms, checklist ack",
+    "< 100 ms) are user-perceived timings on real hardware, and a GitHub-hosted emulator",
+    "cannot measure them honestly. Those remain open — see docs/devops/GO_NO_GO.md §7.1.",
+    "",
+    "WHY A CEILING AND NOT A RATCHET. The bundle is NOT byte-reproducible: two exports of the",
+    "same commit measured 5279878 vs 5279857 (android) and 5286013 vs 5286045 (ios) — tens of",
+    "bytes of jitter. A zero-tolerance ratchet would therefore fail at random. A ceiling with",
+    "real headroom is unaffected by ~32 bytes and still catches what matters.",
+    "",
+    "HOW THE NUMBER WAS CHOSEN. Measured 2026-08-08 at 5.04 MiB (both platforms; 5,286,045 and",
+    "5,279,878 bytes). The budget is 6 MiB = 6,291,456 bytes — about 19% headroom. Wide enough",
+    "that ordinary feature work does not trip it, narrow enough that one heavy dependency",
+    "(typically 100 KB–1 MB) does.",
+    "",
+    "⚠️ UNITS ARE MiB THROUGHOUT, AND EXPO DISAGREES. `expo export` prints decimal MB (it reports",
+    "this same bundle as 5.29 MB) while this file and the checker use binary MiB. Mixing the two",
+    "is how the headroom here was first written as 13% instead of 19%. All values are bytes; the",
+    "MiB labels are presentation only.",
+    "",
+    "RAISING THIS NUMBER IS THE POINT, NOT A NUISANCE. The gate exists to make bundle growth a",
+    "decision someone makes on purpose, in a reviewed diff, rather than something that happens.",
+    "If a change genuinely needs the room, raise it here and say why in the PR."
+  ],
+  "measuredAt": "2026-08-08",
+  "measured": {
+    "ios": 5286045,
+    "android": 5279878
+  },
+  "budgets": {
+    "ios": 6291456,
+    "android": 6291456
+  }
+}

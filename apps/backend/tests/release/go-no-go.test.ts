@@ -182,22 +182,61 @@ describe('GO_NO_GO.md covers the §10.1 checklist the TDD actually specifies', (
 });
 
 describe('the verdicts have not gone stale in the dangerous direction', () => {
-  it('still correctly reports that NO performance gate exists', () => {
-    // §10.1 calls the performance gate release-blocking and the repository has none. The day one
-    // lands, this document must stop saying so — otherwise the gate exists and the go/no-go still
-    // reads as blocked, which is the invisible-gap failure described at the top of this file.
+  it('reports the bundle-size gate as existing, for as long as it does', () => {
+    // ⚠️ THIS ASSERTION WAS INVERTED BY B8.2, WHICH IS THE MECHANISM WORKING RATHER THAN A REPAIR.
+    // Its first form asserted that NO performance gate existed and that the document said so. The
+    // gate landed the same day, the assertion failed with a message naming the two sections to
+    // update, and this is that update — the polarity flips, the guard stays.
+    //
+    // The dangerous direction has flipped with it. Before, the risk was the document still calling
+    // the gate missing after it landed. Now it is the reverse: the gate is deleted or renamed while
+    // GO_NO_GO.md goes on describing a release-blocking control, which is precisely the "documented,
+    // wired, inert" shape this milestone keeps finding.
     const code = workflowCode();
-    const hasPerfGate =
-      /performance|perf[-_ ]?budget|bundle[-_ ]?size|lighthouse|budget\.json/i.test(code);
 
     expect(
-      hasPerfGate,
-      'A workflow now mentions a performance/budget gate. If it is real, close §10.1 item 8 in ' +
-        'GO_NO_GO.md and rewrite §7.1 — do not delete this assertion.',
-    ).toBe(false);
+      /check-bundle-budget\.mjs/.test(code),
+      'No workflow invokes check-bundle-budget.mjs, but GO_NO_GO.md §10.1 item 8 and §7.1 describe ' +
+        'a release-blocking bundle-size gate. Either restore the gate, or revert item 8 to "no ' +
+        'performance gate exists" — the document must not claim a control that does not run.',
+    ).toBe(true);
 
     // And the document must still be the one making the claim, so deleting the prose fails too.
-    expect(docFlat).toMatch(/no performance gate|Performance has none|THERE IS NO GATE/i);
+    expect(docFlat).toMatch(/bundle-size budget|bundle size budget/i);
+  });
+
+  it('still correctly reports the per-screen LATENCY budgets as unmeasured', () => {
+    // The half of item 8 that remains open, and the one §10.1 most plainly means. Its instruments
+    // are named by the TDD (Sentry app-start for NFR-01, a client trace for NFR-02) and both need
+    // real device traffic. If either starts producing data, §7.1 must stop calling them absent.
+    //
+    // Checked against the mobile source rather than the workflows, because this instrument would
+    // live in the app: a duration reaching the analytics port, or a Sentry transaction.
+    const emitsTiming = MOBILE_DIRS.some((dir) => {
+      const stack = [dir];
+      while (stack.length) {
+        const current = stack.pop() as string;
+        for (const entry of readdirSync(current, { withFileTypes: true })) {
+          if (entry.name === 'node_modules' || entry.name === '__tests__') continue;
+          const full = path.join(current, entry.name);
+          if (entry.isDirectory()) stack.push(full);
+          else if (/\.tsx?$/.test(entry.name) && !/\.(test|spec)\.tsx?$/.test(entry.name)) {
+            if (/startTransaction|measureRender|EVT_\d{3}',\s*\{[^}]*duration/.test(readFileSync(full, 'utf8'))) {
+              return true;
+            }
+          }
+        }
+      }
+      return false;
+    });
+
+    expect(
+      emitsTiming,
+      'The app now records render/startup timing. NFR-01 or NFR-02 may be measurable — update ' +
+        'GO_NO_GO.md §7.1 and §10.1 item 8 rather than deleting this assertion.',
+    ).toBe(false);
+
+    expect(docFlat).toMatch(/per-screen latency budgets|latency budgets/i);
   });
 
   it('still correctly reports the paywall as uninstrumented', () => {

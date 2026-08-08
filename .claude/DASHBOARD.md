@@ -2,11 +2,11 @@
 
 # PanchangPal Dashboard
 
-Version: 1.40.0
+Version: 1.41.0
 
-Last Updated: 2026-08-08 (**B7 COMPLETE** → 63%, then **B8 STARTED** — the §10.1 checklist is walked
-and the answer is **NO-GO**: 3 of 22 met. Two findings: no performance gate, and the paywall emits
-nothing)
+Last Updated: 2026-08-08 (**B8.2** — a release-blocking **bundle-size budget** now gates NFR-01, the
+first performance gate this repo has ever had. Item 8 stays ⚠️: the per-screen *latency* budgets are
+still unmeasured and a CI emulator cannot measure them honestly)
 
 Purpose:
 This is the first file Claude should read at the beginning of every session.
@@ -138,6 +138,53 @@ CURRENT_MILESTONE.md
 
 # Current Task
 
+✅ **B8.2 — THE FIRST PERFORMANCE GATE THIS REPOSITORY HAS EVER HAD.** **Progress stays 63%.**
+
+`scripts/check-bundle-budget.mjs`, wired into the Bundle gate as **one line**, weighs each platform's
+Hermes bytecode — what a device downloads, parses and executes before the first frame (**NFR-01**) —
+against a checked-in ceiling in `apps/mobile/performance-budget.json`. **Currently 5.04 MiB against a
+6 MiB budget (~19% headroom).** `expo export` already ran in that job and its output was **thrown
+away**; the marginal cost is a `stat`.
+
+⚠️ **THE BUNDLE IS NOT BYTE-REPRODUCIBLE, AND I ASSUMED IT WAS.** I told the user "same source → same
+bytecode" when proposing this. Two exports of the **same commit** disagreed: **5,279,878 vs
+5,279,857** (android) and **5,286,013 vs 5,286,045** (ios) — tens of bytes of jitter. That decides the
+design: **a ceiling, never a ratchet.** A zero-tolerance ratchet would fail at random, get switched
+off, and leave the documentation claiming a release-blocking control that no longer runs — which is
+strictly worse than having none.
+
+⛔ **EVERY "MEASURED NOTHING" PATH EXITS 1.** Missing export dir · a budgeted platform with no bundle ·
+an empty platform dir · **two** bundles for one platform (ambiguity is a failure, not a "pick the
+biggest") · an unreadable budget file · **a platform that built with no budget** (an unbudgeted
+platform is an ungated one — the `cd.yml`-omitting-`health` shape). A size gate that passes because it
+found nothing to weigh would go green forever the first time a refactor moved the output path.
+
+✅ **THE B8.1 GUARD FIRED ON ITS OWN, WITHIN HOURS, EXACTLY AS DESIGNED.** `go-no-go.test.ts` asserted
+that no performance gate existed; adding one **failed the test**, with a message naming the two
+document sections to update. **The assertion was re-pointed, not deleted** — the dangerous direction
+inverted with it, so it now fails if the gate is *removed* while the doc still describes it. This is
+the first time in this milestone that a doc-rot guard caught the rot instead of a human noticing.
+
+⚠️ **Item 8 stays ⚠️, deliberately.** PDD's per-screen **latency** budgets (Today render < 500 ms ·
+checklist ack < 100 ms) still have nothing measuring them, and asserting them against a shared-vCPU
+emulator would measure the runner — this suite has recorded **2m20s and 3m20s for the same commit**.
+Their instruments are TDD-named (**Sentry app-start**, a **client trace on EVT_012**) and need real
+device traffic, so they belong with the capabilities blocked on §10.2 step 1. **Calling item 8 closed
+because a bundle gate exists would be the overstatement GO_NO_GO was written to avoid.**
+
+**Two of my own errors, both caught by running things:** a missing comma left
+`performance-budget.json` invalid — the gate's own "cannot read budget file" path would have failed CI
+correctly — and I wrote "~13% headroom" by **mixing decimal MB with binary MiB** (Expo prints 5.29 MB
+for the same 5.04 MiB bundle). Actual headroom is 19%; the file now states its units.
+
+**Verified:** vitest **218 (+12)** · tsc **11/11 uncached** · eslint **0 errors** (16-warning
+baseline) · **11 perturbations** — 9 on the gate's failure paths, 2 on the re-pointed assertions —
+each failing exactly the intended test, controls green at both ends.
+
+---
+
+**Previously — B8.1.**
+
 🚧 **B8 STARTED — THE §10.1 GO/NO-GO CHECKLIST IS WALKED. The answer is ⛔ NO-GO.**
 **Progress stays 63%** — a slice counts only when complete, and B8's other two deliverables
 (internal smoke on TestFlight/Play Internal, beta cohort) are owner-gated on store accounts.
@@ -186,7 +233,7 @@ Play Internal needs only Apple ($99) + Play ($25) — the build pipeline, signin
 flows already work — and it converts every *"proven in EAS, not on a device"* caveat in the rollback
 section into a real answer.
 
-**Verified:** vitest **206 (+30)** · tsc **11/11 uncached** · eslint **0 errors** (14 warnings) ·
+**Verified:** vitest **206 (+30)** · tsc **11/11 uncached** · eslint **0 errors** (16-warning baseline) ·
 **seven perturbations**, each failing exactly the intended assertion, controls green at both ends.
 
 ---
@@ -1174,6 +1221,19 @@ Verified end-to-end. **PR #36 merged to main as `e1e10d4`**; the docs checkpoint
 (`45f1b0d`). Main's E2E is green again (run 30156615768). See TASK.md.
 
 # Today's Objective
+
+Session of 2026-08-08 (part 3). **B8.2 — build the performance gate.** Outcome: **the first one this
+repository has ever had** — a release-blocking bundle-size budget on NFR-01, wired into the Bundle
+gate whose export was previously discarded. **Progress stays 63%.** The design was decided by
+measurement, not preference: two exports of the same commit differ by ~32 bytes, so **a ceiling, not a
+ratchet**. The best moment of the day was **B8.1's own guard firing within hours** — it asserted no
+performance gate existed, adding one failed it, and the message named the sections to update; the
+assertion was re-pointed rather than deleted, so it now fails if the gate is removed.
+**Item 8 stays ⚠️ on purpose:** the per-screen latency budgets remain unmeasured, because a shared
+CI emulator would measure the runner.
+Next: **B8.3** (emit `EVT_049`), then the store accounts.
+
+---
 
 Session of 2026-08-08 (part 2). **Start B8 — walk the §10.1 go/no-go checklist.** Outcome: the walk
 is done and the answer is **⛔ NO-GO — 3 of 22 items met**, recorded in `docs/devops/GO_NO_GO.md` and
