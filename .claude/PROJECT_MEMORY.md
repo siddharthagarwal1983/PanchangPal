@@ -2,11 +2,11 @@
 
 # PanchangPal — Project Memory
 
-Version: 3.6.0
+Version: 3.7.0
 
-Last Updated: 2026-08-07 (Maestro rules 5 and 6; the artifact's logcat held only the last ~20s of
-every run until it was streamed; the jest worker leak; apps/backend importing supabase-js
-undeclared; and B7.1 — OTA publish/rollback performed, where a successful publish can reach nobody)
+Last Updated: 2026-08-08 (**B7 closed** — the staged OTA rollout is real and performed; a version
+mismatch corrupts the crash-free SLOs; `promote-production` turned a successful rollback red; and
+auto-rollback is proven as an action with nothing triggering it)
 
 Current Phase:
 Beta Readiness & Platform Hardening (TDD Part 5)
@@ -545,19 +545,74 @@ Stable, cross-cutting facts (permanent until an approved decision changes them):
   parse was deleted rather than guessed at a fourth time, because it made a warning fire on every
   healthy rollback, and **a warning that always fires is one operators learn to ignore**.
   ⚠️ **Limit:** assumes one same-named branch per channel. A §3.2 canary split pointing a channel at
-  two branches would roll back only the channel-named side.
+  two branches would roll back only the channel-named side — **and that split now exists**, see the
+  staged-rollout entry below.
+  **THE STAGED ROLLOUT IS REAL AND PERFORMED (B7.4, 2026-08-08).** `ota.yml` →
+  `rollout-start` / `rollout-advance` / `rollout-end` / `rollout-view`, wrapping `eas channel:rollout`.
+  A rollout splits a **channel's** traffic between its current branch and a **candidate branch**, so
+  the candidate must be published to its own branch first — **publishing with `--channel` puts the
+  update on the branch the channel already points at, which splits nothing**. Hence `publish`'s
+  optional `--branch`. Performed end to end on staging: `31170893305` (publish candidate) →
+  `31171165323` (10%) → `31171256503` (50%) → `31171329608` (revert).
+  **`rollout_outcome` defaults to `revert`, and a test pins it**: the dangerous default is the one
+  that *keeps* a bad update live, so a hurried operator ending a rollout mid-incident must not
+  **preserve** the regression.
+  ⚠️ **THE MONITORING BETWEEN STAGES IS THE POINT, NOT THE PERCENTAGES.** Advancing on a timer is a
+  slow deploy, not a staged rollout; what each stage buys is a bounded population to observe. And
+  because **an open Sentry issue suppresses the next alert**, "no new alert" is NOT evidence of health
+  if one is already open — check before advancing.
+  ⚠️ **`--runtime-version` is REQUIRED to create a rollout.** It is listed in `--help` with nothing
+  marking it mandatory; found only by run `31171046705` failing with *"All of the following must be
+  provided."* The workflow **derives** it from the candidate branch's latest update rather than taking
+  it as an input, because a rollout targets one runtime version and a 40-character fingerprint is not
+  something to copy by hand mid-incident — the same reasoning that makes the rollback resolve its own
+  update group. **That is the fourth eas-cli assumption this slice got wrong: three JSON shapes and
+  one mandatory flag, every one surfaced by running against real EAS rather than by reading `--help`.**
+  ⚠️ **§2.4's staged rollout was recorded as store-gated across every tracking document, and only
+  HALF of it was.** The requirement is about **OTA**, which `eas channel:rollout` satisfies today;
+  only the phased rollout of a **binary** needs a Play/Apple account. It had been deferred on an
+  assumption nobody had tested. **A blocker recorded once propagates through every document that
+  cites it** — the same shape as the merged SLO denominator that sat in five files, and the second
+  time in this milestone that re-reading a stated blocker against the actual tool was worth more than
+  the engineering it was blocking.
   ⛔ **The old scaffold's failure message was UNREACHABLE for three weeks.** It mapped only
   `EXPO_ACCESS_TOKEN`, so `preflight.sh staging` died on `SUPABASE_STAGING_DB_URL` first and its
   comment "Preflight passed, so the channel's configuration is present" could never print. A control
   documented, wired, and inert — found the first time anyone dispatched it.
 - **Release rollback lives in `docs/devops/RELEASE_RUNBOOK.md`** (§3.4), separate from
-  `DR_RUNBOOKS.md` (§8.3 disaster recovery). Its §0 opens with what is NOT true: **three of seven
-  rollback paths have no mechanism at all and only the OTA one has ever been performed.** PITR is
-  unavailable (NFR-15), so a destructive migration against real user data has **no recovery**;
-  staged rollout is a plan, not a capability. Pinned by
-  `apps/backend/tests/release/release-runbook.test.ts`, which asserts the controls the runbook tells
-  an operator to use still exist — it deliberately does NOT assert that a rollback was performed,
-  because a test cannot check that and the gap is the point.
+  `DR_RUNBOOKS.md` (§8.3 disaster recovery). Its §0 opens with what is NOT true. **As of B7's close
+  (2026-08-08) it counts EIGHT paths: three exercised** — OTA rollback, Edge Function redeploy,
+  staged OTA rollout, all on staging — **one blocked, three with no mechanism at all, and PITR
+  absent** (NFR-15), so a destructive migration against real user data still has **no recovery**.
+  Pinned by `apps/backend/tests/release/release-runbook.test.ts`, which asserts the controls the
+  runbook tells an operator to use still exist — it deliberately does NOT assert that a rollback was
+  performed, because a test cannot check that and the gap is the point.
+  ⚠️ **NONE OF THE THREE IS PROVEN TO REACH A DEVICE.** No EAS build exists for any channel, so each
+  proves its mechanism runs correctly in EAS or Supabase, not that a user's phone changed behaviour.
+  Keep that distinction at a go/no-go: "performed" here means the control ran, not that a user was
+  affected.
+  ⛔ **"AUTO-ROLLBACK ON A CRASH SPIKE" (§2.4) IS NOT AUTOMATED, AND THE RUNBOOK SAYS SO IN THOSE
+  WORDS, HELD BY A TEST.** The revert action is proven; **nothing triggers it** — that needs a Sentry
+  alert webhook plus a credential to call GitHub. A `repository_dispatch` receiver was deliberately
+  NOT added: a trigger with no sender is the placeholder shape B1 spent its time removing, and the
+  same reasoning that left the `job` table worker unbuilt. Today a crash spike pages a human (proven
+  in B4.4) and the human dispatches the revert. **"Auto-rollback" in a TDD and a manually dispatched
+  revert are different claims**, which is why the sentence is pinned rather than left to prose.
+  ⚠️ **A VERSION MISMATCH CORRUPTS THE CRASH-FREE SLOs** (B7.2). Sentry sets no explicit release, so
+  `@sentry/react-native` derives it from the **native app version**; NFR-06 and NFR-07 are read **per
+  release**. A build tagged `v0.2.0` from an `app.config.ts` still saying `0.1.0` files its crashes
+  under `0.1.0` and **reads as healthy** while the previous release absorbs them. `release-build.yml`
+  therefore fails **before building** when a `v*` tag, `app.config.ts` and `CHANGELOG.md` disagree.
+  The check is split by what can violate each half: config↔changelog lives in the unit suite because
+  any PR can break it; tag↔config lives in the workflow because only a tag push can, and it must fail
+  rather than produce a mislabelled artifact.
+  ⛔ **`promote-production` FAILS BY DESIGN AND ONCE RAN ON EVERY `workflow_dispatch`** (found by
+  B7.3's drill), so **a successful Edge Function rollback produced a RED run**. Mid-incident the
+  obvious reading of red is "the rollback failed", and the next move is something riskier: **a
+  control built to prevent a false green was manufacturing a false red on the recovery path**, which
+  is worse, because that is where a misread costs most. Now gated behind an explicit `promote` input,
+  default `false`. For runs predating the fix, judge by the `Deploy Edge Functions` job, never the run
+  colour.
 - **⚠️ `apps/backend` IMPORTS `@supabase/supabase-js` WITHOUT DECLARING IT** (found 2026-08-07 while
   triaging #109; **not fixed**). `functions/_shared/supabase.ts` and the repos import it as a bare
   specifier, but the package is declared **only** in `apps/mobile/package.json`. It resolves today, so

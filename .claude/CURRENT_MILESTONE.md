@@ -2,10 +2,10 @@
 
 # PanchangPal — Current Milestone
 
-Version: 4.15.0
+Version: 4.17.0
 
-Last Updated: 2026-08-07 (**B7 STARTED** — B7.1 OTA publish + rollback performed; no slice COMPLETED,
-so 50% is unchanged; B2's gate also materially better instrumented)
+Last Updated: 2026-08-08 (**B7 COMPLETE** → 63%, then **B8 STARTED** — the §10.1 checklist is walked
+and the verdict is **⛔ NO-GO, 3 of 22**; two findings, and one of them was in my own document)
 
 Purpose:
 This document defines the current milestone. Unlike SESSION.md (daily work) or TASK.md (current
@@ -24,8 +24,98 @@ Status
 
 Overall Progress
 
-50% (**4 of 8 slices COMPLETE — B2 ✅, B4 ✅, B5 ✅, B6 ✅**, the last three at verifiable scope;
-B1 ~85%, B3 ~80%)
+63% (**5 of 8 slices COMPLETE — B2 ✅, B4 ✅, B5 ✅, B6 ✅, B7 ✅**, the last four at verifiable
+scope; B1 ~85%, B3 ~80%; **B8 🚧 STARTED**)
+
+**2026-08-08 (part 2) — B8 IS STARTED AND THE ANSWER IS ⛔ NO-GO.** `docs/devops/GO_NO_GO.md` walks
+all 22 of §10.1's `[MANDATORY]` items: **3 met · 10 partial · 7 not met · 2 business-owned**. Pinned
+by `go-no-go.test.ts` (30 assertions), which parses the checklist **out of the TDD** and compares
+**both directions** — an item dropped fails, an item invented fails — the same two-way pattern as
+`data-inventory.test.ts`. **Progress stays 63%**: B8's other two deliverables need store accounts.
+
+**This is the expected answer, and saying so is the deliverable.** §10.4 already called the milestone
+"ready for launch, *conditional on* the §10.1 checklist", and five slices closed at **verifiable
+scope** with named residuals. B8 exists to read those residuals **together, once** — because the
+failure this milestone keeps finding is a control that is documented, visible and inert, and that is
+invisible from inside any single document. **Almost none of the gap is unfinished engineering:** of
+the 19 items not fully met, 7 are content/AI readiness, 6 are owner purchases, 2 are business
+decisions, and **4 are engineering**.
+
+⚠️ **"PARTIAL" IS THE COLUMN THAT MATTERS, BECAUSE A PARTLY-MET ITEM LOOKS TICKED FROM A DISTANCE.**
+The clearest case is *"traditions/festivals/rituals seeded for launch traditions"*: traditions **are**
+seeded — four of them — so a quick read passes the item, while the seed carries exactly one ritual and
+one festival named `sample-festival`, whose significance text is *"Placeholder significance (reviewer
+content to follow)."* The seed's own header says reviewer content is loaded by `SVC_content_ingest`
+and not raw-seeded.
+
+⛔ **FINDING 1 — THERE IS NO PERFORMANCE GATE, AND §10.1 CALLS IT RELEASE-BLOCKING.** PDD specifies
+numeric per-screen budgets (Today cached render < 500 ms · checklist toggle ack < 100 ms · ritual
+"Begin"→first step < 400 ms · completion ack < 100 ms) and **no performance, bundle-size or budget
+check exists in any of the eight workflows**. The asymmetry is worth naming: accessibility became
+real because it was expressible as a unit assertion, and performance never was. **Deliberately not
+bolted on inside a checklist walk** — a threshold measured on a CI emulator says little about a
+mid-range phone, and that is exactly the argument that keeps such a gate from being written at all.
+
+⛔ **FINDING 2 — THE PAYWALL IS FULLY BUILT AND EMITS NOTHING.** SCR_SUBSCRIPTION_001, CMP_PLAN_CARD,
+the contextual sheet, `visibleOfferings` and the `FF_FAMILY_PLAN` gate are implemented and tested, and
+**not one emits an event**; PDD §11 defines `EVT_049` for that surface and nothing fires it. So **the
+NZ pricing question the MRD wants answered is unanswerable with the data the app produces**, and that
+would have surfaced only after launch, when someone went looking for the funnel. ⚠️ Unlike NFR-10 —
+which has **no** sync event in the registry and is therefore genuinely blocked on a PDD decision —
+`EVT_049` already exists, so emitting it invents nothing.
+
+⛔ **AND THE PERTURBATION CAUGHT A DEFECT IN MY OWN DOCUMENT, OF THE EXACT CLASS IT CATALOGUES.**
+GO_NO_GO §9 and §10 both told the reader the verbatim appendix was "the machine-checked surface", and
+the test's first version checked coverage against the **whole file** — so deleting an appendix item
+still passed, because the human-readable table above quotes the same words and the assertion matched
+there instead. **The appendix was decorative while two sections claimed it was load-bearing.** Fixed
+by scoping the check to the appendix, plus a guard that fails if its heading is renamed — which takes
+all 22 coverage assertions down with it, proving they are not vacuous. Found by running a
+perturbation, not by review; **the third time this milestone that a guard looked convincing and
+measured nothing.**
+
+**Verified:** vitest **206 (+30)** · tsc **11/11 uncached** · eslint **0 errors** (14 warnings) ·
+**seven perturbations**, each failing exactly the intended assertion, controls green at both ends.
+
+**Prior position — B7's close:**
+
+**2026-08-08 — B7 CLOSED, and three increments had shipped without a checkpoint.** B7.2 (`76e9764`,
+#114), B7.3 (`fd1aa83`, #115) and B7.4 (`9667600`, #116) complete Release Management. Every increment
+was **performed** against real infrastructure rather than configured — the standard B4 set and §8.4
+states. `RELEASE_RUNBOOK.md` §0 now opens on the count: of **eight** rollback paths, **three
+exercised** (OTA rollback, Edge Function redeploy, staged OTA rollout), **one blocked**, **three with
+no mechanism at all**, **PITR absent**.
+
+⚠️ **NONE OF THE THREE IS PROVEN TO REACH A DEVICE.** No EAS build exists for any channel, so each
+proves its mechanism runs correctly in EAS or Supabase — not that a user's phone changed behaviour.
+That is written into §0 rather than left to be inferred, because it is exactly the kind of gap a
+go/no-go conversation should not have to discover for itself.
+
+⛔ **AND "AUTO-ROLLBACK ON A CRASH SPIKE" (§2.4) IS NOT AUTOMATED.** The revert action is proven and
+**nothing triggers it** — that needs a Sentry alert webhook plus a credential to call GitHub, an
+owner action. A `repository_dispatch` receiver was deliberately **not** added: a trigger with no
+sender is the placeholder shape B1 spent its time removing, and the same reasoning that left the
+`job` table worker unbuilt. Today a crash spike pages a human (proven in B4.4) and the human
+dispatches the revert. **A test holds that disclosure in the runbook in those words**, because
+"auto-rollback" in a TDD and a manually dispatched revert are different claims, and the distance
+between them is what this milestone keeps finding.
+
+⛔ **THE TRACKING DOCUMENTS HAD BEEN THREE INCREMENTS STALE, AND EVERY ONE OF THEM AGREED WITH THE
+OTHERS.** B7.2, B7.3 and B7.4 each completed without the Increment & Milestone Completion Checkpoint
+running, so all six status files still said "B7 is 1 of 4" while the work sat merged on main. Nothing
+looked wrong from inside the documentation, because each file had been written from the previous one.
+**`git log` is the instrument; a status file is not evidence about the repository.**
+
+⛔ **AND B7.4's RECORDED BLOCKER WAS HALF FALSE.** Every document had B7.4 as owner-gated on Play and
+Apple accounts. §2.4's requirement — *"OTA rollouts are staged and monitored (Sentry crash-free),
+auto-rollback on a crash spike"* — is about **OTA**, and `eas channel:rollout` does exactly what §3.2
+describes. The store-side phased rollout of a *binary* is genuinely blocked; **the OTA side never
+was**, and had been deferred on an assumption nobody had tested. **A blocker recorded once propagates
+through every document that cites it** — the same shape as the SLO count, where five files repeated
+one merged denominator, and it is the second time in this milestone that re-reading a stated blocker
+against the tool was worth more than the engineering behind it.
+
+**Prior position — 4 of 8 slices, 50%:**
 
 **2026-08-07 — no slice moved, and both open branches merged.** The Actions outage cleared, so
 **#107** (RNTL 13 → 14) got a real verdict and merged as `21e8c13`: all five CI gates **executed**
@@ -455,8 +545,8 @@ possible fix and would have caught defects 1–3 at M1.
 | B4 | Observability | Sentry, telemetry, SLO dashboards + alerts (§7) | 🟡 ~75% — B4.1 seam ✅ · B4.2 sink ✅ · B4.3 server seam + prod release gate ✅ · EVT_* daily-habit funnel emitting (§11.4, incl. the North Star input EVT_017). **The concrete Sentry implementation (PR #79) is verified and ready**: both blockers closed 2026-08-01/02 — the startup-init defect is fixed and guarded by a behavioural test, and the E2E red was never Sentry (it was the preference-durability defect, fixed in #86). **The DSN is now provisioned and VERIFIED on device (2026-08-02)** — org `panchang`, projects `panchangpal-mobile` + `panchangpal-edge`; `[telemetry] reporter=sentry` appears once per launch in the E2E artifact (12/12, where it read `none` before), with the native SDK installing NDK/ANR/uncaught-exception and — the one that matters — `AppLifecycleIntegration`, which is what crash-free sessions is computed from. **Crash-free sessions is therefore MEASURABLE for the first time.** **B4.4 is still the open increment and B4 does not close**: the §7.2 SLO dashboards and alerts do not exist, and §8.4's rule stands that alerting never triggered is a plan, not a capability. Also unverified: ingest into Sentry itself (needs the dashboard), the Edge Function path (needs a real server error), and the source-map upload (`e2e.yml` sets `SENTRY_DISABLE_AUTO_UPLOAD=true` deliberately; only `release-build.yml` exercises it) |
 | B5 | Reliability & DR | backups, restore drill, runbooks, graceful degradation (§8) | ✅ COMPLETE at verifiable scope — runbooks (§8.3) · mechanised restore drill · §8.2 degradation policy · §8.4 operator resilience. **One deliverable is NOT engineering-closable: NFR-15 needs PITR, which is a purchase.** Recorded as a launch blocker rather than counted as done. |
 | B6 | Security & privacy | OWASP Mobile review, CCPA export/delete verification, store privacy labels (§5, §6) | ✅ COMPLETE at verifiable scope — OWASP review ✅ (2 critical defects found + fixed, each proven by reintroducing it) · CCPA export + SVC_account authz ✅ · **B6.3 data inventory + privacy policy draft + store labels ✅**, the inventory pinned to the schema and the emitted `EVT_*` set by a conformance test proven to fail four ways · §5.2 SBOM/Dependabot/pinning ✅. **Two deliverables are NOT engineering-closed and are recorded rather than counted: (a) ⛔ deletion is never EXECUTED** — the request is written to `account_deletion` and nothing carries it out, which is ordinary engineering and a launch blocker; **(b)** nothing is legally reviewed, and no policy or label is publishable until (a) is fixed. Export remains at verifiable scope: unit-tested and proven-to-fail, never run against a live backend |
-| B7 | Release management | versioning/trains, OTA policy + channels, staged rollout, rollback verification (§3) | 🟡 **STARTED — B7.1 ✅** (`3cee165`). OTA publish + rollback are real and **both PERFORMED** on staging (`31166287897`, `31166824122`), which is §8.4's standard rather than 'configured'; `RELEASE_RUNBOOK.md` covers §3.4 and is pinned by a conformance test. ⚠️ **A successful publish can reach NOBODY** — `runtimeVersion: fingerprint` enforces §2.4 mechanically and by the same mechanism delivers nothing once the fingerprint moves; the job counts matching builds and warns at zero. **NOT proven: delivery to a device** (no EAS build on the channel). Verifying it found **five defects every local check had passed**, incl. the old scaffold's error being **unreachable for three weeks**. Remaining: **B7.2** version trains · **B7.3** flag-disable + Edge Function rollback *performed* · **B7.4** staged rollout (store-gated) |
-| B8 | Go/no-go & launch | §10.1 checklist execution, internal → beta cohort, sign-off | ⏳ |
+| B7 | Release management | versioning/trains, OTA policy + channels, staged rollout, rollback verification (§3) | ✅ **COMPLETE at verifiable scope (2026-08-08)** — all four increments **PERFORMED**, not configured. **B7.1** (`3cee165`) OTA publish + rollback on staging (`31166287897`, `31166824122`). **B7.2** (`76e9764`) version trains: `CHANGELOG.md` created and `release-build.yml` now fails **before building** when a `v*` tag disagrees with `app.config.ts` or the changelog lacks its entry — ⚠️ because Sentry derives the release from the **native app version**, a mismatch files a new build's crashes under the OLD release and NFR-06/NFR-07 are read per release, so **a mislabelled build looks healthy**. **B7.3** (`fd1aa83`) Edge Function rollback performed (`31169545892` → `31169842290`) — ⛔ and it found that `promote-production` ran on every dispatch and fails by design, so **a successful rollback produced a RED run**: a control built against a false green was manufacturing a false red on the recovery path. **B7.4** (`9667600`) the staged OTA rollout performed through its whole lifecycle (`31170893305` → `31171165323` → `31171256503` → `31171329608`), `rollout_outcome` defaulting to `revert` because the dangerous default is the one that keeps a bad update live. ⚠️ **NOT proven: delivery to a device** — no EAS build exists for any channel. ⛔ **Auto-rollback is NOT automated** — the action is proven, nothing triggers it (owner: a Sentry webhook + a GitHub credential). **Blocked, not skipped:** the store-side phased rollout of a binary (Play/Apple accounts) and the flag-disable drill (`FF_FAMILY_PLAN` gates only the Family offering, and `react-native-purchases` is uninstalled, so filtering an empty list proves nothing either way) |
+| B8 | Go/no-go & launch | §10.1 checklist execution, internal → beta cohort, sign-off | 🚧 **STARTED 2026-08-08** — the §10.1 checklist is **walked**: `docs/devops/GO_NO_GO.md` records **⛔ NO-GO, 3 of 22 items met** (10 partial · 7 unmet · 2 business-owned), pinned by `apps/backend/tests/release/go-no-go.test.ts` (30 assertions), which parses §10.1 **out of the TDD** and checks coverage **both ways**. ⚠️ *Partial* is the dangerous column — *"traditions/festivals/rituals seeded"* reads as ticked because traditions are, while the festival is named `sample-festival` with placeholder significance text. **Two findings:** ⛔ **no performance gate exists** in any of the eight workflows though §10.1 calls it release-blocking and PDD sets numeric budgets; ⛔ **the fully-built paywall emits no analytics** (`EVT_049` is defined in PDD §11 and never fired), so the MRD's NZ pricing test has no signal. Remaining: internal smoke on TestFlight / Play Internal · beta cohort — both **owner-gated** on Apple + Play accounts |
 
 One slice per session, same cadence as M1–M8: implemented, self-verified, reviewed, then the next.
 
@@ -525,16 +615,82 @@ One slice per session, same cadence as M1–M8: implemented, self-verified, revi
             nobody.
       - [x] **§3.4 rollback runbook** — `docs/devops/RELEASE_RUNBOOK.md`, pinned by
             `apps/backend/tests/release/release-runbook.test.ts` (5 assertions, 5 perturbations).
-            It records that **three of seven rollback paths have no mechanism at all** and only the
-            OTA one has been performed.
-      - [ ] **B7.2** — version trains + changelog/tag discipline (§3.1).
-      - [ ] **B7.3** — the flag-disable and Edge Function rollback paths **performed**, not just
-            documented. DR_RUNBOOKS §6 has recorded the Edge Function gap since 2026-07-25.
-      - [ ] **B7.4** — staged rollout + crash-spike auto-rollback (§3.2). **Owner-gated**: phased
-            percentages live in the Play Console / App Store Connect and neither account exists.
-      - [ ] **Delivery to a device is unproven** — no EAS build exists for either channel, so the
-            reachability check correctly reports 0. The mechanism is proven; delivery is not.
+            Updated through B7.2–B7.4: it now records that of **eight** rollback paths, **three have
+            been exercised** (OTA rollback, Edge Function redeploy, staged OTA rollout), one is
+            blocked, **three have no mechanism at all**, and PITR does not exist — plus the fact that
+            **none of the three is proven to reach a device**.
+      - [x] **B7.2** — version trains + changelog/tag discipline (§3.1), `76e9764` (#114).
+            `CHANGELOG.md` created per §3.0A.4 with the bump rules restated where they are used;
+            `release-build.yml` fails **before building** on a tag/config/changelog disagreement.
+            ⚠️ The stake is the crash-free SLOs, not tidiness: Sentry derives the release from the
+            **native app version**, so a mislabelled build files its crashes under the previous
+            release and reads as healthy. Split by what can violate each half — config↔changelog in
+            the unit suite (checkable per PR), tag↔config in the workflow (only a tag push can
+            violate it, and it must fail rather than produce a mislabelled artifact).
+      - [x] **B7.3** — the Edge Function rollback **performed**, `fd1aa83` (#115). Runs
+            `31169545892` (seven functions redeployed from an older commit) and `31169842290` (all
+            eight restored from `main`). ⚠️ It proves a prior version can be redeployed on demand,
+            **not** a behavioural diff — the two commits had no observable difference, so "the older
+            code is serving" rests on the deploy log naming the older SHA, and the runbook says so.
+            ⛔ **The drill's real finding: a manual CD dispatch could never report green**, because
+            `promote-production` fails by design and ran on every `workflow_dispatch`. Fixed with an
+            explicit `promote` input, default `false`.
+      - [x] **B7.3 — the flag-disable path is BLOCKED, not "never performed"**, and the distinction
+            is the point. `FF_FAMILY_PLAN` gates exactly one thing — the Family **offering**, via
+            `visibleOfferings` — and `react-native-purchases` is uninstalled, so `NullPaymentAdapter`
+            returns no offerings and filtering an empty list yields an empty list either way. It
+            would stay unobservable **even with the SDK installed**, because `getOfferings()` returns
+            what a *store* defines and no Apple or Play account exists. Revisit with the store
+            accounts — the same increment that installs the payments SDK, which must also move E2E
+            back to a `google_apis` image and reintroduces the Pixel Launcher ANR risk PRs #41 and
+            #55 spent effort eliminating.
+      - [x] **B7.4** — staged OTA rollout (§3.2), `9667600` (#116), **performed through its whole
+            lifecycle** on staging: publish candidate `31170893305` → 10% `31171165323` → 50%
+            `31171256503` → revert `31171329608`, leaving staging where it started. `publish` gained
+            an optional `--branch`, because a rollout splits traffic between **two** branches and
+            publishing with `--channel` targets the one the channel already points at, which splits
+            nothing. `rollout_outcome` defaults to **`revert`**, pinned by a test.
+            ⚠️ **The monitoring between stages is the point, not the percentages** — advancing on a
+            timer is a slow deploy. And since an open Sentry issue suppresses the next alert, "no new
+            alert" is not evidence of health if one is already open.
+            ⚠️ **`--runtime-version` is required to create a rollout**, unmarked as mandatory in
+            `--help` and found only by a failing run; it is **derived** from the candidate branch,
+            because a 40-character fingerprint is not something to copy by hand mid-incident.
+      - [ ] ⛔ **Auto-rollback is NOT automated** (§2.4) — the revert action is proven and **nothing
+            triggers it**. Needs a Sentry alert webhook plus a credential to call GitHub, an owner
+            action. A `repository_dispatch` receiver is deliberately not added: a trigger with no
+            sender is the placeholder shape B1 removed. Today a crash spike pages a human and the
+            human dispatches.
+      - [ ] **The STORE-side phased rollout stays blocked** — phased percentages live in the Play
+            Console / App Store Connect and neither account exists. (The OTA half was never blocked;
+            recording the two as one is the error this increment corrected.)
+      - [ ] **Delivery to a device is unproven** — no EAS build exists for any channel, so the
+            reachability check correctly reports 0. The mechanisms are proven; delivery is not.
 - [ ] **B8** — the §10.1 checklist walked; internal smoke on TestFlight/Play Internal; beta cohort.
+      - [x] **B8.1 — the §10.1 checklist WALKED** (2026-08-08). `docs/devops/GO_NO_GO.md`:
+            **⛔ NO-GO, 3 of 22 met** (10 partial · 7 unmet · 2 business-owned), every verdict derived
+            from the repository rather than from another document. Pinned by
+            `apps/backend/tests/release/go-no-go.test.ts`, which parses §10.1 out of the TDD and
+            checks coverage both ways, then pins the claims that will rot **in the dangerous
+            direction** — it fails when a performance gate appears, when `EVT_049` starts being
+            emitted, when `GURU_LIVE` flips, or when `react-native-purchases` is installed, because a
+            document that keeps saying "blocked" after the blocker clears makes the gap invisible.
+      - [ ] **B8.2 — a performance gate** (§10.1 item 8, *release-blocking*). None exists in any of
+            the eight workflows while PDD sets numeric budgets. ⚠️ Has a genuine design question:
+            a CI-emulator threshold says little about a mid-range phone. Likely instrument — a
+            Maestro assertion on the already-green device runs.
+      - [ ] **B8.3 — emit `EVT_049`** from the subscription surface (§10.1 item 19). The paywall is
+            fully built and emits nothing, so the MRD's NZ pricing signal test has no signal. The id
+            is already in PDD §11, so this invents nothing.
+      - [ ] **Internal smoke on TestFlight / Play Internal** (§10.2 step 1) — **owner-gated**: Apple
+            ($99) + Google Play ($25). The single highest-leverage purchase in the project: it also
+            converts every "proven in EAS, not on a device" caveat into a real answer.
+      - [ ] **Beta cohort / canary** (§10.2 step 2) — needs step 1, §7.2's dashboards, and the two
+            open metric-monitor issues cleared.
+      **Four residuals decide the eventual verdict, none of them unfinished code:** PITR absent
+      (NFR-15) · no release path proven to reach a device · auto-rollback not automated · **two metric
+      monitors with open issues**, which cannot be cleared by hand and will suppress the next alert of
+      their kind.
 
 ---
 

@@ -2,9 +2,9 @@
 
 # PanchangPal — Implementation Roadmap
 
-Version: 2.11.0
-Last Updated: 2026-08-07 (**B7 started** — B7.1 OTA publish/rollback performed; B2's gate hardened
-three ways and the device log is no longer 85% missing)
+Version: 2.13.0
+Last Updated: 2026-08-08 (**B7 COMPLETE** → 63%, then **B8 STARTED** — §10.1 walked, verdict
+**⛔ NO-GO, 3 of 22**; the two credential-free findings are the next work)
 
 Purpose: the forward plan from the current state. Complements PROJECT_STATUS.md (snapshot) and
 CURRENT_MILESTONE.md (active milestone). Updated when scope or sequencing changes — and at every
@@ -12,20 +12,48 @@ increment/milestone boundary per the Increment & Milestone Completion Checkpoint
 
 ---
 
-## Where we are (2026-08-07)
+## Where we are (2026-08-08)
 
-**Beta Readiness & Platform Hardening, 50%** — **B2 ✅, B4 ✅, B5 ✅, B6 ✅** (the last three at
-verifiable scope). B1 ~85%, B3 ~80%, all remainders owner-gated on money or a store account.
-**B7 — RELEASE MANAGEMENT IS STARTED (2026-08-07).** `B7.1` merged as **`3cee165`** (PR #113): OTA
-publish and rollback are real, and **both were performed** on the staging channel (`31166287897`,
-`31166824122`) rather than merely configured — §8.4's standard. `docs/devops/RELEASE_RUNBOOK.md`
-covers §3.4's surfaces and opens with what is *not* true. **The percentage does not move**: a slice
-counts only when complete, and B7 is 1 of 4 increments. Remaining: **B7.2** version trains &
-changelog discipline · **B7.3** the flag-disable and Edge Function rollback paths *performed* ·
-**B7.4** staged rollout + crash-spike auto-rollback, whose store half is owner-gated.
+**Beta Readiness & Platform Hardening, 63%** — **B2 ✅, B4 ✅, B5 ✅, B6 ✅, B7 ✅** (the last four
+at verifiable scope). B1 ~85%, B3 ~80%, all remainders owner-gated on money or a store account.
+
+**B8 — GO/NO-GO IS STARTED, AND THE CHECKLIST IS WALKED (2026-08-08).** `docs/devops/GO_NO_GO.md`
+records **⛔ NO-GO: 3 of 22** `[MANDATORY]` items met, 10 partial, 7 unmet, 2 business-owned — every
+verdict read from the repository rather than from another document, and pinned by `go-no-go.test.ts`
+parsing §10.1 out of the TDD. **Progress stays 63%**; the remaining deliverables need store accounts.
+**Of the 19 items not fully met, only 4 are engineering** — 7 are content/AI readiness, 6 are owner
+purchases, 2 are business decisions. **Two of those four are new findings:** no performance gate
+exists though §10.1 calls it release-blocking, and the fully-built paywall emits no analytics, so the
+MRD's NZ pricing test has no signal.
+
+**The sequencing this produces is unusually clear for once.** The two findings are the only blocking
+items that are also credential-free, so they come first; then **Apple ($99) + Google Play ($25)**,
+which unblocks §10.2 step 1 and simultaneously converts every *"proven in EAS, not on a device"*
+caveat from B7 into a real answer. Nothing else on the checklist is reachable before that purchase.
+
+**B7 — RELEASE MANAGEMENT IS COMPLETE (2026-08-08).** Merged: `B7.1` **`3cee165`** (#113) · `B7.2`
+**`76e9764`** (#114) · `B7.3` **`fd1aa83`** (#115) · `B7.4` **`9667600`** (#116). Every increment was
+**performed** against real infrastructure rather than configured — §8.4's standard — with run ids
+recorded in `docs/devops/RELEASE_RUNBOOK.md`, whose §0 now counts **eight** rollback paths: **three
+exercised**, one blocked, **three with no mechanism at all**, PITR absent.
 ⚠️ **A successful OTA publish can reach nobody** — `runtimeVersion: fingerprint` enforces §2.4
 mechanically and, by the same mechanism, delivers nothing when the fingerprint has moved. The publish
 job counts matching builds and warns at zero.
+⚠️ **And none of the three exercised paths is proven to reach a device**, because no EAS build exists
+for any channel. Each proves its mechanism works in EAS or Supabase, not that a phone changed.
+⛔ **Auto-rollback on a crash spike is NOT automated** — the revert action is proven and nothing
+triggers it. That needs a Sentry alert webhook plus a GitHub credential (owner). A
+`repository_dispatch` receiver was deliberately not added: a trigger with no sender is the
+placeholder shape B1 removed.
+
+⛔ **Two sequencing lessons came out of closing it, and both are about the plan rather than the code.**
+(1) **B7.2, B7.3 and B7.4 all shipped without a checkpoint**, so every tracking file said "B7 is 1 of
+4" while the work sat merged on main — and no file contradicted another, because each was written
+from the previous one. (2) **B7.4 was sequenced last and marked owner-gated, and only half of it
+was**: §2.4's staged rollout is about **OTA**, which `eas channel:rollout` does today; only the
+store-side phased rollout of a binary needed an account. **A blocker recorded once propagates through
+every document that cites it**, and re-reading one against the actual tool has now twice been worth
+more than the engineering it was blocking.
 
 **The dependency queue is also empty** — six further merges: **#108** (`610bf12`, timeout guard) ·
 **#107** (`21e8c13`, RNTL 13 → 14) · **#110** (`afce763`, the double-`clearState` race) · **#111**
