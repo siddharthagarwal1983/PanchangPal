@@ -2,9 +2,108 @@
 
 # PanchangPal — Current Session
 
-Version: 18.0.0
-Last Updated: 2026-08-08 (**B8.3** — the monetization funnel emits; the privacy inventory caught the
-new collection unprompted, and no credential-free blocking engineering remains on §10.1)
+Version: 19.0.0
+Last Updated: 2026-08-09 (**Expo SDK 57 verified on BOTH platforms — iOS runs for the first time
+in this project's history** — and **ADR-033 is ratified at a narrowed scope**, which found that its
+own acceptance gate cannot be built)
+
+---
+
+# Part 5 — SDK 57 proven on device, iOS built at last, and ADR-033 ratified
+
+**Progress stays 63%.** Neither item completes a Beta slice: the SDK upgrade is platform
+maintenance, and ratifying an ADR surfaces a decision rather than shipping one.
+
+## ⛔ The tracking documents were a whole increment stale again
+
+`chore/expo-sdk-57-upgrade` (`1c4a2f0`) sat **committed locally, unpushed, with no PR and no CI
+verdict**, while `PROJECT_MEMORY.md` v3.7.0 already described the SDK 57 baseline as fact and
+**SESSION/TASK/DASHBOARD/CURRENT_MILESTONE mentioned it nowhere.** One document had run ahead of
+four. **`git log` is the instrument** — the same finding as B7's close, one session later.
+
+## ✅ The upgrade is now verified on both platforms
+
+Opened as **PR #121**. Verdict:
+
+| Layer | Result |
+|---|---|
+| Five CI gates | green, none `SKIPPED` via `needs:` |
+| Counts | mobile **450/450** · ui **33/33** · vitest **219** — identical to the SDK 54 baseline |
+| Bundle budget (B8.2) | ios **4.93 MiB** (*down* from 5.04) · android **5.12 MiB**, both under 6 MiB |
+| **Android E2E** | **6/6 flows, 2m22s**, run `31291087673` green |
+| **iOS** | **native build + app running on the simulator — a project first** |
+
+**The bundle gate answered the plausible worry with a number**: a three-major RN jump made iOS
+*smaller*. That is the most useful thing B8.2 has produced.
+
+## ✅ iOS was never "blocked on a $99 membership" — that was distribution
+
+PROJECT_MEMORY recorded iOS as unbuilt and needing an Apple membership. **The simulator needs
+none.** What it actually needed was CocoaPods (system Ruby 2.6 is too old — `brew install
+cocoapods`) and the **iOS platform/runtime**, which Xcode 26 does not ship: `-showsdks` lists the
+simulator SDK while `xcodebuild` reports *"Found no destinations"*, so the ~7 GB
+`xcodebuild -downloadPlatform iOS` gates **compiling**, not merely running. **293 pods** resolved
+— NitroModules 0.35.10, Hermes, Sentry 8.58.0, ExpoSecureStore.
+✅ **And the runtime log shows `MMKV::sync` writing to disk** — the storage seam has real native
+backing on iOS, the seam whose v2 failure on Android silently degraded to memory.
+✅ **`[telemetry] reporter=none env=development`** — `isUsableDsn()` correctly rejects the
+placeholder DSN, and the environment is **not** mislabelled `production`. #98's observable doing
+its job on a platform it was never tested on.
+⚠️ **A local iOS build fails on the Sentry source-map upload** unless `SENTRY_DISABLE_AUTO_UPLOAD=true`
+is set, as `e2e.yml` does. The upload task **fails the build rather than skipping** — recorded from
+PR #79 on Gradle, now confirmed identical on iOS. Owed: a line in `SETUP.md`.
+
+## ⛔ A green E2E run reported nothing for 35 minutes after passing
+
+Run `31289038585` showed `6/6 Flows Passed in 6m 37s`, printed `[e2e] captured 12385 logcat
+lines`, ran `adb emu kill` → `OK: killing emulator, bye bye` — **and then hung until cancelled.**
+The suite had succeeded 35 minutes earlier. Left alone it would have burned to
+`timeout-minutes: 90` and reported red.
+
+⚠️ **`timeout` wraps only `maestro test`, so the guard cannot fire for this** — the hang is in the
+emulator-runner's teardown, *after* the guarded command. Same shape as B7.3's `promote-production`
+turning a successful rollback red: **a run whose colour contradicts the work it did.**
+⚠️ **It did NOT recur** on the re-dispatch (2m22s flows, 17m32s total), so it is **intermittent,
+not systematic** — recorded rather than fixed. **Judge such a run by the `Flows Passed` line, never
+its colour.**
+⚠️ **And cancelling did not destroy the evidence** — `Upload Maestro debug output` is `if: always()`
+and produced the 1.56 MB artifact that settled all of this.
+
+## ✅ ADR-033 ratified at a narrowed scope — and it found its own gate is unbuildable
+
+Owner rulings recorded in the ADR's new **Ratification Record**: **B-1 JPL DE440** (public domain —
+**removes the Swiss Ephemeris AGPL/commercial licence question, the MR-6 legal blocker**) ·
+**B-2 Lahiri (Chitrapaksha)** default with per-tradition override · **B-3 `generic` ONLY**, the other
+three deferred to a pandit reviewer · **B-4 festival dates exact, N and M deliberately unset**.
+
+⛔ **R1 — THE RATIFIED ACCEPTANCE GATE CANNOT BE BUILT.** TDD §6 needs a golden dataset
+cross-checked against Drik/mPanchang. **None existed**, and the seed holds **one** festival —
+`sample-festival`, *"Placeholder significance (reviewer content to follow)"*. So "festival dates
+exact" has nothing to measure, and a gate would pass vacuously — the shape `ci.yml` bans.
+**The engine and the festival corpus are blocked on the same reviewer**, which matters for
+scheduling them as if they were independent.
+⚠️ **R2 — DE440 is a bigger build than the option it replaced**: JPL binary SPK kernels
+(`de440s.bsp` ≈ 32 MB) with Chebyshev interpolation, and no mature JS/Deno SPK reader — the
+maintained MIT libraries implement VSOP87/Meeus, **not DE440**. The licence risk removed returns as
+implementation surface.
+⚠️ **R3 — three seeded traditions become selectable but unserved.**
+
+**Shipped:** `GOLDEN_DATASET.md` + `generic-2027-phase1.csv` — **46 rows, keys only, every value
+UNFILLED**, stratified on what is computable without astronomy (DST transitions ±1 day from the
+IANA database · solstices/equinoxes incl. Anchorage at 61.2°N · monthly coverage · **no-DST
+controls** that separate a DST fault from an astronomy fault). **A uniform year of 365 dates would
+agree with any roughly-correct engine.**
+⛔ **The rule that makes it worth having: expected values come from independent references and
+NEVER from our engine** — nor from a library we are considering adopting, which is the same error
+one layer out. Every row carries `source`/`source_url`/`checked_by`/`checked_on`, because **a
+golden value without provenance is an assertion, not a reference.**
+⚠️ **The circularity is real and Phase 2 breaks it:** the sharpest rows are tithi boundaries within
+minutes of sunrise, and choosing those needs an engine. So a candidate engine may **propose** the
+dates; the reviewer supplies the answers. **The engine chooses the questions, never the answers.**
+✅ **`generic`'s four profile fields are RULED (2026-08-09)** — `month_scheme` **purnimanta** · `tithi_reference` **tithi-at-sunrise** · `sunrise_convention` **upper limb + standard refraction** · `day_division` **sunrise→sunset in 8 equal parts**. ⚠️ Two caveats carried, neither blocking the engine: the **Rahu Kaal weekday→segment mapping is PROVISIONAL** and no engine may read it until the pandit reviewer confirms it, and **`generic` now carries a regional convention (purnimanta = North Indian) under a name TDD §4 calls "neutral"**, so a South Indian user who never opens the tradition picker gets purnimanta month names silently.
+
+**Verified:** CI green on #121 · E2E **6/6** · iOS native build + running app. The ADR/dataset work
+is documentation and data only — no code path touched.
 
 ---
 

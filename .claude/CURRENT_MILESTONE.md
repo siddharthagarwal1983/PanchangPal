@@ -2,10 +2,10 @@
 
 # PanchangPal — Current Milestone
 
-Version: 4.19.0
+Version: 4.20.0
 
-Last Updated: 2026-08-08 (**B8.3** — the monetization funnel emits, and the privacy inventory caught
-the new collection unprompted. Item 19 stays ⚠️: EVT_051 waits on payments)
+Last Updated: 2026-08-09 (**Expo SDK 57 verified on both platforms — iOS runs for the first time**;
+**ADR-033 ratified at narrowed scope**, and its acceptance gate proves unbuildable)
 
 Purpose:
 This document defines the current milestone. Unlike SESSION.md (daily work) or TASK.md (current
@@ -26,6 +26,55 @@ Overall Progress
 
 63% (**5 of 8 slices COMPLETE — B2 ✅, B4 ✅, B5 ✅, B6 ✅, B7 ✅**, the last four at verifiable
 scope; B1 ~85%, B3 ~80%; **B8 🚧 STARTED**)
+
+**2026-08-09 — EXPO SDK 57 VERIFIED ON BOTH PLATFORMS, AND ADR-033 RATIFIED.** Progress stays 63%:
+a platform re-base is maintenance, and ratifying an ADR surfaces a decision rather than shipping one.
+
+**PR #121** carries the SDK 54 → 57 re-base with **five CI gates green**, counts **identical to the
+SDK 54 baseline** (mobile 450 · ui 33 · vitest 219), **E2E 6/6 in 2m22s**, and the B8.2 budget held
+at **ios 4.93 MiB — down from 5.04** across a three-major RN jump. **iOS was built and run for the
+first time in this project's history**, which converts the standing "iOS is unbuilt" note into a
+result.
+
+⛔ **THE TRACKING DOCUMENTS WERE A WHOLE INCREMENT STALE, AGAIN — AND THIS TIME ONE FILE HAD RUN
+AHEAD OF FOUR.** `1c4a2f0` sat committed locally, **unpushed, no PR, no CI verdict**, while
+`PROJECT_MEMORY.md` already described the SDK 57 baseline as established fact and SESSION, TASK,
+DASHBOARD and this file mentioned it nowhere. B7's close found four files agreeing with each other
+and with nothing else; this is the inverse and equally invisible from inside the documents.
+**`git log` is the instrument.**
+
+⛔ **AND A GREEN E2E RUN REPORTED NOTHING FOR 35 MINUTES AFTER PASSING.** Run `31289038585` printed
+`6/6 Flows Passed in 6m 37s`, captured 12,385 logcat lines, ran `adb emu kill` → *"bye bye"*, then
+hung until cancelled. **`timeout` wraps only `maestro test`**, so the guard cannot fire for a hang in
+the emulator-runner's *teardown*. Unattended it would have run to the 90-minute budget and reported
+**red on a suite that passed** — the B7.3 `promote-production` shape, where a control's colour
+contradicts its work. ⚠️ **It did not recur** on re-dispatch (17m32s clean), so it is **intermittent
+and is recorded rather than fixed**, with the standing rule: **judge such a run by the `Flows Passed`
+line, never its colour.**
+
+✅ **ADR-033 IS RATIFIED AT A NARROWED SCOPE, AND RATIFYING IT FOUND ITS OWN GATE CANNOT BE BUILT.**
+Owner rulings: **DE440** (public domain — this **removes the Swiss Ephemeris AGPL/commercial licence
+question**, which was the MR-6 legal blocker) · **Lahiri (Chitrapaksha)** with per-tradition override
+· **`generic` ONLY**, the other three deferred to a pandit reviewer · **festival dates exact, with N
+and M deliberately unset**.
+⛔ **R1 — TDD §6 requires a golden dataset cross-checked against Drik/mPanchang. None existed**, and
+the seed carries **one** festival: `sample-festival`, *"Placeholder significance (reviewer content to
+follow)."* The ratified criterion therefore has nothing to measure, and a gate would pass vacuously —
+the shape `ci.yml` bans. **The engine and the reviewed festival corpus (§10.1 item 2) are blocked on
+the same reviewer**, which matters before either is scheduled as independent work.
+**Shipped:** `GOLDEN_DATASET.md` and a **46-row skeleton with every expected value UNFILLED**,
+stratified only on what is computable without astronomy — DST transitions ±1 day from the IANA
+database, solstices/equinoxes including **Anchorage at 61.2°N**, monthly coverage, and **no-DST
+controls that separate a DST fault from an astronomy fault**. **A uniform year of 365 dates would
+agree with any roughly-correct engine.**
+⛔ **The rule that makes it worth having: expected values come from independent references and NEVER
+from our engine** — nor from a library we are considering adopting, which is the same error one layer
+out. ⚠️ **The circularity is real**: the sharpest rows are tithi boundaries within minutes of
+sunrise, and selecting those needs an engine. Phase 2 lets a candidate engine **propose** the dates
+while the reviewer supplies the answers — **the engine chooses the questions, never the answers.**
+✅ **`generic`'s four profile fields are RULED (2026-08-09)** — `month_scheme` **purnimanta** · `tithi_reference` **tithi-at-sunrise** · `sunrise_convention` **upper limb + standard refraction** · `day_division` **sunrise→sunset in 8 equal parts**. ⚠️ Two caveats carried, neither blocking the engine: the **Rahu Kaal weekday→segment mapping is PROVISIONAL** and no engine may read it until the pandit reviewer confirms it, and **`generic` now carries a regional convention (purnimanta = North Indian) under a name TDD §4 calls "neutral"**, so a South Indian user who never opens the tradition picker gets purnimanta month names silently.
+
+---
 
 **2026-08-08 (part 4) — B8.3: THE MONETIZATION FUNNEL EMITS.** Progress stays 63%. EVT_049/050/051/052
 are wired across both upgrade surfaces, derived purely in `subscriptionEvents.ts` (the

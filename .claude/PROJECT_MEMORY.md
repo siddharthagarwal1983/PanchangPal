@@ -2,11 +2,12 @@
 
 # PanchangPal — Project Memory
 
-Version: 3.7.0
+Version: 3.8.0
 
-Last Updated: 2026-08-08 (**B7 closed** — the staged OTA rollout is real and performed; a version
-mismatch corrupts the crash-free SLOs; `promote-production` turned a successful rollback red; and
-auto-rollback is proven as an action with nothing triggering it)
+Last Updated: 2026-08-09 (**SDK 57 verified on both platforms and iOS runs for the first time** —
+the "iOS needs an Apple membership" note was about distribution, not running; **ADR-033 is ratified**
+and its blocker changed kind, from an undecided ADR to reviewer-supplied data; and a **guard covers
+the command it wraps, not the step it lives in**)
 
 Current Phase:
 Beta Readiness & Platform Hardening (TDD Part 5)
@@ -364,10 +365,58 @@ Remaining:
 Stable, cross-cutting facts (permanent until an approved decision changes them):
 
 - **PanchangEngine** (server) + **PanchangProvider** (client) — panchang is ALWAYS accessed
-  through these seams. The astronomical algorithm is undocumented and BLOCKED by ADR-033
-  (Canonical Panchang Computation Engine, Proposed). Until ratified, panchang compute,
-  Calendar/festival markers, and sunrise/tithi notifications surface a calm "unavailable" state;
-  no astronomical calculations are implemented and no values are fabricated.
+  through these seams. Panchang compute, Calendar/festival markers and sunrise/tithi notifications
+  still surface a calm "unavailable" state; no astronomical calculations are implemented and no
+  values are fabricated.
+  ✅ **ADR-033 IS NO LONGER PROPOSED — RATIFIED 2026-08-09 at a narrowed scope** (Ratification
+  Record in the ADR): **DE440** · **Lahiri (Chitrapaksha)** with per-tradition override ·
+  **`generic` ONLY**, the other three traditions deferred to a pandit reviewer · **festival dates
+  exact, with N and M deliberately unset**. **DE440 was chosen to remove the Swiss Ephemeris
+  AGPL-or-paid licence question (MR-6)**; the price is implementation surface — SPK kernels with
+  Chebyshev interpolation and no mature JS/Deno reader.
+  ⛔ **THE BLOCKER CHANGED KIND RATHER THAN CLEARING: it is now reviewer-supplied DATA, not an
+  undecided ADR.** Ratification authorises **writing** an engine for `generic`; it does **not**
+  authorise registering one. §9 puts golden-dataset validation before registration, so
+  `unimplementedPanchangEngine` remains the only REGISTERED engine regardless of what exists in the
+  tree. **Splitting "written" from "served" is what stops "Accepted" being read as "shippable".**
+  ⛔ **The ratified acceptance gate cannot be built yet.** TDD §6 needs a golden dataset
+  cross-checked against Drik/mPanchang; none existed, and the seed holds **one** festival
+  (`sample-festival`, *"Placeholder significance"*), so "festival dates exact" has nothing to
+  measure. **The engine and the reviewed festival corpus (§10.1 item 2) are blocked on the SAME
+  reviewer** — do not schedule them as independent tracks.
+  **`docs/architecture/canonical-panchang-engine/GOLDEN_DATASET.md`** + a **46-row skeleton with
+  every value UNFILLED** (`apps/backend/functions/panchang/golden/generic-2027-phase1.csv`),
+  stratified only on what is computable without astronomy: DST transitions ±1 day from the IANA
+  database · solstices/equinoxes incl. **Anchorage at 61.2°N** · monthly coverage · **no-DST
+  controls that separate a DST fault from an astronomy fault**. **A uniform year of 365 dates would
+  agree with any roughly-correct engine.**
+  ⛔ **Expected values come from independent references and NEVER from our engine** — nor from a
+  library we are considering adopting, which is the same error one layer out and the tempting one.
+  Every row carries `source`/`source_url`/`checked_by`/`checked_on`: **a golden value without
+  provenance is an assertion, not a reference.**
+  ✅ **`generic`'s FOUR PROFILE FIELDS ARE RULED (B-5/B-6, 2026-08-09):** `month_scheme`
+  **purnimanta** · `tithi_reference` **tithi-at-sunrise** · `sunrise_convention` **upper limb +
+  standard refraction** · `day_division` **sunrise→sunset in 8 equal parts**.
+  ⚠️ **The Rahu Kaal weekday→segment mapping is PROVISIONAL and no engine may read it until the
+  pandit reviewer confirms it.** A widely-published mapping exists, but freezing an unconfirmed one
+  would put a religious convention into the system as an engineering default — the same discipline as
+  the golden values, and for the same reason.
+  ⚠️ **`generic` NOW CARRIES A REGIONAL CONVENTION UNDER A NEUTRAL NAME.** TDD §4 calls it "a
+  documented neutral default" and **purnimanta is the North Indian scheme**, so a South Indian user
+  who never opens the tradition picker silently gets purnimanta month names. Non-blocking and
+  reviewer-owned: rename the profile, or make the onboarding tradition suggestion prominent.
+  ⛔ **DERIVING `month_scheme` FROM PHONE LOCATION WAS PROPOSED AND REJECTED ON PRODUCT GROUNDS, AND
+  THE REASONING GENERALISES.** The primary users are **Indians living abroad**, so a device in
+  Auckland or Chicago yields **no Hindu regional scheme at all** — the deciding attribute is the
+  family/regional tradition they carry with them, which `tradition_code` already captures as a
+  user-owned preference (F-9). **Phone location is the one signal that is systematically wrong for
+  this product's target user**: it reports where someone emigrated to, not what they practise. It
+  would also relocate an unratified religious convention into an implicit region→scheme lookup, and
+  break ADR-010's requirement that `compute` be pure over
+  `(instant, lat, lng, tz, tradition, engine_version)` — two users of the same tradition would
+  disagree by geography while `panchang_cache` keys on a coarsened `geo_bucket`. **Location may
+  legitimately SUGGEST a tradition at onboarding** (the ADR-026 `timezone` pattern: location-derived,
+  user-correctable, never overwriting), which is a suggestion rather than the value `compute()` needs.
 - **Ask Guru readiness gate** — the client streams only via the server SSE adapter (never an LLM
   directly, never fabricates). Live answers are gated OFF (GURU_LIVE = false) until reviewed
   corpus + evaluation readiness (TDD Part 3 §9/§10B); the client is complete behind the gate.
@@ -793,9 +842,33 @@ Stable, cross-cutting facts (permanent until an approved decision changes them):
   Metro plus `adb reverse tcp:8081 tcp:8081`, while `assembleRelease` embeds the bundle, signs with
   the checked-in debug keystore and runs standalone; and `apps/mobile/android/` is GENERATED and
   gitignored, so `expo prebuild` is safe to re-run (it does rewrite `package.json`'s `android`/`ios`
-  scripts, which should be reverted). **iOS is unchanged — still unbuilt, still needs an Apple
-  membership.** This matters mainly because Maestro flows can now be iterated locally instead of
-  through 20-minute CI runs.
+  scripts, which should be reverted). This matters mainly because Maestro flows can now be iterated
+  locally instead of through 20-minute CI runs.
+  ⛔ **~~iOS is unchanged — still unbuilt, still needs an Apple membership.~~ FALSE, corrected
+  2026-08-09: iOS BUILDS AND RUNS, and it never needed a membership to do so.** That note conflated
+  **distribution** with **running** — a paid membership is for TestFlight and physical devices; the
+  **simulator needs none**. The app was built and launched on iPhone 17 / iOS 26.5 under SDK 57,
+  Metro serving, no red box.
+  **What it actually needed, none of it obvious:** **CocoaPods** (`brew install cocoapods` — macOS
+  system Ruby 2.6 is too old for modern CocoaPods) · `npx expo prebuild --platform ios` (`ios/` is
+  generated and gitignored, and prebuild rewrites those same `package.json` scripts) · and **Xcode's
+  iOS platform, which Xcode 26 does NOT ship**.
+  ⚠️ **`xcodebuild -showsdks` LISTING THE SIMULATOR SDK DOES NOT MEAN YOU CAN BUILD.** With the
+  platform absent, `xcodebuild` reports *"Found no destinations for the scheme"*, so the ~7 GB
+  `xcodebuild -downloadPlatform iOS` gates **compiling**, not merely running. Reading `-showsdks` as
+  sufficient produced a wrong claim mid-session.
+  ⚠️ **A local iOS build FAILS on the Sentry source-map upload unless `SENTRY_DISABLE_AUTO_UPLOAD=true`**
+  (`xcodebuild` exit 65, *"An organization ID or slug is required"*). The upload task **fails the
+  build rather than skipping** when unconfigured — recorded from PR #79 on Gradle, now confirmed
+  identical on iOS. `e2e.yml` sets the flag; nothing tells a first-time local builder to.
+  **293 pods resolve**, including **NitroModules 0.35.10**, Hermes (pre-built), Sentry/HybridSDK
+  8.58.0 and ExpoSecureStore 57.0.1. ✅ **The runtime log shows `MMKV::sync` writing to disk**, so the
+  storage seam has real native backing on iOS — the seam whose mmkv-v2 failure on Android silently
+  degraded to memory. ✅ **`[telemetry] reporter=none env=development`** — the placeholder DSN is
+  correctly rejected and the environment is **not** mislabelled `production`, #98's observable
+  working on a platform it was never tested on.
+  **Still genuinely store-gated: TestFlight distribution and physical-device installs** — not the
+  ability to build and exercise the app on iOS.
 - **⚠️ THE BASELINE IS NOW EXPO SDK 57 (re-based 2026-08-08). Everything below about the RULE still
   holds; the SDK 54 VERSIONS in it are historical.** Current pins: `expo` 57.0.11 ·
   `react-native` 0.86.2 · `react` 19.2.3 · `@types/react` ~19.2.0 · `expo-router` ~57.0.11 ·

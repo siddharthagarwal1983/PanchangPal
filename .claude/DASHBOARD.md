@@ -2,11 +2,11 @@
 
 # PanchangPal Dashboard
 
-Version: 1.42.0
+Version: 1.43.0
 
-Last Updated: 2026-08-08 (**B8.3** — the monetization funnel emits; the comment-only anchors are gone.
-Item 19 stays ⚠️: **EVT_051 cannot fire until payments ship**, and the privacy inventory refused to
-let the new collection go undisclosed)
+Last Updated: 2026-08-09 (**Expo SDK 57 verified on BOTH platforms — PR #121 green, and iOS runs
+for the first time in this project's history.** **ADR-033 ratified at a narrowed scope**, which
+found that its own acceptance gate cannot be built)
 
 Purpose:
 This is the first file Claude should read at the beginning of every session.
@@ -137,6 +137,53 @@ CURRENT_MILESTONE.md
 ---
 
 # Current Task
+
+🟡 **PR #121 — EXPO SDK 57 IS GREEN ON BOTH PLATFORMS AND AWAITING MERGE. Progress stays 63%**
+(platform maintenance advances no Beta slice).
+
+**Verified:** five CI gates green, none skipped · counts **identical to the SDK 54 baseline**
+(mobile 450 · ui 33 · vitest 219) · **E2E 6/6 in 2m22s** (`31291087673`) · bundle budget held with
+**ios 4.93 MiB — DOWN from 5.04** on a three-major RN jump, which is the most useful number B8.2's
+gate has produced · **iOS native build running on the simulator, a project first**.
+
+⛔ **THE DOCS WERE A WHOLE INCREMENT STALE AGAIN.** `1c4a2f0` sat committed locally, **unpushed,
+no PR, no CI verdict**, while PROJECT_MEMORY already described the SDK 57 baseline as fact and four
+tracking files mentioned it nowhere. **One document had run ahead of four.** Same finding as B7's
+close, one session later: **`git log` is the instrument.**
+
+✅ **"iOS needs a $99 membership" WAS ABOUT DISTRIBUTION, NOT RUNNING.** The simulator needs none.
+It needed CocoaPods (system Ruby 2.6 is too old) and the **iOS platform**, which Xcode 26 does not
+ship — `-showsdks` lists the simulator SDK while `xcodebuild` says *"Found no destinations"*, so the
+~7 GB download gates **compiling**, not merely running. 293 pods resolved; **`MMKV::sync` writes to
+disk**, so the storage seam has real native backing on iOS; `[telemetry] reporter=none
+env=development` — not mislabelled `production`, #98's observable working on a platform it was never
+tested on.
+
+⛔ **A GREEN E2E RUN REPORTED NOTHING FOR 35 MINUTES AFTER PASSING.** `31289038585` printed
+**`6/6 Flows Passed in 6m 37s`**, captured its logcat, ran `adb emu kill` → *"bye bye"* — then hung
+until cancelled. **`timeout` wraps only `maestro test`, so the guard cannot fire for a teardown
+hang.** Left alone it would have burned to the 90-minute budget and reported red on a suite that
+passed — the B7.3 `promote-production` shape, a run whose colour contradicts its work. ⚠️ **It did
+not recur** (17m32s clean), so it is **intermittent, recorded not fixed**. ⚠️ **Cancelling did not
+lose the evidence** — `if: always()` uploaded the 1.56 MB artifact that settled it.
+
+✅ **ADR-033 IS RATIFIED AT A NARROWED SCOPE — AND RATIFYING IT FOUND ITS GATE IS UNBUILDABLE.**
+**DE440** (public domain — **removes the Swiss Ephemeris AGPL/commercial licence question**, the
+MR-6 legal blocker) · **Lahiri** with per-tradition override · **`generic` ONLY** · festival dates
+exact, N/M deliberately unset.
+⛔ **R1: TDD §6 needs a golden dataset cross-checked against Drik/mPanchang. None existed, and the
+seed holds ONE festival — `sample-festival`, "Placeholder significance".** So the ratified criterion
+has nothing to measure. **The engine and the festival corpus are blocked on the SAME reviewer.**
+**Shipped:** `GOLDEN_DATASET.md` + a **46-row skeleton with every value UNFILLED**, stratified on
+what is computable without astronomy (DST ±1 day, solstices incl. Anchorage at 61.2°N, monthly
+coverage, **no-DST controls**) — because **a uniform year of 365 dates would agree with any
+roughly-correct engine.** ⛔ **Values come from independent references, NEVER from our engine** —
+nor from a library we might adopt, which is the same error one layer out.
+✅ **`generic`'s four profile fields are RULED (2026-08-09)** — `month_scheme` **purnimanta** · `tithi_reference` **tithi-at-sunrise** · `sunrise_convention` **upper limb + standard refraction** · `day_division` **sunrise→sunset in 8 equal parts**. ⚠️ Two caveats carried, neither blocking the engine: the **Rahu Kaal weekday→segment mapping is PROVISIONAL** and no engine may read it until the pandit reviewer confirms it, and **`generic` now carries a regional convention (purnimanta = North Indian) under a name TDD §4 calls "neutral"**, so a South Indian user who never opens the tradition picker gets purnimanta month names silently.
+
+---
+
+**Previously — B8.3.**
 
 ✅ **B8.3 — THE MONETIZATION FUNNEL EMITS. Progress stays 63%.**
 
