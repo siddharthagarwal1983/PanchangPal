@@ -76,6 +76,7 @@ All 32 tables in `apps/backend/migrations`. Classification:
 | `account_deletion_audit` | **Pseudonymous** | a one-way **sha256 digest** of the erased uid, the request time, the erasure time, outcome. **No identifier, no recovered content.** | `execute_account_deletion()` (service role only; RLS on with no policies) | Yes — durable evidence that an erasure completed (ADR-034, TDD Part 5 §5.1) |
 | `support_ticket` | Identifying | email, subject, free-text body | Not implemented | No |
 | `analytics_event` | Pseudonymous | `EVT_*` id, `user_pseudo_id`, household id, session id, props | Client (insert-only) | Yes — see §4 |
+| `analytics_rollup_daily` | Pseudonymous (aggregate) | local/UTC date, `EVT_*` id, household id, attributed flag, event + distinct-user counts | Derived service-side from `analytics_event` (ADR-025) — never written by a client | Yes — aggregate of §4 |
 | `ai_cost_ledger` | Pseudonymous | model, cost, correlation id, `user_pseudo_id` | SVC_ask-guru | No — `GURU_LIVE=false` |
 | `ai_rate_limit` | Pseudonymous | rate-limit subject (`u:<uid>` or `ip:<addr>`), window, count | SVC_ask-guru | No — `GURU_LIVE=false` |
 | `job` | Non-personal | background job type, status, payload | Not implemented — no runner, see §8.2 | No |
