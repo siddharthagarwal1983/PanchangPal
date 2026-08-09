@@ -72,8 +72,7 @@ from our engine** — nor from a library we are considering adopting, which is t
 out. ⚠️ **The circularity is real**: the sharpest rows are tithi boundaries within minutes of
 sunrise, and selecting those needs an engine. Phase 2 lets a candidate engine **propose** the dates
 while the reviewer supplies the answers — **the engine chooses the questions, never the answers.**
-⚠️ **Still unruled: `generic`'s four profile fields.** B-3 ratified *which* tradition ships, not
-*what its conventions are*, and `compute()` cannot be defined without them.
+✅ **`generic`'s four profile fields are RULED (2026-08-09)** — `month_scheme` **purnimanta** · `tithi_reference` **tithi-at-sunrise** · `sunrise_convention` **upper limb + standard refraction** · `day_division` **sunrise→sunset in 8 equal parts**. ⚠️ Two caveats carried, neither blocking the engine: the **Rahu Kaal weekday→segment mapping is PROVISIONAL** and no engine may read it until the pandit reviewer confirms it, and **`generic` now carries a regional convention (purnimanta = North Indian) under a name TDD §4 calls "neutral"**, so a South Indian user who never opens the tradition picker gets purnimanta month names silently.
 
 ---
 

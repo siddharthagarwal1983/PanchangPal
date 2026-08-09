@@ -100,9 +100,7 @@ golden value without provenance is an assertion, not a reference.**
 ⚠️ **The circularity is real and Phase 2 breaks it:** the sharpest rows are tithi boundaries within
 minutes of sunrise, and choosing those needs an engine. So a candidate engine may **propose** the
 dates; the reviewer supplies the answers. **The engine chooses the questions, never the answers.**
-⚠️ **Still unruled: `generic`'s own four profile fields.** B-3 said *which* tradition ships, not
-*what its conventions are*. Rule on them **before** the first disagreement with Drik, or the
-temptation is to pick whichever convention makes the test pass.
+✅ **`generic`'s four profile fields are RULED (2026-08-09)** — `month_scheme` **purnimanta** · `tithi_reference` **tithi-at-sunrise** · `sunrise_convention` **upper limb + standard refraction** · `day_division` **sunrise→sunset in 8 equal parts**. ⚠️ Two caveats carried, neither blocking the engine: the **Rahu Kaal weekday→segment mapping is PROVISIONAL** and no engine may read it until the pandit reviewer confirms it, and **`generic` now carries a regional convention (purnimanta = North Indian) under a name TDD §4 calls "neutral"**, so a South Indian user who never opens the tradition picker gets purnimanta month names silently.
 
 **Verified:** CI green on #121 · E2E **6/6** · iOS native build + running app. The ADR/dataset work
 is documentation and data only — no code path touched.

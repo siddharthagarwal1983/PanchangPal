@@ -179,8 +179,7 @@ what is computable without astronomy (DST ±1 day, solstices incl. Anchorage at 
 coverage, **no-DST controls**) — because **a uniform year of 365 dates would agree with any
 roughly-correct engine.** ⛔ **Values come from independent references, NEVER from our engine** —
 nor from a library we might adopt, which is the same error one layer out.
-⚠️ **`generic`'s own four profile fields are still unruled**, and `compute()` cannot be defined
-without them.
+✅ **`generic`'s four profile fields are RULED (2026-08-09)** — `month_scheme` **purnimanta** · `tithi_reference` **tithi-at-sunrise** · `sunrise_convention` **upper limb + standard refraction** · `day_division` **sunrise→sunset in 8 equal parts**. ⚠️ Two caveats carried, neither blocking the engine: the **Rahu Kaal weekday→segment mapping is PROVISIONAL** and no engine may read it until the pandit reviewer confirms it, and **`generic` now carries a regional convention (purnimanta = North Indian) under a name TDD §4 calls "neutral"**, so a South Indian user who never opens the tradition picker gets purnimanta month names silently.
 
 ---
 

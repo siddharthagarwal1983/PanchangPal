@@ -394,11 +394,29 @@ Stable, cross-cutting facts (permanent until an approved decision changes them):
   library we are considering adopting, which is the same error one layer out and the tempting one.
   Every row carries `source`/`source_url`/`checked_by`/`checked_on`: **a golden value without
   provenance is an assertion, not a reference.**
-  ⚠️ **STILL UNRULED: `generic`'s own four profile fields** (`month_scheme`, `tithi_reference`,
-  `sunrise_convention`, `day_division`). B-3 ratified *which* tradition ships, not *what its
-  conventions are*, and `compute()` cannot be defined without them. **Rule on them before the first
-  disagreement with Drik, not after** — afterwards the temptation is to pick whichever convention
-  makes the test pass.
+  ✅ **`generic`'s FOUR PROFILE FIELDS ARE RULED (B-5/B-6, 2026-08-09):** `month_scheme`
+  **purnimanta** · `tithi_reference` **tithi-at-sunrise** · `sunrise_convention` **upper limb +
+  standard refraction** · `day_division` **sunrise→sunset in 8 equal parts**.
+  ⚠️ **The Rahu Kaal weekday→segment mapping is PROVISIONAL and no engine may read it until the
+  pandit reviewer confirms it.** A widely-published mapping exists, but freezing an unconfirmed one
+  would put a religious convention into the system as an engineering default — the same discipline as
+  the golden values, and for the same reason.
+  ⚠️ **`generic` NOW CARRIES A REGIONAL CONVENTION UNDER A NEUTRAL NAME.** TDD §4 calls it "a
+  documented neutral default" and **purnimanta is the North Indian scheme**, so a South Indian user
+  who never opens the tradition picker silently gets purnimanta month names. Non-blocking and
+  reviewer-owned: rename the profile, or make the onboarding tradition suggestion prominent.
+  ⛔ **DERIVING `month_scheme` FROM PHONE LOCATION WAS PROPOSED AND REJECTED ON PRODUCT GROUNDS, AND
+  THE REASONING GENERALISES.** The primary users are **Indians living abroad**, so a device in
+  Auckland or Chicago yields **no Hindu regional scheme at all** — the deciding attribute is the
+  family/regional tradition they carry with them, which `tradition_code` already captures as a
+  user-owned preference (F-9). **Phone location is the one signal that is systematically wrong for
+  this product's target user**: it reports where someone emigrated to, not what they practise. It
+  would also relocate an unratified religious convention into an implicit region→scheme lookup, and
+  break ADR-010's requirement that `compute` be pure over
+  `(instant, lat, lng, tz, tradition, engine_version)` — two users of the same tradition would
+  disagree by geography while `panchang_cache` keys on a coarsened `geo_bucket`. **Location may
+  legitimately SUGGEST a tradition at onboarding** (the ADR-026 `timezone` pattern: location-derived,
+  user-correctable, never overwriting), which is a suggestion rather than the value `compute()` needs.
 - **Ask Guru readiness gate** — the client streams only via the server SSE adapter (never an LLM
   directly, never fabricates). Live answers are gated OFF (GURU_LIVE = false) until reviewed
   corpus + evaluation readiness (TDD Part 3 §9/§10B); the client is complete behind the gate.

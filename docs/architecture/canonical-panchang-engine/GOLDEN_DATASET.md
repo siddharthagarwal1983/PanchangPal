@@ -46,12 +46,18 @@ ADR-033 B-3 ratified **`generic` alone** for v1. `north_indian`, `south_indian_t
 `bengali` are deferred to the pandit reviewer and must not appear in this dataset; rows for them
 would imply conventions nobody has ruled on.
 
-⚠️ **`generic`'s own four profile fields are still unruled** (`month_scheme`, `tithi_reference`,
-`sunrise_convention`, `day_division`). They do not block *collecting* sunrise/tithi values from a
-reference, but they do block interpreting a disagreement — if our engine and Drik differ by one
-tithi, the four fields decide whether that is a bug or a convention difference. **Rule on them
-before the first disagreement, not after**, or the temptation will be to pick the convention that
-makes the test pass.
+✅ **`generic`'s four profile fields are RULED (ADR-033 B-5, 2026-08-09):** `month_scheme`
+**purnimanta** · `tithi_reference` **tithi-at-sunrise** · `sunrise_convention` **upper limb +
+standard refraction** · `day_division` **sunrise→sunset in 8 equal parts**. This matters for
+collection: **a disagreement with Drik can now be adjudicated** as either a bug or a convention
+difference, rather than being resolved in whichever direction makes the test pass.
+
+⚠️ **Two caveats affect what may be filled.** The **Rahu Kaal weekday→segment mapping is
+PROVISIONAL** until the reviewer confirms it, so `rahu_kaal_start`/`rahu_kaal_end` are collectable
+from a reference but must not be compared against engine output until it is confirmed. And
+`generic` is **purnimanta**, a North Indian convention — so **when reading a reference, set its
+month scheme to purnimanta explicitly** rather than accepting the site's default, or the month names
+recorded here will silently belong to a different scheme.
 
 ---
 
@@ -99,7 +105,8 @@ All four must hold before any CI job reads this file:
    two references are recorded rather than silently resolved — a disagreement between authorities
    is information about tolerance, which ADR-033 B-4 deliberately left unset.
 3. `checked_by` / `checked_on` are populated — reviewer approval is per-row, not per-file.
-4. `generic`'s four profile fields are ruled on (§2).
+4. ✅ `generic`'s four profile fields are ruled (§2) — **met 2026-08-09**. ⚠️ The Rahu Kaal
+   weekday mapping remains provisional, so those two columns cannot gate until confirmed.
 
 Until then the gate is **not added**. `ci.yml`'s standing rule from B1 is that *a gate is added
 when it can fail*, and two gates were de-declared for failing it. A festival-date gate today would

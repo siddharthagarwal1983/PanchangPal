@@ -82,11 +82,69 @@ Ruled by the decision owner. Each entry replaces the corresponding **recommendat
 | B-3 | Traditions (v1) | **`generic` ONLY** | `north_indian`, `south_indian_tamil`, `bengali` are **deferred to a pandit reviewer** and keep returning `ERR_PANCHANG_UNAVAILABLE`. ⚠️ All four are already seeded and selectable, so three become *selectable but unserved* — see R3. |
 | B-4 | Tolerances | **Festival dates exact (0-day). N and M deliberately NOT set.** | Instant tolerances to be set from real cross-check data rather than guessed. ⛔ Unmeasurable today — see R1. |
 
-**Still undecided and therefore not implementable:** `generic`'s own profile fields
-(`month_scheme`, `tithi_reference`, `sunrise_convention`, `day_division`). B-3 ratifies *which*
-tradition ships, not *what its conventions are*. TDD §4 calls `generic` "a documented neutral
-default"; the four values must be written down and ruled on before `compute()` can be defined,
-because each one changes the reported day.
+### `generic` profile — ruled 2026-08-09 (B-5)
+
+| Field | Ruling | Note |
+|---|---|---|
+| `ayanamsa` | **Lahiri (Chitrapaksha)** | per B-2 |
+| `tithi_reference` | **`tithi-at-sunrise`** | the tithi prevailing at sunrise owns the civil day |
+| `sunrise_convention` | **upper limb + standard refraction** | the civil/astronomical standard (~50′ below horizon centre: 34′ refraction + 16′ semi-diameter) |
+| `day_division` | **sunrise→sunset in 8 equal parts**, with an **explicitly frozen** weekday→segment mapping | the mapping is ratified as data, never left implicit in code |
+| `month_scheme` | **purnimanta** | ruled 2026-08-09; lunar month ends at the full moon |
+
+⚠️ **`generic` NOW CARRIES A REGIONAL CONVENTION UNDER A NEUTRAL NAME, AND THE REVIEWER SHOULD KNOW
+THAT.** TDD §4 describes `generic` as "a documented neutral default", and **purnimanta is the North
+Indian scheme** — so the profile is no longer convention-neutral, it is North-Indian-defaulted. That
+may well be the right product call given the diaspora mix, but it is a **naming honesty issue**: a
+South Indian user who never opens the tradition picker gets purnimanta month names silently. Two
+follow-ups for the reviewer, neither blocking: whether the label should change, and whether the
+onboarding tradition suggestion (below) should be prominent rather than a default.
+
+⚠️ **`tithi_reference` AS A SINGLE FIELD IS A KNOWN SIMPLIFICATION, RECORDED RATHER THAN DISCOVERED
+LATER.** It fixes the day-labelling convention; it does **not** encode per-vrata rules, which in
+practice vary — some keyed to sunrise, others to sunset, moonrise, or a midday/pradosh window. So a
+festival whose own rule differs from day-labelling will resolve wrongly while every other output
+looks right. Acceptable for v1 because only `generic` ships and the festival corpus does not yet
+exist; **it must be reconsidered when real reviewed festival content lands**, since that is exactly
+when the divergence becomes visible.
+
+⚠️ **THE FROZEN WEEKDAY MAPPING MUST BE WRITTEN DOWN AND CONFIRMED, NOT ASSUMED.** A widely-published
+mapping of Rahu Kaal to the eight sunrise→sunset segments exists, but **freezing an unconfirmed
+mapping is precisely the failure this ADR guards against** — it would be a religious convention
+entering the system as an engineering default.
+**B-6, ruled 2026-08-09: the mapping is PROVISIONAL data and no engine may read it until the pandit
+reviewer confirms it.** It is stored in the tradition profile, versioned with `engine_version`, and
+carries an explicit unconfirmed marker — the same discipline as the golden values, and for the same
+reason: **the system must not be able to compute a religious output from a convention nobody
+approved.**
+
+### B-5 `month_scheme` — resolved as **purnimanta**; the location proposal is recorded as rejected
+
+A ruling of *"derive it from the user's phone location"* was proposed on 2026-08-09 and is **recorded
+as rejected on product grounds**, not overridden silently:
+
+- **The primary users are Indians living ABROAD** (MRD; launch markets US/AU/NZ). A device in
+  Auckland or Chicago yields **no Hindu regional month scheme at all**. The attribute that decides
+  amanta vs purnimanta is the user's **family/regional tradition**, which is exactly what they carry
+  abroad and what the product exists to keep them connected to. **Phone location is the one signal
+  that is systematically wrong for the target user.**
+- **The mechanism already exists and is user-owned.** `tradition_code` is a seeded, user-selected
+  preference (`generic`, `north_indian`, `south_indian_tamil`, `bengali` — F-9), and TDD §4 places
+  `month_scheme` **inside the tradition profile** as versioned data. Deriving it from coordinates
+  would move a religious convention out of reviewed profile data and into an implicit region→scheme
+  lookup **that is itself an unratified convention**.
+- **It would break the caching contract.** ADR-010 requires `compute` to be a pure function of
+  `(instant, lat, lng, tz, tradition, engine_version)`; a scheme silently derived from coordinates
+  makes two users with the same tradition disagree by geography, and `panchang_cache` is keyed on a
+  coarsened `geo_bucket`.
+
+**Location may legitimately SUGGEST a default tradition at onboarding** (as ADR-026 already does for
+`timezone`: location-derived, user-correctable, never overwriting). That is a defensible onboarding
+nicety and does **not** remove the requirement below.
+
+✅ **RESOLVED: `generic.month_scheme = purnimanta`** (ruled 2026-08-09). `generic` is the profile a
+user holds before choosing anything, so it needs one value, and it now has one. See the naming
+caveat in the profile table above.
 
 ### Residuals — why Accepted ≠ shippable
 
@@ -184,7 +242,8 @@ is found; or the ephemeris source's license/precision changes.
 *serving*:
 
 - **Authorised:** implementing a concrete engine for **`generic` only**, on **DE440** with
-  **Lahiri**, once `generic`'s four profile fields are ruled on (see Ratification Record).
+  **Lahiri**, and **`generic`'s four profile fields are now ruled** (B-5/B-6). ⚠️ The Rahu Kaal
+  weekday→segment mapping stays **provisional** — no engine may read it until the reviewer confirms it.
 - ⛔ **NOT authorised:** registering it in place of `unimplementedPanchangEngine`. §9's rollout
   puts "pass golden dataset → reviewer sign-off" before registration, and **R1 records that the
   dataset does not exist**. The placeholder stays registered, failing closed

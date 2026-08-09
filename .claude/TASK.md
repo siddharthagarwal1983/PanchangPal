@@ -134,10 +134,23 @@ N/M unset. **Authorised:** *writing* an engine for `generic`. ⛔ **NOT authoris
 §9 puts golden-dataset validation before registration, and **the dataset has no values**.
 
 **Blocking, in order:**
-1. ⛔ **Rule on `generic`'s four profile fields** (`month_scheme`, `tithi_reference`,
-   `sunrise_convention`, `day_division`). B-3 chose the tradition, not its conventions, and
-   `compute()` cannot be defined without them. **Decide before the first disagreement with Drik**,
-   not after.
+1. ✅ **DONE — `generic`'s four profile fields are ruled (2026-08-09):** `month_scheme` **purnimanta**
+   · `tithi_reference` **tithi-at-sunrise** · `sunrise_convention` **upper limb + standard
+   refraction** · `day_division` **sunrise→sunset in 8 equal parts**.
+   ⚠️ **The Rahu Kaal weekday→segment mapping is PROVISIONAL** — no engine may read it until the
+   pandit reviewer confirms it, because freezing an unconfirmed mapping would put a religious
+   convention into the system as an engineering default.
+   ⚠️ **And `generic` now carries a regional convention under a neutral name** (purnimanta is North
+   Indian, while TDD §4 calls `generic` "a documented neutral default"), so a South Indian user who
+   never opens the tradition picker silently gets purnimanta month names. Non-blocking, reviewer's
+   call: rename the profile, or make the onboarding tradition suggestion prominent.
+   ⛔ **Rejected on product grounds: deriving `month_scheme` from phone location.** The primary users
+   are Indians living **abroad**, so a device in Auckland yields no Hindu regional scheme; the
+   deciding attribute is the family tradition they carry with them, which `tradition_code` already
+   captures as a user-owned preference. It would also make two users of the same tradition disagree
+   by geography, against ADR-010's purity requirement. Location may **suggest** a tradition at
+   onboarding (the ADR-026 `timezone` pattern), which is a suggestion, not the value `compute()`
+   needs.
 2. ⛔ **Fill `generic-2027-phase1.csv`** — 46 rows, values from Drik/mPanchang with per-row
    provenance. **Never from our engine or from a candidate library.** Reviewer-owned.
 3. ⚠️ **Real festival content** (§10.1 item 2) — B-4's "festival dates exact" has one fictional
