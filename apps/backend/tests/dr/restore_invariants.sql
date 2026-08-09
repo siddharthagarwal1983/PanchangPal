@@ -131,5 +131,27 @@ begin
     raise warning 'DR: the account-deletion sweep is NOT scheduled in this database. Expected for CI/local; if this is a restored PRODUCTION database, re-run 20260727000120_account_deletion_schedule.sql or deletion requests will never execute.';
   end if;
 
+  -- ---- 8. The analytics rollup survived the restore -------------------------
+  -- Same shape as 7, and it fails the same way: silently. If the rollup function is gone,
+  -- `analytics_event` keeps accepting inserts and nothing ever reads them back, so every
+  -- dashboard simply stops moving — indistinguishable from a quiet week, which is the worst
+  -- possible failure mode for a metric you are watching during a launch.
+  select string_agg(t, ', ') into missing
+  from unnest(array[
+    'rollup_analytics_daily',
+    'analytics_rollup_is_scheduled'
+  ]) as t
+  where to_regproc(t) is null;
+
+  if missing is not null then
+    raise exception 'DR: analytics rollup functions missing after restore: % (EVT_* data would accumulate with nothing reading it)', missing;
+  end if;
+
+  -- Warned, not enforced, for the same two reasons as the sweep: pg_cron is absent from CI
+  -- and local stacks, and `cron.job` is not part of a `pg_dump` of the application database.
+  if not analytics_rollup_is_scheduled() then
+    raise warning 'DR: the analytics rollup is NOT scheduled in this database. Expected for CI/local; if this is a restored PRODUCTION database, re-run 20260809000140_analytics_rollup.sql or the dashboards will silently stop updating.';
+  end if;
+
   raise notice 'DR invariants: OK';
 end $$;
