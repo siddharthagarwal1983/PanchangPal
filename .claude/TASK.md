@@ -2,9 +2,10 @@
 
 # PanchangPal — Current Task
 
-Version: 12.0.0
-Last Updated: 2026-08-08 (**B8.3 DONE** — the monetization funnel emits. **No credential-free blocking
-engineering remains on §10.1**; the store accounts are the critical path)
+Version: 13.0.0
+Last Updated: 2026-08-09 (**SDK 57 verified on both platforms — PR #121 open and fully green;
+iOS runs for the first time.** **ADR-033 ratified at narrowed scope**, and its acceptance gate turns
+out to be unbuildable)
 
 Purpose: the current implementation task. Stay focused; avoid unrelated work unless instructed.
 
@@ -109,6 +110,56 @@ green in CI on a real native build. Canonical progress 0% → 13% (1 of 8 Beta s
 ---
 
 # Current Task
+
+## Title
+🟡 **PR #121 (Expo SDK 57) IS GREEN AND AWAITING MERGE** · **ADR-033 ratified, engine still not
+buildable.** **Progress stays 63%** (5 of 8; B8 started with B8.1–B8.3 done) — neither item
+completes a Beta slice.
+
+### 1. Merge PR #121 — the evidence is complete
+
+`chore/expo-sdk-57-upgrade` → **five CI gates green** (counts identical to the SDK 54 baseline:
+mobile 450, ui 33, vitest 219) · **E2E 6/6 in 2m22s**, run `31291087673` · **bundle budget held**
+(ios 4.93 MiB *down* from 5.04, android 5.12 MiB) · **iOS native build running on the simulator**.
+Every caveat in `1c4a2f0` is answered except the owner-gated ones.
+
+⚠️ **The first E2E dispatch (`31289038585`) is `cancelled` and that is NOT a failure** — it printed
+`6/6 Flows Passed in 6m 37s`, then hung 35 minutes in the emulator-runner's **teardown**, after the
+`timeout` guard's scope. It did not recur. **Judge it by the `Flows Passed` line, never the colour.**
+
+### 2. ADR-033 — what is unblocked and what is not
+
+**Ratified:** DE440 · Lahiri (per-tradition override) · **`generic` only** · festival dates exact,
+N/M unset. **Authorised:** *writing* an engine for `generic`. ⛔ **NOT authorised:** registering it —
+§9 puts golden-dataset validation before registration, and **the dataset has no values**.
+
+**Blocking, in order:**
+1. ⛔ **Rule on `generic`'s four profile fields** (`month_scheme`, `tithi_reference`,
+   `sunrise_convention`, `day_division`). B-3 chose the tradition, not its conventions, and
+   `compute()` cannot be defined without them. **Decide before the first disagreement with Drik**,
+   not after.
+2. ⛔ **Fill `generic-2027-phase1.csv`** — 46 rows, values from Drik/mPanchang with per-row
+   provenance. **Never from our engine or from a candidate library.** Reviewer-owned.
+3. ⚠️ **Real festival content** (§10.1 item 2) — B-4's "festival dates exact" has one fictional
+   festival to check against. **Same reviewer as (1) and (2)**; do not schedule them as independent.
+4. ⚠️ **DE440 delivery** (R2) — SPK kernels + Chebyshev interpolation, no mature JS/Deno reader,
+   and it must fit an Edge Function deployment.
+
+### 3. Then the owner-gated queue, unchanged
+
+Apple ($99) + Google Play ($25) — still the highest-leverage purchase · ~$25/mo paid Supabase for
+PITR (NFR-15) · **ADR-025's `analytics_event` rollup worker**, still the one genuinely useful
+*unblocked* engineering task (items 11, 19, 21) · legal review of the privacy policy.
+
+**Also owed, and named rather than absorbed:** a `SETUP.md` line that a local iOS build needs
+`SENTRY_DISABLE_AUTO_UPLOAD=true` (the upload task **fails** the build rather than skipping) ·
+the intermittent emulator-teardown hang · `SVC_health`'s 503 branch end to end · the deprecated
+Supabase key migration · **`@supabase/supabase-js` undeclared in `apps/backend`** (⚠️ which has **no
+`package.json` at all**).
+
+---
+
+## Superseded — the position before SDK 57 and ADR-033
 
 ## Title
 ⏳ **OWNER-GATED — no credential-free blocking engineering remains on the §10.1 checklist.**
