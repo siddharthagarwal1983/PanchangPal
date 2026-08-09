@@ -167,16 +167,25 @@ ADR-031 forbids cross-session AI memory in v1: context does not survive a thread
 **Thirteen** `EVT_*` ids reach `AnalyticsService.track()` in the built app. This is **not** the full
 PDD §11 registry — the registry is the permitted vocabulary; this is the emitted subset.
 
+"Base props" = the `EVT_015` row's set, which every ritual-family event carries.
+
+⚠️ **`local_date` (added 2026-08-09) is the user's LOCAL calendar day, not a timestamp.** It is
+collected because the envelope carries only a UTC `ts`, and the server cannot recover the user's
+zone — `user_pseudo_id` is deliberately not joinable to `user_profile` (ADR-031). Without it an
+AU/NZ morning ritual buckets into the previous UTC day and, across a week boundary, the wrong ISO
+week of the North Star. It is a date only: **no time, no offset, no zone name, no coordinates.**
+It narrows a user's plausible zone no more than the existing `ts` already does.
+
 | Event | Meaning | Props sent |
 |---|---|---|
 | `EVT_012` | Today viewed | `screen_id`, `local_date` |
-| `EVT_015` | Ritual started | `ritual_id`, `tradition`, `depth`, `audio_used`, `offline` |
+| `EVT_015` | Ritual started | `ritual_id`, `tradition`, `depth`, `audio_used`, `offline`, `local_date` |
 | `EVT_016` | Ritual step advanced | base props + `step_number`, `total_steps` |
 | `EVT_017` | Ritual completed (North Star input) | base props + `duration_ms` |
 | `EVT_018` | Ritual abandoned | base props + `step_number`, `total_steps` |
-| `EVT_019` | Checklist item completed | `screen_id`, `item_id` |
-| `EVT_020` | Streak advanced | `streak_len`, `grace_remaining` |
-| `EVT_021` | Streak grace used | `streak_len`, `grace_remaining` |
+| `EVT_019` | Checklist item completed | `screen_id`, `item_id`, `local_date` |
+| `EVT_020` | Streak advanced | `streak_len`, `grace_remaining`, `local_date` |
+| `EVT_021` | Streak grace used | `streak_len`, `grace_remaining`, `local_date` |
 | `EVT_049` | Upgrade surface viewed | `source` (screen/contextual), `screen_id` (null on the sheet) |
 | `EVT_050` | Plan selected | `plan` (individual/family), `source` |
 | `EVT_051` | Purchase result | `plan`, `result` (success/fail/cancel), `error_code?` (`ERR_*`) |

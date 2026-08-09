@@ -131,26 +131,46 @@ describe('ritualAbandonedEvent', () => {
 });
 
 describe('streakEvents', () => {
-  it('emits EVT_020 with the server-reported streak', () => {
-    const events = streakEvents({
-      current_len: 5,
-      best_len: 9,
-      grace_remaining: 1,
-      grace_used: false,
-    });
+  it('emits EVT_020 with the server-reported streak, stamped with the local day', () => {
+    const events = streakEvents(
+      { current_len: 5, best_len: 9, grace_remaining: 1, grace_used: false },
+      '2026-08-09',
+    );
     expect(events).toHaveLength(1);
     expect(events[0]?.eventId).toBe('EVT_020');
-    expect(events[0]?.props).toEqual({ streak_len: 5, grace_remaining: 1 });
+    expect(events[0]?.props).toEqual({
+      streak_len: 5,
+      grace_remaining: 1,
+      local_date: '2026-08-09',
+    });
   });
 
   it('adds EVT_021 when a grace day was consumed', () => {
-    const events = streakEvents({
-      current_len: 5,
-      best_len: 9,
-      grace_remaining: 0,
-      grace_used: true,
-    });
+    const events = streakEvents(
+      { current_len: 5, best_len: 9, grace_remaining: 0, grace_used: true },
+      '2026-08-09',
+    );
     expect(events.map((e) => e.eventId)).toEqual(['EVT_020', 'EVT_021']);
-    expect(events[1]?.props).toEqual({ streak_len: 5, grace_remaining: 0 });
+    expect(events[1]?.props).toEqual({
+      streak_len: 5,
+      grace_remaining: 0,
+      local_date: '2026-08-09',
+    });
+  });
+
+  /**
+   * The day must travel with the event, because the envelope carries only a UTC `ts` and the
+   * server cannot recover the user's zone: `user_pseudo_id` is deliberately not joinable to
+   * `user_profile` (ADR-031). Without `local_date`, an Auckland 07:00 ritual buckets into the
+   * previous UTC day — and across a week boundary, into the wrong ISO week of the North Star.
+   */
+  it('reports local_date as null rather than omitting it when the zone has not resolved', () => {
+    const events = streakEvents({
+      current_len: 1,
+      best_len: 1,
+      grace_remaining: 2,
+      grace_used: false,
+    });
+    expect(events[0]?.props).toHaveProperty('local_date', null);
   });
 });

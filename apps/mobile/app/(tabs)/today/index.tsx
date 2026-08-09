@@ -80,7 +80,14 @@ export default function TodayScreen() {
             toggle.mutate(id);
             // EVT_019 Checklist Item Completed — §11.3 tracks checklist completion as habit depth
             // (>=1 per DAU). `item_id` is a seeded content id, never user text.
-            getAnalyticsService().track('EVT_019', { screen_id: 'SCR_HOME_001', item_id: id });
+            // `local_date` for the same reason EVT_012 carries it: §11.3 counts checklist
+            // completion as habit depth, and the envelope's UTC `ts` buckets an AU/NZ morning
+            // into the previous day.
+            getAnalyticsService().track('EVT_019', {
+              screen_id: 'SCR_HOME_001',
+              item_id: id,
+              local_date: today,
+            });
           }}
           allDoneLabel={t('today.checklistAllDone')}
           testID="today-checklist"

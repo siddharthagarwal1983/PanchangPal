@@ -24,6 +24,24 @@ export interface RitualEventContext {
   durationMs?: number | null;
   /** Whether the device was offline for the ritual — the flow is offline-capable by design. */
   offline?: boolean;
+  /**
+   * The user's LOCAL date (ADR-026, via `useLocalDate`). Null until the zone resolves.
+   *
+   * ⛔ WITHOUT THIS THE NORTH STAR IS WRONG FOR TWO OF THE THREE LAUNCH MARKETS. The envelope
+   * carries only `ts`, a UTC instant, so a rollup has to bucket on the UTC date — and a 07:00
+   * morning ritual in Auckland is 18:00 UTC the PREVIOUS day. Across a week boundary that moves
+   * the completion into the wrong ISO week, and §11.3 sums the North Star per ISO week. This is
+   * issue #30 ("UTC dates recorded the AU/NZ morning ritual against yesterday") one layer up:
+   * `localDateIn`/ADR-026 fixed the data model and the analytics family never got the same
+   * treatment. EVT_012 already passes `local_date`; the ritual family did not.
+   *
+   * ⛔ AND THE SERVER CANNOT REPAIR IT. The obvious fix — look up the user's timezone and convert
+   * — is impossible by construction: `user_pseudo_id` is device-minted and DELIBERATELY never
+   * derived from the auth uid (ADR-031), so there is no join to `user_profile.timezone`. The
+   * pseudonymity property and the metric's correctness are in genuine tension, and pseudonymity
+   * is the one already ratified. The day therefore has to travel WITH the event.
+   */
+  localDate?: string | null;
 }
 
 export interface RitualAnalyticsEvent {
@@ -31,7 +49,17 @@ export interface RitualAnalyticsEvent {
   props: AnalyticsProps;
 }
 
-/** Shared §11.2 properties for the ritual family. */
+/**
+ * Shared §11.2 properties for the ritual family.
+ *
+ * `local_date` is emitted as NULL rather than omitted when the zone has not resolved, and that is
+ * a deliberate choice between two bad options. EVT_012 waits for the zone before firing, which is
+ * right for a *view* — an unrecorded view costs nothing. A ritual COMPLETION is different: not
+ * firing it under-counts the metric the whole product optimises for, while guessing a day
+ * mis-attributes it. Null keeps the event (so household totals stay correct) and makes the gap
+ * explicit, so a rollup has to decide what to do with unattributed rows instead of silently
+ * bucketing them into whatever UTC implies.
+ */
 function baseProps(view: RitualPlayerViewModel, ctx: RitualEventContext): AnalyticsProps {
   return {
     ritual_id: ctx.ritualId,
@@ -39,6 +67,7 @@ function baseProps(view: RitualPlayerViewModel, ctx: RitualEventContext): Analyt
     depth: view.depth,
     audio_used: view.audioAvailable,
     offline: ctx.offline ?? false,
+    local_date: ctx.localDate ?? null,
   };
 }
 
@@ -127,10 +156,16 @@ export interface StreakResult {
  * (HOOK_useCompleteRitual reconciles from server truth), and an analytics event that disagreed
  * with the streak the user sees would be worse than no event.
  */
-export function streakEvents(streak: StreakResult): RitualAnalyticsEvent[] {
+export function streakEvents(
+  streak: StreakResult,
+  localDate: string | null = null,
+): RitualAnalyticsEvent[] {
   const props: AnalyticsProps = {
     streak_len: streak.current_len,
     grace_remaining: streak.grace_remaining,
+    // Same reason as the ritual family: a streak advance is a daily-habit funnel step, and the
+    // envelope's UTC `ts` cannot be bucketed into the user's day without it.
+    local_date: localDate,
   };
   const events: RitualAnalyticsEvent[] = [{ eventId: 'EVT_020', props }];
   if (streak.grace_used) events.push({ eventId: 'EVT_021', props });

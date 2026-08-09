@@ -35,7 +35,9 @@ export function useCompleteRitual(localDate: string | null) {
       // EVT_020 / EVT_021 (PDD §11.2) fire from the SERVER's streak, not a client guess — the
       // streak is server-derived, and an event that disagreed with the number the user sees on
       // Today would corrupt the retention analysis it exists to feed.
-      for (const event of streakEvents(streak)) {
+      // `localDate` is threaded through so the streak events land in the user's day rather than
+      // the UTC one — the hook already requires it for the completion itself.
+      for (const event of streakEvents(streak, localDate)) {
         getAnalyticsService().track(event.eventId, event.props);
       }
     },
