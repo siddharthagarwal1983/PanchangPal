@@ -19,8 +19,7 @@
     "sourceMap": true,
     "resolveJsonModule": true,
     "isolatedModules": true,
-    "verbatimModuleSyntax": true,
-    "baseUrl": "."
+    "verbatimModuleSyntax": true
   },
   "exclude": [
     "node_modules",

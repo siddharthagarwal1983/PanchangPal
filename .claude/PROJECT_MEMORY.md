@@ -796,6 +796,35 @@ Stable, cross-cutting facts (permanent until an approved decision changes them):
   scripts, which should be reverted). **iOS is unchanged — still unbuilt, still needs an Apple
   membership.** This matters mainly because Maestro flows can now be iterated locally instead of
   through 20-minute CI runs.
+- **⚠️ THE BASELINE IS NOW EXPO SDK 57 (re-based 2026-08-08). Everything below about the RULE still
+  holds; the SDK 54 VERSIONS in it are historical.** Current pins: `expo` 57.0.11 ·
+  `react-native` 0.86.2 · `react` 19.2.3 · `@types/react` ~19.2.0 · `expo-router` ~57.0.11 ·
+  `@expo/metro-runtime` ~57.0.8 · `babel-preset-expo` ~57.0.6 · `jest-expo` ~57.0.3 ·
+  `test-renderer` **1.2.0** · `@sentry/react-native` 7.11.0 · `@sentry/cli` ^2.58.4.
+  **The upgrade was forced by a fact nobody had re-checked: Expo Go ships only the NEWEST SDK, and
+  the SDK 54 re-baseline in July was justified by exactly that.** By August, latest was 57, so the
+  app could no longer be loaded in Expo Go at all — the escape hatch expired silently while every
+  document still described it as available. **A capability justified by "X is currently newest" has
+  a shelf life; re-check it before relying on it.**
+  ✅ **THE TWO-SIDED CHECK PROVED ITSELF DURING THE UPGRADE, NOT IN A COMMENT.** `expo install
+  --fix` moved every native module and **left `babel-preset-expo`, `jest-expo` and `@types/react`
+  behind**, exactly as the rule predicts — it follows `bundledNativeModules.json`, which lists
+  NATIVE modules. All three had to be resolved from `expo`'s own dependency ranges and bumped by
+  hand. Expect this on every future SDK increment.
+  ✅ **AND `test-renderer` MOVED FOR THE REASON RECORDED — the sixth mechanism, resolving in the
+  opposite direction.** React 19.1 → 19.2 makes `test-renderer` **1.2.0** correct
+  (1.2.0 → `react-reconciler@~0.33.0` → peer `react ^19.2.0`), where 19.1 had made **1.1.0** the
+  only legal choice. ⚠️ Both workspaces declare it — `apps/mobile` AND `packages/ui` — and only
+  `packages/ui` was found by the first pass; `apps/mobile` kept 1.1.0 and ran a reconciler built
+  for a React it no longer used, peer-legally and silently. **Grep both.**
+  ⚠️ **`@sentry/cli` is pinned by an EXACT version inside `@sentry/react-native`, and it moved:**
+  7.2.0 pinned `2.55.0`, 7.11.0 pins `2.58.4`. The top-level declaration exists only so
+  `sentry.gradle`'s flat-`node_modules` fallback resolves under pnpm, so it must track that exact
+  version or Gradle and the SDK disagree.
+  ⚠️ **Node did NOT have to move.** RN 0.86 declares `^20.19.4 || ^22.13.0 || ^24.3.0 || >= 25.0.0`,
+  so CI's 22.23.2 stays valid. The standing "Node 24 with the SDK upgrade" note was an assumption,
+  not a requirement.
+
 - **THE EXPO SDK 54 PIN IS A SEAM, AND THE AUTHORITATIVE LIST IS A FILE, NOT A PATTERN SET**
   (established 2026-07-28, corrected 2026-08-01 after the rule leaked a THIRD time).
   **`node_modules/expo/bundledNativeModules.json` is the authority: every key in it is SDK-pinned by

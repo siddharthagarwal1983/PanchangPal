@@ -26,7 +26,13 @@ export function ThemeProvider({
   appearance?: Appearance;
   reducedMotion?: boolean;
 }) {
-  const system = useColorScheme() ?? 'light';
+  // ⚠️ RN 0.86 redefined `ColorSchemeName` as 'light' | 'dark' | 'unspecified' and made
+  // `useColorScheme()` NON-NULLABLE — an unknown system scheme now returns the string
+  // 'unspecified' rather than null. The previous `useColorScheme() ?? 'light'` therefore became
+  // dead: the fallback could never fire, and 'unspecified' would have been passed to getTheme(),
+  // which only knows 'light' | 'dark'. Narrowing explicitly restores the original intent (light
+  // unless the system says dark) and no longer depends on a nullability that upstream removed.
+  const system: ColorSchemeName = useColorScheme() === 'dark' ? 'dark' : 'light';
   const scheme: ColorSchemeName = appearance === 'system' ? system : appearance;
   const value = useMemo(() => ({ theme: getTheme(scheme), reducedMotion }), [scheme, reducedMotion]);
   return <ThemeContext.Provider value={value}>{children}</ThemeContext.Provider>;
