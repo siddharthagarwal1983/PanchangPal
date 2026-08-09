@@ -2,10 +2,10 @@
 
 # PanchangPal — Current Milestone
 
-Version: 4.20.0
+Version: 4.21.0
 
-Last Updated: 2026-08-09 (**Expo SDK 57 verified on both platforms — iOS runs for the first time**;
-**ADR-033 ratified at narrowed scope**, and its acceptance gate proves unbuildable)
+Last Updated: 2026-08-09 (**ADR-025's rollup is built and pg_cron was watched executing it**;
+plus SDK 57 on both platforms and ADR-033 ratified)
 
 Purpose:
 This document defines the current milestone. Unlike SESSION.md (daily work) or TASK.md (current
@@ -27,7 +27,36 @@ Overall Progress
 63% (**5 of 8 slices COMPLETE — B2 ✅, B4 ✅, B5 ✅, B6 ✅, B7 ✅**, the last four at verifiable
 scope; B1 ~85%, B3 ~80%; **B8 🚧 STARTED**)
 
-**2026-08-09 — EXPO SDK 57 VERIFIED ON BOTH PLATFORMS, AND ADR-033 RATIFIED.** Progress stays 63%:
+**2026-08-09 (part 2) — ADR-025's ROLLUP IS BUILT; `analytics_event` STOPPED BEING WRITE-ONLY.**
+Progress stays 63% — no Beta slice completes, but this closes the shared blocker behind §10.1 items
+**11**, **19** and **21**. Merged **#125** (the daily-habit funnel carries the user's `local_date`),
+**#126** (the rollup), **#127** (the reachable activation steps).
+
+⛔ **THE NORTH STAR HAD NO USABLE DAY.** §11.3 buckets EVT_017 per ISO week and the envelope carries
+only UTC `ts`, so a **07:00 Auckland ritual is 18:00 UTC the previous day** — the wrong day and,
+across a boundary, the wrong week. Issue #30 one layer up; **EVT_012 already carried `local_date`
+and its own comment explains why**, but the reasoning was never extended to the funnel it
+describes. ⛔ **And the server could not repair it**: `user_pseudo_id` is deliberately un-joinable
+to `user_profile` (ADR-031), so **pseudonymity and metric correctness are in real tension** and
+pseudonymity is ratified.
+
+✅ **The rollup stores counts, never ratios** — §11.3 says "EVT_017/opens" and never defines
+"opens", so a stored rate would freeze an unratified denominator into the data. **The lookback
+recomputes rather than increments**, because events arrive late by design and a worker that rolled
+up "yesterday" once would permanently under-count the offline-first usage the product exists for.
+✅ **Validated on a real Postgres 17 including the never-exercised branch**: 17 pgTAP assertions
+(66 across four suites), three perturbations, and **pg_cron watched executing the function on its
+own schedule** — §8.4's standard that a control nobody has seen run is a plan, not a capability.
+
+⛔ **EVT_011 CANNOT BE IMPLEMENTED, AND SAYING SO IS THE DELIVERABLE.** Its definition needs a
+panchang that cannot render (ADR-033) and a notification grant that returns `'denied'` by design.
+Emitting it would read **0% against a ≥55% target** — an unbuilt capability wearing the costume of
+a product failure, which is the trap B8.3 avoided. **Three registry entries now describe a richer
+product than exists**: EVT_004, EVT_011, and NFR-10's absent sync event.
+
+---
+
+**2026-08-09 (part 1) — EXPO SDK 57 VERIFIED ON BOTH PLATFORMS, AND ADR-033 RATIFIED.** Progress stays 63%:
 a platform re-base is maintenance, and ratifying an ADR surfaces a decision rather than shipping one.
 
 **PR #121** carries the SDK 54 → 57 re-base with **five CI gates green**, counts **identical to the

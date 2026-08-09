@@ -2,12 +2,12 @@
 
 # PanchangPal — Project Status Dashboard
 
-Version: 1.28.0
+Version: 1.29.0
 
-Last Updated: 2026-08-09 (**Expo SDK 57 verified on BOTH platforms — PR #121 green; iOS built and
-run for the first time**, retiring the standing "iOS is unbuilt" note. **ADR-033 ratified at a
-narrowed scope**, and its acceptance gate proves unbuildable until a reviewer supplies festival
-content and golden values. **Progress unchanged at 63%**)
+Last Updated: 2026-08-09 (**ADR-025's rollup is BUILT and pg_cron was watched executing it** —
+`analytics_event` is no longer write-only, so §10.1 item 11's dashboards finally have a source.
+Plus SDK 57 verified on **both** platforms (iOS built and run for the first time) and **ADR-033
+ratified**. Five PRs merged; **progress unchanged at 63%**)
 
 Purpose:
 This document provides a high-level snapshot of the overall project.
@@ -541,6 +541,18 @@ E2E (Maestro FLOW_*) + first live CI run
 ---
 
 # Known Blockers
+
+⛔ **`EVT_011` Activation Completed cannot be implemented** (recorded 2026-08-09)
+- Its registry definition is *"Household + first panchang + notif enabled in first session"*, and **two of the three are structurally impossible today**: panchang returns `unavailable` (ADR-033 authorises writing an engine, never serving one) and `NullNotificationAdapter.requestPermission()` returns **`'denied'`** deliberately, *"rather than a fabricated grant"*.
+- Impact: **§10.1 item 21 (activation dashboards) is blocked on more than the rollup.** Emitting EVT_011 faithfully would fire it **zero times forever**, so the board would read **0% against a ≥55% target** — an unbuilt capability wearing the costume of a catastrophic product failure. The B8.3 rule: a metric wrong in a plausible direction is worse than one that is absent.
+- ⛔ **`EVT_004` likewise** — `expo-location` is not installed and no location screen exists.
+- Owner: **Product/PDD** (redefine activation for a v1 without panchang or notifications, with a target attached) **or** wait for ADR-033 + `expo-notifications`.
+- ⚠️ **Three registry entries now describe a richer product than exists**: EVT_004, EVT_011, and NFR-10's absent sync event. The taxonomy was written for the finished product.
+
+⚠️ **The privacy conformance test enforces event IDs but not PROPS** (recorded 2026-08-09)
+- Its own failure message promises *"with the props it carries"*; the assertions match ids only, so adding `local_date` to five events passed the gate silently.
+- Closed for `local_date` specifically. **General enforcement is deliberately NOT faked**: props are assembled dynamically in `baseProps`, so a source regex would be a parser pretending to be a checker — which reads as coverage and is worse than nothing.
+- Owner: ENG.
 
 ⛔ **Canonical Panchang Computation Engine** (ADR-033 — **RATIFIED 2026-08-09 at a narrowed scope; still blocked, but on data rather than on a decision**)
 - Ratified: **DE440** (public domain — this **removed the Swiss Ephemeris AGPL-or-paid licence question, the MR-6 legal blocker**) · **Lahiri (Chitrapaksha)** with per-tradition override · **`generic` ONLY**, the other three traditions deferred to a pandit reviewer · **festival dates exact, N and M deliberately unset**.

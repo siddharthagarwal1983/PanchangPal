@@ -2,9 +2,10 @@
 
 # PanchangPal — Project Memory
 
-Version: 3.8.0
+Version: 3.9.0
 
-Last Updated: 2026-08-09 (**SDK 57 verified on both platforms and iOS runs for the first time** —
+Last Updated: 2026-08-09 (**ADR-025's rollup is built and pg_cron was watched executing it** —
+`analytics_event` is no longer write-only; **SDK 57 verified on both platforms and iOS runs for the first time** —
 the "iOS needs an Apple membership" note was about distribution, not running; **ADR-033 is ratified**
 and its blocker changed kind, from an undecided ADR to reviewer-supplied data; and a **guard covers
 the command it wraps, not the step it lives in**)
@@ -726,6 +727,68 @@ Stable, cross-cutting facts (permanent until an approved decision changes them):
   how an error or a server response would carry PII in), and an event id outside the PDD §11 EVT_*
   taxonomy is rejected rather than inserted. Every `ERR_*` is recorded as EVT_054 here, separately
   from the crash reporter, so error rates do not wait on Sentry.
+- **THE ANALYTICS ROLLUP IS THE ONLY READER OF `analytics_event`** (ADR-025, built 2026-08-09).
+  `analytics_rollup_daily` + `rollup_analytics_daily(p_lookback_days)` + an hourly pg_cron job at
+  `:20` + `analytics_rollup_is_scheduled()`. Service-role only (RLS on, **no policies**), exactly
+  like its source. From B4.2 until now the table was INSERT-only with nothing reading it, which was
+  the shared blocker behind §10.1 items 11, 19 and 21.
+  **COUNTS, NEVER RATIOS.** §11.3 states habit depth as "EVT_017/opens" and **never defines
+  "opens"** — a stored rate would freeze an unratified denominator into the data, where it outlives
+  anyone's memory of the choice. Daily grain, weeks derived: days sum into ISO weeks, weeks do not
+  divide into days.
+  ⚠️ **THE LOOKBACK RECOMPUTES, IT NEVER INCREMENTS.** Events arrive late by design (20 per batch,
+  queue drains on reconnect), so a worker that rolled up "yesterday" once would permanently
+  under-count **exactly the offline-first usage the product is built around**. Recomputing also
+  makes it idempotent — a re-run or an overlapping run cannot double-count.
+  ⚠️ **`attributed` is a column, not an assumption.** An event with no usable `local_date` is
+  bucketed by UTC and **marked false**, so the North Star can exclude it and an operator can measure
+  how much data cannot be trusted to a day. **`nulls not distinct`** on the unique index because a
+  solo user's NULL `household_id` would otherwise insert unbounded duplicate rows instead of
+  updating one. A malformed client-supplied `props.local_date` is treated as **absent, never cast**
+  — `props` is client input and an unguarded `::date` aborts the whole run on one bad row, leaving
+  the table looking merely *stale*, which is the failure nobody investigates.
+  ✅ **PROVEN, NOT CONFIGURED**: validated on a real Postgres 17 (the CI image) with 17 pgTAP
+  assertions and three perturbations, then on a **pg_cron-enabled** instance where the job
+  scheduled, re-running the migration twice left exactly ONE job, and **pg_cron was watched
+  executing the function on its own schedule** with the table populated by the scheduler. §8.4's
+  standard. **DR fails if the functions are missing after a restore and warns if the schedule is
+  absent** — a stopped rollup does not error, the dashboards simply stop moving, which is
+  indistinguishable from a quiet week.
+
+- **THE ANALYTICS EVENT'S DAY TRAVELS WITH IT, BECAUSE THE SERVER CANNOT RECOVER ONE** (2026-08-09).
+  The envelope carries only a UTC `ts`, and the North Star is bucketed **per ISO week** — so a 07:00
+  Auckland ritual (18:00 UTC the previous day) lands on the wrong day and, across a boundary, in the
+  **wrong week**. **Issue #30 one layer up**: `localDateIn`/ADR-026 fixed the data model and the
+  analytics family never got the same treatment, even though **EVT_012 already carried `local_date`
+  and its own comment explains the risk.** EVT_015/016/017/018/019/020/021 now carry it too.
+  ⛔ **The obvious server-side fix is impossible by construction:** `user_pseudo_id` is
+  device-minted and deliberately never derived from the auth uid (ADR-031), so there is no join to
+  `user_profile.timezone`. **Pseudonymity and metric correctness are in genuine tension, and
+  pseudonymity is the ratified one.**
+  ⚠️ **`local_date` is null rather than omitted when the zone is unresolved.** EVT_012 *waits* for
+  the zone, which suits a view — an unrecorded view costs nothing. A ritual **completion** is
+  different: dropping it under-counts the metric the product optimises for, while guessing
+  mis-attributes it. Null keeps the event and forces the reader to decide.
+
+- ⛔ **`EVT_011` AND `EVT_004` CANNOT BE EMITTED, AND THIS IS NOT UNFINISHED CODE** (2026-08-09).
+  `EVT_011`'s registry definition is *"Household + first panchang + notif enabled in first
+  session"*; **two of the three are structurally impossible** — panchang returns `unavailable`
+  (ADR-033 authorises writing an engine, never serving one) and
+  `NullNotificationAdapter.requestPermission()` returns **`'denied'`** deliberately, *"rather than a
+  fabricated grant"*. `EVT_004` needs a location flow that does not exist (`expo-location`
+  uninstalled, no screen; `timezoneSync.ts` implements the documented device-locale fallback only).
+  **Emitting EVT_011 faithfully fires it zero times forever, so the activation board reads 0%
+  against a ≥55% target** — an unbuilt capability wearing the costume of a catastrophic product
+  failure. That is B8.3's rule extended from a wrong value to a wrong zero. Redefining activation to
+  something reachable would be inventing a business metric.
+  ⚠️ **THREE registry entries now describe a richer product than exists**: EVT_004, EVT_011, and
+  NFR-10's absent sync event. The taxonomy was written for the finished product; **a funnel can only
+  be as complete as the features beneath it.**
+  ⚠️ **EVT_003 fires at the ONBOARDING GATE, never on SCR_AUTH_001.** `/(onboarding)/sign-in` is
+  reached from **four** places and three are post-onboarding (You tab, invite, household), so
+  tracking there feeds long-since-activated users into the activation **rate's** denominator and
+  drags it toward zero **while looking like a conversion problem**.
+
 - **The device key-value seam** lives in `src/data/keyValueStore.ts` — `createDeviceStore()` with the
   degrade-to-memory fallback and `getStorageBackend()`. Both the ritual session store and the
   analytics pseudonymous id use it; it is re-exported from `ritualSessionRepository`, its original

@@ -2,7 +2,7 @@
 
 # PanchangPal — AI Decision Summary
 
-Version: 1.9.0
+Version: 1.10.0
 
 Purpose:
 This file contains a condensed summary of permanent project decisions.
@@ -20,6 +20,50 @@ docs/architecture/adr/
 ---
 
 # Product Decisions
+
+## 2026-08-09 — an aggregate stores counts, and a metric you cannot compute stays absent
+
+**Decision 1. Rollups store COUNTS, never RATIOS.** PDD §11.3 states habit depth as "ritual
+completion rate (EVT_017/opens)" and **never defines "opens"**. A stored rate freezes one reading
+of an undefined denominator into the data itself, where it outlives everyone's memory of the
+choice. Counts are facts; a rate is an interpretation, and interpretations belong in the query.
+Same reasoning gives **daily grain with weeks derived**: days sum into ISO weeks, weeks do not
+divide into days.
+
+**Decision 2. A scheduled aggregate RECOMPUTES a window; it never increments.** Events reach the
+server late by design — the client batches 20 per flush and the offline queue drains on reconnect
+— so a worker that processed "yesterday" once and never revisited it would permanently under-count
+**exactly the offline-first usage the product is built around**. Recomputing also makes the worker
+idempotent, so a re-run or an overlapping run cannot double-count.
+
+**Decision 3. The user's local day travels WITH the analytics event.** The envelope carries only a
+UTC `ts`, and `user_pseudo_id` is deliberately never derived from the auth uid (ADR-031), so the
+server **cannot** recover a timezone. **Pseudonymity and metric correctness are in genuine tension
+here, and pseudonymity is the ratified one.** Without `local_date` a 07:00 Auckland ritual buckets
+into the previous UTC day and, across a boundary, the wrong ISO week — issue #30 one layer up.
+When the zone is unresolved the prop is **null rather than omitted**: dropping a completion
+under-counts the metric the product optimises for, while guessing mis-attributes it, and null
+forces the reader to decide instead of silently trusting UTC.
+
+**Decision 4. A funnel's top is tracked where the funnel actually starts, not on the first screen
+it renders.** `/(onboarding)/sign-in` is reached from four places and three are post-onboarding, so
+tracking there would feed activated users into the activation **rate's** denominator and drag it
+toward zero **while looking like a conversion problem**. The gate — which reads the persisted
+onboarding flag — is the only place that knows.
+
+**Decision 5. An unmeasurable metric stays ABSENT rather than being emitted as zero.** `EVT_011`'s
+own definition requires a panchang that cannot render and a notification grant that returns
+`'denied'` by design; emitting it faithfully yields **0% against a ≥55% target** — an unbuilt
+capability wearing the costume of a catastrophic product failure. Extends B8.3's rule from a wrong
+*value* to a wrong *zero*: **a metric wrong in a plausible direction is worse than one that is
+absent, because nobody goes looking for it.** Redefining activation to something reachable would be
+inventing a business metric, which is forbidden.
+
+**Decision 6. A guard that cannot be written honestly is RECORDED, not faked.** The privacy
+conformance test enforces event ids but not props, though its message promises otherwise. Props are
+assembled dynamically, so a source regex would be **a parser pretending to be a checker** — which
+reads as coverage and is therefore worse than no check at all. The exactly-checkable case
+(`local_date`) was closed; the general gap is documented in the test file itself.
 
 ## 2026-08-09 — ADR-033 ratified at a narrowed scope, and a validation set never comes from the thing it validates
 

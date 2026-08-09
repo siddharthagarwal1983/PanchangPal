@@ -2,10 +2,11 @@
 
 # PanchangPal — Implementation Roadmap
 
-Version: 2.16.0
-Last Updated: 2026-08-09 (**SDK 57 green on both platforms — PR #121 awaiting merge, iOS built for
-the first time.** **ADR-033 ratified**, moving panchang from "blocked on a decision" to "blocked on a
-reviewer's data" — the store accounts remain the critical path)
+Version: 2.17.0
+Last Updated: 2026-08-09 (**ADR-025's rollup is built** — the app's events are readable for the
+first time. SDK 57 merged and verified on both platforms; ADR-033 ratified, moving panchang from
+"blocked on a decision" to "blocked on a reviewer's data". The store accounts remain the critical
+path)
 
 Purpose: the forward plan from the current state. Complements PROJECT_STATUS.md (snapshot) and
 CURRENT_MILESTONE.md (active milestone). Updated when scope or sequencing changes — and at every
@@ -18,7 +19,14 @@ increment/milestone boundary per the Increment & Milestone Completion Checkpoint
 **Beta Readiness & Platform Hardening, 63%** — **B2 ✅, B4 ✅, B5 ✅, B6 ✅, B7 ✅** (the last four
 at verifiable scope). B1 ~85%, B3 ~80%, all remainders owner-gated on money or a store account.
 
-**Two things moved on 2026-08-09, neither of which changes the percentage.**
+**Three things moved on 2026-08-09, none of which changes the percentage.**
+
+**0. ADR-025's analytics rollup is built, scheduled, and watched running.** `analytics_event` had
+been INSERT-only with no reader since B4.2, which was the shared blocker behind §10.1 items 11, 19
+and 21. **Item 11's dashboards now have a source.** ⛔ **Item 21 does not follow automatically** —
+`EVT_011` is unreachable by its own definition, so activation needs either the missing features or
+a PDD redefinition, and that is a business decision rather than engineering. Item 19 still waits on
+payments.
 
 **1. Expo SDK 57 is verified on both platforms (PR #121, green, awaiting merge).** Five CI gates,
 counts identical to the SDK 54 baseline, **E2E 6/6 in 2m22s**, bundle budget held with iOS *smaller*
