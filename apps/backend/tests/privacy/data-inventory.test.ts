@@ -76,6 +76,37 @@ function eventsEmitted(): Set<string> {
   return found;
 }
 
+/** Every non-test mobile source file, for prop-level inspection. */
+function analyticsSources(): string[] {
+  const out: string[] = [];
+  const walk = (dir: string): void => {
+    for (const entry of readdirSync(dir, { withFileTypes: true })) {
+      const full = path.join(dir, entry.name);
+      if (entry.isDirectory()) {
+        if (entry.name !== '__tests__' && entry.name !== 'node_modules') walk(full);
+        continue;
+      }
+      if (!/\.tsx?$/.test(entry.name) || /\.test\.tsx?$/.test(entry.name)) continue;
+      out.push(readFileSync(full, 'utf8'));
+    }
+  };
+  MOBILE_DIRS.forEach(walk);
+  return out;
+}
+
+/** Does the §4 row for `eventId` mention `prop`? */
+function inventoryRowMentions(eventId: string, prop: string): boolean {
+  const section = sectionOf('## 4. Analytics events actually emitted', '### 4.1');
+  const row = section.split('\n').find((l) => l.startsWith(`| \`${eventId}\``));
+  if (!row) return false;
+  // "base props + X" rows inherit the EVT_015 set, which is where the shared props are listed.
+  if (/base props/i.test(row)) {
+    const base = section.split('\n').find((l) => l.startsWith('| `EVT_015`')) ?? '';
+    if (base.includes(prop)) return true;
+  }
+  return row.includes(prop);
+}
+
 /** `EVT_*` ids listed in the §4 table. */
 function eventsInInventory(): Set<string> {
   const section = sectionOf('## 4. Analytics events actually emitted', '### 4.1');
@@ -149,5 +180,42 @@ describe('DATA_INVENTORY.md — analytics events', () => {
     const events = eventsEmitted();
     expect(events.size).toBeGreaterThan(5);
     expect(events).toContain('EVT_017'); // the North Star input
+  });
+
+  /**
+   * ⚠️ THE PROP HALF OF THIS FILE'S PROMISE IS NOT GENERALLY ENFORCED, AND THAT IS WORTH KNOWING
+   * RATHER THAN ASSUMING. The two coverage tests above match event **ids** only; the failure
+   * message says "with the props it carries", which the assertions do not check. Adding
+   * `local_date` to five events on 2026-08-09 was new collection that passed this gate silently —
+   * this milestone's signature defect (documented, visible, inert) inside the control built to
+   * catch it.
+   *
+   * General prop enforcement is genuinely hard here: props are assembled dynamically in
+   * `baseProps`, so a source regex would be a parser pretending to be a checker — which is the
+   * *worse* outcome, because it would read as coverage. So this closes the one hole that is
+   * checkable exactly, and the general gap stays recorded rather than papered over.
+   *
+   * `local_date` is checkable exactly because it is a literal key at every site that adds it.
+   */
+  it('discloses local_date for every event that carries it', () => {
+    const withLocalDate = new Set<string>();
+    for (const src of analyticsSources()) {
+      // Screen call sites: track('EVT_0xx', { ... local_date ... })
+      for (const m of src.matchAll(/track\(\s*'(EVT_\d{3})'\s*,\s*\{([^}]*)\}/gs)) {
+        if (/\blocal_date\b/.test(m[2] ?? '')) withLocalDate.add(m[1]!);
+      }
+    }
+    // The ritual family receives it through `baseProps`/`streakEvents` rather than at a call site.
+    for (const e of ['EVT_015', 'EVT_016', 'EVT_017', 'EVT_018', 'EVT_020', 'EVT_021']) {
+      withLocalDate.add(e);
+    }
+
+    const undisclosed = sorted(withLocalDate).filter((e) => !inventoryRowMentions(e, 'local_date'));
+    expect(
+      undisclosed,
+      `These events send 'local_date' but DATA_INVENTORY.md §4 does not say so. A prop that is ` +
+        `collected and undisclosed is exactly what §4 exists to prevent — the user's local ` +
+        `calendar day is collection even though it is coarser than the 'ts' already stored.`,
+    ).toEqual([]);
   });
 });

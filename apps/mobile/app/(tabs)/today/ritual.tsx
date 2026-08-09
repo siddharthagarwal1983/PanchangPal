@@ -79,8 +79,12 @@ export default function RitualScreen() {
       tradition,
       durationMs: startedAt.current === null ? null : Date.now() - startedAt.current,
       offline: !online,
+      // The user's local day travels WITH the event. The envelope carries only a UTC `ts`, and an
+      // Auckland morning ritual is the previous UTC day — which would land EVT_017 in the wrong
+      // ISO week of the metric §11.3 sums. See RitualEventContext.localDate.
+      localDate: today,
     }),
-    [ritual.data?.id, tradition, online],
+    [ritual.data?.id, tradition, online, today],
   );
 
   const dispatch = useCallback(async (intent: (value: RitualEngine) => Promise<void>) => {
