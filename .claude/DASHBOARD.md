@@ -2,11 +2,11 @@
 
 # PanchangPal Dashboard
 
-Version: 1.43.0
+Version: 1.44.0
 
-Last Updated: 2026-08-09 (**Expo SDK 57 verified on BOTH platforms — PR #121 green, and iOS runs
-for the first time in this project's history.** **ADR-033 ratified at a narrowed scope**, which
-found that its own acceptance gate cannot be built)
+Last Updated: 2026-08-09 (**ADR-025's ROLLUP IS BUILT and pg_cron was watched executing it** —
+`analytics_event` is no longer write-only. Five PRs merged: SDK 57 on both platforms · ADR-033
+ratified · `local_date` · the rollup · the activation funnel)
 
 Purpose:
 This is the first file Claude should read at the beginning of every session.
@@ -137,6 +137,44 @@ CURRENT_MILESTONE.md
 ---
 
 # Current Task
+
+✅ **ADR-025's ROLLUP IS BUILT — `analytics_event` STOPPED BEING WRITE-ONLY TODAY. Progress stays
+63%** (no Beta slice completes; five PRs merged, no open PRs).
+
+⛔ **THE NORTH STAR HAD NO USABLE DAY, AND NO SERVER-SIDE FIX WAS POSSIBLE.** §11.3 groups EVT_017
+by `household_id` **per ISO week**; the envelope carries only UTC `ts`, so a **07:00 Auckland
+ritual is 18:00 UTC the previous day** — Monday's completion landing in Sunday, and across a
+boundary the **wrong ISO week**. Issue #30 one layer up. **EVT_012 already carried `local_date` and
+its own comment explains the risk** — written once, never extended to the funnel it describes. And
+`user_pseudo_id` is deliberately un-joinable to `user_profile` (ADR-031), so **pseudonymity and
+metric correctness are in genuine tension** and pseudonymity is the ratified one. The day now
+travels with the event (#125).
+
+✅ **THE ROLLUP (#126): counts never ratios** (§11.3 never defines "opens") · **daily grain, weeks
+derived** · a **lookback window that recomputes rather than increments**, because events arrive
+late by design and a worker rolling up "yesterday" once would permanently under-count exactly the
+offline-first usage the product is built around · **`attributed` is a column**, so unbucketable
+events are kept and *marked* rather than dropped or silently mis-dated.
+✅ **VALIDATED ON A REAL POSTGRES 17 INCLUDING THE BRANCH THAT HAD NEVER RUN** — 17 pgTAP
+assertions (66 across four suites), three perturbations, and then **pg_cron watched executing the
+function on its own schedule**, table populated by the scheduler. §8.4's standard.
+
+⛔ **THE ACTIVATION FUNNEL IS INSTRUMENTED ONLY AS FAR AS THE PRODUCT ALLOWS (#127).** EVT_003
+fires at the **gate**, not the screen — sign-in is reached from **four** places and three of them
+are post-onboarding, so tracking there would drag an activation **rate** toward zero while looking
+like a conversion problem. ⛔ **EVT_004 and EVT_011 are unreachable**: no location screen, and
+EVT_011's own definition needs a panchang that cannot render and a notification grant that returns
+**`'denied'`** by design. Emitting it would read **0% against a ≥55% target** — the B8.3 rule, that
+a metric wrong in a plausible direction is worse than one absent. **Three registry entries now
+describe a richer product than exists** (EVT_004, EVT_011, NFR-10).
+
+⚠️ **Three of my own errors, each caught only by running something**, and one instrument that
+measured nothing: I grepped jest for `✕`, which it never prints without `--verbose`, and nearly
+declared my own guards vacuous. **The summary line is the instrument.**
+
+---
+
+**Previously — SDK 57.**
 
 🟡 **PR #121 — EXPO SDK 57 IS GREEN ON BOTH PLATFORMS AND AWAITING MERGE. Progress stays 63%**
 (platform maintenance advances no Beta slice).

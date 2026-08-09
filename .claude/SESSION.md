@@ -2,10 +2,100 @@
 
 # PanchangPal — Current Session
 
-Version: 19.0.0
-Last Updated: 2026-08-09 (**Expo SDK 57 verified on BOTH platforms — iOS runs for the first time
-in this project's history** — and **ADR-033 is ratified at a narrowed scope**, which found that its
-own acceptance gate cannot be built)
+Version: 20.0.0
+Last Updated: 2026-08-09 (**ADR-025's rollup is BUILT and pg_cron was watched executing it** —
+`analytics_event` stopped being write-only. Plus SDK 57 on both platforms, ADR-033 ratified, and
+the activation funnel instrumented as far as the product allows)
+
+---
+
+# Part 6 — the analytics rollup: the app's events can finally be read
+
+**Progress stays 63%.** Three PRs merged (**#125**, **#126**, **#127**); none completes a Beta
+slice, but together they close the shared blocker behind §10.1 items **11**, **19** and **21**.
+
+## ⛔ The North Star had no usable day, and no server-side fix was possible
+
+§11.3 defines it as **EVT_017 grouped by `household_id` per ISO week**. Grouping was fine;
+**bucketing was not.** The envelope carries only `ts` (UTC) and EVT_017 carried no local date — so
+a **07:00 Auckland ritual is 18:00 UTC the previous day**, landing Monday's completion in Sunday
+and, across a week boundary, **the wrong ISO week**. Issue #30 one layer up: `localDateIn`/ADR-026
+fixed the data model, and the analytics family never got the same treatment. **EVT_012 already
+carried `local_date` and its own comment explains exactly this risk** — written once, never
+extended to the funnel it describes.
+⛔ **And the server cannot repair it**: `user_pseudo_id` is deliberately un-joinable to
+`user_profile` (ADR-031), so the zone is unrecoverable. **Pseudonymity and metric correctness are
+in genuine tension, and pseudonymity is the one already ratified** — the day travels with the
+event (#125). `local_date` is emitted as **null rather than omitted** when the zone is unresolved:
+EVT_012 *waits*, which suits a view, but dropping a **completion** under-counts the metric the
+product optimises for while guessing mis-attributes it.
+
+## ✅ The rollup (#126) — counts, a window, and a marked fallback
+
+`analytics_rollup_daily` · `rollup_analytics_daily(p_lookback_days)` · hourly pg_cron ·
+`analytics_rollup_is_scheduled()`.
+**Counts, never ratios** — §11.3 says "EVT_017/opens" and never defines "opens"; a stored rate
+freezes an unratified denominator into the data. **Daily grain, weeks derived** — days sum into
+ISO weeks; weeks do not divide into days.
+⚠️ **The lookback window is the point.** Events arrive late by design (batched 20 per flush, queue
+drains on reconnect), so a worker that rolled up "yesterday" once would **permanently under-count
+the offline-first usage the product is built around**. The upsert **recomputes rather than
+increments**, which is what makes late arrivals correct and re-runs safe.
+**`attributed` is a column, not an assumption** — an event with no usable `local_date` is bucketed
+by UTC and *marked*, so the North Star can exclude it and an operator can measure how much data
+cannot be trusted to a day. **`nulls not distinct`** because a solo user's NULL `household_id`
+would otherwise insert unbounded duplicate rows instead of updating one.
+
+✅ **VALIDATED ON A REAL POSTGRES 17, INCLUDING THE BRANCH THAT HAD NEVER RUN.** 17 pgTAP
+assertions (66 across four suites) · three perturbations (UTC bucketing fails the Auckland tests;
+incrementing fails idempotence; removing the malformed-date guard aborts the run outright) · then
+on a **pg_cron-enabled** instance: the job scheduled, re-running the migration twice left exactly
+**one** job, and **pg_cron was watched executing the function on its own schedule**
+(`status=succeeded`) with the table populated by the scheduler. §8.4's standard — a control nobody
+has seen run is a plan, not a capability.
+
+## ⛔ The activation funnel is instrumented only as far as the product allows (#127)
+
+**EVT_003 fires at the GATE, not the screen.** `/(onboarding)/sign-in` is reached from **four**
+places and only one is onboarding; the other three push it for users who onboarded weeks ago.
+Tracking there would feed them into the funnel's **top** — and §11.3 measures activation as a
+**rate**, so a bloated denominator **drags it toward zero while looking like a conversion
+problem**. **EVT_005** carries `source` (onboarding has no tradition step, so every selection today
+is a later edit) and fires only on a real change.
+
+⛔ **EVT_004 and EVT_011 are NOT instrumented, and neither is unfinished code.** `expo-location`
+is uninstalled with no location screen, so EVT_004's flow does not exist. **EVT_011's own
+definition** — *"Household + first panchang + notif enabled in first session"* — has **two
+structurally impossible conditions**: panchang returns `unavailable` (ADR-033 authorises writing
+an engine, never serving one) and `NullNotificationAdapter.requestPermission()` returns
+**`'denied'`** deliberately. Implementing it faithfully yields an event firing **zero times
+forever**, so the board reads **0% against a ≥55% target** — a catastrophic-looking product failure
+that is actually an unbuilt capability. **The B8.3 rule exactly: a metric wrong in a plausible
+direction is worse than one that is absent.**
+⚠️ **That is now THREE registry entries describing a richer product than exists** — EVT_004,
+EVT_011 and NFR-10's absent sync event. The taxonomy was written for the finished product; a
+funnel can only be as complete as the features beneath it.
+
+## ⚠️ Three of my own errors, each caught only by running something
+
+`sum()` returns **numeric** so pgTAP's `is()` had no signature · the plan declared **16** against
+17 assertions · and **I never re-ran the JS suites after adding a migration that a JS test reads**,
+so CI caught `analytics_rollup_daily` as an unclassified table. **Thoroughness in one layer is not
+coverage of another.**
+⚠️ **And one instrument measured nothing:** I grepped jest output for `✕`, which it does not print
+without `--verbose`, saw silence, and nearly concluded my own guards were vacuous. **The summary
+line is the instrument** — the same shape as `--detectOpenHandles` and the ring-buffer theory.
+
+✅ **The privacy inventory caught new collection THREE times in two days** — `local_date` on five
+events, the `analytics_rollup_daily` table, and EVT_003/EVT_005. ⚠️ **But its prop half is
+documented and unenforced**: the coverage tests match event **ids** while the failure message
+promises "with the props it carries", so adding `local_date` passed silently. Closed for
+`local_date` specifically; **general prop enforcement is recorded as an open gap** rather than
+faked, because a regex over dynamically-assembled props would be a parser pretending to be a
+checker — which reads as coverage and is worse than nothing.
+
+**Verified:** tsc **11/11** · eslint **0 errors** · vitest **220** · mobile jest **456** · pgTAP
+**66** · all five CI gates green on #125/#126/#127.
 
 ---
 

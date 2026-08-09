@@ -2,10 +2,10 @@
 
 # PanchangPal — Current Task
 
-Version: 13.0.0
-Last Updated: 2026-08-09 (**SDK 57 verified on both platforms — PR #121 open and fully green;
-iOS runs for the first time.** **ADR-033 ratified at narrowed scope**, and its acceptance gate turns
-out to be unbuildable)
+Version: 14.0.0
+Last Updated: 2026-08-09 (**ADR-025's rollup is BUILT, and pg_cron was watched executing it** —
+`analytics_event` is no longer write-only. Five PRs merged: #121 SDK 57 · #122 ADR-033 · #125
+local_date · #126 rollup · #127 activation funnel)
 
 Purpose: the current implementation task. Stay focused; avoid unrelated work unless instructed.
 
@@ -112,9 +112,52 @@ green in CI on a real native build. Canonical progress 0% → 13% (1 of 8 Beta s
 # Current Task
 
 ## Title
-🟡 **PR #121 (Expo SDK 57) IS GREEN AND AWAITING MERGE** · **ADR-033 ratified, engine still not
-buildable.** **Progress stays 63%** (5 of 8; B8 started with B8.1–B8.3 done) — neither item
-completes a Beta slice.
+⏳ **NO CREDENTIAL-FREE BLOCKING ENGINEERING REMAINS.** **Progress stays 63%** (5 of 8; B8 started
+with B8.1–B8.3 done). **Five PRs merged 2026-08-09** — #121 SDK 57 · #122 ADR-033 · #125
+`local_date` · #126 the rollup · #127 the activation funnel. **No open PRs.**
+
+### What changed today, and what it unblocked
+
+✅ **`analytics_event` is no longer write-only.** ADR-025's rollup exists, is scheduled hourly, and
+**pg_cron was watched executing it** on a real Postgres 17. §10.1 item **11**'s dashboards now have
+a source, and the North Star is computable *and correctly bucketed*.
+
+### Blocking, in order — all of it owner-gated
+
+1. **Apple ($99) + Google Play ($25)** — still the highest-leverage purchase. Unblocks §10.2 step 1
+   and is what lets **EVT_051** fire at all. ⚠️ Cheaper than recorded: **iOS builds and runs
+   locally**, so the account buys *distribution*, not the ability to test.
+2. **~$25/mo paid Supabase** — PITR (NFR-15). A destructive migration against real user data still
+   has **no recovery**.
+3. **Enable pg_cron on the hosted projects** — ✅ owner reports this is **done**; confirm after CD
+   applies the migration with `select analytics_rollup_is_scheduled();` (one line, no assumption).
+4. **A pandit reviewer** — the single dependency behind ADR-033's 46 golden rows, the **provisional
+   Rahu Kaal weekday mapping**, real festival content (§10.1 item 2), and the three deferred
+   traditions. ⚠️ **The engine and the festival corpus share this one person**; do not schedule
+   them as independent tracks.
+5. **Legal** — the privacy policy and store labels are drafted from a machine-checked inventory and
+   **not reviewed** (item 15).
+
+### Named rather than absorbed
+
+⛔ **`EVT_011` cannot be implemented** — *"Household + first panchang + notif enabled in first
+session"* has **two structurally impossible conditions** (panchang `unavailable` per ADR-033;
+`NullNotificationAdapter` returns `'denied'`). Emitting it would read **0% against a ≥55% target**
+— an unbuilt capability wearing the costume of a product failure. Needs either the features or a
+**PDD redefinition of activation**, which is a business decision with a target attached.
+⛔ **`EVT_004` likewise** — `expo-location` uninstalled, no location screen.
+⚠️ **The privacy gate enforces event IDS but not PROPS** — its own message promises "with the props
+it carries". Closed for `local_date`; general enforcement is an open gap, deliberately not faked.
+⚠️ **`SETUP.md` needs one line**: a local iOS build requires `SENTRY_DISABLE_AUTO_UPLOAD=true` (the
+upload task **fails** the build rather than skipping).
+⚠️ **17 references cite "§7.2 dashboards"** — §7.2 is *SLOs & alerts*; **dashboards are §7.1**.
+⚠️ **An intermittent emulator-teardown hang** can leave a green E2E suite reporting red — judge such
+a run by its `Flows Passed` line, never its colour.
+⚠️ **`@supabase/supabase-js` undeclared in `apps/backend`**, which has **no `package.json` at all**.
+
+---
+
+## Superseded — the SDK 57 / ADR-033 position
 
 ### 1. Merge PR #121 — the evidence is complete
 
