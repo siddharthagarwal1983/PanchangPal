@@ -18,6 +18,7 @@ import {
 } from '@panchangpal/ui';
 import type { AppearanceMode, ContentDepth, TraditionCode } from '@panchangpal/shared';
 import { usePreferences, useUpdatePreferences } from '../../../src/data/hooks/usePreferences';
+import { getAnalyticsService } from '../../../src/data/analyticsAdapter';
 import { usePremiumGate } from '../../../src/data/hooks/useEntitlement';
 import { DEFAULT_PREFERENCES } from '../../../src/domain/profile';
 import { useOnline } from '../../../src/data/useOnline';
@@ -110,7 +111,21 @@ export default function SettingsScreen() {
           <SegmentedControl<TraditionCode>
             options={traditionOptions}
             value={prefs.tradition}
-            onChange={(tradition) => update.mutate({ tradition })}
+            onChange={(tradition) => {
+              update.mutate({ tradition });
+              // EVT_005 Tradition Selected (PDD §3.0.1). ⚠️ `source` is carried because §11.4
+              // places EVT_005 in the ACTIVATION funnel, and onboarding has no tradition step
+              // yet — so every selection today is a later settings change. Without the prop a
+              // funnel query could not tell an onboarding choice from a preference edit made
+              // months in, and would read the latter as activation.
+              //
+              // Fired only on a real change: SegmentedControl calls onChange for a press, and
+              // re-selecting the current value is not a selection event. An inflated count here
+              // would misstate how many users ever chose a tradition at all.
+              if (tradition !== prefs.tradition) {
+                getAnalyticsService().track('EVT_005', { tradition, source: 'settings' });
+              }
+            }}
             accessibilityLabel={t('settings.traditionLabel')}
             testID="settings-tradition"
           />

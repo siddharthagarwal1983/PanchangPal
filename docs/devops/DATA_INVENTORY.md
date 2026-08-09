@@ -179,6 +179,8 @@ It narrows a user's plausible zone no more than the existing `ts` already does.
 
 | Event | Meaning | Props sent |
 |---|---|---|
+| `EVT_003` | Onboarding started | *(none)* — fired at the onboarding gate, not the sign-in screen |
+| `EVT_005` | Tradition selected | `tradition` (one of four seeded codes), `source` |
 | `EVT_012` | Today viewed | `screen_id`, `local_date` |
 | `EVT_015` | Ritual started | `ritual_id`, `tradition`, `depth`, `audio_used`, `offline`, `local_date` |
 | `EVT_016` | Ritual step advanced | base props + `step_number`, `total_steps` |
