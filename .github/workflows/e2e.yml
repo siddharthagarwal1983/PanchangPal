@@ -74,7 +74,7 @@ jobs:
       # baseline). ⚠️ The Android native build could NOT be exercised locally for the SDK 57
       # upgrade — the dev Mac has only JDK 26 installed, and Kotlin's version parser rejects it —
       # so THIS JOB is the arbiter for the native half of that upgrade.
-      - uses: actions/setup-java@v5
+      - uses: actions/setup-java@v6
         with:
           distribution: temurin
           java-version: '${{ env.JAVA_VERSION }}'
