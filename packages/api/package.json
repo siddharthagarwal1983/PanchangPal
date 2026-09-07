@@ -16,7 +16,7 @@
   },
   "dependencies": {
     "@panchangpal/shared": "workspace:*",
-    "zod": "^4.4.3"
+    "zod": "^4.5.4"
   },
   "devDependencies": {
     "yaml": "^2.9.0"
